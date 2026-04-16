@@ -9,7 +9,8 @@ import {
   Calendar,
   PieChart,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Boxes
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 
@@ -17,7 +18,7 @@ export interface CurrentUser {
   id: string;
   name: string;
   email: string;
-  role: 'employee' | 'lead' | 'manager' | 'admin';
+  role: 'member' | 'manager' | 'admin';
   title?: string;
 }
 
@@ -31,8 +32,9 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
 
-  const nav = [
+  const nav: Array<{ href: string; label: string; icon: any; badge?: string }> = [
     { href: '/', label: 'My Dashboard', icon: LayoutDashboard },
+    { href: '/applications', label: 'Applications', icon: Boxes },
     { href: '/projects', label: 'Projects', icon: FolderKanban },
     { href: '/teams', label: 'Teams', icon: Users },
     { href: '/yearly', label: 'Yearly View', icon: Calendar },
@@ -40,7 +42,7 @@ export default function AppShell({
     { href: '/ai/risk', label: 'Deadline Risk', icon: AlertTriangle, badge: 'ML' }
   ];
   if (user.role === 'manager' || user.role === 'admin') {
-    nav.splice(4, 0, { href: '/org', label: 'Org Overview', icon: PieChart });
+    nav.splice(5, 0, { href: '/org', label: 'Org Overview', icon: PieChart });
   }
 
   const isActive = (href: string) =>

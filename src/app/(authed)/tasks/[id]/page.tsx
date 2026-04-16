@@ -83,7 +83,7 @@ export default function TaskDetailPage() {
   const canSignoff =
     task.requiresQaSignoff &&
     !task.qaSignoffAt &&
-    ['lead', 'manager', 'admin'].includes(me?.role);
+    ['manager', 'admin'].includes(me?.role);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

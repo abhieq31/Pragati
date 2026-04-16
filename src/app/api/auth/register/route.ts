@@ -14,7 +14,7 @@ const Body = z.object({
   name: z.string().min(1),
   password: z.string().min(6),
   title: z.string().optional(),
-  role: z.enum(['employee', 'lead', 'manager', 'admin']).optional()
+  role: z.enum(['member', 'manager', 'admin']).optional()
 });
 
 export async function POST(req: NextRequest) {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const exists = await User.findOne({ email: body.email.toLowerCase() });
     if (exists) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
     const count = await User.countDocuments();
-    const role = count === 0 ? 'admin' : body.role || 'employee';
+    const role = count === 0 ? 'admin' : body.role || 'member';
     const user = await User.create({
       email: body.email.toLowerCase(),
       name: body.name,

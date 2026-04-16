@@ -4,10 +4,12 @@ import { cookies } from 'next/headers';
 import { connectDB } from './db';
 import { User } from '@/models/User';
 
+export type UserRole = 'member' | 'manager' | 'admin';
+
 export interface JwtPayload {
   sub: string;
   email: string;
-  role: 'employee' | 'lead' | 'manager' | 'admin';
+  role: UserRole;
   name: string;
 }
 
@@ -77,7 +79,7 @@ export async function requireUser(req: NextRequest) {
   return { error: null, user };
 }
 
-export async function requireRole(req: NextRequest, ...roles: JwtPayload['role'][]) {
+export async function requireRole(req: NextRequest, ...roles: UserRole[]) {
   const { user, error } = await requireUser(req);
   if (error) return { user: null as unknown as JwtPayload, error };
   if (!roles.includes(user.role)) {

@@ -35,7 +35,7 @@ export default function TeamsPage() {
     setCreating(false);
     load();
   }
-  const canCreate = me && ['lead', 'manager', 'admin'].includes(me.role);
+  const canCreate = me && ['manager', 'admin'].includes(me.role);
 
   return (
     <div className="space-y-6">

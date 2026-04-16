@@ -17,6 +17,7 @@ const Patch = z.object({
   description: z.string().optional(),
   status: z.enum(['planning', 'in_progress', 'on_hold', 'completed', 'cancelled']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  applicationId: z.string().nullable().optional(),
   teamId: z.string().nullable().optional(),
   ownerId: z.string().nullable().optional(),
   startDate: z.string().nullable().optional(),
@@ -96,7 +97,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireRole(req, 'manager', 'admin', 'lead');
+    const { error } = await requireRole(req, 'manager', 'admin');
     if (error) return error;
     await connectDB();
     await Task.deleteMany({ projectId: params.id });
