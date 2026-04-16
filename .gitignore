@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+dist
+build
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+coverage
+.vercel
+.mongo-memory-data
+.mongo-data
+.mongo-logs
+tsconfig.tsbuildinfo
