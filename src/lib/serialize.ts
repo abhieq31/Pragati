@@ -103,17 +103,18 @@ export function task(t: any, extras: Any = {}) {
     completedAt: t.completedAt,
     estimatedHours: t.estimatedHours,
     actualHours: t.actualHours,
-    aiTriage: t.aiTriage
-      ? {
-          severity: t.aiTriage.severity,
-          severityScore: t.aiTriage.severityScore,
-          category: t.aiTriage.category,
-          rationale: t.aiTriage.rationale,
-          suggestedCapa: t.aiTriage.suggestedCapa,
-          similarTaskIds: (t.aiTriage.similarTaskIds || []).map((x: any) => id(x)),
-          computedAt: t.aiTriage.computedAt
-        }
-      : null,
+    aiTriage:
+      t.aiTriage && t.aiTriage.severity
+        ? {
+            severity: t.aiTriage.severity,
+            severityScore: t.aiTriage.severityScore,
+            category: t.aiTriage.category,
+            rationale: t.aiTriage.rationale,
+            suggestedCapa: t.aiTriage.suggestedCapa,
+            similarTaskIds: (t.aiTriage.similarTaskIds || []).map((x: any) => id(x)),
+            computedAt: t.aiTriage.computedAt
+          }
+        : null,
     subtasks: (t.subtasks || []).map(subtask),
     comments: (t.comments || []).map(comment),
     createdAt: t.createdAt,
