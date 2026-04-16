@@ -1,197 +1,268 @@
-# MicroMacro — Pharma QA Project Management
+# QInformX — Quality Informatics PM with AI
 
-MicroMacro is a self-hostable project & task management tool designed for the
-QA / IT department of a pharmaceutical company. It is tuned to how pharma QA
-actually runs — **macro** projects (CSV / GAMP 5 validations, SOPs, Deviations,
-CAPAs, Change Controls, Audits) with their **micro** checklists, phased
-lifecycles, QA sign-off gates, GxP criticality, and yearly employee visibility.
+**QInformX** is a self-hostable project & task management platform built for the
+**Quality Informatics department** of a pharmaceutical company. It handles
+pharma-specific lifecycles (CSV / GAMP 5, SOP, Deviation & CAPA, Change
+Control, Audit, Data Integrity, Pharmacovigilance) and adds two explainable
+on-premise AI features that plug directly into how QA actually works:
 
-> Built by the QA IT team at Alembic Pharma as a side project — fully self-
-> contained, no external SaaS, data stays on your server.
+1. 🧠 **AI Issue Triage** — classifies a freshly logged deviation / audit
+   finding / data integrity issue by severity and category, cites the
+   signals that drove the classification, surfaces similar past cases from
+   your own corpus, and proposes CAPA actions from a curated pharma playbook.
+2. 📈 **ML Deadline-Risk Predictor** — a logistic-style model that learns
+   from your historical completions and predicts, for every open task, the
+   probability of missing its deadline — with per-feature contributions so
+   every prediction is auditable.
+
+Both AI features run **on your own server**, with no external API calls — the
+correct bar for a regulated QA environment.
+
+> Stack: **Next.js 14 (App Router) · TypeScript · MongoDB (Mongoose) · Tailwind · Recharts**.
+> One Node process serves the UI, the API, and both AI modules.
 
 ---
 
-## ✨ Feature mapping to the brief
+## 🎯 Feature → requirement mapping
 
-The manager's requirements and where they live in this app:
-
-| # | Requirement | Where it is |
+| # | Original ask | Where it lives |
 | - | --- | --- |
-| 1 | Employee can see *their* bucket of tasks | `My Dashboard` (`/`) — open/overdue/done filters, subtasks list, due dates, GxP and QA sign-off badges |
-| 2 | Employee-level project/task completion view | `My Dashboard` stats (completion rate, due this week, overdue) + `Yearly View` (monthly chart, big deliveries, early-completion) |
-| 3 | Pharma QA lifecycle customisation | `New project` uses **lifecycle templates**: CSV / GAMP 5, SOP, Deviation & CAPA, Change Control, Audit, Process/Method Validation — each with phases, default tasks, QA sign-off & GxP-critical defaults, and regulatory refs (21 CFR Part 11, EU Annex 11, ICH Q10, etc.) |
-| 4 | Team-wise view of current progress and micro-tasks | `Teams` → a team — three tabs: **Team progress** (per-project and per-member load with progress bars), **Micro-tasks** (every active sub/task across the team's projects), **Projects** |
-| 5 | Higher-level view of sub-tasks the team members need to complete | `Teams/:id` → Micro-tasks tab, plus `Org overview` for managers (org-wide: open tasks, overdue, GxP-critical open, QA sign-off pending, lifecycle & status pies, team load) |
-| 6 | Yearly view — big tasks completed + micro-tasks completed before deadline (extra effort) | `Yearly View` (`/yearly`) — monthly bar chart, **big deliveries** (GxP/QA-signoff/approvals), **early completions** (anything closed before its due date), and an **extra-effort score** (sum of days-early) |
+| 1 | Employee whole view of tasks | `My Dashboard` (`/`) — open / overdue / done filters, subtasks list, GxP & QA sign-off badges |
+| 2 | Employee-level completion view | Dashboard stats (completion rate, due this week, overdue) + `Yearly View` (monthly chart, big deliveries, extra-effort score) |
+| 3 | Customization for quality pharma software life cycles | `/projects/new` offers 9 lifecycle templates — **CSV / GAMP 5**, **SOP**, **Deviation & CAPA**, **Change Control**, **Audit**, **Process/Method Validation**, **Data Integrity (ALCOA+)**, **Pharmacovigilance (ICSR)**, **Generic** — each auto-creates phases and default tasks pre-flagged with GxP-critical, QA sign-off and regulatory refs (21 CFR Part 11, EU Annex 11, ICH Q10, GAMP 5, MHRA DI 2018, GVP Module VI) |
+| 4 | Team-wise current progress + micro-tasks | `Teams/:id` → three tabs: **Team progress** (per-project and per-member load), **Micro-tasks** (every open task/subtask across team projects), **Projects** |
+| 5 | Higher-level view of sub-tasks team members must complete | Team `Micro-tasks` tab + `Org Overview` for managers (open / overdue / GxP-critical / QA-signoff pending, lifecycle & status pies, team-level bar chart) |
+| 6 | Yearly view — big deliveries + micro-tasks done before deadline | `Yearly View` (`/yearly` or `/yearly/:userId`) — monthly bar chart, big-deliveries list, early-completion trophies, and an **extra-effort score** (sum of days saved) |
+| ✨ | Add AI/ML features | `AI Triage` (`/ai/triage`) + `Deadline Risk` (`/ai/risk`) |
 
 ---
 
-## 🧱 Tech stack
+## 🧠 AI features in detail
 
-- **Backend**: Node.js + Express + `better-sqlite3` (single-file DB) + JWT auth, Zod validation
-- **Frontend**: React 18 + Vite + Tailwind CSS + React Router + Recharts
-- **Database**: SQLite (file lives at `server/data/micromacro.db`), auto-migrated on boot
-- **Auth**: JWT bearer tokens, roles: `employee`, `lead`, `manager`, `admin`
-- **Monorepo**: `npm` workspaces, a single `npm install` pulls everything
+### 1. AI Issue Triage (`/ai/triage`)
+
+Input: a free-text title + description. Output:
+
+- **Severity** (`minor` / `major` / `critical`) with a numeric score
+- **Category** (Data Integrity, CSV, Pharmacovigilance, Audit Trail, Lab
+  Informatics, Training, General) — each category has its own curated CAPA
+  playbook
+- **Rationale** — every feature that fired (e.g. `+4.0 · Regulatory /
+  inspection exposure`, `+3.0 · Shared credentials`)
+- **Suggested CAPA** — 3 to 5 actions from the category's playbook
+- **Similar past cases** — cosine similarity over bag-of-words vectors of
+  your stored deviation / CAPA / audit findings / data review tasks
+
+Also embedded directly in the **task detail page** for any task of type
+`deviation`, `capa`, `audit_finding`, or `data_review`. Click *Run triage*
+and it persists on the task.
+
+Why this design (vs. calling an LLM)? For a regulated function, auditability
+beats mystique. Every score is traceable, reproducible, and testable — and it
+runs entirely on your server with no data leaving the environment.
+
+### 2. Deadline Risk Predictor (`/ai/risk`)
+
+For each open task, scores the probability of missing the due date using a
+logistic-regression-style model whose coefficients are **learned from your
+own historical completions**:
+
+- Feature vector: days-until-due, assignee's current open load, assignee's
+  historical miss-rate, priority (one-hot), GxP-critical flag, QA-signoff
+  flag, project's historical miss-rate, subtask-completion ratio.
+- Intercept: the org base miss-rate (logit).
+- Priority / GxP / QA-signoff coefficients are fit from the marginal
+  miss-rates in your history (shrinks to sensible priors when a bucket has
+  fewer than 3 samples).
+
+Output for each task: probability (0–1), label (low / medium / high), the
+per-feature contributions, and a contextual recommendation
+(*"Little progress and deadline in <5 days — add resources"*, etc.).
+
+The page groups scored tasks into High / Medium / Low buckets and lets the
+team lead filter by team or assignee.
 
 ---
 
-## 🚀 Quickstart (local dev)
+## 🚀 Quickstart
 
-Requirements: **Node.js 18+** and npm.
+Requirements: **Node.js 18+** (tested on 22) and **MongoDB** 6+ (local, Atlas,
+or via the bundled `docker-compose.yml`).
 
 ```bash
-# 1. install
+# 0) start MongoDB (pick one)
+#   a) docker:
+docker compose up -d mongo
+#   b) or local mongod:
+mongod --dbpath ./.mongo-data
+
+# 1) install
 npm install
 
-# 2. seed demo data (9 users, 3 teams, 5 pharma QA projects with templates,
-#    historic completions for the yearly view)
+# 2) copy env
+cp .env.example .env
+# edit .env if your mongo is elsewhere, e.g. mongodb+srv://... for Atlas
+
+# 3) seed demo data (10 users, 3 teams, 6 projects across 6 lifecycles,
+#    historic completions for the yearly view + a pre-seeded corpus for
+#    AI triage similarity)
 npm run seed
 
-# 3. run dev servers (API on :4000, client on :5173 with proxy)
+# 4) dev server on :3000
 npm run dev
 ```
 
-Open <http://localhost:5173> and sign in with any demo account (shown on the
-login screen), for example:
+Open <http://localhost:3000> and sign in with any demo account (shown on the
+login screen):
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | `admin@alembic.local` | `admin123` |
-| QA Head (manager) | `priya@alembic.local` | `priya123` |
-| CSV Lead | `rahul@alembic.local` | `rahul123` |
-| SOP Lead | `ananya@alembic.local` | `ananya123` |
-| QA Analyst | `karan@alembic.local` | `karan123` |
-| QA Analyst | `neha@alembic.local` | `neha123` |
-| CSV Engineer | `vikram@alembic.local` | `vikram123` |
-| Validation Specialist | `meera@alembic.local` | `meera123` |
-| QA Reviewer | `arjun@alembic.local` | `arjun123` |
+| Admin | `admin@qinformx.local` | `admin123` |
+| Head of Quality Informatics | `priya@qinformx.local` | `priya123` |
+| CSV Lead | `rahul@qinformx.local` | `rahul123` |
+| Data Integrity Lead | `ananya@qinformx.local` | `ananya123` |
+| Pharmacovigilance Lead | `dhruv@qinformx.local` | `dhruv123` |
+| QA Analyst | `karan@qinformx.local` | `karan123` |
+| PV Case Processor | `arjun@qinformx.local` | `arjun123` |
+| CSV Engineer | `vikram@qinformx.local` | `vikram123` |
+| Validation Specialist | `meera@qinformx.local` | `meera123` |
+| QA Analyst | `neha@qinformx.local` | `neha123` |
 
-## 🏭 Production build (single server)
+### Production build
 
 ```bash
-npm install
-npm run seed        # optional, only first time
-npm run build       # builds the React client into client/dist
-npm run start       # API + SPA fallback on :4000
+npm run build
+npm run start
 ```
 
-The Express server automatically serves `client/dist` when present, so a single
-Node process handles both the API and the UI.
+### Environment variables
 
-### Configuration
-
-Copy `server/.env.example` to `server/.env` and adjust:
-
-```
-PORT=4000
+```bash
+MONGODB_URI=mongodb://127.0.0.1:27017/qinformx
 JWT_SECRET=change-me-in-production
-DB_PATH=./data/micromacro.db
-CLIENT_ORIGIN=http://localhost:5173    # CORS allowlist for dev
+# Fallback for environments without a Mongo instance (dev only)
+USE_IN_MEMORY_MONGO=false
 ```
 
-## 🧬 Pharma QA lifecycles
+Using **MongoDB Atlas**? Just set `MONGODB_URI` to your `mongodb+srv://...`
+string. Nothing else changes.
 
-Each of these is a first-class template under `server/src/lifecycles.js`. When
-you create a project and pick a lifecycle, the matching phases and default
-tasks are created automatically, pre-flagged with GxP-critical and requires-QA-
+---
+
+## 🧬 Pharma lifecycle templates
+
+Each of these is a first-class template in `src/lib/lifecycles.ts`. When you
+create a project and pick a lifecycle, the matching phases and default tasks
+are created automatically, pre-flagged with GxP-critical and requires-QA-
 sign-off where appropriate.
 
-- **CSV / GAMP 5** — Planning & Risk · URS/FS/DS · Build · IQ/OQ/PQ · Release · Operational phase
+- **Computer System Validation (CSV / GAMP 5)** — Planning · URS/FS/DS · Build · IQ/OQ/PQ · Release · Periodic Review
 - **SOP** — Authoring · Review · Approval · Training · Periodic Review
 - **Deviation / CAPA** — Identification · RCA · CAPA definition · Execution & Closure
 - **Change Control** — Proposal · Impact assessment · Approval · Implementation · Verification
-- **Audit / Inspection** — Preparation · Execution · Findings & CAPA · Follow-up
+- **Audit / Inspection readiness** — Preparation · Execution · Findings & CAPA · Follow-up
 - **Process / Method Validation** — VMP · Protocol · Execution · Report
-- **Generic** — simple planning/execution/closure for non-pharma-specific work
+- **Data Integrity Assessment (ALCOA+)** — Scope & inventory · Control assessment · Gap remediation · Closure
+- **Pharmacovigilance Case Processing** — Intake · Triage · Coding & Narrative · QC & Medical Review · Submission
+- **Generic**
 
-Adding a new lifecycle is just a new entry in `LIFECYCLES` and it immediately
-becomes selectable in the UI.
+Adding a new lifecycle is just an entry in `LIFECYCLES` — it becomes
+selectable in the UI automatically.
+
+---
 
 ## 📡 API at a glance
 
-All endpoints under `/api`; all except `/auth/*` and `/health` require a
-`Authorization: Bearer <token>` header.
+All routes live under `/api/*` and use JWT cookies (or `Authorization:
+Bearer`). Full set:
 
 ```
 POST   /auth/register          { email, name, password, role?, title? }
 POST   /auth/login             { email, password }
+POST   /auth/logout
 GET    /auth/me
 
 GET    /users
-PATCH  /users/:id
+GET    /teams                  (manager/admin/lead create: POST)
+GET    /teams/:id              board: /teams/:id/board
+POST   /teams/:id/members       DELETE /teams/:id/members/:userId
 
-GET    /teams
-POST   /teams
-GET    /teams/:id
-POST   /teams/:id/members
-DELETE /teams/:id/members/:userId
-GET    /teams/:id/board
-GET    /analytics/team/:id/progress
+GET    /lifecycles             GET /lifecycles?key=csv
 
-GET    /lifecycles
-GET    /lifecycles/:key
-
-GET    /projects                (?team_id=&status=&lifecycle=&q=)
-POST   /projects
-GET    /projects/:id
-PATCH  /projects/:id
-DELETE /projects/:id
+GET    /projects                 (?teamId=&status=&lifecycle=&q=)
+POST   /projects                 (seeds phases + default tasks from template)
+GET/PATCH/DELETE /projects/:id
 
 POST   /tasks
-GET    /tasks/:id
-PATCH  /tasks/:id
-POST   /tasks/:id/signoff       (lead/manager/admin)
-DELETE /tasks/:id
+GET/PATCH/DELETE /tasks/:id
+POST   /tasks/:id/signoff        (lead / manager / admin only)
 POST   /tasks/:id/subtasks
+PATCH/DELETE /tasks/:id/subtasks/:subId
 POST   /tasks/:id/comments
-PATCH  /subtasks/:id
-DELETE /subtasks/:id
 
 GET    /me/tasks
 GET    /me/summary
 GET    /analytics/user/:id/year?year=YYYY
+GET    /analytics/team/:id/progress
 GET    /analytics/org/overview
+
+POST   /ai/triage                { title, description, taskId?, save? }
+GET    /ai/risk                  (?teamId=&userId=)
 ```
 
-## 🧪 What counts as a "big delivery" / "early completion"
-
-- **Big delivery** (yearly view): a completed task that is `gxp_critical` or
-  `requires_qa_signoff` or of type `approval` / `audit_finding`.
-- **Early completion**: any task or subtask closed before its `due_date`. The
-  **extra-effort score** is the sum of days saved (capped at 30 per item so
-  one very old completion doesn't dominate).
+---
 
 ## 🗂️ Project layout
 
 ```
 .
-├── server/                 Express API + SQLite
-│   ├── src/index.js        routes
-│   ├── src/db.js           schema + migrate
-│   ├── src/lifecycles.js   pharma QA templates
-│   ├── src/auth.js         JWT helpers
-│   └── src/seed.js         demo data
-├── client/                 React + Vite + Tailwind
-│   ├── src/pages/          route components
-│   ├── src/ui.jsx          shared UI primitives (tags, cards, avatars…)
-│   ├── src/api.js          fetch wrapper
-│   └── src/auth.jsx        React auth context
-└── package.json            workspaces
+├── src/
+│   ├── app/                       Next.js App Router
+│   │   ├── (authed)/              cookie-protected routes
+│   │   │   ├── page.tsx           My Dashboard
+│   │   │   ├── projects/…         list / detail / new
+│   │   │   ├── tasks/[id]/        task detail with AI triage panel
+│   │   │   ├── teams/…
+│   │   │   ├── yearly/…
+│   │   │   ├── org/               manager org overview
+│   │   │   └── ai/{triage,risk}/  AI pages
+│   │   ├── api/                   API routes
+│   │   └── login/
+│   ├── components/                AppShell, UI primitives
+│   ├── lib/
+│   │   ├── db.ts                  Mongoose connect (+ in-mem fallback)
+│   │   ├── auth.ts                JWT cookie helpers
+│   │   ├── lifecycles.ts          pharma lifecycle templates
+│   │   ├── serialize.ts           Mongo doc → JSON
+│   │   ├── http.ts                Zod validation + error helpers
+│   │   └── ai/
+│   │       ├── triage.ts          issue-triage classifier & similarity
+│   │       ├── risk.ts            deadline risk scorer + model trainer
+│   │       └── riskService.ts     batch scoring across Mongo
+│   └── models/                    Mongoose schemas
+├── scripts/seed.ts                demo data seeder
+├── docker-compose.yml             optional local Mongo
+└── README.md
 ```
 
-## 🔒 Security notes for production
+---
+
+## 🔒 Notes for production
 
 - Change `JWT_SECRET` in `.env`.
 - Put Nginx / Caddy in front for TLS.
-- The DB is a single file — back it up (`cp server/data/micromacro.db …`).
-- Optional hardening: add rate-limiting, move `activity_log` behind an archive,
-  and wire up SSO.
+- Use MongoDB Atlas or a replica set with daily backups. The DB holds
+  auditable QA records, so backup/restore drills are non-negotiable.
+- The AI triage model is deterministic; the risk model is re-trained at
+  request time from the live database, so no model artefact to version.
+- Every AI output ships with its explanation (features + contributions) —
+  keep them next to sign-off records.
 
-## 🗺️ Where to go next (stretch ideas)
+## 🛣️ What's intentionally not done yet
 
-- Email / Teams notifications on QA sign-off pending and overdue GxP-critical tasks
-- Electronic signature (Part 11) — password re-prompt on sign-off
-- Gantt view per project (dependency + critical path)
-- File attachments per task (evidence, validation protocols, etc.)
-- Periodic review scheduler (SOPs, CSV annual reviews) auto-creating projects
+- Electronic signature (21 CFR Part 11): password re-prompt on sign-off.
+- Email / MS-Teams notifications on overdue GxP-critical tasks.
+- File attachments on tasks (evidence, protocols).
+- Periodic-review scheduler that auto-creates annual review projects.
+- Optional LLM-based narrative generation for CAPA write-ups (kept off by
+  default to preserve explainability).
