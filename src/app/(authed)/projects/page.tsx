@@ -47,16 +47,25 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
           <p className="text-sm text-slate-500">
             Macro view of all quality projects across teams &amp; lifecycles.
           </p>
         </div>
-        <Link href="/projects/new" className="btn-primary">
-          + New project
-        </Link>
+        <div className="flex gap-2">
+          <a
+            href="/api/export/projects"
+            className="btn-secondary"
+            title="Download all projects as CSV"
+          >
+            ⤓ Export CSV
+          </a>
+          <Link href="/projects/new" className="btn-primary">
+            + New project
+          </Link>
+        </div>
       </div>
 
       <Card>

@@ -2,10 +2,41 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
-    ports:
-      - '27017:27017'
     volumes:
       - mongo-data:/data/db
+    # No exposed ports — the app talks to mongo over the internal network only.
+
+  app:
+    build: .
+    image: qinformx:latest
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      # Point the app at the internal mongo service
+      MONGODB_URI: mongodb://mongo:27017/qinformx
+      # IMPORTANT: change this in production -- rotate if ever leaked.
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-in-production}
+    ports:
+      - '${QINFORMX_PORT:-3000}:3000'
+
+  # Nightly MongoDB dump into ./backups. 14-day retention, owned by host.
+  # Runs mongodump at 02:00 every day via a tiny alpine+cron image.
+  backup:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    volumes:
+      - ./backups:/backups
+      - ./docker/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "apk add --no-cache mongodb-tools tzdata dcron &&
+       chmod +x /backup.sh &&
+       echo '0 2 * * * /backup.sh >> /var/log/backup.log 2>&1' > /etc/crontabs/root &&
+       touch /var/log/backup.log &&
+       crond -f -l 8 -L /var/log/cron.log"
 
 volumes:
   mongo-data:

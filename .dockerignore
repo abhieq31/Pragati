@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env*.local
+backups
+.mongo-data
+.mongo-logs
+.mongo-memory-data
+*.log
+coverage
+.DS_Store
+/opt
+Dockerfile
+docker-compose.yml
