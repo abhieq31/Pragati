@@ -36,6 +36,7 @@ export default function AppShell({
 
   const nav: Array<{ href: string; label: string; icon: any; badge?: string }> = [
     { href: '/', label: 'My Dashboard', icon: LayoutDashboard },
+    { href: '/reportings', label: 'My Reportings', icon: Users },
     { href: '/applications', label: 'Applications', icon: Boxes },
     { href: '/projects', label: 'Projects', icon: FolderKanban },
     { href: '/teams', label: 'Teams', icon: Users },
@@ -44,7 +45,10 @@ export default function AppShell({
     { href: '/ai/risk', label: 'Deadline Risk', icon: AlertTriangle, badge: 'ML' }
   ];
   if (user.role === 'manager' || user.role === 'admin') {
-    nav.splice(5, 0, { href: '/org', label: 'Org Overview', icon: PieChart });
+    nav.splice(6, 0, { href: '/org', label: 'Org Overview', icon: PieChart });
+  }
+  if (user.role === 'admin') {
+    nav.push({ href: '/admin/users', label: 'Admin · Users', icon: Users });
   }
 
   const isActive = (href: string) =>

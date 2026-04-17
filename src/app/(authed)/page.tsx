@@ -122,19 +122,36 @@ function TaskRow({
             </span>
           )}
         </div>
-        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+          {t.applicationKey && (
+            <>
+              <Link
+                href={`/applications/${t.applicationId}`}
+                className="hover:underline font-medium text-slate-600"
+              >
+                {t.applicationKey}
+              </Link>
+              <span className="text-slate-300">›</span>
+            </>
+          )}
           <Link href={`/projects/${t.projectId}`} className="hover:underline">
-            {t.projectCode} · {t.projectName}
+            {t.projectCode}
           </Link>
+          {t.phaseName && (
+            <>
+              <span className="text-slate-300">›</span>
+              <span>{t.phaseName}</span>
+            </>
+          )}
           {t.lifecycle && (
             <>
-              <span>·</span>
+              <span className="text-slate-300">·</span>
               <LifecycleTag lifecycle={t.lifecycle} />
             </>
           )}
           {subPct !== null && (
             <>
-              <span>·</span>
+              <span className="text-slate-300">·</span>
               <span>
                 {t.subtasksDone}/{t.subtaskCount} subtasks
               </span>

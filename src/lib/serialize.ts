@@ -16,7 +16,8 @@ export function u(user: any) {
     email: user.email,
     name: user.name,
     role: user.role,
-    title: user.title
+    title: user.title,
+    reportsToId: user.reportsToId ? id(user.reportsToId) : null
   };
 }
 

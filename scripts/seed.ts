@@ -100,6 +100,32 @@ async function main() {
   const users = await Promise.all(people.map(mkUser));
   const U = Object.fromEntries(users.map((u) => [u.email, u]));
 
+  // Reporting lines — Satya's team reports to him, LIMS team reports to Ravi.
+  // Satya reports directly to nobody (top of the tree in this slice).
+  console.log('[seed] setting reporting lines...');
+  const satyasReports = [
+    'karan@qinformx.local',
+    'neha@qinformx.local'
+  ];
+  const limsReports = ['vikram@qinformx.local', 'meera@qinformx.local'];
+  for (const email of satyasReports) {
+    await User.updateOne(
+      { _id: U[email]._id },
+      { $set: { reportsToId: U['satya@qinformx.local']._id } }
+    );
+  }
+  for (const email of limsReports) {
+    await User.updateOne(
+      { _id: U[email]._id },
+      { $set: { reportsToId: U['lims.dgm@qinformx.local']._id } }
+    );
+  }
+  // LIMS DGM reports to Satya (so Satya sees a nested hierarchy)
+  await User.updateOne(
+    { _id: U['lims.dgm@qinformx.local']._id },
+    { $set: { reportsToId: U['satya@qinformx.local']._id } }
+  );
+
   // --- Applications ---
   // The five business applications the team owns day to day.
   console.log('[seed] creating applications...');

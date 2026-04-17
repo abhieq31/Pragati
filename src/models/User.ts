@@ -10,7 +10,11 @@ const UserSchema = new Schema(
       enum: ['member', 'manager', 'admin'],
       default: 'member'
     },
-    title: { type: String, default: '' }
+    title: { type: String, default: '' },
+    // reportsToId makes an explicit manager-of chain so that the `/reportings`
+    // page can aggregate progress upward. Purely additive — nobody has to set
+    // it and the tool keeps working if it's not filled.
+    reportsToId: { type: Schema.Types.ObjectId, ref: 'User', default: null }
   },
   { timestamps: true }
 );
