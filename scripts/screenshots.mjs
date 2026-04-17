@@ -39,25 +39,56 @@ async function login(page, email, password) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 
-  console.log('Satya view');
+  await page.goto(`${BASE}/login`, { waitUntil: 'networkidle2' });
+  await waitForNetworkQuiet(page);
+  await shot(page, 'v1-01-login');
+
+  console.log('Satya (manager)');
   await login(page, 'satya@qinformx.local', 'satya123');
   await waitForNetworkQuiet(page, 800);
-  await shot(page, 'w2-01-dashboard-macro-trail');
+  await shot(page, 'v1-02-dashboard');
 
   await page.goto(`${BASE}/reportings`, { waitUntil: 'networkidle2' });
-  await waitForNetworkQuiet(page, 900);
-  await shot(page, 'w2-02-my-reportings');
+  await waitForNetworkQuiet(page, 800);
+  await shot(page, 'v1-03-my-reportings');
 
-  console.log('Admin view (users page)');
-  await page.evaluate(() => fetch('/api/auth/logout', { method: 'POST' }));
-  await login(page, 'admin@qinformx.local', 'admin123');
+  await page.goto(`${BASE}/applications`, { waitUntil: 'networkidle2' });
+  await waitForNetworkQuiet(page, 800);
+  await shot(page, 'v1-04-applications');
+
+  // LIMS bottleneck
+  const apps = await page.evaluate(async () => (await fetch('/api/applications')).json());
+  const lims = apps.find((a) => a.key === 'LIMS');
+  if (lims) {
+    await page.goto(`${BASE}/applications/${lims.id}`, { waitUntil: 'networkidle2' });
+    await waitForNetworkQuiet(page, 1200);
+    await shot(page, 'v1-05-lims-bottleneck');
+  }
+
+  await page.goto(`${BASE}/projects/new`, { waitUntil: 'networkidle2' });
   await waitForNetworkQuiet(page, 600);
-  await page.goto(`${BASE}/admin/users`, { waitUntil: 'networkidle2' });
-  await waitForNetworkQuiet(page, 700);
-  await shot(page, 'w2-03-admin-users');
+  await shot(page, 'v1-06-new-project-minimal');
+
+  await page.goto(`${BASE}/yearly`, { waitUntil: 'networkidle2' });
+  await waitForNetworkQuiet(page, 900);
+  await shot(page, 'v1-07-yearly');
+
+  await page.goto(`${BASE}/ai/risk`, { waitUntil: 'networkidle2' });
+  await waitForNetworkQuiet(page, 1200);
+  await shot(page, 'v1-08-ai-risk');
+
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle2' });
+  await waitForNetworkQuiet(page, 600);
+  await page.evaluate(() =>
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
+  );
+  await new Promise((r) => setTimeout(r, 300));
+  await page.keyboard.type('audit');
+  await new Promise((r) => setTimeout(r, 600));
+  await shot(page, 'v1-09-cmdk', { fullPage: false });
 
   await browser.close();
-  console.log('done');
+  console.log('✅ done');
 })().catch((e) => {
   console.error(e);
   process.exit(1);
