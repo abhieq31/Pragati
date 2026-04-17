@@ -16,6 +16,8 @@ const ProjectSchema = new Schema(
     lifecycle: {
       type: String,
       enum: [
+        'simple',
+        'software',
         'csv',
         'sop',
         'deviation_capa',
@@ -26,7 +28,7 @@ const ProjectSchema = new Schema(
         'pharmacovigilance',
         'generic'
       ],
-      default: 'generic'
+      default: 'simple'
     },
     status: {
       type: String,

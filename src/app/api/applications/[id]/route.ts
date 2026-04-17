@@ -19,6 +19,8 @@ const Patch = z.object({
   status: z.enum(['operational', 'under_implementation', 'under_upgrade', 'retired']).optional(),
   defaultLifecycle: z
     .enum([
+      'simple',
+      'software',
       'csv',
       'sop',
       'deviation_capa',

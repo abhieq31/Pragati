@@ -10,6 +10,84 @@ const STATUS_LABELS: Record<string, string> = {
   under_upgrade: 'Under upgrade',
   retired: 'Retired'
 };
+
+function AppMoreOptions({
+  form,
+  setForm,
+  users
+}: {
+  form: any;
+  setForm: (f: any) => void;
+  users: any[];
+}) {
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-sm text-brand-700 hover:underline mt-3"
+      >
+        + Add owner, vendor, description, default lifecycle
+      </button>
+    );
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <input
+        className="input"
+        placeholder="Vendor"
+        value={form.vendor}
+        onChange={(e) => setForm({ ...form, vendor: e.target.value })}
+      />
+      <select
+        className="select"
+        value={form.ownerId}
+        onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
+      >
+        <option value="">— Owner —</option>
+        {users.map((u: any) => (
+          <option key={u.id} value={u.id}>
+            {u.name}
+          </option>
+        ))}
+      </select>
+      <input
+        className="input md:col-span-2"
+        placeholder="Description"
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+      />
+      <select
+        className="select"
+        value={form.defaultLifecycle}
+        onChange={(e) => setForm({ ...form, defaultLifecycle: e.target.value })}
+      >
+        <option value="simple">Simple (Plan → Do → Done)</option>
+        <option value="software">Software Delivery</option>
+        <option value="csv">CSV / GAMP 5</option>
+        <option value="data_integrity">Data Integrity</option>
+        <option value="sop">SOP</option>
+        <option value="pharmacovigilance">Pharmacovigilance</option>
+        <option value="change_control">Change Control</option>
+        <option value="audit">Audit</option>
+        <option value="validation">Validation</option>
+        <option value="deviation_capa">Deviation / CAPA</option>
+        <option value="generic">Generic</option>
+      </select>
+      <select
+        className="select"
+        value={form.status}
+        onChange={(e) => setForm({ ...form, status: e.target.value })}
+      >
+        {Object.entries(STATUS_LABELS).map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 const STATUS_COLORS: Record<string, string> = {
   operational: 'bg-emerald-100 text-emerald-700',
   under_implementation: 'bg-blue-100 text-blue-700',
@@ -28,7 +106,7 @@ export default function ApplicationsPage() {
     vendor: '',
     description: '',
     ownerId: '',
-    defaultLifecycle: 'csv',
+    defaultLifecycle: 'simple',
     status: 'operational'
   });
 
@@ -61,7 +139,7 @@ export default function ApplicationsPage() {
       vendor: '',
       description: '',
       ownerId: '',
-      defaultLifecycle: 'csv',
+      defaultLifecycle: 'simple',
       status: 'operational'
     });
     setCreating(false);
@@ -86,72 +164,27 @@ export default function ApplicationsPage() {
 
       {creating && (
         <Card title="Add application">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <p className="text-xs text-slate-500 mb-3">
+            A short key and a display name are all that&apos;s required. Add the rest whenever you like.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input
               className="input"
-              placeholder="Key (e.g. LIMS)"
+              placeholder="Key *"
               value={form.key}
               onChange={(e) => setForm({ ...form, key: e.target.value.toUpperCase() })}
+              autoFocus
             />
             <input
-              className="input md:col-span-2"
-              placeholder="Display name"
+              className="input md:col-span-3"
+              placeholder="Display name *"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <input
-              className="input"
-              placeholder="Vendor (optional)"
-              value={form.vendor}
-              onChange={(e) => setForm({ ...form, vendor: e.target.value })}
-            />
-            <input
-              className="input md:col-span-2"
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-            <select
-              className="select"
-              value={form.ownerId}
-              onChange={(e) => setForm({ ...form, ownerId: e.target.value })}
-            >
-              <option value="">— Owner —</option>
-              {users.map((u: any) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="select"
-              value={form.defaultLifecycle}
-              onChange={(e) => setForm({ ...form, defaultLifecycle: e.target.value })}
-            >
-              <option value="csv">CSV / GAMP 5</option>
-              <option value="data_integrity">Data Integrity</option>
-              <option value="sop">SOP</option>
-              <option value="pharmacovigilance">Pharmacovigilance</option>
-              <option value="change_control">Change Control</option>
-              <option value="audit">Audit</option>
-              <option value="validation">Validation</option>
-              <option value="deviation_capa">Deviation / CAPA</option>
-              <option value="generic">Generic</option>
-            </select>
-            <select
-              className="select"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-            >
-              {Object.entries(STATUS_LABELS).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
           </div>
+          <AppMoreOptions form={form} setForm={setForm} users={users} />
           <div className="mt-3 flex gap-2">
-            <button className="btn-primary" onClick={create}>
+            <button className="btn-primary" onClick={create} disabled={!form.key || !form.name}>
               Create
             </button>
             <button className="btn-ghost" onClick={() => setCreating(false)}>

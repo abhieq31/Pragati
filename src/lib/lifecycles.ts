@@ -1,4 +1,6 @@
 export type LifecycleKey =
+  | 'simple'
+  | 'software'
   | 'csv'
   | 'sop'
   | 'deviation_capa'
@@ -37,6 +39,36 @@ export interface LifecycleTemplate {
 }
 
 export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
+  // Simple is the default for new projects. Three lightweight phases and no
+  // seeded tasks — so a fresh project is NOT a wall of 30 pre-filled tasks the
+  // user has to clean up. This is the entry point "every PM in the world"
+  // sees first; regulated templates sit one click away.
+  simple: {
+    label: 'Simple (Plan → Do → Done)',
+    description:
+      'Three-phase lightweight lifecycle for everyday projects. No seeded tasks — add the ones that matter, skip the ones that do not.',
+    regulatoryRefs: '',
+    phases: [
+      { name: 'Plan', tasks: [] },
+      { name: 'Do', tasks: [] },
+      { name: 'Done', tasks: [] }
+    ]
+  },
+
+  software: {
+    label: 'Software Delivery',
+    description:
+      'Generic software delivery flow — design, build, test, release, operate. Use when you want structure without regulatory overhead.',
+    regulatoryRefs: '',
+    phases: [
+      { name: 'Discovery', tasks: [] },
+      { name: 'Design', tasks: [] },
+      { name: 'Build', tasks: [] },
+      { name: 'Test', tasks: [] },
+      { name: 'Release & Operate', tasks: [] }
+    ]
+  },
+
   csv: {
     label: 'Computer System Validation (CSV / GAMP 5)',
     description:

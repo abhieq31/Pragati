@@ -22,6 +22,8 @@ export const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export const LIFECYCLE_LABELS: Record<string, string> = {
+  simple: 'Simple',
+  software: 'Software',
   csv: 'CSV',
   sop: 'SOP',
   deviation_capa: 'Deviation/CAPA',
@@ -34,6 +36,8 @@ export const LIFECYCLE_LABELS: Record<string, string> = {
 };
 
 export const LIFECYCLE_COLORS: Record<string, string> = {
+  simple: 'bg-slate-100 text-slate-700',
+  software: 'bg-blue-100 text-blue-700',
   csv: 'bg-indigo-100 text-indigo-700',
   sop: 'bg-emerald-100 text-emerald-700',
   deviation_capa: 'bg-red-100 text-red-700',

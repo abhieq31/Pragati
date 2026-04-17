@@ -10,9 +10,11 @@ import {
   PieChart,
   Sparkles,
   AlertTriangle,
-  Boxes
+  Boxes,
+  Search
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import CommandPalette from './CommandPalette';
 
 export interface CurrentUser {
   id: string;
@@ -56,6 +58,7 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen flex bg-slate-50">
+      <CommandPalette />
       <aside className="w-60 shrink-0 bg-slate-900 text-slate-100 flex flex-col sticky top-0 h-screen">
         <div className="px-5 py-4 border-b border-slate-800">
           <Link href="/" className="flex items-center gap-2">
@@ -70,6 +73,21 @@ export default function AppShell({
             </div>
           </Link>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            window.dispatchEvent(
+              new KeyboardEvent('keydown', { key: 'k', metaKey: true })
+            );
+          }}
+          className="mx-3 mt-3 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+        >
+          <Search size={12} />
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="text-[10px] bg-slate-900 border border-slate-700 px-1 py-0.5 rounded">
+            ⌘K
+          </kbd>
+        </button>
         <nav className="flex-1 p-3 space-y-1 overflow-auto">
           {nav.map((n) => {
             const Icon = n.icon;

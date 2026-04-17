@@ -17,17 +17,21 @@ const Create = z.object({
   name: z.string().min(1),
   code: z.string().optional(),
   description: z.string().optional(),
-  lifecycle: z.enum([
-    'csv',
-    'sop',
-    'deviation_capa',
-    'change_control',
-    'audit',
-    'validation',
-    'data_integrity',
-    'pharmacovigilance',
-    'generic'
-  ]).default('generic'),
+  lifecycle: z
+    .enum([
+      'simple',
+      'software',
+      'csv',
+      'sop',
+      'deviation_capa',
+      'change_control',
+      'audit',
+      'validation',
+      'data_integrity',
+      'pharmacovigilance',
+      'generic'
+    ])
+    .default('simple'),
   priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   applicationId: z.string().optional(),
   teamId: z.string().optional(),

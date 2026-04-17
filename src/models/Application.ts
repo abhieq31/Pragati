@@ -26,6 +26,8 @@ const ApplicationSchema = new Schema(
     defaultLifecycle: {
       type: String,
       enum: [
+        'simple',
+        'software',
         'csv',
         'sop',
         'deviation_capa',
@@ -36,7 +38,7 @@ const ApplicationSchema = new Schema(
         'pharmacovigilance',
         'generic'
       ],
-      default: 'csv'
+      default: 'simple'
     },
     // regulatory/business impact tags -- used for dashboards and priority hints
     gxp: { type: Boolean, default: true },
