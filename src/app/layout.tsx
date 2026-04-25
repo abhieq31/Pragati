@@ -2,9 +2,17 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'QInformX — Quality Informatics Project Manager',
+  title: {
+    default: 'QInformX',
+    template: '%s · QInformX'
+  },
   description:
-    'A project and task management platform for pharma quality informatics teams, with AI-assisted triage and deadline risk prediction.'
+    'A self-hosted project & task management platform for quality-driven teams. Built for pharma QA, open to everyone.',
+  icons: {
+    icon: '/icon.png',
+    apple: '/apple-icon.png',
+    shortcut: '/icon.png'
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
