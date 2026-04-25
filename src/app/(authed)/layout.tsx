@@ -12,7 +12,7 @@ export default async function AuthedLayout({ children }: { children: React.React
         name: user.name,
         email: user.email,
         role: user.role,
-        title: ''
+        title: user.title || ''
       }}
     >
       {children}

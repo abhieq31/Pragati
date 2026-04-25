@@ -9,7 +9,6 @@ async function resolveUri(): Promise<string> {
   if (uri) return uri;
 
   if (process.env.USE_IN_MEMORY_MONGO === 'true') {
-    // Lazy load so it is only ever loaded in dev / CI.
     const { MongoMemoryServer } = await import('mongodb-memory-server');
     const g = global as any;
     if (!g.__mongoMemoryServer) {
@@ -32,5 +31,11 @@ export async function connectDB(): Promise<typeof mongoose> {
     );
   }
   cached.conn = await cached.promise;
+
+  if (process.env.USE_IN_MEMORY_MONGO === 'true') {
+    const { devSeed } = await import('@/lib/devSeed');
+    await devSeed();
+  }
+
   return cached.conn;
 }

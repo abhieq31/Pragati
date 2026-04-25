@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ['mongoose', 'mongodb-memory-server'],
+  experimental: {
+    serverComponentsExternalPackages: ['mongoose', 'mongodb-memory-server']
+  },
   eslint: {
     ignoreDuringBuilds: true
   }

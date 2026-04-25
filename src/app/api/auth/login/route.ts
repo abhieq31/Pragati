@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
       sub: String(user._id),
       email: user.email,
       role: user.role as any,
-      name: user.name
+      name: user.name,
+      title: user.title || ''
     });
 
     const res = NextResponse.json({ token, user: u(user) });

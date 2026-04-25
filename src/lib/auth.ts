@@ -9,6 +9,7 @@ export interface JwtPayload {
   email: string;
   role: 'employee' | 'lead' | 'manager' | 'admin';
   name: string;
+  title?: string;
 }
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
