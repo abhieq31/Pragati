@@ -120,12 +120,22 @@ export function Card({
   );
 }
 
-export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+export function EmptyState({ title, hint, principle }: {
+  title: string;
+  hint?: string;
+  /** Optional ALP principle name to show as a micro-label */
+  principle?: string;
+}) {
   return (
     <div className="text-center py-12 text-slate-400">
-      <div className="text-2xl mb-2">◈</div>
+      <div className="text-2xl mb-2 opacity-40">◈</div>
       <div className="text-sm font-semibold text-slate-500">{title}</div>
-      {hint && <div className="text-xs mt-1 text-slate-400">{hint}</div>}
+      {hint && <div className="text-xs mt-1.5 text-slate-400 max-w-xs mx-auto leading-relaxed">{hint}</div>}
+      {principle && (
+        <div className="mt-3 text-[10px] uppercase tracking-widest text-brand-400/60 font-bold">
+          {principle}
+        </div>
+      )}
     </div>
   );
 }
