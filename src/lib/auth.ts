@@ -61,7 +61,12 @@ export async function getCurrentUserFromCookie(): Promise<JwtPayload | null> {
   const token = cookies().get(COOKIE)?.value;
   if (!token) return null;
   try {
-    return verifyToken(token);
+    const payload = verifyToken(token);
+    // Verify the user still exists in the DB — catches in-memory resets and deleted accounts
+    await connectDB();
+    const exists = await User.exists({ _id: payload.sub });
+    if (!exists) return null;
+    return payload;
   } catch {
     return null;
   }
