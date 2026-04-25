@@ -65,9 +65,9 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
           <Link href="/" className="flex items-center gap-3">
             <AlembicChevron size={30} />
             <div>
-              <div className="font-bold text-white text-base tracking-tight leading-tight">QInformX</div>
+              <div className="font-bold text-white text-base tracking-tight leading-tight">Pragati</div>
               <div className="text-[10px] text-blue-200/80 uppercase tracking-widest leading-tight mt-0.5">
-                Alembic Digital · QI
+                Alembic Digital
               </div>
             </div>
           </Link>

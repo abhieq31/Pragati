@@ -1,5 +1,5 @@
 /**
- * Amazon Leadership Principles — embedded as living philosophy throughout QInformX.
+ * Amazon Leadership Principles — embedded as living philosophy throughout Pragati.
  *
  * These are not decorations. They inform how we assign work, measure quality,
  * celebrate wins, and flag risks. Each principle has:

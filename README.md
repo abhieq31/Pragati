@@ -1,4 +1,4 @@
-# QInformX
+# Pragati
 
 **A self-hosted project & task management platform for quality-driven teams.**
 
@@ -13,7 +13,7 @@ Built for pharmaceutical Quality Informatics, but designed to be forked by any t
 
 Most PM tools are built for software teams. They do not understand GxP, CAPA, validation lifecycles, or the difference between a deviation and a change control. They do not understand that "done" in pharma means signed off, not just checked.
 
-QInformX was built by a Quality Informatics team who needed a tool that spoke their language — and felt personal enough that people would actually use it.
+Pragati was built by a Quality Informatics team who needed a tool that spoke their language — and felt personal enough that people would actually use it.
 
 It ships with:
 
@@ -51,7 +51,7 @@ The AI features are deliberately simple and explainable — logistic-style score
 
 ### The personal layer
 
-A PM tool that feels institutional will be used institutionally — reluctantly, minimally. QInformX tries to feel like it was made by the team, for the team:
+A PM tool that feels institutional will be used institutionally — reluctantly, minimally. Pragati tries to feel like it was made by the team, for the team:
 
 - It greets you in Gujarati on Mondays and Fridays if your name suggests you might appreciate it
 - It says "Shabash!" when you close a task early, "Wah-wah!" for GxP completions
@@ -93,7 +93,7 @@ On first run with `USE_IN_MEMORY_MONGO=true`, the app seeds a demo QI team autom
 
 ```bash
 # Required in production
-MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/qinformx
+MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/pragati
 JWT_SECRET=<long-random-string>   # openssl rand -base64 48
 
 # Development only — in-memory MongoDB with auto-seed

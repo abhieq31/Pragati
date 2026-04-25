@@ -36,16 +36,16 @@ async function main() {
 
   console.log('[seed] creating users...');
   const people = [
-    { email: 'admin@qinformx.local', name: 'Admin', role: 'admin', title: 'Admin', pw: 'admin123' },
-    { email: 'priya@qinformx.local', name: 'Priya Shah', role: 'manager', title: 'Head of Quality Informatics', pw: 'priya123' },
-    { email: 'rahul@qinformx.local', name: 'Rahul Mehta', role: 'lead', title: 'CSV Lead', pw: 'rahul123' },
-    { email: 'ananya@qinformx.local', name: 'Ananya Iyer', role: 'lead', title: 'Data Integrity Lead', pw: 'ananya123' },
-    { email: 'dhruv@qinformx.local', name: 'Dhruv Kapoor', role: 'lead', title: 'Pharmacovigilance Lead', pw: 'dhruv123' },
-    { email: 'karan@qinformx.local', name: 'Karan Desai', role: 'employee', title: 'QA Analyst', pw: 'karan123' },
-    { email: 'neha@qinformx.local', name: 'Neha Patel', role: 'employee', title: 'QA Analyst', pw: 'neha123' },
-    { email: 'vikram@qinformx.local', name: 'Vikram Joshi', role: 'employee', title: 'CSV Engineer', pw: 'vikram123' },
-    { email: 'meera@qinformx.local', name: 'Meera Kulkarni', role: 'employee', title: 'Validation Specialist', pw: 'meera123' },
-    { email: 'arjun@qinformx.local', name: 'Arjun Reddy', role: 'employee', title: 'PV Case Processor', pw: 'arjun123' }
+    { email: 'admin@pragati.local', name: 'Admin', role: 'admin', title: 'Admin', pw: 'admin123' },
+    { email: 'priya@pragati.local', name: 'Priya Shah', role: 'manager', title: 'Head of Quality Informatics', pw: 'priya123' },
+    { email: 'rahul@pragati.local', name: 'Rahul Mehta', role: 'lead', title: 'CSV Lead', pw: 'rahul123' },
+    { email: 'ananya@pragati.local', name: 'Ananya Iyer', role: 'lead', title: 'Data Integrity Lead', pw: 'ananya123' },
+    { email: 'dhruv@pragati.local', name: 'Dhruv Kapoor', role: 'lead', title: 'Pharmacovigilance Lead', pw: 'dhruv123' },
+    { email: 'karan@pragati.local', name: 'Karan Desai', role: 'employee', title: 'QA Analyst', pw: 'karan123' },
+    { email: 'neha@pragati.local', name: 'Neha Patel', role: 'employee', title: 'QA Analyst', pw: 'neha123' },
+    { email: 'vikram@pragati.local', name: 'Vikram Joshi', role: 'employee', title: 'CSV Engineer', pw: 'vikram123' },
+    { email: 'meera@pragati.local', name: 'Meera Kulkarni', role: 'employee', title: 'Validation Specialist', pw: 'meera123' },
+    { email: 'arjun@pragati.local', name: 'Arjun Reddy', role: 'employee', title: 'PV Case Processor', pw: 'arjun123' }
   ];
   const users = await Promise.all(people.map(mkUser));
   const U = Object.fromEntries(users.map((u) => [u.email, u]));
@@ -55,22 +55,22 @@ async function main() {
     {
       name: 'Computerized System Validation',
       description: 'CSV / GAMP 5 lifecycle for GxP computerized systems.',
-      lead: 'rahul@qinformx.local',
-      members: ['rahul@qinformx.local', 'vikram@qinformx.local', 'meera@qinformx.local', 'karan@qinformx.local'],
+      lead: 'rahul@pragati.local',
+      members: ['rahul@pragati.local', 'vikram@pragati.local', 'meera@pragati.local', 'karan@pragati.local'],
       function: 'csv_validation'
     },
     {
       name: 'Data Integrity & Audit',
       description: 'ALCOA+ assessments, audit trail reviews, inspection readiness.',
-      lead: 'ananya@qinformx.local',
-      members: ['ananya@qinformx.local', 'neha@qinformx.local', 'arjun@qinformx.local', 'karan@qinformx.local'],
+      lead: 'ananya@pragati.local',
+      members: ['ananya@pragati.local', 'neha@pragati.local', 'arjun@pragati.local', 'karan@pragati.local'],
       function: 'data_integrity'
     },
     {
       name: 'Pharmacovigilance Informatics',
       description: 'ICSR intake, E2B submissions, safety system operations.',
-      lead: 'dhruv@qinformx.local',
-      members: ['dhruv@qinformx.local', 'arjun@qinformx.local', 'neha@qinformx.local'],
+      lead: 'dhruv@pragati.local',
+      members: ['dhruv@pragati.local', 'arjun@pragati.local', 'neha@pragati.local'],
       function: 'pharmacovigilance'
     }
   ];
@@ -161,7 +161,7 @@ async function main() {
     code: 'CSV-2026-001',
     lifecycle: 'csv',
     teamName: 'Computerized System Validation',
-    ownerEmail: 'rahul@qinformx.local',
+    ownerEmail: 'rahul@pragati.local',
     start: -40,
     due: 30
   });
@@ -170,7 +170,7 @@ async function main() {
     code: 'DI-2026-004',
     lifecycle: 'data_integrity',
     teamName: 'Data Integrity & Audit',
-    ownerEmail: 'ananya@qinformx.local',
+    ownerEmail: 'ananya@pragati.local',
     start: -25,
     due: 40
   });
@@ -179,7 +179,7 @@ async function main() {
     code: 'AUD-2026-002',
     lifecycle: 'audit',
     teamName: 'Data Integrity & Audit',
-    ownerEmail: 'ananya@qinformx.local',
+    ownerEmail: 'ananya@pragati.local',
     start: -15,
     due: 25,
     priority: 'critical'
@@ -189,7 +189,7 @@ async function main() {
     code: 'DEV-2026-007',
     lifecycle: 'deviation_capa',
     teamName: 'Data Integrity & Audit',
-    ownerEmail: 'ananya@qinformx.local',
+    ownerEmail: 'ananya@pragati.local',
     start: -10,
     due: 18,
     priority: 'critical'
@@ -199,7 +199,7 @@ async function main() {
     code: 'CC-2026-003',
     lifecycle: 'change_control',
     teamName: 'Computerized System Validation',
-    ownerEmail: 'rahul@qinformx.local',
+    ownerEmail: 'rahul@pragati.local',
     start: -5,
     due: 45
   });
@@ -208,7 +208,7 @@ async function main() {
     code: 'PV-2026-001',
     lifecycle: 'pharmacovigilance',
     teamName: 'Pharmacovigilance Informatics',
-    ownerEmail: 'dhruv@qinformx.local',
+    ownerEmail: 'dhruv@pragati.local',
     start: -12,
     due: 32
   });
@@ -254,14 +254,14 @@ async function main() {
         status: 'done',
         dueDate: iso(2),
         completedAt: iso(-1),
-        assigneeId: U['karan@qinformx.local']._id,
+        assigneeId: U['karan@pragati.local']._id,
         position: 0
       });
       (dt as any).subtasks.push({
         title: 'Interview impacted analysts',
         status: 'todo',
         dueDate: iso(4),
-        assigneeId: U['neha@qinformx.local']._id,
+        assigneeId: U['neha@pragati.local']._id,
         position: 1
       });
       await dt.save();
@@ -310,11 +310,11 @@ async function main() {
       });
     }
   };
-  await historyFor('karan@qinformx.local', [1, 2, 3, 5, 7, 9, 10]);
-  await historyFor('neha@qinformx.local', [2, 4, 6, 8, 11]);
-  await historyFor('vikram@qinformx.local', [1, 3, 4, 6, 9]);
-  await historyFor('meera@qinformx.local', [2, 3, 5, 7, 10]);
-  await historyFor('arjun@qinformx.local', [1, 2, 4, 5, 8]);
+  await historyFor('karan@pragati.local', [1, 2, 3, 5, 7, 9, 10]);
+  await historyFor('neha@pragati.local', [2, 4, 6, 8, 11]);
+  await historyFor('vikram@pragati.local', [1, 3, 4, 6, 9]);
+  await historyFor('meera@pragati.local', [2, 3, 5, 7, 10]);
+  await historyFor('arjun@pragati.local', [1, 2, 4, 5, 8]);
 
   console.log('[seed] done. Login with:');
   for (const p of people) console.log(`  ${p.email}  /  ${p.pw}`);

@@ -1,5 +1,5 @@
 /**
- * Cultural layer — small details that make QInformX feel personal.
+ * Cultural layer — small details that make Pragati feel personal.
  *
  * Greetings cycle through languages the Alembic QI team speaks.
  * Seasonal awareness acknowledges the Indian calendar.

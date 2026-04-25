@@ -13,7 +13,7 @@ export interface JwtPayload {
 }
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-const COOKIE = 'qx_token';
+const COOKIE = 'pragati_token';
 
 export function signToken(payload: JwtPayload): string {
   return jwt.sign(payload, SECRET, { expiresIn: '7d' });

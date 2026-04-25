@@ -247,7 +247,7 @@ export default function LoginPage() {
             <p className="mt-5 text-sm text-center text-slate-500">
               {mode === 'login' ? (
                 <>
-                  New to QInformX?{' '}
+                  New to Pragati?{' '}
                   <button className="text-brand-600 font-semibold hover:underline" onClick={() => setMode('register')}>
                     Create an account
                   </button>

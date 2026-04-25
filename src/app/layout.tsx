@@ -3,8 +3,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: 'QInformX',
-    template: '%s · QInformX'
+    default: 'Pragati',
+    template: '%s · Pragati'
   },
   description:
     'A self-hosted project & task management platform for quality-driven teams. Built for pharma QA, open to everyone.',

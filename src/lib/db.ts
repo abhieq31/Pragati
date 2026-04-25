@@ -13,7 +13,7 @@ async function resolveUri(): Promise<string> {
     const g = global as any;
     if (!g.__mongoMemoryServer) {
       g.__mongoMemoryServer = await MongoMemoryServer.create({
-        instance: { dbName: 'qinformx' }
+        instance: { dbName: 'pragati' }
       });
       console.log(`[db] in-memory Mongo @ ${g.__mongoMemoryServer.getUri()}`);
     }

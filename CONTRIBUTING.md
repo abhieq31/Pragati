@@ -1,4 +1,4 @@
-# Contributing to QInformX
+# Contributing to Pragati
 
 Thank you for considering a contribution. This project exists because someone cared enough to build the tool their team actually needed. If you are reading this, you probably have the same instinct.
 
