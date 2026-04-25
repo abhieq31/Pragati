@@ -87,9 +87,9 @@ export function LifecycleTag({ lifecycle }: { lifecycle?: string | null }) {
 export function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className={`w-full bg-slate-200 rounded-full h-2 ${className}`}>
+    <div className={`w-full bg-blue-100 rounded-full h-2 ${className}`}>
       <div
-        className="bg-brand-500 h-2 rounded-full transition-all"
+        className="progress-bar-fill h-2 rounded-full transition-all duration-500"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -110,8 +110,8 @@ export function Card({
   return (
     <div className={`card p-4 ${className}`}>
       {(title || action) && (
-        <div className="flex items-center justify-between mb-3">
-          {title && <h3 className="font-semibold text-slate-800">{title}</h3>}
+        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-blue-50">
+          {title && <h3 className="font-bold text-brand-800 text-sm tracking-tight">{title}</h3>}
           {action}
         </div>
       )}
@@ -122,9 +122,10 @@ export function Card({
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="text-center py-10 text-slate-500">
-      <div className="text-sm font-medium">{title}</div>
-      {hint && <div className="text-xs mt-1">{hint}</div>}
+    <div className="text-center py-12 text-slate-400">
+      <div className="text-2xl mb-2">◈</div>
+      <div className="text-sm font-semibold text-slate-500">{title}</div>
+      {hint && <div className="text-xs mt-1 text-slate-400">{hint}</div>}
     </div>
   );
 }
@@ -152,8 +153,11 @@ export function Avatar({ name, size = 28 }: { name?: string | null; size?: numbe
     .toUpperCase();
   return (
     <div
-      className="rounded-full bg-brand-100 text-brand-700 font-semibold flex items-center justify-center"
-      style={{ width: size, height: size, fontSize: size * 0.42 }}
+      className="rounded-full font-bold flex items-center justify-center text-white shrink-0"
+      style={{
+        width: size, height: size, fontSize: size * 0.38,
+        background: 'linear-gradient(135deg, #1565C0, #1E88E5)'
+      }}
       title={name || ''}
     >
       {initials}

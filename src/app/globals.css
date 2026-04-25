@@ -9,35 +9,82 @@
 body {
   @apply text-slate-800 antialiased;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #F0F4FA;
 }
 
 @layer components {
+  /* ── Buttons ──────────────────────────────────────────────────────────── */
   .btn {
-    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition;
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 shadow-brand;
+    background-image: linear-gradient(135deg, #1565C0 0%, #1152A8 100%);
+  }
+  .btn-primary:hover {
+    background-image: linear-gradient(135deg, #1152A8 0%, #0D47A1 100%);
   }
   .btn-secondary {
-    @apply btn bg-white border border-slate-300 text-slate-700 hover:bg-slate-50;
+    @apply btn bg-white border border-brand-200 text-brand-700 hover:bg-brand-50;
   }
   .btn-ghost {
     @apply btn text-slate-600 hover:bg-slate-100;
   }
+  .btn-success {
+    @apply btn text-white shadow-forest;
+    background-image: linear-gradient(135deg, #43A047 0%, #388E3C 100%);
+  }
+
+  /* ── Inputs ───────────────────────────────────────────────────────────── */
   .input, .select, .textarea {
-    @apply w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white;
+    @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-sm transition-all duration-150;
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-500 bg-white;
+    box-shadow: 0 1px 2px rgba(13, 71, 161, 0.06);
   }
+
+  /* ── Cards ────────────────────────────────────────────────────────────── */
   .card {
-    @apply bg-white border border-slate-200 rounded-lg shadow-sm;
+    @apply bg-white rounded-xl border border-blue-100;
+    box-shadow: 0 1px 3px rgba(13,71,161,0.08), 0 1px 2px rgba(13,71,161,0.04);
   }
+  .card-accent {
+    @apply card border-l-4 border-l-brand-500;
+  }
+  .card-success {
+    @apply card border-l-4 border-l-forest-500;
+  }
+  .card-header {
+    background: linear-gradient(135deg, #1565C0 0%, #1E88E5 100%);
+    @apply text-white rounded-t-xl px-4 py-3;
+  }
+
+  /* ── Tags ─────────────────────────────────────────────────────────────── */
   .tag {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
   }
+
+  /* ── Labels ───────────────────────────────────────────────────────────── */
   .label {
-    @apply block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1;
+    @apply block text-xs font-semibold uppercase tracking-wide text-brand-700 mb-1;
+  }
+
+  /* ── Section headings ─────────────────────────────────────────────────── */
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-widest text-brand-600/60 mb-2;
   }
 }
 
+/* ── Alembic Digital chevron logo ─────────────────────────────────────────── */
+.alembic-chevron {
+  display: inline-block;
+}
+
+/* ── Progress bar gradient ────────────────────────────────────────────────── */
+.progress-bar-fill {
+  background: linear-gradient(90deg, #1565C0 0%, #43A047 100%);
+}
+
+/* ── Celebration animations ───────────────────────────────────────────────── */
 @keyframes confetti-fall {
   0%   { transform: translateY(0) rotateZ(0deg); opacity: 1; }
   80%  { opacity: 1; }
@@ -48,4 +95,21 @@ body {
   0%   { transform: scale(0.6) translateY(16px); opacity: 0; }
   65%  { transform: scale(1.06) translateY(-4px); opacity: 1; }
   100% { transform: scale(1) translateY(0);       opacity: 1; }
+}
+
+/* ── Shimmer for loading skeletons ───────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Decorative chevron watermark (used in sidebar) ──────────────────────── */
+.chevron-watermark {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255,255,255,0.03) 0px,
+    rgba(255,255,255,0.03) 1px,
+    transparent 1px,
+    transparent 12px
+  );
 }

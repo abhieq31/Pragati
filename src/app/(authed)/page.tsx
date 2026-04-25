@@ -241,13 +241,13 @@ export default function DashboardPage() {
           { label: 'Overdue', value: summary?.overdue ?? 0, tone: summary?.overdue ? 'bad' : 'default', sub: 'needs attention' },
           { label: 'Done', value: summary?.completed ?? 0, tone: 'good', sub: `${summary?.completionRate ?? 0}% completion` }
         ].map(({ label, value, sub, tone = 'default' }) => (
-          <div key={label} className="card p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-            <div className={`text-3xl font-bold mt-1 ${
+          <div key={label} className="card p-4 border-t-2 border-t-brand-500/20">
+            <div className="text-[11px] font-bold uppercase tracking-widest text-brand-600/60">{label}</div>
+            <div className={`text-3xl font-black mt-1 ${
               tone === 'warn' ? 'text-amber-500' :
               tone === 'bad' && value ? 'text-red-600' :
-              tone === 'good' ? 'text-emerald-600' :
-              'text-slate-900'
+              tone === 'good' ? 'text-forest-600' :
+              'text-brand-700'
             }`}>
               {value}
             </div>

@@ -5,18 +5,42 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Alembic Digital blue — matches the logo "Alembic" & "DIGITAL" text
         brand: {
-          50: '#eef4ff',
-          100: '#d9e5ff',
-          200: '#b4c7ff',
-          300: '#84a1ff',
-          400: '#5b7cfb',
-          500: '#3a56f2',
-          600: '#2a3ede',
-          700: '#2230b2',
-          800: '#1f2b8f',
-          900: '#1b2570'
+          50:  '#E3F2FD',
+          100: '#BBDEFB',
+          200: '#90CAF9',
+          300: '#64B5F6',
+          400: '#42A5F5',
+          500: '#1E88E5',   // chevron bright blue
+          600: '#1565C0',   // core Alembic blue (logo text)
+          700: '#1152A8',
+          800: '#0D47A1',   // dark navy
+          900: '#0A3480',   // sidebar deep navy
+        },
+        // Alembic progress green — matches the green chevron & "Touching Lives" text
+        forest: {
+          50:  '#E8F5E9',
+          100: '#C8E6C9',
+          200: '#A5D6A7',
+          300: '#81C784',
+          400: '#66BB6A',
+          500: '#43A047',   // core Alembic green
+          600: '#388E3C',
+          700: '#2E7D32',
+          800: '#1B5E20',
+          900: '#1A4A1F',
         }
+      },
+      backgroundImage: {
+        'alembic-gradient': 'linear-gradient(135deg, #0A3480 0%, #1565C0 60%, #1E88E5 100%)',
+        'progress-gradient': 'linear-gradient(90deg, #1565C0, #43A047)',
+        'chevron-gradient': 'linear-gradient(135deg, #1565C0 0%, #0D47A1 100%)',
+      },
+      boxShadow: {
+        'brand':  '0 4px 14px 0 rgba(21, 101, 192, 0.25)',
+        'forest': '0 4px 14px 0 rgba(67, 160, 71, 0.20)',
+        'card':   '0 1px 3px 0 rgba(13, 71, 161, 0.08), 0 1px 2px -1px rgba(13,71,161,0.04)',
       }
     }
   },
