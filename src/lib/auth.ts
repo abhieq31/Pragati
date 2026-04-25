@@ -7,7 +7,7 @@ import { User } from '@/models/User';
 export interface JwtPayload {
   sub: string;
   email: string;
-  role: 'employee' | 'lead' | 'manager' | 'admin';
+  role: 'employee' | 'pm';
   name: string;
   title?: string;
 }

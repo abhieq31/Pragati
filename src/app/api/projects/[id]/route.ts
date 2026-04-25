@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireRole(req, 'manager', 'admin', 'lead');
+    const { error } = await requireRole(req, 'pm');
     if (error) return error;
     await connectDB();
     await Task.deleteMany({ projectId: params.id });

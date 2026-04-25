@@ -7,7 +7,7 @@ const UserSchema = new Schema(
     passwordHash: { type: String, required: true },
     role: {
       type: String,
-      enum: ['employee', 'lead', 'manager', 'admin'],
+      enum: ['employee', 'pm'],
       default: 'employee'
     },
     title: { type: String, default: '' }
