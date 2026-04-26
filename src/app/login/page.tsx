@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { AlembicLogo } from '@/components/AlembicLogo';
 import { CheckCircle2 } from 'lucide-react';
 
 const FEATURES = [
@@ -92,12 +91,9 @@ export default function LoginPage() {
 
         {/* Top: branding */}
         <div className="relative flex items-center gap-3">
-          <AlembicLogo width={28} />
-          <div>
-            <div className="text-white font-bold text-sm tracking-tight leading-tight">Alembic Digital</div>
-            <div style={{ fontSize: 9, letterSpacing: '0.16em' }} className="text-white/30 uppercase mt-0.5">
-              Touching Lives over 100 years
-            </div>
+          <div style={{ background: '#fff', borderRadius: 8, padding: '5px 10px', display: 'inline-flex', alignItems: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-full.png" alt="Alembic Digital" style={{ height: 30, width: 'auto', display: 'block' }} />
           </div>
         </div>
 
