@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
@@ -12,8 +12,230 @@ import {
   TaskLink,
   formatDate
 } from '@/components/ui';
+import { GripVertical } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
+
+const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  todo:        { label: 'To Do',       color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  in_progress: { label: 'In Progress', color: '#1565C0', bg: '#eff6ff', border: '#bfdbfe' },
+  review:      { label: 'Review',      color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  blocked:     { label: 'Blocked',     color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  done:        { label: 'Done',        color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+};
+
+/* ── Kanban board with HTML5 drag-and-drop ─────────────────────────────── */
+function KanbanBoard({ tasks, onMove }: {
+  tasks: any[];
+  onMove: (taskId: string, status: string) => void;
+}) {
+  const [localTasks, setLocalTasks] = useState<any[]>(tasks);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const dragCounter = useRef<Record<string, number>>({});
+
+  useEffect(() => { setLocalTasks(tasks); }, [tasks]);
+
+  function handleDragStart(e: React.DragEvent, taskId: string) {
+    setDraggingId(taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', taskId);
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDragOverCol(null);
+    dragCounter.current = {};
+  }
+
+  function handleColDragEnter(e: React.DragEvent, col: string) {
+    e.preventDefault();
+    dragCounter.current[col] = (dragCounter.current[col] || 0) + 1;
+    setDragOverCol(col);
+  }
+
+  function handleColDragLeave(e: React.DragEvent, col: string) {
+    dragCounter.current[col] = (dragCounter.current[col] || 0) - 1;
+    if (dragCounter.current[col] <= 0) {
+      dragCounter.current[col] = 0;
+      if (dragOverCol === col) setDragOverCol(null);
+    }
+  }
+
+  function handleColDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  function handleDrop(e: React.DragEvent, toStatus: string) {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (!taskId) return;
+    const task = localTasks.find(t => t.id === taskId);
+    if (!task || task.status === toStatus) {
+      setDraggingId(null);
+      setDragOverCol(null);
+      return;
+    }
+    // Optimistic update
+    setLocalTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: toStatus } : t));
+    setDraggingId(null);
+    setDragOverCol(null);
+    dragCounter.current = {};
+    onMove(taskId, toStatus);
+  }
+
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-3" style={{ minHeight: 500 }}>
+      {STATUSES.map((col) => {
+        const meta = STATUS_META[col];
+        const colTasks = localTasks.filter(t => t.status === col);
+        const isOver = dragOverCol === col;
+        const isDragging = !!draggingId;
+
+        return (
+          <div
+            key={col}
+            className="shrink-0 flex flex-col rounded-xl transition-all duration-150"
+            style={{
+              width: 240,
+              background: isOver ? meta.bg : '#f8fafc',
+              border: `2px solid ${isOver ? meta.border : '#e9eef5'}`,
+              boxShadow: isOver ? `0 0 0 3px ${meta.border}` : undefined,
+            }}
+            onDragEnter={(e) => handleColDragEnter(e, col)}
+            onDragLeave={(e) => handleColDragLeave(e, col)}
+            onDragOver={handleColDragOver}
+            onDrop={(e) => handleDrop(e, col)}
+          >
+            {/* Column header */}
+            <div className="px-3 pt-3 pb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} />
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: meta.color }}>
+                  {meta.label}
+                </span>
+              </div>
+              <span
+                className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: meta.border, color: meta.color }}
+              >
+                {colTasks.length}
+              </span>
+            </div>
+
+            {/* Drop zone */}
+            <div className="flex-1 px-2 pb-2 space-y-2 min-h-[80px]">
+              {colTasks.map(t => {
+                const isDraggingThis = draggingId === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, t.id)}
+                    onDragEnd={handleDragEnd}
+                    className="group relative bg-white rounded-lg border transition-all duration-150 cursor-grab active:cursor-grabbing"
+                    style={{
+                      borderColor: isDraggingThis ? meta.color : '#e2e8f0',
+                      boxShadow: isDraggingThis
+                        ? `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}`
+                        : '0 1px 3px rgba(0,0,0,0.06)',
+                      opacity: isDraggingThis ? 0.5 : isDragging ? 0.85 : 1,
+                      transform: isDraggingThis ? 'rotate(1.5deg) scale(1.02)' : undefined,
+                    }}
+                  >
+                    {/* Drag handle */}
+                    <div
+                      className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity"
+                      style={{ color: meta.color }}
+                    >
+                      <GripVertical size={12} />
+                    </div>
+
+                    <Link href={`/tasks/${t.id}`} className="block p-3 pl-4" onClick={(e) => isDragging && e.preventDefault()}>
+                      <div className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2">
+                        {t.title}
+                      </div>
+
+                      {/* Tags row */}
+                      {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                        <div className="mt-1.5 flex gap-1 flex-wrap">
+                          {t.gxpCritical && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">
+                              Compliance
+                            </span>
+                          )}
+                          {t.requiresQaSignoff && !t.qaSignoffAt && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">
+                              Sign-off
+                            </span>
+                          )}
+                          {t.requiresQaSignoff && t.qaSignoffAt && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
+                              Approved ✓
+                            </span>
+                          )}
+                          {t.priority && t.priority !== 'low' && (
+                            <PriorityTag priority={t.priority} />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Footer */}
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 truncate">
+                          {t.assigneeName || 'Unassigned'}
+                        </span>
+                        {t.dueDate && (
+                          <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-1">
+                            {formatDate(t.dueDate)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Subtask progress */}
+                      {t.subtaskCount > 0 && (
+                        <div className="mt-2">
+                          <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${Math.round((t.subtasksDone / t.subtaskCount) * 100)}%`,
+                                background: meta.color,
+                              }}
+                            />
+                          </div>
+                          <div className="text-[9px] text-slate-400 mt-0.5">
+                            {t.subtasksDone}/{t.subtaskCount} subtasks
+                          </div>
+                        </div>
+                      )}
+                    </Link>
+                  </div>
+                );
+              })}
+
+              {/* Empty drop target */}
+              {colTasks.length === 0 && (
+                <div
+                  className="rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150"
+                  style={{
+                    borderColor: isOver ? meta.color : '#e2e8f0',
+                    background: isOver ? meta.bg : 'transparent',
+                  }}
+                >
+                  <span className="text-xs" style={{ color: isOver ? meta.color : '#94a3b8' }}>
+                    {isOver ? 'Drop here' : 'Empty'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function QuickAddTask({
   projectId,
@@ -138,7 +360,7 @@ export default function ProjectDetailPage() {
 
   async function moveTask(taskId: string, status: string) {
     await api(`/tasks/${taskId}`, { method: 'PATCH', body: { status } });
-    load();
+    load(); // reconcile server state quietly after optimistic update settles
   }
 
   return (
@@ -334,36 +556,7 @@ export default function ProjectDetailPage() {
           </Card>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          {STATUSES.map((s) => (
-            <div key={s} className="bg-slate-100 rounded-md p-2">
-              <div className="text-xs font-semibold text-slate-600 uppercase mb-2 px-1">
-                {s.replace('_', ' ')}
-              </div>
-              <div className="space-y-2">
-                {project.tasks
-                  .filter((t: any) => t.status === s)
-                  .map((t: any) => (
-                    <Link
-                      key={t.id}
-                      href={`/tasks/${t.id}`}
-                      className="block bg-white rounded p-2 text-xs shadow-sm hover:shadow"
-                    >
-                      <div className="font-medium text-slate-800">{t.title}</div>
-                      <div className="mt-1 flex gap-1 flex-wrap">
-                        {t.gxpCritical && <span className="tag bg-red-50 text-red-700">GxP</span>}
-                        {t.requiresQaSignoff && (
-                          <span className="tag bg-purple-50 text-purple-700">QA</span>
-                        )}
-                        <PriorityTag priority={t.priority} />
-                      </div>
-                      <div className="mt-1 text-slate-500">{t.assigneeName || 'Unassigned'}</div>
-                    </Link>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <KanbanBoard tasks={project.tasks} onMove={moveTask} />
       )}
     </div>
   );
