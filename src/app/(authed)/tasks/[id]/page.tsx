@@ -7,11 +7,9 @@ import {
   Card,
   PriorityTag,
   StatusTag,
-  SEVERITY_COLORS,
   formatDate,
   Avatar
 } from '@/components/ui';
-import { Sparkles } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -22,7 +20,6 @@ export default function TaskDetailPage() {
   const [me, setMe] = useState<any>(null);
   const [comment, setComment] = useState('');
   const [newSub, setNewSub] = useState('');
-  const [triaging, setTriaging] = useState(false);
 
   async function load() {
     setTask(await api<any>(`/tasks/${id}`));
@@ -62,28 +59,10 @@ export default function TaskDetailPage() {
     await api(`/tasks/${id}/signoff`, { method: 'POST' });
     load();
   }
-  async function runTriage() {
-    setTriaging(true);
-    try {
-      await api('/ai/triage', {
-        method: 'POST',
-        body: {
-          title: task.title,
-          description: task.description || '',
-          taskId: task.id,
-          save: true
-        }
-      });
-      await load();
-    } finally {
-      setTriaging(false);
-    }
-  }
-
   const canSignoff =
     task.requiresQaSignoff &&
     !task.qaSignoffAt &&
-    ['lead', 'manager', 'admin'].includes(me?.role);
+    me?.role === 'pm';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -115,11 +94,6 @@ export default function TaskDetailPage() {
                 </span>
               ))}
             <span className="tag bg-slate-100">{task.taskType}</span>
-            {task.aiTriage?.severity && (
-              <span className={`tag ${SEVERITY_COLORS[task.aiTriage.severity]}`}>
-                AI: {task.aiTriage.severity}
-              </span>
-            )}
           </div>
         </div>
 
@@ -132,63 +106,6 @@ export default function TaskDetailPage() {
             placeholder="Describe what's expected, references, evidence…"
           />
         </Card>
-
-        {/* AI triage */}
-        {['deviation', 'capa', 'audit_finding', 'data_review'].includes(task.taskType) && (
-          <Card
-            title={
-              <span className="flex items-center gap-2">
-                <Sparkles size={16} className="text-brand-600" />
-                AI triage
-              </span>
-            }
-            action={
-              <button
-                className="btn-secondary text-xs"
-                onClick={runTriage}
-                disabled={triaging}
-              >
-                {triaging ? 'Analysing…' : task.aiTriage ? 'Re-run' : 'Run triage'}
-              </button>
-            }
-          >
-            {task.aiTriage ? (
-              <div className="space-y-3 text-sm">
-                <div className="flex flex-wrap gap-2 items-center">
-                  <span className={`tag ${SEVERITY_COLORS[task.aiTriage.severity]}`}>
-                    Severity: {task.aiTriage.severity} ({task.aiTriage.severityScore})
-                  </span>
-                  <span className="tag bg-slate-100 text-slate-700 border border-slate-200">
-                    {task.aiTriage.category}
-                  </span>
-                  <span className="text-xs text-slate-500">
-                    computed {formatDate(task.aiTriage.computedAt)}
-                  </span>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    Rationale
-                  </div>
-                  <ul className="text-xs text-slate-700 list-disc ml-4 space-y-0.5">
-                    {task.aiTriage.rationale?.map((r: string, i: number) => <li key={i}>{r}</li>)}
-                  </ul>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                    Suggested CAPA
-                  </div>
-                  <ul className="text-sm text-slate-700 list-disc ml-4 space-y-1">
-                    {task.aiTriage.suggestedCapa?.map((c: string, i: number) => <li key={i}>{c}</li>)}
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500">
-                Click <em>Run triage</em> to classify this issue, estimate severity, and propose CAPA actions.
-              </p>
-            )}
-          </Card>
-        )}
 
         <Card
           title={`Subtasks (${task.subtasks.length})`}

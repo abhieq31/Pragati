@@ -16,7 +16,7 @@ import {
   CartesianGrid
 } from 'recharts';
 
-const COLORS = ['#3a56f2', '#1b2570', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
+const COLORS = ['#1565C0', '#0D47A1', '#43A047', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899'];
 
 export default function OrgOverviewPage() {
   const [data, setData] = useState<any>(null);
@@ -108,8 +108,8 @@ export default function OrgOverviewPage() {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="tasks" name="Tasks" fill="#3a56f2" />
-                <Bar dataKey="done" name="Done" fill="#10b981" />
+                <Bar dataKey="tasks" name="Tasks" fill="#1565C0" />
+                <Bar dataKey="done" name="Done" fill="#43A047" />
               </BarChart>
             </ResponsiveContainer>
           </div>

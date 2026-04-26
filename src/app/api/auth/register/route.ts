@@ -12,10 +12,18 @@ export const runtime = 'nodejs';
 const Body = z.object({
   email: z.string().email(),
   name: z.string().min(1),
-  password: z.string().min(6),
+  password: z.string().min(8),
   title: z.string().optional(),
-  role: z.enum(['employee', 'pm']).optional()
 });
+
+function resolveRole(email: string, isFirstUser: boolean): 'pm' | 'employee' {
+  if (isFirstUser) return 'pm';
+  const pmEmails = (process.env.PM_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return pmEmails.includes(email.toLowerCase()) ? 'pm' : 'employee';
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +32,7 @@ export async function POST(req: NextRequest) {
     const exists = await User.findOne({ email: body.email.toLowerCase() });
     if (exists) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
     const count = await User.countDocuments();
-    const role = count === 0 ? 'pm' : body.role || 'employee';
+    const role = resolveRole(body.email, count === 0);
     const user = await User.create({
       email: body.email.toLowerCase(),
       name: body.name,

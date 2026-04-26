@@ -5,7 +5,6 @@ import { api } from '@/lib/client/api';
 import {
   Card,
   LifecycleTag,
-  PriorityTag,
   ProgressBar,
   StatusTag,
   formatDate
@@ -88,44 +87,39 @@ export default function ProjectsPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {projects.map((p) => {
           const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
           const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
-          const health = overdueRatio > 0.3 ? 'critical' : overdueRatio > 0 ? 'at_risk' : 'healthy';
-          const healthDot = health === 'critical' ? '🔴' : health === 'at_risk' ? '🟡' : '🟢';
+          const healthColor = overdueRatio > 0.3 ? '#ef4444' : overdueRatio > 0 ? '#f59e0b' : '#22c55e';
           return (
             <Link
               href={`/projects/${p.id}`}
               key={p.id}
-              className="card p-4 hover:shadow-md transition group"
+              className="card p-4 hover:shadow-md transition-shadow group block"
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-slate-500 font-mono">{p.code}</span>
-                    <span title={`Health: ${health}`}>{healthDot}</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] text-slate-400 font-mono tracking-wider">{p.code}</span>
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: healthColor }} title={overdueRatio > 0.3 ? 'Critical' : overdueRatio > 0 ? 'At risk' : 'Healthy'} />
                   </div>
                   <div className="font-semibold text-slate-900 truncate group-hover:text-brand-700 transition-colors">{p.name}</div>
+                  {p.description && <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{p.description}</p>}
                 </div>
-                <div className="flex gap-1 flex-wrap justify-end">
+                <div className="flex flex-col items-end gap-1 shrink-0">
                   <LifecycleTag lifecycle={p.lifecycle} />
                   <StatusTag status={p.status} />
                 </div>
               </div>
-              {p.description && (
-                <p className="text-sm text-slate-500 line-clamp-2 mt-2">{p.description}</p>
-              )}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-slate-500 mb-1">
-                  <span>{p.tasksDone}/{p.taskCount} tasks done</span>
-                  <span className={pct >= 90 ? 'text-forest-600 font-semibold' : ''}>{pct}%</span>
+              <ProgressBar value={pct} />
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-slate-400">{p.tasksDone}/{p.taskCount} tasks</span>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <span>{p.teamName || '—'}</span>
+                  <span>{formatDate(p.dueDate)}</span>
+                  <span className={`font-semibold ${pct >= 90 ? 'text-green-600' : 'text-slate-500'}`}>{pct}%</span>
                 </div>
-                <ProgressBar value={pct} />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                <span>{p.teamName || '—'}</span>
-                <span>Due {formatDate(p.dueDate)}</span>
               </div>
             </Link>
           );

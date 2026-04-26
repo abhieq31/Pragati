@@ -138,9 +138,9 @@ export default function YearlyView({ targetUserId }: { targetUserId?: string }) 
                   <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="completed" name="Completed" fill="#3a56f2" />
-                  <Bar dataKey="big" name="Big deliveries" fill="#1b2570" />
-                  <Bar dataKey="early" name="Early (extra effort)" fill="#10b981" />
+                  <Bar dataKey="completed" name="Completed" fill="#1565C0" />
+                  <Bar dataKey="big" name="Big deliveries" fill="#0D47A1" />
+                  <Bar dataKey="early" name="Early (extra effort)" fill="#43A047" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
