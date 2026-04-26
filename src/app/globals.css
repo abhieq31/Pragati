@@ -9,6 +9,24 @@
   --brand-light: #E3F2FD;
   --forest: #2B8C29;
   --radius: 10px;
+  --bg-page: #F0F3F8;
+  --bg-card: #ffffff;
+  --bg-subtle: #f8fafc;
+  --border-card: rgba(210,218,228,0.8);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg-page: #0d1424;
+  --bg-card: #162032;
+  --bg-subtle: #1c2a3f;
+  --border-card: rgba(51,70,95,0.7);
+  --text-primary: #e8eef5;
+  --text-secondary: #8fa3bc;
+  --text-muted: #506070;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -17,9 +35,11 @@ html { scroll-behavior: smooth; }
 body {
   @apply text-slate-800 antialiased;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #F0F3F8;
+  background: var(--bg-page);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* ── Selection ────────────────────────────────────────────────────────────── */
@@ -189,3 +209,35 @@ body {
 /* ── No-scrollbar utility ─────────────────────────────────────────────────── */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Dark mode structural overrides ──────────────────────────────────────── */
+.dark .card,
+.dark [class*="bg-white"] {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border-card) !important;
+}
+.dark .bg-slate-50,
+.dark .bg-slate-50\/60,
+.dark [class*="bg-slate-50"] {
+  background-color: var(--bg-subtle) !important;
+}
+.dark .text-slate-900 { color: #eef2f7 !important; }
+.dark .text-slate-800 { color: #dde5ef !important; }
+.dark .text-slate-700 { color: #c4d0de !important; }
+.dark .text-slate-600 { color: #8fa3bc !important; }
+.dark .text-slate-500 { color: #6b849e !important; }
+.dark .text-slate-400 { color: #506070 !important; }
+.dark .border-slate-100,
+.dark .border-slate-200 { border-color: rgba(51,70,95,0.6) !important; }
+.dark .divide-slate-50 > * + * { border-color: rgba(51,70,95,0.4) !important; }
+.dark .input,
+.dark .select,
+.dark .textarea {
+  background: #162032 !important;
+  border-color: #2a3f58 !important;
+  color: #dde5ef !important;
+}
+.dark .input::placeholder,
+.dark .textarea::placeholder { color: #506070 !important; }
+.dark ::-webkit-scrollbar-thumb { background: #2a3f58; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #3a5270; }

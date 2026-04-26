@@ -6,9 +6,23 @@ import { Avatar } from './ui';
 import {
   LayoutDashboard, FolderKanban, Users, Calendar,
   PieChart, Lightbulb, LogOut, UserCog, Menu, X,
-  Bell, Lock, User, ChevronUp,
+  Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
+
+function useDarkMode(): [boolean, () => void] {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const stored = localStorage.getItem('theme');
+    const system = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDark(stored === 'dark' || (!stored && system));
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
+  return [dark, () => setDark(d => !d)];
+}
 
 export interface CurrentUser {
   id: string;
@@ -23,6 +37,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   const router   = useRouter();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [dark, toggleDark] = useDarkMode();
 
   // Close drawer on navigation
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -123,41 +139,102 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       <div
         className="px-3 py-3 border-t border-white/5 relative"
         onMouseEnter={() => setProfileOpen(true)}
-        onMouseLeave={() => setProfileOpen(false)}
+        onMouseLeave={() => { setProfileOpen(false); setConfirmLogout(false); }}
       >
         {/* Hover popup */}
-        <div className={`absolute bottom-full left-2 right-2 mb-1.5 rounded-xl overflow-hidden z-50 transition-all duration-150 ${
-          profileOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-1 pointer-events-none'
+        <div className={`absolute bottom-full left-2 right-2 mb-1.5 rounded-xl overflow-hidden z-50 transition-all duration-200 ${
+          profileOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-1.5 pointer-events-none'
         }`} style={{
           background: '#0A1929',
           border: '1px solid rgba(255,255,255,0.09)',
-          boxShadow: '0 -4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04)',
+          boxShadow: '0 -8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
         }}>
-          {/* Mini identity header */}
-          <div className="px-3 py-2.5 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <Avatar name={user.name} size={30} />
-            <div className="min-w-0">
-              <div className="text-[12px] font-bold text-white/90 truncate leading-tight">{user.name}</div>
-              <div style={{ fontSize: 10 }} className="text-white/35 truncate">{user.role === 'pm' ? 'PM' : 'Individual Contributor'}</div>
+
+          {/* ── Normal menu ── */}
+          <div className={`transition-all duration-200 ${confirmLogout ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100'}`}>
+            {/* Mini identity header */}
+            <div className="px-3 py-2.5 flex items-center gap-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <Avatar name={user.name} size={30} />
+              <div className="min-w-0">
+                <div className="text-[12px] font-bold text-white/90 truncate leading-tight">{user.name}</div>
+                <div style={{ fontSize: 10 }} className="text-white/35 truncate">{user.role === 'pm' ? 'PM' : 'Individual Contributor'}</div>
+              </div>
+            </div>
+            {/* Nav links */}
+            <div className="py-1">
+              <Link href="/settings" className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/55 hover:text-white/90 hover:bg-white/5 transition-colors">
+                <User size={12} className="shrink-0" /> Profile &amp; identity
+              </Link>
+              <Link href="/settings#notifications" className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/55 hover:text-white/90 hover:bg-white/5 transition-colors">
+                <Bell size={12} className="shrink-0" /> Notifications
+              </Link>
+              <Link href="/settings#security" className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/55 hover:text-white/90 hover:bg-white/5 transition-colors">
+                <Lock size={12} className="shrink-0" /> Security
+              </Link>
+              <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
+              {/* Dark mode toggle + Sign out row */}
+              <div className="flex items-center gap-1 px-1">
+                {/* Dark mode toggle */}
+                <button
+                  onClick={toggleDark}
+                  title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="flex items-center gap-2 flex-1 px-2 py-2 rounded-lg text-xs text-white/50 hover:text-white/90 hover:bg-white/5 transition-colors"
+                >
+                  {dark
+                    ? <Sun  size={12} className="shrink-0 text-amber-400/70" />
+                    : <Moon size={12} className="shrink-0" />
+                  }
+                  <span>{dark ? 'Light mode' : 'Dark mode'}</span>
+                  {/* Mini pill indicator */}
+                  <span className="ml-auto w-7 h-3.5 rounded-full flex items-center transition-all duration-200 shrink-0"
+                    style={{ background: dark ? '#1565C0' : 'rgba(255,255,255,0.12)', padding: '2px' }}>
+                    <span className="w-2.5 h-2.5 rounded-full bg-white shadow transition-all duration-200"
+                      style={{ transform: dark ? 'translateX(13px)' : 'translateX(0)' }} />
+                  </span>
+                </button>
+                {/* Sign out */}
+                <button
+                  onClick={() => setConfirmLogout(true)}
+                  title="Sign out"
+                  className="flex items-center gap-1.5 px-2 py-2 rounded-lg text-xs text-red-400/55 hover:text-red-400 hover:bg-white/5 transition-colors shrink-0"
+                >
+                  <LogOut size={12} className="shrink-0" />
+                  <span>Sign out</span>
+                </button>
+              </div>
             </div>
           </div>
-          {/* Menu items */}
-          <div className="py-1">
-            <Link href="/settings" className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/55 hover:text-white/90 hover:bg-white/5 transition-colors">
-              <User size={12} className="shrink-0" /> Profile &amp; identity
-            </Link>
-            <Link href="/settings#notifications" className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/55 hover:text-white/90 hover:bg-white/5 transition-colors">
-              <Bell size={12} className="shrink-0" /> Notifications
-            </Link>
-            <Link href="/settings#security" className="flex items-center gap-2.5 px-3 py-2 text-xs text-white/55 hover:text-white/90 hover:bg-white/5 transition-colors">
-              <Lock size={12} className="shrink-0" /> Security
-            </Link>
-            <div className="mx-3 my-1" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} />
-            <button onClick={logout}
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400/60 hover:text-red-400 hover:bg-white/5 transition-colors">
-              <LogOut size={12} className="shrink-0" /> Sign out
-            </button>
+
+          {/* ── Sign-out confirmation ── */}
+          <div className={`transition-all duration-200 ${confirmLogout ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}>
+            <div className="px-4 py-4 flex flex-col items-center gap-3 text-center">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'rgba(239,68,68,0.12)' }}>
+                <AlertTriangle size={16} className="text-red-400" />
+              </div>
+              <div>
+                <div className="text-[13px] font-bold text-white/90 leading-tight">Sign out?</div>
+                <div style={{ fontSize: 11 }} className="text-white/35 mt-0.5">You'll need to sign back in.</div>
+              </div>
+              <div className="flex gap-2 w-full">
+                <button
+                  onClick={() => setConfirmLogout(false)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white/50 hover:text-white/80 transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.07)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={logout}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-bold text-red-300 hover:text-red-200 transition-colors"
+                  style={{ background: 'rgba(239,68,68,0.18)' }}
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
           </div>
+
         </div>
 
         {/* Trigger row */}
@@ -176,7 +253,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   );
 
   return (
-    <div className="min-h-screen" style={{ background: '#F0F3F8' }}>
+    <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
 
       {/* ── Mobile top bar (hidden on lg+) ─────────────────────────────── */}
       <header
