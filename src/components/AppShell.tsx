@@ -29,7 +29,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
     { href: '/',         label: 'Dashboard',     icon: LayoutDashboard },
     { href: '/projects', label: 'Projects',       icon: FolderKanban },
     { href: '/teams',    label: 'Teams',           icon: Users },
-    { href: '/org',      label: 'Org overview',   icon: PieChart },
+    { href: '/org',      label: 'Command Centre', icon: PieChart },
     { href: '/yearly',   label: 'Yearly view',    icon: Calendar },
     { href: '/insights', label: 'Insights',       icon: Lightbulb, badge: 'Live' },
     { href: '/people',   label: 'People',          icon: UserCog },
