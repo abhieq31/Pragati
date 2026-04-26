@@ -93,7 +93,7 @@ function QuickAdd({ projects, currentUserId, onAdded, open, onClose }: {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-xl shadow-2xl border border-slate-100 p-5" style={{ width: 380 }}>
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-xl shadow-2xl border border-slate-100 p-5 w-[calc(100vw-32px)] sm:w-[380px]">
         <div className="flex justify-between items-center mb-4">
           <div className="font-bold text-slate-800">Create task</div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 text-lg leading-none">✕</button>
@@ -344,18 +344,18 @@ export default function DashboardPage() {
       {celebrating && <Celebration taskTitle={celebrating.title} onDone={() => setCelebrating(null)} />}
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-end justify-between pt-1 mb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{greetText}</h1>
+      <div className="flex items-start sm:items-end justify-between pt-1 mb-5 gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">{greetText}</h1>
           <p className="text-xs text-slate-400 mt-0.5">{today}</p>
         </div>
-        <button onClick={() => setQuickAddOpen(true)} className="btn-primary text-xs" style={{ background: '#1565C0' }}>
+        <button onClick={() => setQuickAddOpen(true)} className="btn-primary text-xs shrink-0" style={{ background: '#1565C0' }}>
           + Create task
         </button>
       </div>
 
       {/* ── KPI strip ───────────────────────────────────────────────────── */}
-      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
         <StatCard icon={Zap}          label="Open"          value={openCount}                color="#0f172a" bg="#f1f5f9"
           sub={openCount === 0 ? 'All clear!' : `${openCount} task${openCount !== 1 ? 's' : ''}`} />
         <StatCard icon={Clock}        label="Due this week" value={summary?.dueThisWeek ?? 0} color="#1565C0" bg="#EFF6FF" />
@@ -371,16 +371,16 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Main 2-column layout ─────────────────────────────────────────── */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 280px' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
 
         {/* Left column */}
         <div className="space-y-4 min-w-0">
 
           {/* My Work Items */}
           <div className="card overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/60">
-              <h3 className="text-sm font-semibold text-slate-700">My Work Items</h3>
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/60 gap-2">
+              <h3 className="text-sm font-semibold text-slate-700 shrink-0">My Work Items</h3>
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
                 {(['open', 'overdue', 'done', 'all'] as const).map((f) => (
                   <button key={f} onClick={() => setFilter(f)}
                     className="px-3 py-1 rounded text-xs font-medium transition-colors capitalize"
@@ -396,11 +396,10 @@ export default function DashboardPage() {
 
             {filteredTasks.length > 0 && (
               <div className="grid px-4 py-2 border-b border-slate-100 bg-slate-50/40"
-                   style={{ gridTemplateColumns: '20px 1fr 100px 80px 72px 72px', gap: '0 10px' }}>
+                   style={{ gridTemplateColumns: '20px 1fr 72px', gap: '0 10px' }}>
                 <div />
-                {['Summary', 'Project', 'Type', 'Priority', 'Due'].map(h => (
-                  <div key={h} style={{ fontSize: 10, letterSpacing: '0.08em' }} className="text-slate-400 uppercase font-semibold last:text-right">{h}</div>
-                ))}
+                <div style={{ fontSize: 10, letterSpacing: '0.08em' }} className="text-slate-400 uppercase font-semibold">Summary</div>
+                <div style={{ fontSize: 10, letterSpacing: '0.08em' }} className="text-slate-400 uppercase font-semibold text-right">Due</div>
               </div>
             )}
 
@@ -431,7 +430,7 @@ export default function DashboardPage() {
                   return (
                     <div key={t.id}
                       className="grid items-center px-4 py-2.5 hover:bg-blue-50/30 transition-colors"
-                      style={{ gridTemplateColumns: '20px 1fr 100px 80px 72px 72px', gap: '0 10px', borderTop: i > 0 ? '1px solid #f1f5f9' : undefined }}>
+                      style={{ gridTemplateColumns: '20px 1fr 72px', gap: '0 10px', borderTop: i > 0 ? '1px solid #f1f5f9' : undefined }}>
                       <button
                         onClick={() => !done && markDone(t)}
                         disabled={done}
@@ -442,29 +441,23 @@ export default function DashboardPage() {
                         }}>
                         {done && <span className="text-white" style={{ fontSize: 8, fontWeight: 900 }}>✓</span>}
                       </button>
-                      <div className={done ? 'opacity-40' : ''}>
-                        <div className="flex items-center gap-2">
+                      <div className={`min-w-0 ${done ? 'opacity-40' : ''}`}>
+                        <div className="flex items-center gap-2 min-w-0">
                           <TaskLink task={t} />
                           {t.gxpCritical && (
-                            <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">GxP</span>
+                            <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded shrink-0">GxP</span>
                           )}
                         </div>
-                      </div>
-                      <div>
-                        <Link href={`/projects/${t.projectId}`}
-                          className="text-xs text-slate-500 hover:text-blue-700 font-mono truncate block transition-colors">
-                          {t.projectCode || t.projectName || '—'}
-                        </Link>
-                      </div>
-                      <div>
-                        {t.lifecycle && t.lifecycle !== 'generic'
-                          ? <LifecycleTag lifecycle={t.lifecycle} />
-                          : <span className="text-xs text-slate-300">—</span>}
-                      </div>
-                      <div>
-                        {t.priority && t.priority !== 'low'
-                          ? <PriorityTag priority={t.priority} />
-                          : <span className="text-xs text-slate-300">—</span>}
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {(t.projectCode || t.projectName) && (
+                            <Link href={`/projects/${t.projectId}`}
+                              className="text-[10px] text-slate-400 hover:text-blue-700 font-mono transition-colors">
+                              {t.projectCode || t.projectName}
+                            </Link>
+                          )}
+                          {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
+                          {t.lifecycle && t.lifecycle !== 'generic' && <LifecycleTag lifecycle={t.lifecycle} />}
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className={`text-xs font-medium ${overdue ? 'text-red-600' : done ? 'text-slate-300' : 'text-slate-500'}`}>
