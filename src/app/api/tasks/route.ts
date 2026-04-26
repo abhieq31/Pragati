@@ -22,7 +22,14 @@ const Create = z.object({
   requiresQaSignoff: z.boolean().optional(),
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
-  estimatedHours: z.number().optional()
+  estimatedHours: z.number().optional(),
+  // Pharma fields
+  ccNo:           z.string().optional(),
+  ccTcd:          z.string().optional(),
+  documentNo:     z.string().optional(),
+  applicableSite: z.enum(['val', 'prd', 'val_prd', 'na']).optional(),
+  deployStage:    z.enum(['dev', 'int', 'prd', 'na']).optional(),
+  remarks:        z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -43,7 +50,13 @@ export async function POST(req: NextRequest) {
       requiresQaSignoff: !!body.requiresQaSignoff,
       startDate: body.startDate ? new Date(body.startDate) : undefined,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      estimatedHours: body.estimatedHours
+      estimatedHours: body.estimatedHours,
+      ccNo:           body.ccNo           || '',
+      ccTcd:          body.ccTcd ? new Date(body.ccTcd) : undefined,
+      documentNo:     body.documentNo     || '',
+      applicableSite: body.applicableSite || 'na',
+      deployStage:    body.deployStage    || 'na',
+      remarks:        body.remarks        || '',
     });
     return NextResponse.json(taskS(task));
   } catch (e) {

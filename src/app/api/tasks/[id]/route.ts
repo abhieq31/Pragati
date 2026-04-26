@@ -25,7 +25,14 @@ const Patch = z.object({
   dueDate: z.string().nullable().optional(),
   estimatedHours: z.number().nullable().optional(),
   actualHours: z.number().nullable().optional(),
-  phaseId: z.string().nullable().optional()
+  phaseId: z.string().nullable().optional(),
+  // Pharma fields
+  ccNo:           z.string().optional(),
+  ccTcd:          z.string().nullable().optional(),
+  documentNo:     z.string().optional(),
+  applicableSite: z.enum(['val', 'prd', 'val_prd', 'na']).optional(),
+  deployStage:    z.enum(['dev', 'int', 'prd', 'na']).optional(),
+  remarks:        z.string().optional(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -74,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const set: any = {};
     for (const [k, v] of Object.entries(body)) {
       if (v === undefined) continue;
-      if (['startDate', 'dueDate'].includes(k)) set[k] = v ? new Date(v as string) : null;
+      if (['startDate', 'dueDate', 'ccTcd'].includes(k)) set[k] = v ? new Date(v as string) : null;
       else set[k] = v;
     }
     if (body.status === 'done' && current.status !== 'done') set.completedAt = new Date();

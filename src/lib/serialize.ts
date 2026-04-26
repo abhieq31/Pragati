@@ -102,6 +102,13 @@ export function task(t: any, extras: Any = {}) {
     completedAt: t.completedAt,
     estimatedHours: t.estimatedHours,
     actualHours: t.actualHours,
+    // Pharma fields
+    ccNo:           t.ccNo     || '',
+    ccTcd:          t.ccTcd    || null,
+    documentNo:     t.documentNo || '',
+    applicableSite: t.applicableSite || 'na',
+    deployStage:    t.deployStage   || 'na',
+    remarks:        t.remarks  || '',
     aiTriage: t.aiTriage
       ? {
           severity: t.aiTriage.severity,

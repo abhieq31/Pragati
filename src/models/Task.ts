@@ -59,6 +59,23 @@ const TaskSchema = new Schema(
       computedAt: { type: Date }
     },
 
+    // ── Pharma / Change-Control fields ─────────────────────────────────
+    // Mirrors the columns teams already track in Excel IDP sheets.
+    ccNo:           { type: String, default: '' },   // Change Control number, e.g. "CC-2025-042"
+    ccTcd:          { type: Date },                   // CC Target Completion Date
+    documentNo:     { type: String, default: '' },   // SOP / protocol / doc reference
+    applicableSite: {
+      type: String,
+      enum: ['val', 'prd', 'val_prd', 'na'],
+      default: 'na',
+    },
+    deployStage: {
+      type: String,
+      enum: ['dev', 'int', 'prd', 'na'],
+      default: 'na',
+    },
+    remarks: { type: String, default: '' },
+
     subtasks: { type: [SubtaskSchema], default: [] },
     comments: { type: [CommentSchema], default: [] }
   },

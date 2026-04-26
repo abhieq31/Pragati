@@ -3,15 +3,58 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import {
-  Card,
-  PriorityTag,
-  StatusTag,
-  formatDate,
-  Avatar
-} from '@/components/ui';
+import { Card, PriorityTag, StatusTag, formatDate, Avatar } from '@/components/ui';
+import { ChevronRight, FlaskConical, FileText, Building2, GitBranch, MessageSquare } from 'lucide-react';
 
-const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
+const STATUSES  = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
+const TASK_TYPES = ['task','review','approval','test','deviation','capa','audit_finding','data_review'] as const;
+
+/* ── Deploy-stage pipeline pill ─────────────────────────────────────────── */
+const STAGES = [
+  { key: 'dev', label: 'DEV', color: '#7c3aed', bg: '#f5f3ff' },
+  { key: 'int', label: 'INT', color: '#0369a1', bg: '#f0f9ff' },
+  { key: 'prd', label: 'PRD', color: '#15803d', bg: '#f0fdf4' },
+] as const;
+
+function StagePipeline({ current, onChange }: { current: string; onChange: (v: string) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      {STAGES.map((s, i) => {
+        const active = current === s.key;
+        const passed = STAGES.findIndex(x => x.key === current) > i;
+        return (
+          <div key={s.key} className="flex items-center gap-1">
+            <button
+              onClick={() => onChange(current === s.key ? 'na' : s.key)}
+              className="px-3 py-1 rounded-md text-xs font-bold border transition-all"
+              style={{
+                background: active ? s.bg : passed ? '#f8fafc' : '#fff',
+                color: active ? s.color : passed ? '#94a3b8' : '#cbd5e1',
+                borderColor: active ? s.color : '#e2e8f0',
+                opacity: active ? 1 : passed ? 0.6 : 1,
+              }}
+            >
+              {s.label}
+            </button>
+            {i < STAGES.length - 1 && (
+              <ChevronRight size={12} className={passed || active ? 'text-slate-400' : 'text-slate-200'} />
+            )}
+          </div>
+        );
+      })}
+      {current === 'na' && (
+        <span className="text-xs text-slate-300 ml-1">Not set</span>
+      )}
+    </div>
+  );
+}
+
+const SITE_OPTIONS = [
+  { value: 'na',      label: 'N/A' },
+  { value: 'val',     label: 'Val site' },
+  { value: 'prd',     label: 'PRD site' },
+  { value: 'val_prd', label: 'Val + PRD' },
+];
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,16 +64,15 @@ export default function TaskDetailPage() {
   const [comment, setComment] = useState('');
   const [newSub, setNewSub] = useState('');
 
-  async function load() {
-    setTask(await api<any>(`/tasks/${id}`));
-  }
+  async function load() { setTask(await api<any>(`/tasks/${id}`)); }
+
   useEffect(() => {
     load();
     api<any[]>('/users').then(setUsers);
     api<any>('/auth/me').then((d) => setMe(d.user));
   }, [id]);
 
-  if (!task) return <div className="text-slate-500">Loading…</div>;
+  if (!task) return <div className="text-slate-400 text-sm p-8">Loading…</div>;
 
   async function update(patch: any) {
     await api(`/tasks/${id}`, { method: 'PATCH', body: patch });
@@ -39,296 +81,381 @@ export default function TaskDetailPage() {
   async function addSubtask() {
     if (!newSub.trim()) return;
     await api(`/tasks/${id}/subtasks`, { method: 'POST', body: { title: newSub.trim() } });
-    setNewSub('');
-    load();
+    setNewSub(''); load();
   }
   async function toggleSub(sub: any) {
-    await api(`/tasks/${id}/subtasks/${sub.id}`, {
-      method: 'PATCH',
-      body: { status: sub.status === 'done' ? 'todo' : 'done' }
-    });
+    await api(`/tasks/${id}/subtasks/${sub.id}`, { method: 'PATCH', body: { status: sub.status === 'done' ? 'todo' : 'done' } });
     load();
   }
   async function addComment() {
     if (!comment.trim()) return;
     await api(`/tasks/${id}/comments`, { method: 'POST', body: { body: comment.trim() } });
-    setComment('');
-    load();
+    setComment(''); load();
   }
-  async function signoff() {
-    await api(`/tasks/${id}/signoff`, { method: 'POST' });
-    load();
-  }
-  const canSignoff =
-    task.requiresQaSignoff &&
-    !task.qaSignoffAt &&
-    me?.role === 'pm';
+  async function signoff() { await api(`/tasks/${id}/signoff`, { method: 'POST' }); load(); }
+
+  const canSignoff = task.requiresQaSignoff && !task.qaSignoffAt && me?.role === 'pm';
+  const hasPharmaData = task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl">
+
+      {/* ── Left: main content ─────────────────────────────────────────── */}
       <div className="lg:col-span-2 space-y-4">
+
+        {/* Breadcrumb + title */}
         <div>
-          <div className="text-xs text-slate-500">
-            <Link
-              href={`/projects/${task.projectId}`}
-              className="hover:underline"
-            >
+          <div className="text-xs text-slate-400 flex items-center gap-1 mb-2">
+            <Link href={`/projects/${task.projectId}`} className="hover:text-blue-600 transition-colors">
               {task.projectCode} · {task.projectName}
             </Link>
+            <ChevronRight size={12} />
+            <span className="text-slate-300">Task</span>
           </div>
-          <h1 className="text-2xl font-bold mt-1">{task.title}</h1>
-          <div className="flex flex-wrap gap-2 mt-2">
+          <h1 className="text-xl font-bold text-slate-900 leading-snug">{task.title}</h1>
+          <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
             {task.gxpCritical && (
-              <span className="tag bg-red-50 text-red-700 border border-red-200">GxP critical</span>
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                <FlaskConical size={11} /> GxP Critical
+              </span>
             )}
-            {task.requiresQaSignoff &&
-              (task.qaSignoffAt ? (
-                <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {task.requiresQaSignoff && (
+              task.qaSignoffAt ? (
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                   QA ✓ {task.qaSignoffName} · {formatDate(task.qaSignoffAt)}
                 </span>
               ) : (
-                <span className="tag bg-purple-50 text-purple-700 border border-purple-200">
+                <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
                   QA sign-off required
                 </span>
-              ))}
-            <span className="tag bg-slate-100">{task.taskType}</span>
+              )
+            )}
+            {task.taskType && task.taskType !== 'task' && (
+              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded capitalize">
+                {task.taskType.replace(/_/g, ' ')}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Description */}
         <Card title="Description">
           <textarea
-            className="textarea min-h-[100px]"
+            className="textarea min-h-[90px] text-sm"
             value={task.description || ''}
             onChange={(e) => setTask({ ...task, description: e.target.value })}
             onBlur={(e) => update({ description: e.target.value })}
-            placeholder="Describe what's expected, references, evidence…"
+            placeholder="Describe what's expected, references, evidence required…"
           />
         </Card>
 
+        {/* ── Pharma / Change-Control details ────────────────────────────── */}
+        <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+            <FileText size={14} className="text-blue-500" />
+            <h3 className="text-sm font-semibold text-slate-700">Change Control & Pharma Details</h3>
+            {hasPharmaData && (
+              <span className="ml-auto text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Filled</span>
+            )}
+          </div>
+          <div className="p-4 space-y-4">
+
+            {/* CC No. + CC TCD */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label flex items-center gap-1">
+                  CC Number
+                  <span className="text-slate-300 font-normal normal-case">(Change Control)</span>
+                </label>
+                <input
+                  className="input text-sm font-mono"
+                  placeholder="e.g. CC-2025-042"
+                  value={task.ccNo || ''}
+                  onChange={(e) => setTask({ ...task, ccNo: e.target.value })}
+                  onBlur={(e) => update({ ccNo: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">CC Target Completion Date</label>
+                <input
+                  type="date"
+                  className="input text-sm"
+                  value={task.ccTcd?.slice(0, 10) || ''}
+                  onChange={(e) => update({ ccTcd: e.target.value || null })}
+                />
+              </div>
+            </div>
+
+            {/* Document No. + Applicable Site */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label flex items-center gap-1">
+                  <FileText size={11} /> Document No.
+                </label>
+                <input
+                  className="input text-sm font-mono"
+                  placeholder="SOP / Protocol / Doc ref"
+                  value={task.documentNo || ''}
+                  onChange={(e) => setTask({ ...task, documentNo: e.target.value })}
+                  onBlur={(e) => update({ documentNo: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label flex items-center gap-1">
+                  <Building2 size={11} /> Applicable Site
+                </label>
+                <select
+                  className="select text-sm"
+                  value={task.applicableSite || 'na'}
+                  onChange={(e) => update({ applicableSite: e.target.value })}
+                >
+                  {SITE_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Deploy stage pipeline */}
+            <div>
+              <label className="label flex items-center gap-1 mb-2">
+                <GitBranch size={11} /> Deployment Stage
+              </label>
+              <StagePipeline
+                current={task.deployStage || 'na'}
+                onChange={(v) => { setTask({ ...task, deployStage: v }); update({ deployStage: v }); }}
+              />
+            </div>
+
+            {/* Remarks */}
+            <div>
+              <label className="label flex items-center gap-1">
+                <MessageSquare size={11} /> Remarks
+              </label>
+              <textarea
+                className="textarea text-sm min-h-[60px]"
+                placeholder="Any additional notes, blockers, or context…"
+                value={task.remarks || ''}
+                onChange={(e) => setTask({ ...task, remarks: e.target.value })}
+                onBlur={(e) => update({ remarks: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Subtasks */}
         <Card
           title={`Subtasks (${task.subtasks.length})`}
           action={
-            <span className="text-xs text-slate-500">
-              {task.subtasks.filter((s: any) => s.status === 'done').length}/
-              {task.subtasks.length} done
+            <span className="text-xs text-slate-400">
+              {task.subtasks.filter((s: any) => s.status === 'done').length}/{task.subtasks.length} done
             </span>
           }
         >
           <div className="space-y-1">
             {task.subtasks.map((s: any) => (
-              <div key={s.id} className="flex items-center gap-2 text-sm py-1">
-                <input type="checkbox" checked={s.status === 'done'} onChange={() => toggleSub(s)} />
-                <span
-                  className={`flex-1 ${
-                    s.status === 'done' ? 'line-through text-slate-400' : ''
+              <div key={s.id} className="flex items-center gap-2.5 text-sm py-1 group">
+                <button
+                  onClick={() => toggleSub(s)}
+                  className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                    s.status === 'done' ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-blue-400'
                   }`}
                 >
+                  {s.status === 'done' && <span className="text-white text-[8px] font-black">✓</span>}
+                </button>
+                <span className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
                   {s.title}
                 </span>
-                <span className="text-xs text-slate-500">{formatDate(s.dueDate)}</span>
+                <span className="text-xs text-slate-400">{formatDate(s.dueDate)}</span>
               </div>
             ))}
+            {task.subtasks.length === 0 && (
+              <div className="text-xs text-slate-400 py-1">No subtasks yet.</div>
+            )}
           </div>
           <div className="flex gap-2 mt-3">
-            <input
-              className="input"
-              placeholder="Add a subtask…"
-              value={newSub}
-              onChange={(e) => setNewSub(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addSubtask()}
-            />
-            <button className="btn-primary" onClick={addSubtask}>
-              Add
-            </button>
+            <input className="input text-sm" placeholder="Add a subtask…"
+              value={newSub} onChange={(e) => setNewSub(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addSubtask()} />
+            <button className="btn-primary text-sm" onClick={addSubtask}>Add</button>
           </div>
         </Card>
 
+        {/* Comments */}
         <Card title={`Comments (${task.comments.length})`}>
           <div className="space-y-3 mb-3">
             {task.comments.map((c: any) => (
               <div key={c.id} className="flex gap-3">
-                <Avatar name={c.userName} />
+                <Avatar name={c.userName} size={28} />
                 <div className="flex-1">
                   <div className="text-xs text-slate-500">
-                    <span className="font-semibold text-slate-700">{c.userName}</span> ·{' '}
-                    {formatDate(c.createdAt)}
+                    <span className="font-semibold text-slate-700">{c.userName}</span> · {formatDate(c.createdAt)}
                   </div>
-                  <div className="text-sm">{c.body}</div>
+                  <div className="text-sm text-slate-700 mt-0.5">{c.body}</div>
                 </div>
               </div>
             ))}
             {task.comments.length === 0 && (
-              <div className="text-sm text-slate-500">No comments yet.</div>
+              <div className="text-xs text-slate-400">No comments yet.</div>
             )}
           </div>
           <div className="flex gap-2">
-            <input
-              className="input"
-              placeholder="Add a comment…"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addComment()}
-            />
-            <button className="btn-primary" onClick={addComment}>
-              Post
-            </button>
+            <input className="input text-sm" placeholder="Add a comment…"
+              value={comment} onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addComment()} />
+            <button className="btn-primary text-sm" onClick={addComment}>Post</button>
           </div>
         </Card>
       </div>
 
+      {/* ── Right sidebar: properties ──────────────────────────────────── */}
       <div className="space-y-4">
         <Card title="Properties">
           <div className="space-y-3 text-sm">
             <div>
               <label className="label">Status</label>
-              <select
-                className="select"
-                value={task.status}
-                onChange={(e) => update({ status: e.target.value })}
-              >
+              <select className="select" value={task.status} onChange={(e) => update({ status: e.target.value })}>
                 {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replace('_', ' ')}
-                  </option>
+                  <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="label">Assignee</label>
-              <select
-                className="select"
-                value={task.assigneeId || ''}
-                onChange={(e) =>
-                  update({ assigneeId: e.target.value || null })
-                }
-              >
+              <select className="select" value={task.assigneeId || ''} onChange={(e) => update({ assigneeId: e.target.value || null })}>
                 <option value="">Unassigned</option>
-                {users.map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
+                {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="label">Priority</label>
-                <select
-                  className="select"
-                  value={task.priority}
-                  onChange={(e) => update({ priority: e.target.value })}
-                >
-                  {['low', 'medium', 'high', 'critical'].map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
+                <select className="select" value={task.priority} onChange={(e) => update({ priority: e.target.value })}>
+                  {['low','medium','high','critical'].map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label">Type</label>
-                <select
-                  className="select"
-                  value={task.taskType}
-                  onChange={(e) => update({ taskType: e.target.value })}
-                >
-                  {[
-                    'task',
-                    'review',
-                    'approval',
-                    'test',
-                    'deviation',
-                    'capa',
-                    'audit_finding',
-                    'data_review'
-                  ].map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
+                <select className="select" value={task.taskType} onChange={(e) => update({ taskType: e.target.value })}>
+                  {TASK_TYPES.map(t => <option key={t} value={t}>{t.replace(/_/g,' ')}</option>)}
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="label">Start</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={task.startDate?.slice(0, 10) || ''}
-                  onChange={(e) => update({ startDate: e.target.value || null })}
-                />
+                <label className="label">Start date</label>
+                <input type="date" className="input" value={task.startDate?.slice(0,10)||''}
+                  onChange={(e) => update({ startDate: e.target.value || null })} />
               </div>
               <div>
-                <label className="label">Due</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={task.dueDate?.slice(0, 10) || ''}
-                  onChange={(e) => update({ dueDate: e.target.value || null })}
-                />
+                <label className="label">Due date</label>
+                <input type="date" className="input" value={task.dueDate?.slice(0,10)||''}
+                  onChange={(e) => update({ dueDate: e.target.value || null })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="label">Est. hrs</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={task.estimatedHours ?? ''}
-                  onChange={(e) =>
-                    update({
-                      estimatedHours: e.target.value === '' ? null : Number(e.target.value)
-                    })
-                  }
-                />
+                <input type="number" className="input" value={task.estimatedHours??''}
+                  onChange={(e) => update({ estimatedHours: e.target.value===''?null:Number(e.target.value) })} />
               </div>
               <div>
                 <label className="label">Actual hrs</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={task.actualHours ?? ''}
-                  onChange={(e) =>
-                    update({
-                      actualHours: e.target.value === '' ? null : Number(e.target.value)
-                    })
-                  }
-                />
+                <input type="number" className="input" value={task.actualHours??''}
+                  onChange={(e) => update({ actualHours: e.target.value===''?null:Number(e.target.value) })} />
               </div>
             </div>
-            <div className="flex gap-4 pt-2 text-xs">
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={!!task.gxpCritical}
-                  onChange={(e) => update({ gxpCritical: e.target.checked })}
-                />
+            <div className="flex gap-4 pt-1 text-xs">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={!!task.gxpCritical}
+                  onChange={(e) => update({ gxpCritical: e.target.checked })} />
                 GxP critical
               </label>
-              <label className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={!!task.requiresQaSignoff}
-                  onChange={(e) => update({ requiresQaSignoff: e.target.checked })}
-                />
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={!!task.requiresQaSignoff}
+                  onChange={(e) => update({ requiresQaSignoff: e.target.checked })} />
                 QA sign-off
               </label>
             </div>
           </div>
         </Card>
 
+        {/* Quick pharma summary */}
+        {(task.ccNo || task.documentNo || task.deployStage !== 'na') && (
+          <div className="card p-4 space-y-2">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">CC Summary</h4>
+            {task.ccNo && (
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">CC No.</span>
+                <span className="font-mono font-semibold text-slate-700">{task.ccNo}</span>
+              </div>
+            )}
+            {task.ccTcd && (
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">CC TCD</span>
+                <span className="font-medium text-slate-700">{formatDate(task.ccTcd)}</span>
+              </div>
+            )}
+            {task.documentNo && (
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Doc No.</span>
+                <span className="font-mono font-semibold text-slate-700">{task.documentNo}</span>
+              </div>
+            )}
+            {task.applicableSite && task.applicableSite !== 'na' && (
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Site</span>
+                <span className="font-medium text-slate-700 uppercase">{task.applicableSite.replace('_',' + ')}</span>
+              </div>
+            )}
+            {task.deployStage && task.deployStage !== 'na' && (
+              <div className="flex justify-between text-xs items-center">
+                <span className="text-slate-400">Stage</span>
+                <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                  task.deployStage === 'prd' ? 'bg-green-50 text-green-700' :
+                  task.deployStage === 'int' ? 'bg-blue-50 text-blue-700' :
+                  'bg-purple-50 text-purple-700'
+                }`}>{task.deployStage.toUpperCase()}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {canSignoff && (
           <Card title="QA sign-off">
-            <p className="text-sm text-slate-600 mb-3">
-              This task requires QA sign-off. As a {me?.role}, you can approve it once the evidence is reviewed.
+            <p className="text-xs text-slate-500 mb-3">
+              This task requires QA sign-off. Review the evidence and approve below.
             </p>
-            <button className="btn-primary w-full justify-center" onClick={signoff}>
+            <button className="btn-primary w-full justify-center text-sm" onClick={signoff}>
               Sign off as QA
             </button>
           </Card>
+        )}
+
+        {/* AI triage if present */}
+        {task.aiTriage?.severity && (
+          <div className="card p-4">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">AI Triage</h4>
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                task.aiTriage.severity === 'critical' ? 'bg-red-50 text-red-700' :
+                task.aiTriage.severity === 'major' ? 'bg-amber-50 text-amber-700' :
+                'bg-slate-100 text-slate-600'
+              }`}>{task.aiTriage.severity}</span>
+              {task.aiTriage.category && (
+                <span className="text-xs text-slate-500">{task.aiTriage.category}</span>
+              )}
+            </div>
+            {task.aiTriage.rationale?.length > 0 && (
+              <ul className="text-xs text-slate-500 space-y-1">
+                {task.aiTriage.rationale.slice(0,3).map((r: string, i: number) => (
+                  <li key={i} className="flex gap-1.5"><span className="text-slate-300">·</span>{r}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
     </div>
