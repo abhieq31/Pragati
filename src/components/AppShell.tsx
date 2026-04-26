@@ -53,9 +53,16 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
         style={{ background: '#0B1628' }}
       >
         {/* Logo */}
-        <div className="px-5 py-5">
+        <div className="px-4 py-4">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <AlembicLogo width={24} />
+            {/* Real PNG icon in a white rounded badge — standard enterprise sidebar pattern */}
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: '#fff', borderRadius: 7, padding: '4px 5px', lineHeight: 0, flexShrink: 0,
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-icon.png" alt="" width={22} height={22} style={{ display: 'block', objectFit: 'contain' }} />
+            </span>
             <div>
               <div className="font-black text-white text-sm tracking-tight leading-tight">Pragati</div>
               <div style={{ fontSize: 9, letterSpacing: '0.15em' }} className="text-white/30 uppercase mt-0.5">
