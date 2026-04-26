@@ -63,7 +63,7 @@ body {
     box-shadow: 0 3px 8px rgba(21,101,192,0.35), 0 1px 2px rgba(0,0,0,0.1);
     transform: translateY(-0.5px);
   }
-  .btn-primary:active:not(:disabled) { transform: translateY(0); }
+  .btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.97); }
 
   .btn-secondary {
     @apply btn bg-white border border-slate-200 text-slate-700;
@@ -75,6 +75,7 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.07);
     transform: translateY(-0.5px);
   }
+  .btn-secondary:active { transform: translateY(0) scale(0.97); }
 
   .btn-ghost {
     @apply btn text-slate-500 hover:bg-slate-100/80 hover:text-slate-700;
@@ -123,14 +124,18 @@ body {
     @apply bg-white rounded-xl border;
     border-color: rgba(210,218,228,0.8);
     box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03);
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   }
   .card-hover {
-    @apply card transition-all duration-200 cursor-pointer;
+    @apply card cursor-pointer;
   }
   .card-hover:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.05);
-    transform: translateY(-1px);
+    transform: translateY(-1.5px);
     border-color: rgba(190,205,220,0.9);
+  }
+  .card-hover:active {
+    transform: translateY(0px) scale(0.995);
   }
   .card-accent  { @apply card border-l-4; border-left-color: #1565C0; }
   .card-success { @apply card border-l-4; border-left-color: #2B8C29; }
@@ -209,6 +214,48 @@ body {
 /* ── No-scrollbar utility ─────────────────────────────────────────────────── */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Page transition ─────────────────────────────────────────────────────── */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: page-enter 0.3s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* ── Command palette / modal ─────────────────────────────────────────────── */
+@keyframes paletteIn {
+  from { opacity: 0; transform: scale(0.94) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Toast drain bar ─────────────────────────────────────────────────────── */
+@keyframes drain {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: 200% center; }
+  to   { background-position: -200% center; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #e8edf4 25%, #f3f6fa 50%, #e8edf4 75%);
+  background-size: 200% auto;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 6px;
+}
+.dark .skeleton {
+  background: linear-gradient(90deg, #1c2a40 25%, #243350 50%, #1c2a40 75%);
+  background-size: 200% auto;
+}
+
+/* ── Smooth link transitions ─────────────────────────────────────────────── */
+a { transition: color 0.15s ease, opacity 0.15s ease; }
 
 /* ── Dark mode structural overrides ──────────────────────────────────────── */
 .dark .card,
