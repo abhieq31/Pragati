@@ -2,21 +2,24 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
-import { AlembicLogo } from '@/components/AlembicLogo';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setErr('');
     setLoading(true);
     try {
       await api('/auth/forgot-password', { method: 'POST', body: { email } });
-    } finally {
-      // Always show success — never reveal if email exists
       setSent(true);
+    } catch (e: any) {
+      // Only surfaces in dev when SMTP is misconfigured
+      setErr(e.message || 'Something went wrong. Please try again.');
+    } finally {
       setLoading(false);
     }
   }
@@ -68,6 +71,12 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+
+              {err && (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                  {err}
+                </div>
+              )}
 
               <button
                 type="submit"
