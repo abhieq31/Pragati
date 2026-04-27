@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar } from './ui';
 import { CommandPalette } from './CommandPalette';
+import { Tour } from './Tour';
 import { api } from '@/lib/client/api';
 import {
   LayoutDashboard, FolderKanban, Users, Calendar,
   PieChart, Lightbulb, LogOut, UserCog, Menu, X,
   Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle,
-  Search, CheckSquare,
+  Search, CheckSquare, FlaskConical,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -18,6 +19,7 @@ export interface CurrentUser {
   email: string;
   role: 'employee' | 'pm';
   title?: string;
+  mustChangePassword?: boolean;
 }
 
 /* ── Dark-mode hook ───────────────────────────────────────────────────────── */
@@ -35,6 +37,102 @@ function useDarkMode(): [boolean, () => void] {
   return [dark, () => setDark(d => !d)];
 }
 
+/* ── Force password change modal ─────────────────────────────────────────── */
+function ForcePasswordModal({ onDone }: { onDone: () => void }) {
+  const [pw, setPw]       = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+
+  const checks = [
+    { label: '8+ chars', ok: pw.length >= 8 },
+    { label: 'A–Z',      ok: /[A-Z]/.test(pw) },
+    { label: 'a–z',      ok: /[a-z]/.test(pw) },
+    { label: '0–9',      ok: /[0-9]/.test(pw) },
+  ];
+  const score = checks.filter(c => c.ok).length;
+  const barColor = score <= 1 ? '#EF4444' : score <= 2 ? '#F59E0B' : score <= 3 ? '#3B82F6' : '#22C55E';
+  const strong = score >= 3 && pw.length >= 8;
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pw !== confirm) { setErr('Passwords do not match.'); return; }
+    if (!strong) { setErr('Please choose a stronger password.'); return; }
+    setErr(''); setSaving(true);
+    try {
+      await api('/auth/first-password', { method: 'POST', body: { newPassword: pw } });
+      onDone();
+    } catch (e: any) {
+      setErr(e.message || 'Something went wrong.');
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-sm p-7"
+        style={{ animation: 'celebration-pop 0.3s ease-out forwards' }}>
+        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+          <Lock size={22} className="text-blue-600" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 text-center tracking-tight">Set your password</h2>
+        <p className="text-sm text-slate-400 text-center mt-1.5 leading-snug">
+          Your account was created with a temporary password. Choose a new one to get started.
+        </p>
+        <form onSubmit={submit} className="mt-6 space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">New password</label>
+            <input
+              type="password" autoFocus required minLength={8}
+              className="input text-sm"
+              placeholder="Min 8 characters"
+              value={pw} onChange={e => { setPw(e.target.value); setErr(''); }}
+            />
+            {pw && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex gap-0.5">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="h-1 flex-1 rounded-sm transition-all duration-300"
+                      style={{ background: i <= score ? barColor : '#E2E8F0' }} />
+                  ))}
+                </div>
+                <div className="flex gap-3 flex-wrap">
+                  {checks.map(c => (
+                    <span key={c.label} style={{ fontSize: 10 }} className={`transition-colors ${c.ok ? 'text-green-600 font-medium' : 'text-slate-300'}`}>
+                      {c.ok ? '✓' : '·'} {c.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Confirm password</label>
+            <input
+              type="password" required
+              className="input text-sm"
+              placeholder="Re-enter password"
+              value={confirm} onChange={e => { setConfirm(e.target.value); setErr(''); }}
+            />
+            {confirm && pw !== confirm && (
+              <div className="text-xs text-red-500 mt-1">Passwords do not match</div>
+            )}
+          </div>
+          {err && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              {err}
+            </div>
+          )}
+          <button type="submit" disabled={saving || !strong || pw !== confirm}
+            className="w-full py-2.5 rounded-lg text-sm font-bold text-white transition-all disabled:opacity-50 mt-1"
+            style={{ background: 'linear-gradient(135deg, #1256B0 0%, #1769C8 100%)' }}>
+            {saving ? 'Saving…' : 'Set password & continue →'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 /* ── Main shell ───────────────────────────────────────────────────────────── */
 export default function AppShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   const pathname = usePathname();
@@ -44,6 +142,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   const [profileOpen, setProfileOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [dark, toggleDark]        = useDarkMode();
+  const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
 
   /* Notifications */
   const [notifOpen, setNotifOpen]     = useState(false);
@@ -82,18 +181,20 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
 
   /* Nav */
   const employeeNav = [
-    { href: '/',         label: 'My Tasks',      icon: LayoutDashboard },
-    { href: '/projects', label: 'Projects',       icon: FolderKanban },
-    { href: '/yearly',   label: 'My Year',        icon: Calendar },
+    { href: '/',         label: 'My Tasks',      icon: LayoutDashboard, tour: 'nav-tasks' },
+    { href: '/projects', label: 'Projects',       icon: FolderKanban,   tour: 'nav-projects' },
+    { href: '/yearly',   label: 'My Year',        icon: Calendar,       tour: 'nav-yearly' },
+    { href: '/triage',   label: 'QA Triage',      icon: FlaskConical,   badge: 'AI' },
   ];
   const pmNav = [
-    { href: '/',         label: 'Dashboard',      icon: LayoutDashboard },
-    { href: '/projects', label: 'Projects',       icon: FolderKanban },
-    { href: '/teams',    label: 'Teams',           icon: Users },
-    { href: '/org',      label: 'Command Centre',  icon: PieChart },
+    { href: '/',         label: 'Dashboard',      icon: LayoutDashboard, tour: 'nav-home' },
+    { href: '/projects', label: 'Projects',       icon: FolderKanban,   tour: 'nav-projects' },
+    { href: '/teams',    label: 'Teams',           icon: Users,          tour: 'nav-teams' },
+    { href: '/org',      label: 'Command Centre',  icon: PieChart,       tour: 'nav-org' },
     { href: '/yearly',   label: 'Yearly view',     icon: Calendar },
-    { href: '/insights', label: 'Insights',        icon: Lightbulb, badge: 'Live' },
-    { href: '/people',   label: 'People',          icon: UserCog },
+    { href: '/insights', label: 'Insights',        icon: Lightbulb,      badge: 'Live', tour: 'nav-insights' },
+    { href: '/triage',   label: 'QA Triage',       icon: FlaskConical,   badge: 'AI' },
+    { href: '/people',   label: 'People',          icon: UserCog,        tour: 'nav-people' },
   ];
   const nav = user.role === 'pm' ? pmNav : employeeNav;
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname?.startsWith(href);
@@ -139,6 +240,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       {/* ⌘K Search hint */}
       <div className="px-3 pb-2">
         <button
+          data-tour="cmd-palette"
           onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors group"
         >
@@ -161,6 +263,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
             <Link
               key={n.href}
               href={n.href}
+              data-tour={(n as any).tour}
               className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group ${
                 active ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/80 hover:bg-white/5'
               }`}
@@ -181,6 +284,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       {/* ── Notifications bell ──────────────────────────────────────────── */}
       <div className="px-3 pb-1 relative">
         <button
+          data-tour="notifications"
           onClick={() => setNotifOpen(o => !o)}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-white/5 transition-colors"
         >
@@ -225,8 +329,9 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
                 <div className="py-1">
                   {notifs.map(n => {
                     const Icon = n.icon;
+                    const href = n.id === 'open' ? '/projects' : '/yearly';
                     return (
-                      <Link href="/" key={n.id} onClick={() => setNotifOpen(false)}
+                      <Link href={href} key={n.id} onClick={() => setNotifOpen(false)}
                         className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-white/5 transition-colors">
                         <Icon size={13} style={{ color: n.color, marginTop: 1, flexShrink: 0 }} />
                         <div className="min-w-0">
@@ -245,6 +350,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
 
       {/* ── User footer ─────────────────────────────────────────────────── */}
       <div
+        data-tour="user-profile"
         className="px-3 py-3 border-t border-white/5 relative"
         onMouseEnter={() => setProfileOpen(true)}
         onMouseLeave={() => { setProfileOpen(false); setConfirmLogout(false); }}
@@ -407,6 +513,12 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
           </div>
         </main>
       </div>
+
+      {mustChangePw && (
+        <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
+      )}
+
+      {!mustChangePw && <Tour role={user.role} />}
     </div>
   );
 }

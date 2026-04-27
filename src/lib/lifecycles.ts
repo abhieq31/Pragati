@@ -6,8 +6,11 @@ export type LifecycleKey =
   | 'research'
   | 'csv'
   | 'sop'
+  | 'deviation'
+  | 'capa'
   | 'deviation_capa'
   | 'change_control'
+  | 'software_change'
   | 'audit'
   | 'validation'
   | 'data_integrity'
@@ -426,6 +429,106 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
         { title: 'Data Integrity Assessment Report', type: 'task', qa: true, gxp: true },
         { title: 'QA sign-off', type: 'approval', qa: true, gxp: true }
       ] }
+    ]
+  },
+
+  deviation: {
+    label: 'Deviation',
+    description: 'Manage deviations from approved procedures, specifications, or plans — from detection through QA closure.',
+    regulatoryRefs: '21 CFR 211.192, ICH Q10',
+    group: 'Life Sciences',
+    phases: [
+      { name: 'Detection & Logging', tasks: [
+        { title: 'Log deviation with initial description & timestamp', type: 'deviation', qa: true, gxp: true },
+        { title: 'Immediate containment / quarantine actions', type: 'task', qa: true, gxp: true },
+        { title: 'Notify affected stakeholders', type: 'task', qa: true },
+      ] },
+      { name: 'Classification & Triage', tasks: [
+        { title: 'Classify severity (minor / major / critical)', type: 'task', qa: true, gxp: true },
+        { title: 'Assign investigator & timeline', type: 'task', qa: true },
+        { title: 'Preliminary regulatory reportability check', type: 'review', qa: true, gxp: true },
+      ] },
+      { name: 'Investigation & RCA', tasks: [
+        { title: 'Root cause analysis (5-Why, fishbone, etc.)', type: 'review', qa: true, gxp: true },
+        { title: 'Impact assessment on product / batch / system', type: 'review', qa: true, gxp: true },
+        { title: 'Review comparable deviations / trend data', type: 'data_review', qa: true, gxp: true },
+      ] },
+      { name: 'Closure', tasks: [
+        { title: 'Disposition decision (accept / reject / rework)', type: 'approval', qa: true, gxp: true },
+        { title: 'Raise CAPA if required', type: 'capa', qa: true, gxp: true },
+        { title: 'QA review & sign-off', type: 'approval', qa: true, gxp: true },
+      ] },
+    ]
+  },
+
+  capa: {
+    label: 'CAPA',
+    description: 'Corrective and Preventive Action lifecycle — from root cause definition through effectiveness verification.',
+    regulatoryRefs: 'ICH Q10, 21 CFR 820.100',
+    group: 'Life Sciences',
+    phases: [
+      { name: 'Initiation', tasks: [
+        { title: 'Define problem statement and source (deviation / audit / complaint)', type: 'task', qa: true, gxp: true },
+        { title: 'Risk rank the CAPA (minor / major / critical)', type: 'review', qa: true, gxp: true },
+        { title: 'Assign CAPA owner & target dates', type: 'task', qa: true },
+      ] },
+      { name: 'Corrective Actions', tasks: [
+        { title: 'Define corrective actions (fix the known issue)', type: 'capa', qa: true, gxp: true },
+        { title: 'Execute corrective actions & collect evidence', type: 'task', qa: true, gxp: true },
+        { title: 'Update SOPs / procedures as needed', type: 'task', qa: true, gxp: true },
+      ] },
+      { name: 'Preventive Actions', tasks: [
+        { title: 'Define preventive actions (stop recurrence)', type: 'capa', qa: true, gxp: true },
+        { title: 'Training / awareness update', type: 'task', qa: true },
+        { title: 'System or process control improvements', type: 'task', qa: true, gxp: true },
+      ] },
+      { name: 'Effectiveness Review', tasks: [
+        { title: 'Effectiveness check plan execution', type: 'review', qa: true, gxp: true },
+        { title: 'Trending analysis (confirm recurrence eliminated)', type: 'data_review', qa: true, gxp: true },
+        { title: 'QA final sign-off & closure', type: 'approval', qa: true, gxp: true },
+      ] },
+    ]
+  },
+
+  software_change: {
+    label: 'Software Change (QI)',
+    description: 'Lifecycle for adding features or changes to existing quality informatics software — change control, validation, and GxP sign-off.',
+    regulatoryRefs: '21 CFR Part 11, GAMP 5, EU Annex 11',
+    group: 'Life Sciences',
+    phases: [
+      { name: 'Change Request', tasks: [
+        { title: 'Document change request with business justification', type: 'task', gxp: true },
+        { title: 'Impact assessment on validated state', type: 'review', qa: true, gxp: true },
+        { title: 'Risk classification (minor / major change)', type: 'review', qa: true, gxp: true },
+        { title: 'Change Control Board approval', type: 'approval', qa: true, gxp: true },
+      ] },
+      { name: 'Design & Specification', tasks: [
+        { title: 'Update / create User Requirements Specification (URS)', type: 'task', qa: true, gxp: true },
+        { title: 'Technical design document / impact on existing specs', type: 'task', qa: true, gxp: true },
+        { title: 'Traceability matrix update', type: 'task', qa: true, gxp: true },
+      ] },
+      { name: 'Development', tasks: [
+        { title: 'Code / configure changes in non-production environment', type: 'task', gxp: true },
+        { title: 'Code review & peer testing', type: 'review', gxp: true },
+        { title: 'Unit tests for changed components', type: 'test', gxp: true },
+      ] },
+      { name: 'Validation & Testing', tasks: [
+        { title: 'Draft / update validation test scripts (OQ / PQ)', type: 'task', qa: true, gxp: true },
+        { title: 'Execute validation testing in QA environment', type: 'test', qa: true, gxp: true },
+        { title: 'Resolve defects & re-test', type: 'test', qa: true, gxp: true },
+        { title: 'UAT by process owner', type: 'approval', qa: true, gxp: true },
+      ] },
+      { name: 'GxP Sign-off & Deployment', tasks: [
+        { title: 'Validation Summary Report for change', type: 'approval', qa: true, gxp: true },
+        { title: 'QA Head sign-off & re-validated state confirmation', type: 'approval', qa: true, gxp: true },
+        { title: 'Deploy to production with change ticket reference', type: 'task', gxp: true },
+        { title: 'Training records updated for impacted users', type: 'task', qa: true, gxp: true },
+      ] },
+      { name: 'Post-Implementation Review', tasks: [
+        { title: 'Monitor system behaviour post-deployment (1–4 weeks)', type: 'task', gxp: true },
+        { title: 'Confirm no new deviations or data integrity gaps', type: 'review', qa: true, gxp: true },
+        { title: 'Close change control record', type: 'approval', qa: true, gxp: true },
+      ] },
     ]
   },
 

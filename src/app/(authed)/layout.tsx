@@ -12,7 +12,8 @@ export default async function AuthedLayout({ children }: { children: React.React
         name: user.name,
         email: user.email,
         role: user.role,
-        title: user.title || ''
+        title: user.title || '',
+        mustChangePassword: user.mustChangePassword,
       }}
     >
       {children}

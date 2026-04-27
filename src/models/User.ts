@@ -33,6 +33,9 @@ const UserSchema = new Schema(
     ldapSyncedAt:   { type: Date,   default: null },  // null = not yet synced
     ldapAttributes: { type: Schema.Types.Mixed, default: null }, // raw AD attrs for debugging
 
+    // ── First-login flag ────────────────────────────────────────────────
+    mustChangePassword: { type: Boolean, default: false },
+
     // ── Notification preferences ────────────────────────────────────────
     notifTaskAssigned:  { type: Boolean, default: true  },
     notifTaskDueSoon:   { type: Boolean, default: true  },  // 24h before due

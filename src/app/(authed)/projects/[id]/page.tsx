@@ -12,7 +12,7 @@ import {
   TaskLink,
   formatDate
 } from '@/components/ui';
-import { GripVertical } from 'lucide-react';
+import { Download, GripVertical } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -330,6 +330,27 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [view, setView] = useState<'phases' | 'board'>('phases');
+  const [exporting, setExporting] = useState(false);
+
+  async function exportProject() {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/projects/${id}/export`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match ? match[1] : `project_${id}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function load() {
     const p = await api<any>(`/projects/${id}`);
@@ -417,6 +438,14 @@ export default function ProjectDetailPage() {
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
           </select>
+          <button
+            onClick={exportProject}
+            disabled={exporting}
+            className="btn-secondary flex items-center gap-1.5 text-xs w-48 justify-center"
+          >
+            <Download size={14} />
+            {exporting ? 'Exporting…' : 'Export to Excel'}
+          </button>
         </div>
       </div>
 

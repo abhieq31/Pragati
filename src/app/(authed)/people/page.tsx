@@ -2,13 +2,9 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
-import { UserPlus, Copy, Check, X, Shield, User } from 'lucide-react';
+import { UserPlus, Copy, Check, X, Shield, User, AlertTriangle } from 'lucide-react';
 
 /* ── role display helpers ─────────────────────────────────────────────── */
-const ROLE_LABEL: Record<string, string> = {
-  pm:       'PM',
-  employee: 'Individual Contributor',
-};
 const ROLE_COLOR: Record<string, string> = {
   pm:       'bg-blue-50 text-blue-700 border-blue-200',
   employee: 'bg-slate-100 text-slate-600 border-slate-200',
@@ -64,23 +60,21 @@ function CredentialsModal({ name, email, tempPassword, onClose }: {
         </div>
 
         <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800 leading-snug mb-5">
-          This password is shown only once. Ask {name} to change it after first login via Settings → Security.
+          This password is shown only once. {name} will be prompted to set their own on first login.
         </div>
 
-        <button onClick={onClose} className="btn-primary w-full justify-center">
-          Done
-        </button>
+        <button onClick={onClose} className="btn-primary w-full justify-center">Done</button>
       </div>
     </>
   );
 }
 
-/* ── Add member modal ─────────────────────────────────────────────────── */
+/* ── Add member modal — role is always IC, no picker needed ───────────── */
 function AddMemberModal({ onClose, onCreated }: {
   onClose: () => void;
   onCreated: (name: string, email: string, tempPassword: string) => void;
 }) {
-  const [form, setForm] = useState({ name: '', email: '', title: '', role: 'employee' });
+  const [form, setForm] = useState({ name: '', email: '', title: '' });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -91,7 +85,7 @@ function AddMemberModal({ onClose, onCreated }: {
     try {
       const res = await api<{ user: any; tempPassword: string }>('/users', {
         method: 'POST',
-        body: { name: form.name, email: form.email, title: form.title, role: form.role },
+        body: { name: form.name, email: form.email, title: form.title },
       });
       onCreated(res.user.name, res.user.email, res.tempPassword);
     } catch (e: any) {
@@ -108,7 +102,10 @@ function AddMemberModal({ onClose, onCreated }: {
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Add team member</div>
-            <div className="text-sm text-slate-400 mt-0.5">A temporary password will be generated for you to share.</div>
+            <div className="text-sm text-slate-400 mt-0.5">
+              New accounts are always <strong>Individual Contributors</strong>.
+              You can promote to PM after creation.
+            </div>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
         </div>
@@ -129,35 +126,10 @@ function AddMemberModal({ onClose, onCreated }: {
             <input className="input" placeholder="e.g. Frontend Engineer"
               value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
-          <div>
-            <label className="label">Role</label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              {[
-                { value: 'employee', label: 'Individual Contributor', icon: User,   desc: 'Sees own tasks & projects' },
-                { value: 'pm',       label: 'PM',                     icon: Shield, desc: 'Full access — all teams & analytics' },
-              ].map((r) => {
-                const Icon = r.icon;
-                const active = form.role === r.value;
-                return (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setForm({ ...form, role: r.value })}
-                    className="rounded-xl border-2 p-3 text-left transition-all"
-                    style={{
-                      borderColor: active ? '#1565C0' : '#e2e8f0',
-                      background:  active ? '#eff6ff'  : '#fafafa',
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon size={13} style={{ color: active ? '#1565C0' : '#94a3b8' }} />
-                      <span className="text-xs font-bold" style={{ color: active ? '#1565C0' : '#475569' }}>{r.label}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 leading-snug">{r.desc}</div>
-                  </button>
-                );
-              })}
-            </div>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 flex items-center gap-2">
+            <User size={13} className="text-slate-400 shrink-0" />
+            <span className="text-xs text-slate-500">Account role: <strong>Individual Contributor</strong></span>
           </div>
 
           {err && (
@@ -173,6 +145,44 @@ function AddMemberModal({ onClose, onCreated }: {
   );
 }
 
+/* ── Role-change confirmation dialog ──────────────────────────────────── */
+function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
+  user: any; targetRole: 'pm' | 'employee'; onConfirm: () => void; onCancel: () => void; saving: boolean;
+}) {
+  const promote = targetRole === 'pm';
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-[calc(100vw-32px)] sm:w-[380px]"
+        style={{ animation: 'celebration-pop 0.2s ease-out' }}>
+        <div className="flex flex-col items-center text-center gap-4">
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${promote ? 'bg-blue-50' : 'bg-amber-50'}`}>
+            {promote ? <Shield size={22} className="text-blue-600" /> : <AlertTriangle size={22} className="text-amber-500" />}
+          </div>
+          <div>
+            <div className="text-base font-black text-slate-900 tracking-tight">
+              {promote ? `Promote ${user.name} to PM?` : `Remove PM from ${user.name}?`}
+            </div>
+            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+              {promote
+                ? 'PMs have full access to all projects, teams, org analytics, and AI insights. Only promote trusted team members.'
+                : 'They will lose access to org analytics, AI insights, and team management. Their tasks and projects remain intact.'}
+            </p>
+          </div>
+          <div className="flex gap-2 w-full">
+            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button onClick={onConfirm} disabled={saving}
+              className={`flex-1 justify-center btn ${promote ? 'btn-primary' : ''}`}
+              style={!promote ? { background: 'linear-gradient(135deg,#b45309,#d97706)', color: '#fff', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' } : {}}>
+              {saving ? '…' : promote ? 'Promote to PM' : 'Remove PM access'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Main page ────────────────────────────────────────────────────────── */
 export default function PeoplePage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -180,6 +190,8 @@ export default function PeoplePage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [creds, setCreds] = useState<{ name: string; email: string; tempPassword: string } | null>(null);
+  const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'pm' | 'employee' } | null>(null);
+  const [roleErr, setRoleErr] = useState('');
 
   function load() { api<any[]>('/users').then(setUsers); }
   useEffect(() => {
@@ -187,13 +199,19 @@ export default function PeoplePage() {
     api<any>('/auth/me').then((d) => setMe(d.user));
   }, []);
 
-  async function toggleRole(user: any) {
-    const newRole = user.role === 'pm' ? 'employee' : 'pm';
-    setSaving(user.id);
+  async function confirmRoleChange() {
+    if (!roleConfirm) return;
+    setSaving(roleConfirm.user.id);
+    setRoleErr('');
     try {
-      await api(`/users/${user.id}`, { method: 'PATCH', body: { role: newRole } });
+      await api(`/users/${roleConfirm.user.id}`, { method: 'PATCH', body: { role: roleConfirm.targetRole } });
+      setRoleConfirm(null);
       load();
-    } finally { setSaving(null); }
+    } catch (e: any) {
+      setRoleErr(e.message || 'Failed to update role.');
+    } finally {
+      setSaving(null);
+    }
   }
 
   function handleCreated(name: string, email: string, tempPassword: string) {
@@ -210,56 +228,74 @@ export default function PeoplePage() {
     <div className="space-y-6 max-w-3xl">
       {/* Modals */}
       {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onCreated={handleCreated} />}
-      {creds  && <CredentialsModal {...creds} onClose={() => setCreds(null)} />}
+      {creds && <CredentialsModal {...creds} onClose={() => setCreds(null)} />}
+      {roleConfirm && (
+        <RoleConfirmDialog
+          user={roleConfirm.user}
+          targetRole={roleConfirm.targetRole}
+          onConfirm={confirmRoleChange}
+          onCancel={() => { setRoleConfirm(null); setRoleErr(''); }}
+          saving={saving === roleConfirm.user.id}
+        />
+      )}
 
       {/* Header */}
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 pt-1">
         <div>
-          <h1 className="page-title">People</h1>
-          <p className="page-subtitle">
-            Manage team members and roles. PMs see everything — ICs see their own work.
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">People</h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Manage team members and access. PMs see everything — ICs see their own work.
           </p>
         </div>
         {isPM && (
-          <button onClick={() => setShowAdd(true)} className="btn-primary shrink-0">
+          <button onClick={() => setShowAdd(true)} className="btn-primary shrink-0 gap-2">
             <UserPlus size={14} /> Add member
           </button>
         )}
       </div>
 
-      {/* How roles work */}
-      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-sm text-slate-700">
-        <strong className="text-blue-700">How roles work:</strong>{' '}
-        <span className="text-slate-500">
-          <strong>Individual Contributors</strong> see their tasks, projects, and yearly view.{' '}
-          <strong>PMs</strong> additionally access Teams, Org overview, and the Insights centre.
-          {isPM && ' You can promote or demote anyone below — except yourself.'}
-        </span>
+      {/* Role info banner */}
+      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+        <div className="flex items-start gap-3">
+          <Shield size={16} className="text-blue-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-slate-600 leading-relaxed">
+            <strong className="text-blue-700">Access levels:</strong>{' '}
+            <strong>Individual Contributors</strong> see their tasks, projects, and yearly view.{' '}
+            <strong>PMs</strong> additionally access Teams, Org analytics, and AI Insights.{' '}
+            {isPM && <span className="text-slate-400">Promote ICs to PM only when needed — PM access cannot be self-assigned.</span>}
+          </div>
+        </div>
       </div>
+
+      {roleErr && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{roleErr}</div>
+      )}
 
       {/* PM section */}
       <div className="card overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <Shield size={14} className="text-blue-500" /> PMs
-            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{pms.length}</span>
-          </h2>
+        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+          <Shield size={14} className="text-blue-500" />
+          <h2 className="text-sm font-bold text-slate-700">Project Managers</h2>
+          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">{pms.length}</span>
         </div>
         {pms.length === 0 ? (
           <div className="px-5 py-5 text-sm text-slate-400">No PMs yet.</div>
         ) : (
           <div className="divide-y divide-slate-50">
             {pms.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-3.5">
+              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
                 <Avatar name={u.name} size={36} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-800 text-sm">{u.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Product Manager'} · {u.email}</div>
+                  <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Project Manager'} · {u.email}</div>
                 </div>
-                <span className={`tag border text-xs font-semibold ${ROLE_COLOR.pm}`}>{ROLE_LABEL.pm}</span>
+                <span className={`tag border text-xs font-semibold ${ROLE_COLOR.pm}`}>PM</span>
                 {isPM && me?.id !== u.id && (
-                  <button className="btn-ghost text-xs text-slate-500" onClick={() => toggleRole(u)} disabled={saving === u.id}>
-                    {saving === u.id ? '…' : 'Make IC'}
+                  <button
+                    className="text-xs text-slate-500 hover:text-amber-600 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-amber-50 transition-colors border border-transparent hover:border-amber-200"
+                    onClick={() => setRoleConfirm({ user: u, targetRole: 'employee' })}
+                    disabled={saving === u.id}>
+                    Remove PM
                   </button>
                 )}
               </div>
@@ -270,29 +306,33 @@ export default function PeoplePage() {
 
       {/* IC section */}
       <div className="card overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-            <User size={14} className="text-slate-400" /> Individual Contributors
-            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">{ics.length}</span>
-          </h2>
+        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+          <User size={14} className="text-slate-400" />
+          <h2 className="text-sm font-bold text-slate-700">Individual Contributors</h2>
+          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 ml-1">{ics.length}</span>
         </div>
         {ics.length === 0 ? (
           <div className="px-5 py-5 text-sm text-slate-400">
-            No ICs yet.{isPM && <> <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button></>}
+            No ICs yet.{isPM && (
+              <> <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button></>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
             {ics.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-3.5">
+              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
                 <Avatar name={u.name} size={36} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-800 text-sm">{u.name}</div>
+                  <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
                   <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Individual Contributor'} · {u.email}</div>
                 </div>
-                <span className={`tag border text-xs ${ROLE_COLOR.employee}`}>{ROLE_LABEL.employee}</span>
+                <span className={`tag border text-xs ${ROLE_COLOR.employee}`}>IC</span>
                 {isPM && (
-                  <button className="btn-ghost text-xs text-blue-700" onClick={() => toggleRole(u)} disabled={saving === u.id}>
-                    {saving === u.id ? '…' : 'Make PM'}
+                  <button
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                    onClick={() => setRoleConfirm({ user: u, targetRole: 'pm' })}
+                    disabled={saving === u.id}>
+                    Promote to PM
                   </button>
                 )}
               </div>

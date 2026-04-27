@@ -88,7 +88,7 @@ export default function InsightsPage() {
   const criticalCount = data.projects.filter(p => p.health === 'critical').length;
   const atRiskCount   = data.projects.filter(p => p.health === 'at_risk').length;
   const healthyCount  = data.projects.filter(p => p.health === 'healthy').length;
-  const thisWeekVelocity = data.velocity[3]?.completed ?? 0;
+  const thisWeekVelocity = data.velocity?.[3]?.completed ?? 0;
 
   return (
     <div className="space-y-6 pb-10">
@@ -198,9 +198,9 @@ export default function InsightsPage() {
             </BarChart>
           </ResponsiveContainer>
           <div className="mt-2 text-center text-xs text-slate-400">
-            {data.velocity[3].completed > data.velocity[2].completed
+            {(data.velocity?.[3]?.completed ?? 0) > (data.velocity?.[2]?.completed ?? 0)
               ? '↑ Accelerating this week'
-              : data.velocity[3].completed < data.velocity[2].completed
+              : (data.velocity?.[3]?.completed ?? 0) < (data.velocity?.[2]?.completed ?? 0)
               ? '↓ Slowing this week'
               : '→ Steady pace'}
           </div>

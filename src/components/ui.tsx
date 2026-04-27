@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 
 // ── Status dots ───────────────────────────────────────────────────────────────
 const STATUS_DOT: Record<string, string> = {
@@ -59,11 +59,14 @@ export const LIFECYCLE_LABELS: Record<string, string> = {
   software_release:  'Release',
   product_launch:    'Launch',
   research:          'Research',
-  // Life Sciences templates (kept for compatibility)
+  // Life Sciences templates
   csv:               'CSV',
   sop:               'SOP',
+  deviation:         'Deviation',
+  capa:              'CAPA',
   deviation_capa:    'Issue/CAPA',
   change_control:    'Change Control',
+  software_change:   'SW Change',
   audit:             'Audit',
   validation:        'Validation',
   data_integrity:    'Data Integrity',
@@ -80,8 +83,11 @@ export const LIFECYCLE_COLORS: Record<string, string> = {
   // Life Sciences templates
   csv:               'text-indigo-700 bg-indigo-50',
   sop:               'text-emerald-700 bg-emerald-50',
+  deviation:         'text-rose-700 bg-rose-50',
+  capa:              'text-orange-700 bg-orange-50',
   deviation_capa:    'text-red-600 bg-red-50',
   change_control:    'text-amber-700 bg-amber-50',
+  software_change:   'text-blue-700 bg-blue-50',
   audit:             'text-purple-700 bg-purple-50',
   validation:        'text-sky-700 bg-sky-50',
   data_integrity:    'text-teal-700 bg-teal-50',
@@ -211,7 +217,8 @@ export function formatDate(s?: string | Date | null) {
 
 export function daysUntil(s?: string | Date | null) {
   if (!s) return null;
-  return Math.round((new Date(s).getTime() - Date.now()) / 86400000);
+  const d = typeof s === 'string' && s.length === 10 ? new Date(s + 'T12:00:00') : new Date(s);
+  return Math.round((d.getTime() - Date.now()) / 86400000);
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
@@ -221,23 +228,43 @@ const AVATAR_PALETTE = [
 ];
 
 export function Avatar({ name, size = 28 }: { name?: string | null; size?: number }) {
+  const [failed, setFailed] = useState(false);
   const initials = (name || '?').split(/\s+/).map((x) => x[0]).slice(0, 2).join('').toUpperCase();
   const bg = AVATAR_PALETTE[(name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_PALETTE.length];
+  const radius = Math.round(size * 0.3);
+  const seed = encodeURIComponent(name || 'user');
+
+  if (failed) {
+    return (
+      <div
+        className="font-bold flex items-center justify-center text-white shrink-0 select-none"
+        style={{ width: size, height: size, fontSize: size * 0.38, background: bg, borderRadius: radius }}
+        title={name || ''}
+      >
+        {initials}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="rounded-md font-bold flex items-center justify-center text-white shrink-0 select-none"
-      style={{ width: size, height: size, fontSize: size * 0.38, background: bg }}
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://api.dicebear.com/9.x/shapes/png?seed=${seed}&size=128`}
+      alt={initials}
       title={name || ''}
-    >
-      {initials}
-    </div>
+      width={size}
+      height={size}
+      onError={() => setFailed(true)}
+      className="shrink-0 select-none object-cover"
+      style={{ width: size, height: size, borderRadius: radius }}
+    />
   );
 }
 
 // ── Links ─────────────────────────────────────────────────────────────────────
-export function TaskLink({ task, children }: { task: { id: string; title?: string }; children?: ReactNode }) {
+export function TaskLink({ task, children, className }: { task: { id: string; title?: string }; children?: ReactNode; className?: string }) {
   return (
-    <Link href={`/tasks/${task.id}`} className="font-medium text-slate-800 hover:text-brand-700 transition-colors">
+    <Link href={`/tasks/${task.id}`} className={className ?? 'font-medium text-slate-800 hover:text-blue-700 transition-colors'}>
       {children || task.title}
     </Link>
   );

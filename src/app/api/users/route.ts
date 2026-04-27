@@ -26,7 +26,8 @@ const CreateBody = z.object({
   name:  z.string().min(1),
   email: z.string().email(),
   title: z.string().optional(),
-  role:  z.enum(['employee', 'pm']).optional(),
+  // role is intentionally excluded — all new accounts are IC
+  // Promotion to PM requires a separate explicit PATCH action
 });
 
 function generateTempPassword(): string {
@@ -48,11 +49,12 @@ export async function POST(req: NextRequest) {
     if (exists) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
     const tempPassword = generateTempPassword();
     const user = await User.create({
-      email:        body.email.toLowerCase(),
-      name:         body.name,
-      passwordHash: bcrypt.hashSync(tempPassword, 10),
-      role:         body.role || 'employee',
-      title:        body.title || '',
+      email:              body.email.toLowerCase(),
+      name:               body.name,
+      passwordHash:       bcrypt.hashSync(tempPassword, 10),
+      role:               'employee',
+      title:              body.title || '',
+      mustChangePassword: true,
     });
     return NextResponse.json({ user: u(user), tempPassword });
   } catch (e) {

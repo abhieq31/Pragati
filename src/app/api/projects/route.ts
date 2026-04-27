@@ -18,15 +18,10 @@ const Create = z.object({
   code: z.string().optional(),
   description: z.string().optional(),
   lifecycle: z.enum([
-    'csv',
-    'sop',
-    'deviation_capa',
-    'change_control',
-    'audit',
-    'validation',
-    'data_integrity',
-    'pharmacovigilance',
-    'generic'
+    'csv', 'sop', 'deviation', 'capa', 'deviation_capa', 'change_control',
+    'software_change', 'audit', 'validation', 'data_integrity',
+    'pharmacovigilance', 'generic', 'agile_sprint', 'software_release',
+    'product_launch', 'research',
   ]).default('generic'),
   priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
   teamId: z.string().optional(),
@@ -34,7 +29,11 @@ const Create = z.object({
   startDate: z.string().optional(),
   dueDate: z.string().optional(),
   gxpImpact: z.enum(['none', 'low', 'medium', 'high']).optional(),
-  useTemplate: z.boolean().default(true)
+  useTemplate: z.boolean().default(true),
+  customPhases: z.array(z.object({
+    name: z.string(),
+    tasks: z.array(z.string()),
+  })).optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -103,7 +102,12 @@ export async function POST(req: NextRequest) {
         (await Project.countDocuments({})) + 1
       ).padStart(4, '0')}`;
 
-    const phaseDocs = lc.phases.map((ph, i) => ({
+    // Use customPhases if provided, otherwise fall back to lifecycle template
+    const sourcePhases = body.customPhases && body.customPhases.length > 0
+      ? body.customPhases.map((ph, i) => ({ name: ph.name || `Stage ${i + 1}`, tasks: ph.tasks }))
+      : lc.phases.map(ph => ({ name: ph.name, tasks: ph.tasks.map(t => t.title) }));
+
+    const phaseDocs = sourcePhases.map((ph, i) => ({
       _id: new mongoose.Types.ObjectId(),
       name: ph.name,
       position: i
@@ -124,23 +128,22 @@ export async function POST(req: NextRequest) {
       phases: phaseDocs
     });
 
-    if (body.useTemplate) {
-      const taskDocs: any[] = [];
-      lc.phases.forEach((ph, i) => {
-        for (const t of ph.tasks) {
+    // Seed tasks from custom or template phases
+    const taskDocs: any[] = [];
+    sourcePhases.forEach((ph, i) => {
+      for (const title of ph.tasks) {
+        if (title.trim()) {
           taskDocs.push({
             projectId: project._id,
             phaseId: phaseDocs[i]._id,
-            title: t.title,
-            taskType: t.type,
-            gxpCritical: !!t.gxp,
-            requiresQaSignoff: !!t.qa,
+            title: title.trim(),
+            taskType: 'task',
             priority: body.priority || 'medium'
           });
         }
-      });
-      if (taskDocs.length) await Task.insertMany(taskDocs);
-    }
+      }
+    });
+    if (taskDocs.length) await Task.insertMany(taskDocs);
 
     return NextResponse.json(projectS(project));
   } catch (e) {

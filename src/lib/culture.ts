@@ -11,34 +11,14 @@ export interface CultureGreeting {
   lang?: string;
 }
 
-/** Time-of-day greeting — rotates language by day of week */
+/** Time-of-day greeting */
 export function getGreeting(name: string): CultureGreeting {
   const firstName = name.split(' ')[0];
   const hour = new Date().getHours();
-  const dow = new Date().getDay(); // 0=Sun
 
-  // Seasonal check first
   const seasonal = getSeasonalGreeting(firstName);
   if (seasonal) return seasonal;
 
-  // Language rotation: Mon/Thu = Gujarati, Tue/Fri = Hindi, rest = English
-  if (dow === 1 || dow === 4) {
-    if (hour < 12)
-      return { text: `સુ.પ્ર. ${firstName} 🌅`, sub: 'Suprabhaat — good morning', lang: 'gu' };
-    if (hour < 17)
-      return { text: `કેમ છો, ${firstName}?`, sub: 'Kem chho — how are you?', lang: 'gu' };
-    return { text: `${firstName}, ઘણું સરસ 👋`, sub: 'Ghanu saras — very nice to see you', lang: 'gu' };
-  }
-
-  if (dow === 2 || dow === 5) {
-    if (hour < 12)
-      return { text: `सुप्रभात, ${firstName} 🌤️`, sub: 'Suprabhat — good morning', lang: 'hi' };
-    if (hour < 17)
-      return { text: `नमस्ते, ${firstName} 🙏`, sub: 'Namaste', lang: 'hi' };
-    return { text: `${firstName}, बढ़िया 👋`, sub: 'Badhiya — great to see you', lang: 'hi' };
-  }
-
-  // Default English
   if (hour < 12) return { text: `Good morning, ${firstName} ☀️`, sub: '' };
   if (hour < 17) return { text: `Good afternoon, ${firstName}`, sub: '' };
   return { text: `Good evening, ${firstName} 🌙`, sub: '' };
@@ -56,15 +36,15 @@ function getSeasonalGreeting(firstName: string): CultureGreeting | null {
 
   // Navratri: late Sep / Oct
   if ((m === 9 && d >= 28) || (m === 10 && d <= 12))
-    return { text: `Jai Mata Di, ${firstName} 🙏`, sub: 'Navratri mubarak', lang: 'hi' };
+    return { text: `Happy Navratri, ${firstName} 🙏`, sub: 'Wishing you joy and celebration' };
 
   // Uttarayan: Jan 14
   if (m === 1 && d === 14)
-    return { text: `ઉત્તરાયણ મુબારક, ${firstName} 🪁`, sub: 'Happy Uttarayan — fly high!', lang: 'gu' };
+    return { text: `Happy Uttarayan, ${firstName} 🪁`, sub: 'Fly high!' };
 
   // Holi window: March
   if (m === 3 && d <= 10)
-    return { text: `Happy Holi, ${firstName} 🌈`, sub: 'Bura na maano, Holi hai!', lang: 'hi' };
+    return { text: `Happy Holi, ${firstName} 🌈`, sub: 'Colours and joy!' };
 
   // New Year
   if (m === 1 && d === 1)

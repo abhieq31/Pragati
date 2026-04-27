@@ -16,14 +16,8 @@ const Body = z.object({
   title: z.string().optional(),
 });
 
-function resolveRole(email: string, isFirstUser: boolean): 'pm' | 'employee' {
-  if (isFirstUser) return 'pm';
-  const pmEmails = (process.env.PM_EMAILS || '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  return pmEmails.includes(email.toLowerCase()) ? 'pm' : 'employee';
-}
+// First registered user is always PM — workspace owner.
+// All subsequent accounts must be created by an existing PM via POST /api/users.
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,12 +32,11 @@ export async function POST(req: NextRequest) {
     const body = await readBody(req, Body);
     const exists = await User.findOne({ email: body.email.toLowerCase() });
     if (exists) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
-    const role = resolveRole(body.email, true);
     const user = await User.create({
       email: body.email.toLowerCase(),
       name: body.name,
       passwordHash: bcrypt.hashSync(body.password, 10),
-      role,
+      role: 'pm',
       title: body.title || ''
     });
     const token = signToken({

@@ -10,9 +10,13 @@ export interface JwtPayload {
   role: 'employee' | 'pm';
   name: string;
   title?: string;
+  mustChangePassword?: boolean;
 }
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('[SECURITY] JWT_SECRET env var is not set. Using insecure fallback. Set JWT_SECRET immediately.');
+}
 const COOKIE = 'pragati_token';
 
 export function signToken(payload: JwtPayload): string {
@@ -62,11 +66,10 @@ export async function getCurrentUserFromCookie(): Promise<JwtPayload | null> {
   if (!token) return null;
   try {
     const payload = verifyToken(token);
-    // Verify the user still exists in the DB — catches in-memory resets and deleted accounts
     await connectDB();
-    const exists = await User.exists({ _id: payload.sub });
-    if (!exists) return null;
-    return payload;
+    const user = await User.findById(payload.sub, 'mustChangePassword').lean();
+    if (!user) return null;
+    return { ...payload, mustChangePassword: !!(user as any).mustChangePassword };
   } catch {
     return null;
   }
