@@ -10,7 +10,7 @@ import {
   LayoutDashboard, FolderKanban, Users, Calendar,
   PieChart, Lightbulb, LogOut, UserCog, Menu, X,
   Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle,
-  Search, CheckSquare, FlaskConical, Activity,
+  Search, CheckSquare, Bot, Activity,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -183,7 +183,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
     { href: '/',         label: 'My Tasks',      icon: LayoutDashboard, tour: 'nav-tasks' },
     { href: '/projects', label: 'Projects',       icon: FolderKanban,   tour: 'nav-projects' },
     { href: '/yearly',   label: 'My Year',        icon: Calendar,       tour: 'nav-yearly' },
-    { href: '/triage',   label: 'QA Triage',      icon: FlaskConical,   badge: 'AI' },
+    { href: '/copilot',  label: 'QA Copilot',     icon: Bot,            badge: 'AI' },
   ];
   const pmNav = [
     { href: '/',         label: 'Dashboard',      icon: LayoutDashboard, tour: 'nav-home' },
@@ -193,7 +193,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
     { href: '/risk',     label: 'Risk Radar',       icon: Activity,       badge: 'AI' },
     { href: '/yearly',   label: 'Yearly view',     icon: Calendar },
     { href: '/insights', label: 'Insights',        icon: Lightbulb,      badge: 'Live', tour: 'nav-insights' },
-    { href: '/triage',   label: 'QA Triage',       icon: FlaskConical,   badge: 'AI' },
+    { href: '/copilot',  label: 'QA Copilot',      icon: Bot,            badge: 'AI' },
     { href: '/people',   label: 'People',          icon: UserCog,        tour: 'nav-people' },
   ];
   const nav = user.role === 'pm' ? pmNav : employeeNav;
