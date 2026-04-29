@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { requireUser } from '@/lib/auth';
 
 export const runtime = 'nodejs';
@@ -40,13 +40,12 @@ Structure every response like this:
 
 **The full picture** (if needed): Deeper explanation, regulatory basis, common mistakes.
 
-**Your next steps** — ALWAYS end with this section, formatted EXACTLY like this so the app can parse it:
+**Your next steps** — ALWAYS end with this section, formatted EXACTLY like this:
 
 ---STEPS---
 1. [First concrete action to take]
 2. [Second concrete action]
 3. [Third action]
-...
 ---END STEPS---
 
 Keep steps specific and actionable. Bad: "Fill out deviation form". Good: "Log a Minor deviation in Pragati under the project — describe what happened, which procedure was affected, and the immediate containment action taken."
@@ -55,17 +54,19 @@ Keep steps specific and actionable. Bad: "Fill out deviation form". Good: "Log a
 - If someone describes an IT/software change that touches GxP systems: always check if they need a change control or CSV validation update
 - If a deviation is described that involves data integrity: escalate the severity assessment and mention ALCOA+
 - If someone says "we already fixed it" before logging: explain retrospective documentation and why contemporaneous records matter
-- If it's clearly a non-QA question (e.g., pure coding help): still help, but note it's outside QA scope
+- If it's clearly a non-QA question: still help briefly, but note it's outside QA scope
 
 Keep the tone: "I've got you. Here's exactly what to do."`;
 
 export async function POST(req: NextRequest) {
-  const { user, error } = await requireUser(req);
+  const { error } = await requireUser(req);
   if (error) return error;
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return new Response(
-      JSON.stringify({ error: 'ANTHROPIC_API_KEY is not configured. Ask your PM to add it in Vercel environment variables.' }),
+      JSON.stringify({
+        error: 'GEMINI_API_KEY is not configured. Get a free key at aistudio.google.com, then add it as a Vercel environment variable named GEMINI_API_KEY.',
+      }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -74,28 +75,34 @@ export async function POST(req: NextRequest) {
   const messages: { role: 'user' | 'assistant'; content: string }[] = body.messages ?? [];
 
   if (!messages.length) {
-    return new Response(JSON.stringify({ error: 'No messages provided' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'No messages' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-  const stream = client.messages.stream({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1500,
-    system: SYSTEM_PROMPT,
-    messages,
+  const genAI  = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model  = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    systemInstruction: SYSTEM_PROMPT,
   });
+
+  // Convert message history to Gemini format
+  const history = messages.slice(0, -1).map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+  const lastMessage = messages[messages.length - 1].content;
+
+  const chat   = model.startChat({ history });
+  const result = await chat.sendMessageStream(lastMessage);
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(chunk.delta.text));
-          }
+        for await (const chunk of result.stream) {
+          const text = chunk.text();
+          if (text) controller.enqueue(encoder.encode(text));
         }
-      } catch (e) {
+      } catch {
         controller.enqueue(encoder.encode('\n\n[Error generating response. Please try again.]'));
       } finally {
         controller.close();

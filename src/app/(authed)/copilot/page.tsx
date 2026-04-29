@@ -267,7 +267,8 @@ export default function CopilotPage() {
       {/* No API key banner */}
       {noKey && (
         <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-          <strong>Setup needed:</strong> Add <code className="bg-amber-100 px-1 rounded">ANTHROPIC_API_KEY</code> to your Vercel environment variables, then redeploy. Get a key at <span className="underline">console.anthropic.com</span>.
+          <strong>Setup needed:</strong> Add <code className="bg-amber-100 px-1 rounded font-mono">GEMINI_API_KEY</code> to your Vercel environment variables, then redeploy.{' '}
+          Get a <strong>free</strong> key (no credit card) at <strong>aistudio.google.com</strong> → "Get API key".
         </div>
       )}
 
