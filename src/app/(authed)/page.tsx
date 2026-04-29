@@ -176,12 +176,32 @@ function TaskRow({ task, onDone }: { task: any; onDone: (t: any) => void }) {
 }
 
 /* ── Stat card ────────────────────────────────────────────────────────────── */
-function StatCard({ label, value, sub, icon: Icon, accent, urgent }: {
+function StatCard({ label, value, sub, icon: Icon, accent, urgent, filled }: {
   label: string; value: string | number; sub?: string;
-  icon: any; accent: string; urgent?: boolean;
+  icon: any; accent: string; urgent?: boolean; filled?: boolean;
 }) {
+  if (filled) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl flex flex-col gap-1 p-5 transition-all hover:scale-[1.02] cursor-default"
+        style={{
+          background: `linear-gradient(135deg, ${accent} 0%, ${accent}dd 100%)`,
+          boxShadow: `0 4px 20px ${accent}40, 0 1px 3px ${accent}30`,
+        }}>
+        <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full opacity-10"
+          style={{ background: '#fff' }} />
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-white/70">{label}</div>
+          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <Icon size={15} className="text-white" />
+          </div>
+        </div>
+        <div className="text-3xl font-black tracking-tight leading-none text-white">{value}</div>
+        {sub && <div className="text-[11px] font-medium text-white/60">{sub}</div>}
+      </div>
+    );
+  }
   return (
-    <div className="relative overflow-hidden bg-white rounded-2xl border flex flex-col gap-1 p-5 transition-all hover:shadow-md"
+    <div className="relative overflow-hidden bg-white rounded-2xl border flex flex-col gap-1 p-5 transition-all hover:shadow-md hover:scale-[1.01] cursor-default"
       style={{
         borderColor: urgent ? `${accent}40` : 'rgba(210,218,228,0.8)',
         boxShadow: urgent
@@ -345,15 +365,22 @@ function AttentionPanel({ items }: { items: OrgOverview['attention'] }) {
 function OrgPulse({ totals, projects }: { totals: OrgOverview['totals']; projects: OrgOverview['projects'] }) {
   const critical = projects.filter(p => p.health === 'critical').length;
   const atRisk   = projects.filter(p => p.health === 'at_risk').length;
+  const allHealthy = critical === 0 && atRisk === 0;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-      <StatCard label="Active projects" value={totals.activeProjects} icon={FolderKanban} accent="#1565C0"
+      <StatCard label="Active projects" value={totals.activeProjects} icon={FolderKanban}
+        accent="#1565C0" filled
         sub={critical > 0 ? `${critical} critical` : atRisk > 0 ? `${atRisk} at risk` : 'All healthy'} />
-      <StatCard label="Open tasks (org)" value={totals.tasksOpen} icon={Target} accent="#0f172a" />
-      <StatCard label="Overdue (org)" value={totals.tasksOverdue} icon={AlertTriangle}
-        accent="#dc2626" urgent={totals.tasksOverdue > 0} sub={totals.tasksOverdue > 0 ? 'Needs resolution' : 'None'} />
-      <StatCard label="Done this month" value={totals.doneThisMonth} icon={TrendingUp} accent="#16a34a"
+      <StatCard label="Open tasks" value={totals.tasksOpen} icon={Target} accent="#475569"
         sub="across all projects" />
+      <StatCard label="Overdue" value={totals.tasksOverdue} icon={AlertTriangle}
+        accent={totals.tasksOverdue > 0 ? '#dc2626' : '#94a3b8'}
+        filled={totals.tasksOverdue > 0}
+        urgent={totals.tasksOverdue > 0}
+        sub={totals.tasksOverdue > 0 ? 'Needs resolution' : 'None — great work'} />
+      <StatCard label="Done this month" value={totals.doneThisMonth} icon={TrendingUp}
+        accent="#16a34a" filled={allHealthy && totals.doneThisMonth > 0}
+        sub="tasks shipped" />
     </div>
   );
 }
@@ -430,7 +457,32 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between pt-1 mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">{greet}</h1>
-          <p className="text-xs text-slate-400 mt-1">{todayLabel}</p>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <p className="text-xs text-slate-400">{todayLabel}</p>
+            {isPM && org && (
+              <div className="flex items-center gap-2">
+                <span className="text-slate-200">·</span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  org.projects.some(p => p.health === 'critical')
+                    ? 'bg-red-50 text-red-600'
+                    : org.projects.some(p => p.health === 'at_risk')
+                    ? 'bg-amber-50 text-amber-600'
+                    : 'bg-green-50 text-green-700'
+                }`}>
+                  {org.projects.some(p => p.health === 'critical')
+                    ? `${org.projects.filter(p => p.health === 'critical').length} critical project${org.projects.filter(p => p.health === 'critical').length > 1 ? 's' : ''}`
+                    : org.projects.some(p => p.health === 'at_risk')
+                    ? `${org.projects.filter(p => p.health === 'at_risk').length} at risk`
+                    : '✓ All projects healthy'}
+                </span>
+              </div>
+            )}
+            {!isPM && overdueCount > 0 && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">
+                {overdueCount} overdue
+              </span>
+            )}
+          </div>
         </div>
         <button onClick={() => setQaOpen(true)} className="btn-primary shrink-0 text-sm gap-2">
           <Plus size={15} /> New task
@@ -445,13 +497,16 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           <StatCard icon={CheckCircle2} label="Open tasks" value={openCount}
             accent={openCount === 0 ? '#16a34a' : '#1565C0'}
+            filled={openCount === 0}
             sub={openCount === 0 ? 'All clear!' : `${overdueCount > 0 ? overdueCount + ' overdue' : 'on track'}`} />
           <StatCard icon={AlertTriangle} label="Overdue" value={overdueCount}
             accent={overdueCount > 0 ? '#dc2626' : '#94a3b8'}
+            filled={overdueCount > 0}
             urgent={overdueCount > 0}
             sub={overdueCount > 0 ? 'Act now' : 'None'} />
           <StatCard icon={BarChart2} label="Completion" value={`${rate}%`}
             accent={rate >= 80 ? '#16a34a' : rate >= 50 ? '#1565C0' : '#d97706'}
+            filled={rate >= 80}
             sub={rate >= 80 ? 'Excellent' : rate >= 50 ? 'Good pace' : 'Needs focus'} />
           <StatCard icon={FolderKanban} label="Projects" value={projects.length}
             accent="#0369a1" sub="active" />
