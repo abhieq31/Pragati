@@ -183,14 +183,14 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
     { href: '/',         label: 'My Tasks',      icon: LayoutDashboard, tour: 'nav-tasks' },
     { href: '/projects', label: 'Projects',       icon: FolderKanban,   tour: 'nav-projects' },
     { href: '/yearly',   label: 'My Year',        icon: Calendar,       tour: 'nav-yearly' },
-    { href: '/copilot',  label: 'QA Copilot',     icon: Bot,            badge: 'AI' },
+    { href: '/copilot',  label: 'QA Copilot',     icon: Bot,            badge: 'AI', tour: 'nav-copilot' },
   ];
   const pmNav = [
     { href: '/',         label: 'Dashboard',      icon: LayoutDashboard, tour: 'nav-home' },
     { href: '/projects', label: 'Projects',       icon: FolderKanban,   tour: 'nav-projects' },
     { href: '/teams',    label: 'Teams',            icon: Users,          tour: 'nav-teams' },
     { href: '/org',      label: 'Operations Hub',  icon: PieChart,       tour: 'nav-org' },
-    { href: '/risk',     label: 'Risk Radar',       icon: Activity,       badge: 'AI' },
+    { href: '/risk',     label: 'Risk Radar',       icon: Activity,       badge: 'AI', tour: 'nav-risk' },
     { href: '/yearly',   label: 'Yearly view',     icon: Calendar },
     { href: '/insights', label: 'Insights',        icon: Lightbulb,      badge: 'Live', tour: 'nav-insights' },
     { href: '/copilot',  label: 'QA Copilot',      icon: Bot,            badge: 'AI' },
