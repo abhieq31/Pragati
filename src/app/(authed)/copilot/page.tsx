@@ -182,10 +182,11 @@ export default function CopilotPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        if (res.status === 503) { setNoKey(true); }
+        if (res.status === 503) setNoKey(true);
+        const errMsg = err.error || `Error ${res.status} — please try again.`;
         setMessages(prev => {
           const copy = [...prev];
-          copy[copy.length - 1] = { role: 'assistant', content: err.error || 'Something went wrong. Please try again.' };
+          copy[copy.length - 1] = { role: 'assistant', content: errMsg };
           return copy;
         });
         return;
