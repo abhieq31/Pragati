@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { LifecycleTag, PriorityTag, TaskLink, formatDate, daysUntil } from '@/components/ui';
@@ -8,7 +9,7 @@ import { parseNaturalInput } from '@/lib/naturalDate';
 import {
   CheckCircle2, Clock, AlertTriangle, TrendingUp, FolderKanban,
   ChevronRight, Flame, Target, Plus, ArrowUpRight, Activity,
-  Zap, BarChart2, CircleCheck, Sparkles, Quote,
+  Zap, BarChart2, CircleCheck, Sparkles, Quote, Calendar, Command,
 } from 'lucide-react';
 
 /* ── Animated count-up — gives numbers a subtle "alive" feel ──────────────── */
@@ -82,59 +83,289 @@ function Celebration({ taskTitle, onDone }: { taskTitle: string; onDone: () => v
 }
 
 /* ── Quick-add modal ──────────────────────────────────────────────────────── */
+type Priority = 'low' | 'medium' | 'high' | 'urgent';
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function shiftDateISO(days: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function QuickAdd({ projects, userId, onAdded, open, onClose }: {
   projects: any[]; userId: string; onAdded: () => void; open: boolean; onClose: () => void;
 }) {
   const [raw, setRaw] = useState('');
   const [projectId, setPId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+  const [dueOverride, setDueOverride] = useState<string>('');
+  const [priorityOverride, setPriorityOverride] = useState<Priority | ''>('');
+  const [mounted, setMounted] = useState(false);
   const parsed = useMemo(() => parseNaturalInput(raw), [raw]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Effective values: explicit override beats natural-language parsing
+  const effDue = dueOverride || parsed.dueDate || '';
+  const effPriority = (priorityOverride || parsed.priority || '') as Priority | '';
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  // Auto-focus input when opened
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  // Auto-select if there's exactly one project
+  useEffect(() => {
+    if (open && projects.length === 1 && !projectId) setPId(projects[0].id);
+  }, [open, projects, projectId]);
+
+  // Reset form when closed
+  useEffect(() => {
+    if (!open) {
+      setRaw(''); setDueOverride(''); setPriorityOverride(''); setErrMsg('');
+    }
+  }, [open]);
+
+  // Esc to close, Cmd/Ctrl+Enter to submit
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const form = document.getElementById('quick-add-form') as HTMLFormElement | null;
+        form?.requestSubmit();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!parsed.title.trim() || !projectId) return;
     setSaving(true);
+    setErrMsg('');
     try {
-      await api('/tasks', { method: 'POST', body: { title: parsed.title.trim(), projectId, assigneeId: userId, dueDate: parsed.dueDate || undefined, priority: parsed.priority || undefined }});
-      setRaw(''); setPId(''); onClose(); onAdded();
-    } finally { setSaving(false); }
+      await api('/tasks', {
+        method: 'POST',
+        body: {
+          title: parsed.title.trim(),
+          projectId,
+          assigneeId: userId,
+          dueDate: effDue || undefined,
+          priority: effPriority || undefined,
+        },
+      });
+      setRaw(''); setPId(''); setDueOverride(''); setPriorityOverride('');
+      onClose();
+      onAdded();
+    } catch (err: any) {
+      setErrMsg(err?.message || 'Could not create task. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (!open) return null;
-  return (
+  if (!open || !mounted) return null;
+
+  const canSubmit = parsed.title.trim().length > 0 && !!projectId && !saving;
+  const dueLabel = effDue
+    ? new Date(effDue + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    : '';
+
+  // Render via portal to document.body so we escape any transformed parent
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-[calc(100vw-32px)] sm:w-[420px]"
-        style={{ animation: 'celebration-pop 0.25s ease-out' }}>
-        <div className="flex items-center justify-between mb-5">
+      <div
+        className="fixed inset-0 z-[100] bg-slate-900/45 backdrop-blur-sm"
+        onClick={onClose}
+        style={{ animation: 'fadeIn 0.18s ease-out' }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-add-title"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] bg-white rounded-2xl shadow-2xl border border-slate-100 w-[calc(100vw-32px)] sm:w-[460px] max-h-[calc(100vh-32px)] overflow-y-auto"
+        style={{ animation: 'celebration-pop 0.25s ease-out' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between p-5 pb-3">
           <div>
-            <h3 className="font-black text-slate-900 text-lg tracking-tight">New task</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Type naturally — "fix login bug by friday"</p>
+            <h3 id="quick-add-title" className="font-black text-slate-900 text-lg tracking-tight flex items-center gap-2">
+              <Sparkles size={15} className="text-brand-500" /> New task
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">Type naturally — we&rsquo;ll detect dates &amp; priority.</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition-colors">✕</button>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-2 -mr-1 -mt-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >✕</button>
         </div>
-        <form onSubmit={submit} className="space-y-3">
+
+        <form id="quick-add-form" onSubmit={submit} className="px-5 pb-4 space-y-3.5">
+
+          {/* Natural-language input */}
           <div>
-            <input autoFocus className="input text-sm" placeholder='"review docs by friday" or "urgent: deploy fix"'
-              value={raw} onChange={e => setRaw(e.target.value)} required />
-            {raw.trim() && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {parsed.title !== raw.trim() && <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{parsed.title || '…'}</span>}
-                {parsed.dueDate && <span className="text-[11px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">{new Date(parsed.dueDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>}
-                {parsed.priority && parsed.priority !== 'low' && <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium capitalize">{parsed.priority}</span>}
+            <input
+              ref={inputRef}
+              className="input text-sm"
+              placeholder='e.g. "urgent: deploy fix by friday"'
+              value={raw}
+              onChange={(e) => setRaw(e.target.value)}
+              required
+            />
+            {raw.trim() && (parsed.title !== raw.trim() || parsed.dueDate || (parsed.priority && parsed.priority !== 'low')) && (
+              <div className="mt-1.5 flex flex-wrap gap-1 items-center">
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mr-1">Detected:</span>
+                {parsed.title && parsed.title !== raw.trim() && (
+                  <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">{parsed.title}</span>
+                )}
+                {parsed.dueDate && !dueOverride && (
+                  <span className="text-[11px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-medium">
+                    {new Date(parsed.dueDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+                {parsed.priority && parsed.priority !== 'low' && !priorityOverride && (
+                  <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium capitalize">
+                    {parsed.priority}
+                  </span>
+                )}
               </div>
             )}
           </div>
-          <select className="select text-sm" value={projectId} onChange={e => setPId(e.target.value)} required>
-            <option value="">Select project…</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ''}{p.name}</option>)}
-          </select>
-          <button type="submit" className="w-full btn-primary justify-center" disabled={saving || !parsed.title.trim() || !projectId}>
-            {saving ? 'Adding…' : 'Create task'}
+
+          {/* Project */}
+          <div>
+            <label className="label">Project</label>
+            <select
+              className="select text-sm"
+              value={projectId}
+              onChange={(e) => setPId(e.target.value)}
+              required
+            >
+              <option value="">Select project…</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ''}{p.name}</option>
+              ))}
+            </select>
+            {projects.length === 0 && (
+              <p className="text-xs text-amber-600 mt-1">No projects yet. <Link href="/projects/new" className="font-semibold underline">Create one</Link>.</p>
+            )}
+          </div>
+
+          {/* Quick-pick due dates */}
+          <div>
+            <label className="label flex items-center gap-1.5"><Calendar size={11} className="text-slate-400" /> Due {dueLabel && <span className="ml-1 normal-case font-semibold text-brand-700">· {dueLabel}</span>}</label>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {[
+                { label: 'No date', val: '' },
+                { label: 'Today',   val: todayISO() },
+                { label: 'Tmrw',    val: shiftDateISO(1) },
+                { label: 'Fri',     val: shiftDateISO(((5 - new Date().getDay()) + 7) % 7 || 7) },
+                { label: 'Next wk', val: shiftDateISO(7) },
+              ].map((c) => {
+                const active = effDue === c.val;
+                return (
+                  <button
+                    type="button"
+                    key={c.label}
+                    onClick={() => setDueOverride(c.val)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
+                      active
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-brand'
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+              <input
+                type="date"
+                value={dueOverride}
+                onChange={(e) => setDueOverride(e.target.value)}
+                className="input text-xs py-1 px-2 w-[130px] ml-auto"
+                aria-label="Custom due date"
+              />
+            </div>
+          </div>
+
+          {/* Priority pills */}
+          <div>
+            <label className="label">Priority</label>
+            <div className="flex gap-1.5">
+              {([
+                { key: '',        label: 'Default', cls: 'bg-white text-slate-500 border-slate-200',           active: 'bg-slate-100 text-slate-700 border-slate-300' },
+                { key: 'medium',  label: 'Medium',  cls: 'bg-white text-blue-600  border-blue-100 hover:bg-blue-50',     active: 'bg-blue-600 text-white border-blue-600' },
+                { key: 'high',    label: 'High',    cls: 'bg-white text-amber-600 border-amber-100 hover:bg-amber-50',   active: 'bg-amber-500 text-white border-amber-500' },
+                { key: 'urgent',  label: 'Urgent',  cls: 'bg-white text-red-600   border-red-100 hover:bg-red-50',       active: 'bg-red-600 text-white border-red-600' },
+              ] as const).map((opt) => {
+                const isActive = (effPriority || '') === opt.key;
+                return (
+                  <button
+                    type="button"
+                    key={opt.label}
+                    onClick={() => setPriorityOverride(opt.key as Priority | '')}
+                    className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold border transition-all ${isActive ? opt.active : opt.cls}`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {errMsg && (
+            <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 leading-snug">
+              {errMsg}
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            className="w-full btn-primary justify-center group mt-1"
+            disabled={!canSubmit}
+          >
+            {saving
+              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Adding…</>
+              : <>Create task <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5" /></>
+            }
           </button>
         </form>
+
+        {/* Keyboard hint */}
+        <div className="px-5 pb-4 -mt-1 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+          <span className="flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-mono text-slate-500">Esc</kbd>
+            to close
+          </span>
+          <span className="flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-mono text-slate-500 flex items-center gap-0.5">
+              <Command size={9} />Enter
+            </kbd>
+            to create
+          </span>
+        </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
