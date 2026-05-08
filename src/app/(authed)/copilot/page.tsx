@@ -1,7 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { Bot, Send, Plus, CheckCircle2, Loader2, RotateCcw, ChevronDown } from 'lucide-react';
+import { formatDate } from '@/components/ui';
+import { Bot, Send, Plus, CheckCircle2, Loader2, RotateCcw, Sparkles, Clock, ChevronRight, Shield } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -10,7 +12,65 @@ interface Message {
   stepsAdded?: boolean[];
 }
 
-const STARTERS = [
+// Starter prompts tailored to each task type
+const TYPE_STARTERS: Record<string, { emoji: string; text: string }[]> = {
+  deviation: [
+    { emoji: '⚠️', text: 'How do I classify the severity of this deviation — minor, major, or critical?' },
+    { emoji: '🔍', text: 'What root cause analysis method should I use for this deviation?' },
+    { emoji: '📋', text: 'What evidence do I need to collect before closing this deviation?' },
+    { emoji: '🔒', text: 'Do I need a CAPA or is the deviation corrective action sufficient?' },
+  ],
+  capa: [
+    { emoji: '🌿', text: 'Walk me through a 5-Why analysis for a CAPA.' },
+    { emoji: '✅', text: 'What makes a strong effectiveness check for a CAPA?' },
+    { emoji: '📝', text: 'What is the difference between the corrective and preventive action?' },
+    { emoji: '⏱️', text: 'How long should a CAPA stay open before it\'s considered overdue?' },
+  ],
+  corrective_action: [
+    { emoji: '🌿', text: 'Walk me through a 5-Why analysis for a CAPA.' },
+    { emoji: '✅', text: 'What makes a strong effectiveness check for a CAPA?' },
+    { emoji: '📝', text: 'What is the difference between the corrective and preventive action?' },
+    { emoji: '⏱️', text: 'How long should a CAPA stay open before it\'s considered overdue?' },
+  ],
+  test: [
+    { emoji: '🖥️', text: 'What is the difference between OQ and PQ testing?' },
+    { emoji: '📋', text: 'What do I need in a test protocol before QA can approve it?' },
+    { emoji: '❌', text: 'A test step failed — do I need a deviation?' },
+    { emoji: '✍️', text: 'How should I document a test execution to satisfy an auditor?' },
+  ],
+  audit_finding: [
+    { emoji: '🔍', text: 'How do I respond to a 483 observation effectively?' },
+    { emoji: '📝', text: 'What root cause analysis is expected for an audit finding response?' },
+    { emoji: '⏱️', text: 'What is the typical timeframe to respond to an FDA 483?' },
+    { emoji: '📋', text: 'What evidence should I attach to an audit finding CAPA?' },
+  ],
+  finding: [
+    { emoji: '🔍', text: 'How do I respond to a 483 observation effectively?' },
+    { emoji: '📝', text: 'What root cause analysis is expected for an audit finding response?' },
+    { emoji: '📋', text: 'What evidence should I attach to an audit finding CAPA?' },
+    { emoji: '🔒', text: 'How do I classify an audit finding — observation vs major vs critical?' },
+  ],
+  review: [
+    { emoji: '📋', text: 'What does a second-person review in GxP context require?' },
+    { emoji: '🔒', text: 'Can a reviewer sign off on a document they also authored?' },
+    { emoji: '📝', text: 'What evidence should a data review record contain?' },
+    { emoji: '✅', text: 'What are the ALCOA+ principles for a compliant review record?' },
+  ],
+  data_review: [
+    { emoji: '🔒', text: 'What ALCOA+ principles apply to data review records?' },
+    { emoji: '📋', text: 'How do I handle an unexpected result found during data review?' },
+    { emoji: '🔍', text: 'What counts as raw data vs processed data under FDA guidance?' },
+    { emoji: '✍️', text: 'How should I document a data integrity finding during review?' },
+  ],
+  approval: [
+    { emoji: '✅', text: 'What does a QA approver need to verify before signing off?' },
+    { emoji: '🔒', text: 'What are the electronic signature requirements under 21 CFR Part 11?' },
+    { emoji: '📋', text: 'Can an approval be retracted after it has been given?' },
+    { emoji: '⏱️', text: 'What is the maximum acceptable delay between completion and approval sign-off?' },
+  ],
+};
+
+const GENERIC_STARTERS = [
   { emoji: '⚠️', text: 'We ran a test script on a production system without approval. What do we need to do?' },
   { emoji: '📝', text: 'I need to update a validated LIMS. Walk me through change control.' },
   { emoji: '🔍', text: 'An auditor found our audit trail was disabled for 2 days. What now?' },
@@ -69,14 +129,12 @@ function MessageBubble({ msg, projects, userId, onStepAdded }: {
         <Bot size={15} className="text-white" />
       </div>
       <div className="flex-1 min-w-0 space-y-3">
-        {/* Main answer */}
         <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
           <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap prose-sm">
             {display || <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse rounded-sm" />}
           </div>
         </div>
 
-        {/* Steps */}
         {steps.length > 0 && (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -138,13 +196,108 @@ function MessageBubble({ msg, projects, userId, onStepAdded }: {
   );
 }
 
-export default function CopilotPage() {
-  const [messages, setMessages]   = useState<Message[]>([]);
-  const [input, setInput]         = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [projects, setProjects]   = useState<any[]>([]);
-  const [me, setMe]               = useState<any>(null);
-  const [noKey, setNoKey]         = useState(false);
+// Strip task type to a KB-friendly keyword for auto-seed messages
+function taskTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    task: 'task', review: 'document review', approval: 'approval', test: 'system test',
+    deviation: 'deviation', capa: 'CAPA', corrective_action: 'CAPA',
+    audit_finding: 'audit finding', finding: 'audit finding', data_review: 'data review',
+  };
+  return map[type] ?? type.replace(/_/g, ' ');
+}
+
+function buildSeedMessage(task: any): string {
+  const type  = taskTypeLabel(task.taskType ?? 'task');
+  const flags = [
+    task.gxpCritical ? 'GxP / Compliance critical' : null,
+    task.requiresQaSignoff ? 'requires QA sign-off' : null,
+  ].filter(Boolean).join(', ');
+
+  const parts: string[] = [
+    `I'm working on a ${type}: "${task.title}".`,
+    `Project: ${task.projectName || task.projectCode || 'N/A'}.`,
+    `Status: ${task.status?.replace(/_/g, ' ')}, Priority: ${task.priority}.`,
+  ];
+  if (flags) parts.push(`Flags: ${flags}.`);
+  parts.push('What are the key QA and compliance steps I should follow to complete this correctly?');
+
+  return parts.join(' ');
+}
+
+// Similar tasks panel shown after context is loaded
+function SimilarTasksPanel({ taskId, taskType }: { taskId: string; taskType: string }) {
+  const [similar, setSimilar] = useState<any[] | null>(null);
+  const [open, setOpen]       = useState(false);
+
+  async function load() {
+    if (similar !== null) { setOpen(v => !v); return; }
+    const data = await api<{ similar: any[] }>(`/copilot/similar?taskId=${taskId}`).catch(() => ({ similar: [] }));
+    setSimilar(data.similar);
+    setOpen(true);
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/60 overflow-hidden">
+      <button
+        onClick={load}
+        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-slate-600 hover:text-brand-700 hover:bg-slate-100 transition-colors"
+      >
+        <Clock size={12} className="shrink-0 text-slate-400" />
+        Find similar {taskType.replace(/_/g,' ')} tasks from the past
+        <ChevronRight size={11} className={`ml-auto transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="border-t border-slate-200 px-3 pb-3 pt-2 space-y-2">
+          {similar === null && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 py-1">
+              <Loader2 size={11} className="animate-spin" /> Loading…
+            </div>
+          )}
+          {similar?.length === 0 && (
+            <p className="text-xs text-slate-400 py-1">No closed tasks of this type in this project yet.</p>
+          )}
+          {similar && similar.length > 0 && similar.map((t: any) => (
+            <a
+              key={t.id}
+              href={`/tasks/${t.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-2 group"
+            >
+              <CheckCircle2 size={12} className="text-green-500 shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs text-slate-700 font-medium group-hover:text-brand-700 truncate transition-colors">{t.title}</div>
+                <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                  {t.completedAt && <span>Closed {formatDate(t.completedAt)}</span>}
+                  {t.gxpCritical && <><span>·</span><Shield size={9} className="text-red-400" /><span className="text-red-400">GxP</span></>}
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Inner page needs useSearchParams, must be wrapped in Suspense by the export
+function CopilotInner() {
+  const searchParams  = useSearchParams();
+  const taskIdParam   = searchParams.get('taskId');
+
+  const [messages, setMessages]       = useState<Message[]>([]);
+  const [input, setInput]             = useState('');
+  const [streaming, setStreaming]     = useState(false);
+  const [projects, setProjects]       = useState<any[]>([]);
+  const [me, setMe]                   = useState<any>(null);
+  const [noKey, setNoKey]             = useState(false);
+
+  // Task context (when launched from a task page)
+  const [taskCtx, setTaskCtx]         = useState<any>(null);
+  const [taskLoading, setTaskLoading] = useState(!!taskIdParam);
+  const seededRef                     = useRef(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLTextAreaElement>(null);
 
@@ -152,6 +305,23 @@ export default function CopilotPage() {
     api<any[]>('/projects').then(setProjects);
     api<any>('/auth/me').then(d => setMe(d.user));
   }, []);
+
+  // Load task context if taskId is in URL
+  useEffect(() => {
+    if (!taskIdParam) return;
+    setTaskLoading(true);
+    api<any>(`/tasks/${taskIdParam}`)
+      .then(t => { setTaskCtx(t); setTaskLoading(false); })
+      .catch(() => setTaskLoading(false));
+  }, [taskIdParam]);
+
+  // Auto-seed conversation once task is loaded
+  useEffect(() => {
+    if (!taskCtx || seededRef.current) return;
+    seededRef.current = true;
+    send(buildSeedMessage(taskCtx));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskCtx]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -207,7 +377,6 @@ export default function CopilotPage() {
         });
       }
 
-      // Parse steps out of final message
       const steps = parseSteps(full);
       setMessages(prev => {
         const copy = [...prev];
@@ -242,7 +411,18 @@ export default function CopilotPage() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   }
 
-  const empty = messages.length === 0;
+  function reset() {
+    setMessages([]);
+    setTaskCtx(null);
+    seededRef.current = false;
+    // Remove taskId from URL without full reload
+    window.history.replaceState({}, '', '/copilot');
+  }
+
+  const empty    = messages.length === 0;
+  const starters = taskCtx
+    ? (TYPE_STARTERS[taskCtx.taskType] ?? GENERIC_STARTERS)
+    : GENERIC_STARTERS;
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] max-w-3xl mx-auto">
@@ -255,11 +435,18 @@ export default function CopilotPage() {
           </div>
           <div>
             <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">QA Copilot</h1>
-            <p className="text-[11px] text-slate-400">Ask anything about QA procedures · answers + instant task creation</p>
+            {taskCtx ? (
+              <p className="text-[11px] text-brand-600 font-semibold truncate max-w-[300px]">
+                <Sparkles size={9} className="inline mr-0.5 -mt-0.5" />
+                Context: {taskCtx.title}
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400">Ask anything about QA procedures · answers + instant task creation</p>
+            )}
           </div>
         </div>
         {messages.length > 0 && (
-          <button onClick={() => setMessages([])} className="btn-ghost text-xs flex items-center gap-1.5 text-slate-400">
+          <button onClick={reset} className="btn-ghost text-xs flex items-center gap-1.5 text-slate-400">
             <RotateCcw size={12} /> New chat
           </button>
         )}
@@ -268,39 +455,73 @@ export default function CopilotPage() {
       {/* No API key banner */}
       {noKey && (
         <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-          <strong>Setup needed:</strong> Add <code className="bg-amber-100 px-1 rounded font-mono">GEMINI_API_KEY</code> to your Vercel environment variables, then redeploy.{' '}
+          <strong>Setup needed:</strong> Add <code className="bg-amber-100 px-1 rounded font-mono">GEMINI_API_KEY</code> to your environment variables, then redeploy.{' '}
           Get a <strong>free</strong> key (no credit card) at <strong>aistudio.google.com</strong> → "Get API key".
         </div>
       )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-5">
-        {empty ? (
-          <div className="flex flex-col items-center justify-center h-full gap-6 pb-8">
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center mx-auto shadow-lg">
-                <Bot size={32} className="text-white" />
+        {/* Task context banner */}
+        {taskCtx && messages.length > 0 && (
+          <div className="rounded-xl border border-brand-100 bg-brand-50/60 px-3.5 py-2.5 flex items-start gap-2.5 fade-in-soft">
+            <Sparkles size={13} className="text-brand-500 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-brand-700 mb-0.5">{taskCtx.title}</div>
+              <div className="text-[10px] text-brand-500 flex flex-wrap gap-x-2">
+                <span className="capitalize">{taskCtx.taskType?.replace(/_/g, ' ')}</span>
+                <span>·</span>
+                <span className="capitalize">{taskCtx.status?.replace(/_/g, ' ')}</span>
+                <span>·</span>
+                <span className="capitalize">{taskCtx.priority} priority</span>
+                {taskCtx.gxpCritical && <><span>·</span><span className="text-red-500 font-semibold">GxP critical</span></>}
               </div>
-              <h2 className="text-xl font-black text-slate-900">QA Copilot</h2>
-              <p className="text-sm text-slate-500 max-w-sm leading-relaxed">
-                Your guide through any pharma QA process. Ask about deviations, CAPAs, change controls,
-                CSV, data integrity — or anything that's blocking you.
-              </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-              {STARTERS.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => send(s.text)}
-                  className="flex items-start gap-2.5 text-left px-3.5 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50 transition-all text-sm text-slate-700 group"
-                >
-                  <span className="text-base shrink-0 mt-0.5">{s.emoji}</span>
-                  <span className="leading-snug group-hover:text-blue-700 transition-colors">{s.text}</span>
-                </button>
-              ))}
-            </div>
+            <a href={`/tasks/${taskCtx.id}`} className="text-[10px] text-brand-400 hover:text-brand-700 shrink-0 transition-colors">
+              View task →
+            </a>
           </div>
+        )}
+
+        {/* Similar tasks — shown once we have task context and at least one reply */}
+        {taskCtx && messages.some(m => m.role === 'assistant' && m.content.length > 10) && (
+          <SimilarTasksPanel taskId={taskCtx.id} taskType={taskCtx.taskType ?? 'task'} />
+        )}
+
+        {empty ? (
+          taskLoading ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <Loader2 size={28} className="text-brand-400 animate-spin" />
+              <p className="text-sm text-slate-400">Loading task context…</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-6 pb-8">
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center mx-auto shadow-lg">
+                  <Bot size={32} className="text-white" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900">QA Copilot</h2>
+                <p className="text-sm text-slate-500 max-w-sm leading-relaxed">
+                  {taskCtx
+                    ? `Advising on: ${taskCtx.title}`
+                    : 'Your guide through any pharma QA process. Ask about deviations, CAPAs, change controls, CSV, data integrity — or anything that\'s blocking you.'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+                {starters.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => send(s.text)}
+                    className="flex items-start gap-2.5 text-left px-3.5 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50 transition-all text-sm text-slate-700 group"
+                  >
+                    <span className="text-base shrink-0 mt-0.5">{s.emoji}</span>
+                    <span className="leading-snug group-hover:text-blue-700 transition-colors">{s.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
         ) : (
           messages.map((msg, i) => (
             <MessageBubble
@@ -322,7 +543,9 @@ export default function CopilotPage() {
             ref={inputRef}
             rows={1}
             className="flex-1 resize-none text-sm text-slate-800 placeholder-slate-400 outline-none bg-transparent py-1.5 max-h-40"
-            placeholder="Ask anything about QA — deviations, CAPA, change control, CSV, data integrity…"
+            placeholder={taskCtx
+              ? `Ask a follow-up about "${taskCtx.title}"…`
+              : 'Ask anything about QA — deviations, CAPA, change control, CSV, data integrity…'}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
@@ -345,5 +568,13 @@ export default function CopilotPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function CopilotPage() {
+  return (
+    <Suspense>
+      <CopilotInner />
+    </Suspense>
   );
 }
