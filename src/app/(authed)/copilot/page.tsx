@@ -361,30 +361,47 @@ function CopilotInner() {
         return;
       }
 
-      // Pick up the runtime mode from the response header (LLM vs KB-only)
-      const m = res.headers.get('X-Copilot-Mode');
-      if (m === 'llm' || m === 'kb') setMode(m);
+      // Tentative mode from header — final mode comes from the trailing
+      // <!--PRAGATI-META--> sentinel embedded by the server once it knows
+      // whether the LLM call actually succeeded.
+      const headerMode = res.headers.get('X-Copilot-Mode');
+      if (headerMode === 'llm-attempt') setMode('llm');
+      else if (headerMode === 'kb')     setMode('kb');
 
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let full = '';
 
+      // Strip the meta sentinel out of any chunk we render so users never see it
+      const META_RE = /\s*<!--PRAGATI-META:({[\s\S]*?})-->\s*$/;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         full += decoder.decode(value, { stream: true });
+        const visible = full.replace(META_RE, '');
         setMessages(prev => {
           const copy = [...prev];
-          copy[copy.length - 1] = { role: 'assistant', content: full };
+          copy[copy.length - 1] = { role: 'assistant', content: visible };
           return copy;
         });
       }
 
-      const steps = parseSteps(full);
+      // Extract the final mode from the meta trailer (if present)
+      const metaMatch = full.match(META_RE);
+      let finalText = full.replace(META_RE, '');
+      if (metaMatch) {
+        try {
+          const m = JSON.parse(metaMatch[1]) as { mode: 'llm' | 'kb'; model?: string; errors?: string[] };
+          setMode(m.mode);
+        } catch { /* ignore */ }
+      }
+
+      const steps = parseSteps(finalText);
       setMessages(prev => {
         const copy = [...prev];
         copy[copy.length - 1] = {
-          role: 'assistant', content: full,
+          role: 'assistant', content: finalText,
           steps, stepsAdded: steps.map(() => false),
         };
         return copy;

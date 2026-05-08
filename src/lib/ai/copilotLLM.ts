@@ -1,17 +1,25 @@
 // ─── Pharma QA Copilot — LLM core ────────────────────────────────────────────
 // Wraps Gemini (free, no credit card) with a curated regulatory knowledge base
 // used as grounding context (RAG). Streams tokens; falls back to KB-only if no
-// key or API failure.
+// key. If a key IS set but the LLM fails, the failure is surfaced to the user
+// (we do NOT silently degrade — that hides bugs and breaks the "Live AI" badge).
 
 import { GoogleGenerativeAI, type Content } from '@google/generative-ai';
 import { findRelevantEntries, findBestAnswer, generalGuidance, type KBEntry } from './qaKnowledge';
 
 export type ChatMsg = { role: 'user' | 'assistant'; content: string };
 
+// Try a few model names in priority order. List validated against
+// generativelanguage.googleapis.com as of v0.24.1 (Jan 2026):
+//   - gemini-2.0-flash and the -001/-exp variants accept system instructions
+//   - lite is cheaper and sometimes available when flash is rate-limited
+//   - 1.5-flash kept as last-ditch because it's been GA the longest
 const MODEL_ORDER = [
-  'gemini-2.0-flash',         // primary — fast, free tier
-  'gemini-2.0-flash-lite',    // smaller / cheaper
-  'gemini-1.5-flash',         // legacy fallback
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
 ];
 
 function systemInstruction(kb: KBEntry[], hasTaskContext: boolean): string {
@@ -95,7 +103,7 @@ function buildHistory(messages: ChatMsg[]): Content[] {
   })) as Content[];
 }
 
-// Old KB-only response — used as fallback
+// KB-only response — used when no API key is set, or as last-ditch fallback
 function buildKBResponse(query: string): string {
   const entry = findBestAnswer(query) ?? generalGuidance(query);
   const lines: string[] = [];
@@ -116,15 +124,26 @@ export interface CopilotStreamOptions {
   hasTaskContext?: boolean;
 }
 
-// Stream a response. Emits text chunks; consumer is responsible for flushing.
+export interface StreamMeta {
+  // Gets populated as the stream progresses so the route can read it later.
+  finalMode: 'llm' | 'kb';
+  modelUsed?: string;
+  errors: string[];
+}
+
+// Stream a response. The `meta` object is mutated as we go so the route can
+// know which path actually executed (LLM vs KB fallback) and which model
+// answered. This is what powers the honest "Live AI" / "KB mode" badge.
 export async function* streamCopilotReply(
-  opts: CopilotStreamOptions
+  opts: CopilotStreamOptions,
+  meta: StreamMeta = { finalMode: 'kb', errors: [] }
 ): AsyncGenerator<string, void, unknown> {
   const apiKey = process.env.GEMINI_API_KEY;
   const lastUser = [...opts.messages].reverse().find(m => m.role === 'user')?.content ?? '';
 
-  // No API key — degrade gracefully to KB-only mode (always reliable)
+  // No key — degrade transparently to KB mode (the route header reflects this)
   if (!apiKey) {
+    meta.finalMode = 'kb';
     yield* streamString(buildKBResponse(lastUser));
     return;
   }
@@ -136,12 +155,16 @@ export async function* streamCopilotReply(
   const genAI = new GoogleGenerativeAI(apiKey);
 
   // Try models in priority order — avoids hard failure if one is rate-limited
-  let lastErr: any = null;
   for (const modelName of MODEL_ORDER) {
     try {
+      // IMPORTANT: systemInstruction must be a plain string, NOT a Content
+      // object with role:'system'. Gemini only accepts user/model roles in
+      // Content; passing role:'system' makes the SDK throw silently inside
+      // the async iterator and we'd never see chunks come back. This was the
+      // bug that made "Live AI" badge show but answers degrade to KB.
       const model = genAI.getGenerativeModel({
         model: modelName,
-        systemInstruction: { role: 'system', parts: [{ text: sys }] },
+        systemInstruction: sys,
         generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
       });
       const chat = model.startChat({ history });
@@ -152,21 +175,29 @@ export async function* streamCopilotReply(
         const t = chunk.text();
         if (t) { any = true; yield t; }
       }
-      // If model returned nothing, try the next one
       if (!any) {
-        lastErr = new Error(`Empty response from ${modelName}`);
+        meta.errors.push(`${modelName}: empty stream`);
         continue;
       }
+      meta.finalMode  = 'llm';
+      meta.modelUsed  = modelName;
       return;
-    } catch (e) {
-      lastErr = e;
+    } catch (e: any) {
+      // Common reasons: 404 model name, 429 rate limit, 400 bad input,
+      // network issue. Capture the message so the route can surface it.
+      const reason = e?.message || e?.toString?.() || 'unknown error';
+      meta.errors.push(`${modelName}: ${reason}`);
       // try next model
     }
   }
 
-  // All models failed — fall back to KB so the user always gets an answer
-  // eslint-disable-next-line no-console
-  console.error('[copilot] all models failed, falling back to KB:', lastErr);
+  // All models failed but a key WAS present — surface this honestly. Users
+  // need to know the LLM didn't run; otherwise they'd think "Live AI" is
+  // working while reading canned KB output.
+  meta.finalMode = 'kb';
+  yield '⚠️ The Live AI failed to respond — falling back to the curated knowledge base.\n\n';
+  yield `_Reason: ${meta.errors.slice(-1)[0] || 'unknown'}_\n\n`;
+  yield '──\n\n';
   yield* streamString(buildKBResponse(lastUser));
 }
 
