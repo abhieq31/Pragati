@@ -9,16 +9,12 @@ import { findRelevantEntries, findBestAnswer, generalGuidance, type KBEntry } fr
 
 export type ChatMsg = { role: 'user' | 'assistant'; content: string };
 
-// Try a few model names in priority order. List validated against
-// generativelanguage.googleapis.com as of v0.24.1 (May 2026):
-//   - gemini-2.0-flash and the -001 variant accept system instructions
-//   - lite is cheaper and available when flash is rate-limited
-//   - 1.5-flash variants removed — 404 on current API keys
+// Try a few model names in priority order. Validated May 2026 against
+// the Pragati App project (955403952729) — 2.0-flash variants return 404
+// for new API keys; 2.5-flash is the current GA model.
 const MODEL_ORDER = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-001',
-  'gemini-2.0-flash-lite',
-  'gemini-2.0-flash-lite-001',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
 ];
 
 function systemInstruction(kb: KBEntry[], hasTaskContext: boolean): string {
