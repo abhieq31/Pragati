@@ -235,32 +235,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   /* ── Sidebar content ─────────────────────────────────────────────────────────── */
   const SidebarContent = (
     <>
-      {/* Role pill */}
-      <div className="px-4 pt-4 pb-2">
-        <div style={{ fontSize: 9, letterSpacing: '0.18em' }}
-          className="text-slate-400 dark:text-white/30 uppercase font-bold">
-          {user.role === 'pm' ? 'Project Manager' : 'Individual Contributor'}
-        </div>
-      </div>
-
-      {/* Search hint */}
-      <div className="px-3 pb-3">
-        <button data-tour="cmd-palette"
-          onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/8 border border-slate-200 dark:border-white/8 transition-colors group">
-          <Search size={12} className="text-slate-400 dark:text-white/30 shrink-0" />
-          <span style={{ fontSize: 11 }} className="text-slate-400 dark:text-white/30 flex-1 text-left">
-            Search & jump to…
-          </span>
-          <kbd style={{ fontSize: 9 }}
-            className="font-mono text-slate-400 dark:text-white/20 border border-slate-300 dark:border-white/10 rounded px-1.5 py-0.5 bg-white dark:bg-transparent">
-            ⌘K
-          </kbd>
-        </button>
-      </div>
-
       {/* Nav */}
-      <nav className="flex-1 px-3 overflow-auto pb-2">
+      <nav className="flex-1 px-3 pt-4 overflow-auto pb-2">
         {sections.map((section, si) => (
           <div key={section.title} className={si > 0 ? 'mt-4' : ''}>
             <div style={{ fontSize: 9, letterSpacing: '0.18em' }}
