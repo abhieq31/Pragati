@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
@@ -9,32 +8,10 @@ import { requireUser } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { project as projectS } from '@/lib/serialize';
 import { LIFECYCLES, LifecycleKey } from '@/lib/lifecycles';
+import { ProjectCreateSchema } from '@/lib/validations';
 import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
-
-const Create = z.object({
-  name: z.string().min(1),
-  code: z.string().optional(),
-  description: z.string().optional(),
-  lifecycle: z.enum([
-    'csv', 'sop', 'deviation', 'capa', 'deviation_capa', 'change_control',
-    'software_change', 'audit', 'validation', 'data_integrity',
-    'pharmacovigilance', 'generic', 'agile_sprint', 'software_release',
-    'product_launch', 'research',
-  ]).default('generic'),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  teamId: z.string().optional(),
-  ownerId: z.string().optional(),
-  startDate: z.string().optional(),
-  dueDate: z.string().optional(),
-  gxpImpact: z.enum(['none', 'low', 'medium', 'high']).optional(),
-  useTemplate: z.boolean().default(true),
-  customPhases: z.array(z.object({
-    name: z.string(),
-    tasks: z.array(z.string()),
-  })).optional(),
-});
 
 export async function GET(req: NextRequest) {
   try {
@@ -95,7 +72,7 @@ export async function POST(req: NextRequest) {
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const body = await readBody(req, Create);
+    const body = await readBody(req, ProjectCreateSchema);
     const lc = LIFECYCLES[body.lifecycle as LifecycleKey] || LIFECYCLES.generic;
     const code =
       body.code ||

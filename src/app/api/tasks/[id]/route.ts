@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { Task } from '@/models/Task';
 import { Project } from '@/models/Project';
@@ -7,33 +6,9 @@ import { User } from '@/models/User';
 import { requireUser } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { task as taskS } from '@/lib/serialize';
+import { TaskUpdateSchema } from '@/lib/validations';
 
 export const runtime = 'nodejs';
-
-const Patch = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
-  assigneeId: z.string().nullable().optional(),
-  status: z.enum(['todo', 'in_progress', 'review', 'blocked', 'done']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  taskType: z
-    .enum(['task', 'review', 'approval', 'test', 'deviation', 'capa', 'audit_finding', 'data_review'])
-    .optional(),
-  gxpCritical: z.boolean().optional(),
-  requiresQaSignoff: z.boolean().optional(),
-  startDate: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
-  estimatedHours: z.number().nullable().optional(),
-  actualHours: z.number().nullable().optional(),
-  phaseId: z.string().nullable().optional(),
-  // Pharma fields
-  ccNo:           z.string().optional(),
-  ccTcd:          z.string().nullable().optional(),
-  documentNo:     z.string().optional(),
-  applicableSite: z.enum(['val', 'prd', 'val_prd', 'na']).optional(),
-  deployStage:    z.enum(['dev', 'int', 'prd', 'na']).optional(),
-  remarks:        z.string().optional(),
-});
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -75,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { error } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const body = await readBody(req, Patch);
+    const body = await readBody(req, TaskUpdateSchema);
     const current = await Task.findById(params.id);
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const set: any = {};

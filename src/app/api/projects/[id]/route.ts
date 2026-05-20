@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
@@ -9,20 +8,9 @@ import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { project as projectS, task as taskS } from '@/lib/serialize';
 import { LIFECYCLES } from '@/lib/lifecycles';
+import { ProjectUpdateSchema } from '@/lib/validations';
 
 export const runtime = 'nodejs';
-
-const Patch = z.object({
-  name: z.string().optional(),
-  description: z.string().optional(),
-  status: z.enum(['planning', 'in_progress', 'on_hold', 'completed', 'cancelled']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  teamId: z.string().nullable().optional(),
-  ownerId: z.string().nullable().optional(),
-  startDate: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional(),
-  gxpImpact: z.enum(['none', 'low', 'medium', 'high']).optional()
-});
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -69,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { error } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const body = await readBody(req, Patch);
+    const body = await readBody(req, ProjectUpdateSchema);
     const current = await Project.findById(params.id);
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const patch: any = {};
