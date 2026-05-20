@@ -435,6 +435,10 @@ export default function ProjectDetailPage() {
   const pendingQa = project.tasks.filter(
     (t: any) => t.requiresQaSignoff && !t.qaSignoffAt && t.status === 'done'
   ).length;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const overdue = project.tasks.filter(
+    (t: any) => t.dueDate && new Date(t.dueDate) < today && t.status !== 'done'
+  ).length;
 
   async function updateStatus(newStatus: string) {
     await api(`/projects/${id}`, { method: 'PATCH', body: { status: newStatus } });
@@ -533,7 +537,7 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <div className="text-xs text-slate-500 font-semibold uppercase">Progress</div>
           <div className="text-2xl font-semibold mt-1">{pct}%</div>
@@ -558,6 +562,13 @@ export default function ProjectDetailPage() {
           <div className="text-2xl font-semibold mt-1">
             {project.tasks.filter((t: any) => t.gxpCritical).length}
           </div>
+        </Card>
+        <Card>
+          <div className="text-xs text-slate-500 font-semibold uppercase">Overdue</div>
+          <div className={`text-2xl font-semibold mt-1 ${overdue ? 'text-red-600' : ''}`}>
+            {overdue}
+          </div>
+          <div className="text-xs text-slate-500 mt-1">not yet done</div>
         </Card>
       </div>
 
@@ -655,10 +666,42 @@ export default function ProjectDetailPage() {
                 .filter((t: any) => !t.phaseId)
                 .map((t: any) => (
                   <div key={t.id} className="py-2 flex items-center gap-3 text-sm">
-                    <TaskLink task={t} />
-                    <span className="ml-auto text-xs text-slate-500">
-                      {t.assigneeName || 'Unassigned'}
-                    </span>
+                    <select
+                      className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white"
+                      value={t.status}
+                      onChange={(e) => moveTask(t.id, e.target.value)}
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {s.replace('_', ' ')}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex-1">
+                      <TaskLink task={t} />
+                      <div className="text-xs text-slate-500">
+                        {t.assigneeName || 'Unassigned'}
+                        {t.subtaskCount > 0 &&
+                          ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
+                      </div>
+                    </div>
+                    {t.gxpCritical && (
+                      <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>
+                    )}
+                    {t.requiresQaSignoff &&
+                      (t.qaSignoffAt ? (
+                        <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          QA ✓
+                        </span>
+                      ) : (
+                        <span className="tag bg-purple-50 text-purple-700 border border-purple-200">
+                          QA sign-off
+                        </span>
+                      ))}
+                    <PriorityTag priority={t.priority} />
+                    <div className="text-xs text-slate-500 w-24 text-right">
+                      {formatDate(t.dueDate)}
+                    </div>
                   </div>
                 ))}
               {project.tasks.filter((t: any) => !t.phaseId).length === 0 && (
