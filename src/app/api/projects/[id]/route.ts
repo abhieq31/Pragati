@@ -19,9 +19,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     await connectDB();
     const p = await Project.findById(params.id).lean();
     if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    const team = p.teamId ? await Team.findById(p.teamId).lean() : null;
-    const owner = p.ownerId ? await User.findById(p.ownerId).lean() : null;
-    const tasks = await Task.find({ projectId: p._id }).lean();
+    const [team, owner, tasks] = await Promise.all([
+      p.teamId ? Team.findById(p.teamId).lean() : Promise.resolve(null),
+      p.ownerId ? User.findById(p.ownerId).lean() : Promise.resolve(null),
+      Task.find({ projectId: p._id }).lean(),
+    ]);
     const assignees = await User.find({
       _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) }
     }).lean();
@@ -58,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (error) return error;
     await connectDB();
     const body = await readBody(req, ProjectUpdateSchema);
-    const current = await Project.findById(params.id);
+    const current = await Project.findById(params.id).select('status').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const patch: any = {};
     for (const [k, v] of Object.entries(body)) {

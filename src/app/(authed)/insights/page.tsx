@@ -1,10 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { api } from '@/lib/client/api';
 import { Avatar, Card, LifecycleTag, ProgressBar } from '@/components/ui';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChevronRight, Shield, AlertTriangle, Pause, Users, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+
+const VelocityChart = dynamic(() => import('./VelocityChart'), {
+  ssr: false,
+  loading: () => <div className="h-40 bg-slate-50 rounded-lg animate-pulse" />,
+});
 
 interface ProjectInsight {
   id: string; name: string; code: string; lifecycle: string;
@@ -258,24 +263,7 @@ export default function InsightsPage() {
 
         {/* Velocity */}
         <Card title="Team velocity · last 4 weeks">
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={data.velocity} barSize={28}>
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis hide />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-                formatter={(v: any) => [`${v} tasks`, 'Completed']}
-              />
-              <Bar dataKey="completed" radius={[4, 4, 0, 0]}>
-                {data.velocity.map((entry, i) => (
-                  <Cell
-                    key={i}
-                    fill={i === 3 ? '#1565C0' : '#BBDEFB'}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <VelocityChart data={data.velocity} />
         </Card>
       </div>
 

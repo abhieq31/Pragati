@@ -17,12 +17,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     await connectDB();
     const t = await Task.findById(params.id).lean();
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    const project = await Project.findById(t.projectId).lean();
-    const assignee = t.assigneeId ? await User.findById(t.assigneeId).lean() : null;
-    const qa = t.qaSignoffUserId ? await User.findById(t.qaSignoffUserId).lean() : null;
-    const commentUsers = await User.find({
-      _id: { $in: (t.comments || []).map((c: any) => c.userId) }
-    }).lean();
+    const [project, assignee, qa, commentUsers] = await Promise.all([
+      Project.findById(t.projectId).lean(),
+      t.assigneeId ? User.findById(t.assigneeId).lean() : Promise.resolve(null),
+      t.qaSignoffUserId ? User.findById(t.qaSignoffUserId).lean() : Promise.resolve(null),
+      User.find({ _id: { $in: (t.comments || []).map((c: any) => c.userId) } }).lean(),
+    ]);
     const uMap = new Map(commentUsers.map((u) => [String(u._id), u.name]));
     const comments = (t.comments || []).map((c: any) => ({
       id: String(c._id),
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (error) return error;
     await connectDB();
     const body = await readBody(req, TaskUpdateSchema);
-    const current = await Task.findById(params.id);
+    const current = await Task.findById(params.id).select('status').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const set: any = {};
     for (const [k, v] of Object.entries(body)) {
