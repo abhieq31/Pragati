@@ -31,13 +31,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (body.role === 'employee') {
       const pmCount = await User.countDocuments({ role: 'pm' });
-      const target = await User.findById(params.id, 'role');
+      const target = await User.findById(params.id, 'role').lean();
       if (target?.role === 'pm' && pmCount <= 1) {
         return NextResponse.json({ error: 'Cannot demote the last PM. Promote another user first.' }, { status: 409 });
       }
     }
 
-    const updated = await User.findByIdAndUpdate(params.id, { $set: body }, { new: true });
+    const updated = await User.findByIdAndUpdate(params.id, { $set: body }, { new: true }).lean();
     if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     return NextResponse.json(u(updated));
   } catch (e) {
@@ -55,7 +55,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'You cannot remove your own account.' }, { status: 403 });
     }
 
-    const target = await User.findById(params.id, 'role name');
+    const target = await User.findById(params.id, 'role name').lean();
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (target.role === 'pm') {

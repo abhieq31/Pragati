@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const { user, error } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const list = await User.find({}).sort({ name: 1 });
+    const list = await User.find({}).sort({ name: 1 }).lean();
     return NextResponse.json(list.map(u));
   } catch (e) {
     return handleError(e);

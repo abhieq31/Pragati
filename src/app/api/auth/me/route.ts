@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { user, error } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const fresh = await User.findById(user.sub);
+    const fresh = await User.findById(user.sub).lean();
     if (!fresh) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     return NextResponse.json({ user: u(fresh) });
   } catch (e) {

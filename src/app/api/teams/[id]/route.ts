@@ -18,8 +18,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const t = await Team.findById(params.id).lean();
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const memberIds = ((t as any).memberIds || []);
-    const users = await User.find({ _id: { $in: memberIds } }).lean();
-    const projects = await Project.find({ teamId: params.id }).lean();
+    const [users, projects] = await Promise.all([
+      User.find({ _id: { $in: memberIds } }).lean(),
+      Project.find({ teamId: params.id }).lean(),
+    ]);
     const taskCounts = await Task.aggregate([
       { $match: { projectId: { $in: projects.map((p) => p._id) } } },
       { $group: { _id: { projectId: '$projectId', status: '$status' }, c: { $sum: 1 } } }
