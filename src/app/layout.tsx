@@ -12,10 +12,11 @@ export const metadata: Metadata = {
   description:
     'A modern project & task management platform for quality-driven teams. Built for teams that care about execution.',
   icons: {
-    icon: '/icon.png',
-    apple: '/apple-icon.png',
-    shortcut: '/icon.png'
-  }
+    icon: '/logo-icon.png',
+    apple: '/logo-icon.png',
+    shortcut: '/logo-icon.png'
+  },
+  robots: { index: false, follow: false }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
