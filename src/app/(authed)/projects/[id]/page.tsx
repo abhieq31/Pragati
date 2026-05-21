@@ -9,6 +9,8 @@ import {
   PriorityTag,
   ProgressBar,
   StatusTag,
+  StatusSelect,
+  PROJECT_STATUS_OPTIONS,
   TaskLink,
   formatDate
 } from '@/components/ui';
@@ -610,17 +612,11 @@ export default function ProjectDetailPage() {
             </div>
             <div>Due: {formatDate(project.dueDate)}</div>
           </div>
-          <select
-            className="select w-48"
+          <StatusSelect
             value={project.status}
-            onChange={(e) => updateStatus(e.target.value)}
-          >
-            <option value="planning">Planning</option>
-            <option value="in_progress">In progress</option>
-            <option value="on_hold">On hold</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={updateStatus}
+            options={PROJECT_STATUS_OPTIONS}
+          />
           <button
             onClick={exportProject}
             disabled={exporting}
@@ -660,51 +656,54 @@ export default function ProjectDetailPage() {
         />
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <div className="text-xs text-slate-500 font-semibold uppercase">Progress</div>
-          <div className="text-2xl font-semibold mt-1">{pct}%</div>
-          <ProgressBar value={pct} className="mt-2" />
-          <div className="text-xs text-slate-500 mt-1">
-            {project.tasks.filter((t: any) => t.status === 'done').length}/{project.tasks.length}{' '}
-            tasks
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {/* Progress */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Progress</div>
+          <div className="text-2xl font-black text-slate-800">{pct}%</div>
+          <ProgressBar value={pct} />
+          <div className="text-xs text-slate-400">
+            {project.tasks.filter((t: any) => t.status === 'done').length}/{project.tasks.length} tasks
           </div>
-        </Card>
-        <Card>
-          <div className="text-xs text-slate-500 font-semibold uppercase">Phases</div>
-          <div className="text-2xl font-semibold mt-1">{project.phases.length}</div>
-        </Card>
-        <Card>
-          <div className="text-xs text-slate-500 font-semibold uppercase">QA sign-off pending</div>
-          <div className={`text-2xl font-semibold mt-1 ${pendingQa ? 'text-amber-600' : ''}`}>
-            {pendingQa}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs text-slate-500 font-semibold uppercase">GxP critical tasks</div>
-          <div className="text-2xl font-semibold mt-1">
-            {project.tasks.filter((t: any) => t.gxpCritical).length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs text-slate-500 font-semibold uppercase">Overdue</div>
-          <div className={`text-2xl font-semibold mt-1 ${overdue ? 'text-red-600' : ''}`}>
-            {overdue}
-          </div>
-          <div className="text-xs text-slate-500 mt-1">not yet done</div>
-        </Card>
+        </div>
+        {/* Phases */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Phases</div>
+          <div className="text-2xl font-black text-slate-800">{project.phases.length}</div>
+          <div className="text-xs text-slate-400">lifecycle stages</div>
+        </div>
+        {/* QA Sign-off */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">QA sign-off pending</div>
+          <div className={`text-2xl font-black ${pendingQa > 0 ? 'text-amber-600' : 'text-slate-800'}`}>{pendingQa}</div>
+          <div className="text-xs text-slate-400">{pendingQa > 0 ? 'awaiting review' : 'all approved'}</div>
+        </div>
+        {/* GxP */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">GxP critical</div>
+          <div className="text-2xl font-black text-slate-800">{project.tasks.filter((t: any) => t.gxpCritical).length}</div>
+          <div className="text-xs text-slate-400">compliance tasks</div>
+        </div>
+        {/* Overdue */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Overdue</div>
+          <div className={`text-2xl font-black ${overdue > 0 ? 'text-red-600' : 'text-slate-800'}`}>{overdue}</div>
+          <div className="text-xs text-slate-400">{overdue > 0 ? 'past deadline' : 'none — on track'}</div>
+        </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-1 bg-white border border-slate-200/80 rounded-xl p-1 w-fit" style={{ boxShadow: '0 1px 2px rgba(15,23,42,0.04)' }}>
         {[
           ['phases', 'By phase'],
-          ['board', 'Kanban']
+          ['board', 'Kanban'],
         ].map(([k, l]) => (
           <button
             key={k}
             onClick={() => setView(k as any)}
-            className={`px-3 py-1.5 rounded text-sm ${
-              view === k ? 'bg-brand-600 text-white' : 'bg-white border border-slate-200'
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              view === k
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             {l}
@@ -740,17 +739,11 @@ export default function ProjectDetailPage() {
                 <div className="divide-y divide-slate-100">
                   {ts.map((t: any) => (
                     <div key={t.id} className="py-2 flex items-center gap-3 text-sm">
-                      <select
-                        className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white"
+                      <StatusSelect
                         value={t.status}
-                        onChange={(e) => moveTask(t.id, e.target.value)}
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s.replace('_', ' ')}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(v) => moveTask(t.id, v)}
+                        size="sm"
+                      />
                       <div className="flex-1">
                         <TaskLink task={t} />
                         <div className="text-xs text-slate-500">
@@ -789,17 +782,11 @@ export default function ProjectDetailPage() {
                 .filter((t: any) => !t.phaseId)
                 .map((t: any) => (
                   <div key={t.id} className="py-2 flex items-center gap-3 text-sm">
-                    <select
-                      className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white"
+                    <StatusSelect
                       value={t.status}
-                      onChange={(e) => moveTask(t.id, e.target.value)}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s.replace('_', ' ')}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => moveTask(t.id, v)}
+                      size="sm"
+                    />
                     <div className="flex-1">
                       <TaskLink task={t} />
                       <div className="text-xs text-slate-500">
