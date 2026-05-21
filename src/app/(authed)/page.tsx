@@ -816,7 +816,7 @@ export default function DashboardPage() {
       {/* ── Hero backdrop — soft brand wash behind the greeting ───────────── */}
       <div aria-hidden className="pointer-events-none absolute -top-6 -left-10 right-0 h-[340px] -z-0 overflow-hidden">
         <div className="absolute inset-0" style={{
-          background: 'radial-gradient(ellipse at 25% 0%, rgba(21,101,192,0.10) 0%, transparent 55%), radial-gradient(ellipse at 80% 10%, rgba(67,160,71,0.07) 0%, transparent 60%)',
+          background: 'radial-gradient(ellipse 70% 100% at 20% 0%, rgba(21,101,192,0.12) 0%, transparent 75%), radial-gradient(ellipse 55% 90% at 85% 5%, rgba(21,101,192,0.08) 0%, transparent 70%), radial-gradient(ellipse at 60% 15%, rgba(67,160,71,0.05) 0%, transparent 65%)',
         }} />
       </div>
 
