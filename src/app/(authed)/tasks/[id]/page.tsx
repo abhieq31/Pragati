@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { Card, PriorityTag, StatusTag, formatDate, Avatar } from '@/components/ui';
+import { Card, PriorityTag, StatusTag, StatusSelect, formatDate, Avatar } from '@/components/ui';
 import { ChevronRight, Shield, FileText, Building2, GitBranch, MessageSquare, CalendarPlus, Timer, Activity, Bot, Sparkles } from 'lucide-react';
 
 const STATUSES  = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -384,11 +384,10 @@ export default function TaskDetailPage() {
           <div className="space-y-3 text-sm">
             <div>
               <label className="label">Status</label>
-              <select className="select" value={task.status} onChange={(e) => update({ status: e.target.value })}>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
+              <StatusSelect
+                value={task.status}
+                onChange={(v) => update({ status: v })}
+              />
             </div>
             <div>
               <label className="label">Assignee</label>

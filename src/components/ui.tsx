@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 // ── Status dots ───────────────────────────────────────────────────────────────
 const STATUS_DOT: Record<string, string> = {
@@ -266,6 +266,86 @@ export function Avatar({ name, size = 28 }: { name?: string | null; size?: numbe
       aria-label={trimmed || 'User'}
     >
       {initials}
+    </div>
+  );
+}
+
+// ── Status option sets ────────────────────────────────────────────────────────
+export const TASK_STATUS_OPTIONS    = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
+export const PROJECT_STATUS_OPTIONS = ['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'] as const;
+
+// ── StatusSelect — custom pill dropdown replacing native <select> ─────────────
+export function StatusSelect({
+  value,
+  onChange,
+  options = TASK_STATUS_OPTIONS as unknown as string[],
+  size = 'md',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options?: readonly string[] | string[];
+  size?: 'sm' | 'md';
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  const dot   = STATUS_DOT[value]   ?? '#94a3b8';
+  const label = STATUS_LABEL[value] ?? value.replace(/_/g, ' ');
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`inline-flex items-center gap-1.5 rounded-lg border bg-white transition-all font-semibold text-slate-700 ${
+          open
+            ? 'border-blue-300 ring-2 ring-blue-100'
+            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+        } ${size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1.5 text-xs'}`}
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: dot }} />
+        {label}
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"
+          className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}>
+          <path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 z-50 bg-white rounded-xl border border-slate-100 overflow-hidden"
+          style={{ minWidth: 148, boxShadow: '0 4px 20px rgba(15,23,42,0.12), 0 1px 4px rgba(15,23,42,0.06)' }}
+        >
+          {(options as string[]).map(opt => {
+            const optDot   = STATUS_DOT[opt]   ?? '#94a3b8';
+            const optLabel = STATUS_LABEL[opt] ?? opt.replace(/_/g, ' ');
+            const active   = opt === value;
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`flex w-full items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${
+                  active ? 'bg-slate-50 text-slate-900' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: optDot }} />
+                {optLabel}
+                {active && <span className="ml-auto text-blue-600 text-[10px] font-bold">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
