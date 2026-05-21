@@ -815,8 +815,11 @@ export default function DashboardPage() {
     <div className="pb-20 max-w-5xl page-enter relative">
       {celebrating && <Celebration taskTitle={celebrating.title} onDone={() => setCelebrating(null)} />}
 
-      {/* ── Hero backdrop — soft uniform brand wash behind the greeting ───── */}
-      <div aria-hidden className="pointer-events-none absolute -top-6 -left-10 right-0 h-[340px] -z-0 overflow-hidden">
+      {/* ── Hero backdrop — soft uniform brand wash behind the greeting.
+              Extends past max-w-5xl on the right to bleed into the empty
+              AppShell content area, so the wash visibly spans across the
+              full page (not just the constrained content column). ───── */}
+      <div aria-hidden className="pointer-events-none absolute -top-6 -left-10 right-0 lg:-right-48 h-[340px] -z-0 overflow-hidden">
         <div className="absolute inset-0" style={{
           background: 'linear-gradient(180deg, rgba(21,101,192,0.10) 0%, rgba(21,101,192,0.04) 55%, transparent 100%)',
         }} />
