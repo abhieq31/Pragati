@@ -598,10 +598,10 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
 
         {/* Main content */}
         <main className="flex-1 overflow-auto min-w-0 relative">
-          {/* Dashboard hero backdrop (IC only) — placed in <main> so it spans
-              the full content area (from sidebar edge to viewport right).
-              PM keeps its in-page gradient which fits its wider layout. */}
-          {pathname === '/' && user.role !== 'pm' && (
+          {/* Dashboard hero backdrop — spans sidebar-edge to viewport-right
+              for both PM and IC without being trapped by the page-enter
+              transform on the inner content div. */}
+          {pathname === '/' && (
             <div
               aria-hidden
               className="pointer-events-none absolute top-0 left-0 right-0 h-[220px]"
