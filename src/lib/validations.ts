@@ -137,6 +137,32 @@ export const DeleteProjectSchema = z.object({
 });
 export type DeleteProjectInput = z.infer<typeof DeleteProjectSchema>;
 
+/* ── Team schemas ────────────────────────────────────────────────────────── */
+
+export const TeamFunctionEnum = z.enum([
+  'data_integrity',
+  'csv_validation',
+  'pharmacovigilance',
+  'lab_informatics',
+  'audit',
+  'training',
+  'general',
+]);
+
+// PM-only update. Each field independently optional so callers can patch
+// just the bits they need (rename, swap lead, add/remove members).
+export const TeamUpdateSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  description: z.string().max(2000).optional(),
+  leadId: nullableObjectId,
+  memberIds: z
+    .array(z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ObjectId'))
+    .max(200)
+    .optional(),
+  function: TeamFunctionEnum.optional(),
+});
+export type TeamUpdateInput = z.infer<typeof TeamUpdateSchema>;
+
 /* ── Task schemas ────────────────────────────────────────────────────────── */
 
 export const TaskCreateSchema = z.object({

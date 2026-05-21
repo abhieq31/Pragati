@@ -118,9 +118,9 @@ const PM_STEPS: Step[] = [
   {
     target: 'nav-risk',
     emoji: '📡',
-    title: 'Risk Radar',
+    title: 'Task Triage',
     tag: 'AI · Deadline prediction',
-    body: "Every open task is scored for deadline-miss probability using a model trained on your team's own history. Spot the fires before they start.",
+    body: "Every open task is scored for deadline-miss probability using a model trained on your team's own history. Spot the fires before they start and fix them inline.",
     accent: '#b45309',
     placement: 'right',
   },

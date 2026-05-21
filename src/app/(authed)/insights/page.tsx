@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/client/api';
-import { Avatar, Card, LifecycleTag, ProgressBar } from '@/components/ui';
-import { ChevronRight, Shield, AlertTriangle, Pause, Users, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+import { Avatar, Card, LifecycleTag } from '@/components/ui';
+import { ChevronRight, Pause, TrendingUp, TrendingDown } from 'lucide-react';
 
 const VelocityChart = dynamic(() => import('./VelocityChart'), {
   ssr: false,
@@ -35,17 +35,8 @@ interface ArchiveProject {
   taskCount: number; tasksDone: number; completedAt: string | null;
 }
 
-interface TopAction {
-  id: string;
-  title: string;
-  why: string;
-  link: string;
-  kind: 'gxp' | 'stuck' | 'overload' | 'critical' | 'atrisk';
-}
-
 interface InsightsData {
   brief: string[];
-  topActions: TopAction[];
   velocityHeadline: string;
   movers: { risingStars: ProjectInsight[]; needAttention: ProjectInsight[] };
   projects: ProjectInsight[];
@@ -55,43 +46,11 @@ interface InsightsData {
   archive: ArchiveProject[];
 }
 
-const ACTION_KIND = {
-  gxp:      { Icon: Shield,        bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',     iconBg: 'bg-red-100' },
-  stuck:    { Icon: Pause,         bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-800',   iconBg: 'bg-amber-100' },
-  overload: { Icon: Users,         bg: 'bg-purple-50',  border: 'border-purple-200',  text: 'text-purple-800',  iconBg: 'bg-purple-100' },
-  critical: { Icon: AlertTriangle, bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',     iconBg: 'bg-red-100' },
-  atrisk:   { Icon: AlertTriangle, bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-800',   iconBg: 'bg-amber-100' },
-} as const;
-
-const HEALTH_CONFIG = {
-  healthy:  { dot: '🟢', label: 'Healthy',  bg: 'bg-forest-50',  border: 'border-forest-200',  text: 'text-forest-700'  },
-  at_risk:  { dot: '🟡', label: 'At risk',  bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700'   },
-  critical: { dot: '🔴', label: 'Critical', bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700'     },
-};
-
 const LOAD_CONFIG = {
   healthy:    { dot: '🟢', label: 'Healthy',    bg: 'bg-forest-50',  text: 'text-forest-700'  },
   busy:       { dot: '🟡', label: 'Busy',       bg: 'bg-amber-50',   text: 'text-amber-700'   },
   overloaded: { dot: '🔴', label: 'Overloaded', bg: 'bg-red-50',     text: 'text-red-700'     },
 };
-
-function HealthBadge({ health }: { health: ProjectInsight['health'] }) {
-  const c = HEALTH_CONFIG[health];
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text} border ${c.border}`}>
-      {c.dot} {c.label}
-    </span>
-  );
-}
-
-function ScoreBar({ score }: { score: number }) {
-  const color = score >= 70 ? '#43A047' : score >= 40 ? '#F59E0B' : '#EF4444';
-  return (
-    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
-      <div className="h-1.5 rounded-full transition-all" style={{ width: `${score}%`, background: color }} />
-    </div>
-  );
-}
 
 export default function InsightsPage() {
   const [data, setData] = useState<InsightsData | null>(null);
@@ -116,156 +75,36 @@ export default function InsightsPage() {
 
   if (!data) return <div className="text-slate-500 text-sm">Could not load insights.</div>;
 
-  const criticalCount = data.projects.filter(p => p.health === 'critical').length;
-  const atRiskCount   = data.projects.filter(p => p.health === 'at_risk').length;
-  const healthyCount  = data.projects.filter(p => p.health === 'healthy').length;
   const thisWeekVelocity = data.velocity?.[3]?.completed ?? 0;
+  const lastWeekVelocity = data.velocity?.[2]?.completed ?? 0;
+  const velocityUp = thisWeekVelocity >= lastWeekVelocity;
 
   return (
     <div className="space-y-6 pb-10">
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-black text-slate-900">Insights</h1>
+        <h1 className="text-2xl font-black text-slate-900">Trends</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          What needs your attention today — ranked by impact, with one click to act.
+          How your teams are moving over time — velocity, momentum and people load.
+          <Link href="/org" className="ml-1 text-brand-600 hover:underline">See today's project health →</Link>
         </p>
       </div>
-
-      {/* Top 3 Actions Today */}
-      {data.topActions && data.topActions.length > 0 ? (
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Sparkles size={13} className="text-brand-500" />
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-brand-600">
-              Top {data.topActions.length} action{data.topActions.length > 1 ? 's' : ''} today
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {data.topActions.map((a, i) => {
-              const c = ACTION_KIND[a.kind];
-              const Icon = c.Icon;
-              return (
-                <Link
-                  href={a.link}
-                  key={a.id}
-                  className={`group rounded-xl border ${c.border} ${c.bg} p-4 hover:shadow-md transition-all hover:-translate-y-0.5`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}>
-                      <Icon size={15} className={c.text} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-1.5 mb-1">
-                        <span className="text-[10px] font-black text-slate-400">#{i + 1}</span>
-                        <h3 className={`text-sm font-bold leading-tight ${c.text}`}>{a.title}</h3>
-                      </div>
-                      <p className="text-xs text-slate-600 leading-snug">{a.why}</p>
-                      <div className={`mt-2 inline-flex items-center gap-0.5 text-[11px] font-semibold ${c.text} group-hover:gap-1.5 transition-all`}>
-                        Take action <ChevronRight size={11} />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-forest-200 bg-gradient-to-r from-forest-50 to-slate-50 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-forest-100 flex items-center justify-center shrink-0">
-            <Sparkles size={18} className="text-forest-600" />
-          </div>
-          <div>
-            <div className="text-sm font-bold text-forest-700">Nothing urgent on your plate today.</div>
-            <div className="text-xs text-forest-600/80 mt-0.5">
-              No critical projects, no overloaded teammates, no blockers. Time to pick up momentum work.
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Velocity headline */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 flex items-center gap-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-          (data.velocity?.[3]?.completed ?? 0) >= (data.velocity?.[2]?.completed ?? 0)
-            ? 'bg-forest-50 text-forest-600' : 'bg-amber-50 text-amber-600'
+          velocityUp ? 'bg-forest-50 text-forest-600' : 'bg-amber-50 text-amber-600'
         }`}>
-          {(data.velocity?.[3]?.completed ?? 0) >= (data.velocity?.[2]?.completed ?? 0)
-            ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+          {velocityUp ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
         </div>
         <p className="text-sm text-slate-700 leading-snug">{data.velocityHeadline}</p>
       </div>
 
-      {/* Top stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Critical projects', value: criticalCount, tone: criticalCount > 0 ? 'bad' : 'good' },
-          { label: 'At risk',           value: atRiskCount,   tone: atRiskCount > 0 ? 'warn' : 'good' },
-          { label: 'On track',          value: healthyCount,  tone: 'good' },
-          { label: 'Done this week',    value: thisWeekVelocity, tone: 'default' },
-        ].map(({ label, value, tone }) => (
-          <div key={label} className="card p-4">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-brand-600/60">{label}</div>
-            <div className={`text-3xl font-black mt-1 ${
-              tone === 'bad' && value > 0 ? 'text-red-600' :
-              tone === 'warn' && value > 0 ? 'text-amber-500' :
-              tone === 'good' ? 'text-forest-600' :
-              'text-brand-700'
-            }`}>{value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
-        {/* Project risk radar */}
-        <div className="xl:col-span-2">
-          <Card title="Project health radar">
-            {data.projects.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 text-sm">No active projects.</div>
-            ) : (
-              <div className="space-y-3">
-                {data.projects.map((p) => {
-                  const hc = HEALTH_CONFIG[p.health];
-                  return (
-                    <div key={p.id} className={`rounded-lg border p-3 ${hc.bg} ${hc.border}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-xs text-slate-500">{p.code}</span>
-                            <Link href={`/projects/${p.id}`} className="font-semibold text-sm text-slate-800 hover:text-brand-700 hover:underline truncate">
-                              {p.name}
-                            </Link>
-                            <LifecycleTag lifecycle={p.lifecycle} />
-                          </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-                            {p.issues.map((issue) => (
-                              <span key={issue} className={`text-xs font-medium ${hc.text}`}>
-                                · {issue}
-                              </span>
-                            ))}
-                          </div>
-                          <ScoreBar score={p.score} />
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <HealthBadge health={p.health} />
-                          <div className="text-[10px] text-slate-400 mt-1">score {p.score}/100</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
-        </div>
-
-        {/* Velocity */}
-        <Card title="Team velocity · last 4 weeks">
-          <VelocityChart data={data.velocity} />
-        </Card>
-      </div>
+      {/* Velocity chart — now the centerpiece */}
+      <Card title="Team velocity · last 4 weeks">
+        <VelocityChart data={data.velocity} />
+      </Card>
 
       {/* Movers — what changed this week */}
       {(data.movers?.risingStars?.length > 0 || data.movers?.needAttention?.length > 0) && (
