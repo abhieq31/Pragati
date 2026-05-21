@@ -7,7 +7,8 @@ import { Task } from '@/models/Task';
 import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS, u, project as projectS } from '@/lib/serialize';
-import { TeamUpdateSchema } from '@/lib/validations';
+import { TeamUpdateSchema, DeleteTeamSchema } from '@/lib/validations';
+import bcrypt from 'bcryptjs';
 
 export const runtime = 'nodejs';
 
@@ -78,6 +79,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await Team.updateOne({ _id: params.id }, { $set: patch });
     const fresh = await Team.findById(params.id).lean();
     return NextResponse.json(teamS(fresh));
+  } catch (e) {
+    return handleError(e);
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { error, user } = await requireRole(req, 'pm');
+    if (error) return error;
+    await connectDB();
+
+    const body = await readBody(req, DeleteTeamSchema);
+    const pmUser = await User.findById(user.sub).select('passwordHash').lean();
+    if (!pmUser || !bcrypt.compareSync(body.password, (pmUser as any).passwordHash)) {
+      return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
+    }
+
+    // Detach projects from this team rather than cascade-deleting them — projects
+    // and their tasks represent real work and must survive a team disband.
+    await Project.updateMany({ teamId: params.id }, { $set: { teamId: null } });
+    await Team.deleteOne({ _id: params.id });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);
   }

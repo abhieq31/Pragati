@@ -163,6 +163,12 @@ export const TeamUpdateSchema = z.object({
 });
 export type TeamUpdateInput = z.infer<typeof TeamUpdateSchema>;
 
+// Requires PM password re-entry for destructive team deletion (21 CFR 11 audit intent).
+export const DeleteTeamSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+});
+export type DeleteTeamInput = z.infer<typeof DeleteTeamSchema>;
+
 /* ── Task schemas ────────────────────────────────────────────────────────── */
 
 export const TaskCreateSchema = z.object({
