@@ -597,8 +597,21 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto min-w-0">
-          <div key={pathname} className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 page-enter">
+        <main className="flex-1 overflow-auto min-w-0 relative">
+          {/* Dashboard hero backdrop — placed in <main> so it spans the
+              full content area (from sidebar edge to viewport right) and
+              isn't trapped by the page-enter transform on the inner div. */}
+          {pathname === '/' && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute top-0 left-0 right-0 h-[220px]"
+              style={{
+                zIndex: 0,
+                background: 'linear-gradient(180deg, rgba(21,101,192,0.09) 0%, rgba(21,101,192,0.05) 45%, rgba(21,101,192,0.01) 80%, transparent 100%)',
+              }}
+            />
+          )}
+          <div key={pathname} className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 page-enter relative">
             {children}
           </div>
         </main>

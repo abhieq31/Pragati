@@ -1039,17 +1039,6 @@ export default function DashboardPage() {
       <DailyQuote />
 
       {me && <QuickAdd projects={projects} userId={me.id} onAdded={reload} open={qaOpen} onClose={() => setQaOpen(false)} />}
-
-      {/* Hero backdrop rendered via portal so it escapes the page-enter
-          transform containing block and truly spans the full viewport */}
-      {typeof document !== 'undefined' && createPortal(
-        <div aria-hidden className="pointer-events-none fixed top-14 left-0 right-0 h-[200px]" style={{ zIndex: -1 }}>
-          <div className="absolute inset-0" style={{
-            background: 'linear-gradient(180deg, rgba(21,101,192,0.09) 0%, rgba(21,101,192,0.05) 45%, rgba(21,101,192,0.01) 80%, transparent 100%)',
-          }} />
-        </div>,
-        document.body
-      )}
     </div>
   );
 }
