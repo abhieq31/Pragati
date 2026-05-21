@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { api } from '@/lib/client/api';
 
 export default function ForgotPasswordPage() {
@@ -34,7 +35,7 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div className="flex justify-center mb-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-full.png" alt="Pragati" style={{ width: 180 }} />
+          <Image src="/logo-full.png" alt="Pragati" width={180} height={36} priority style={{ width: 180, height: 'auto' }} />
         </div>
 
         {sent ? (

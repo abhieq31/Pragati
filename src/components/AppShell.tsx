@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar } from './ui';
 import { CommandPalette } from './CommandPalette';
@@ -440,8 +441,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
             background: 'linear-gradient(135deg, #1256B0 0%, #1E88E5 100%)',
             borderRadius: 8, padding: '5px 6px', lineHeight: 0, flexShrink: 0,
           }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.png" alt="" width={20} height={20}
+            <Image src="/logo-icon.png" alt="" width={20} height={20} priority
               style={{ display: 'block', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
           </span>
           <div className="hidden sm:block">

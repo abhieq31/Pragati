@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { api } from '@/lib/client/api';
 import { CheckCircle2, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 
@@ -177,8 +178,15 @@ export default function LoginPage() {
                   boxShadow: `0 0 0 1px rgba(255,255,255,0.08), 0 24px 64px rgba(0,0,0,0.5),
                               0 8px 24px rgba(21,101,192,0.25), inset 0 1px 0 rgba(255,255,255,0.9)`,
                 }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/logo-full.png" alt="Pragati" style={{ height: 52, width: 'auto', display: 'block' }} />
+                  <Image
+                    src="/logo-full.png"
+                    alt="Pragati"
+                    width={260}
+                    height={52}
+                    priority
+                    sizes="260px"
+                    style={{ height: 52, width: 'auto', display: 'block' }}
+                  />
                 </div>
               </div>
 
@@ -233,8 +241,7 @@ export default function LoginPage() {
             {/* Mobile branding */}
             <div className="flex flex-col items-center mb-8 lg:hidden">
               <div style={{ background: '#0B1628', borderRadius: 12, padding: '8px 16px', display: 'inline-flex', alignItems: 'center' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo-icon.png" alt="" width={24} height={24} style={{ display: 'block', objectFit: 'contain' }} />
+                <Image src="/logo-icon.png" alt="" width={24} height={24} priority style={{ display: 'block', objectFit: 'contain' }} />
               </div>
               <div className="text-xl font-black text-slate-900 mt-2 tracking-tight">Pragati</div>
             </div>
