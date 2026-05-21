@@ -457,52 +457,25 @@ function TaskRow({ task, onDone }: { task: any; onDone: (t: any) => void }) {
   );
 }
 
-/* ── Stat card ────────────────────────────────────────────────────────────── */
-function StatCard({ label, value, sub, icon: Icon, accent, urgent, filled, delay = 0 }: {
+/* ── Stat card ────────────────────────────────────────────────────────────────
+   Single unified treatment — accent shows only via icon-tile background and
+   (when urgent) the number colour. Keeps the 4-card grid visually rhythmic so
+   nothing dominates the others, which makes the dashboard scan cleanly. */
+function StatCard({ label, value, sub, icon: Icon, accent, urgent, delay = 0 }: {
   label: string; value: string | number; sub?: string;
-  icon: any; accent: string; urgent?: boolean; filled?: boolean; delay?: number;
+  icon: any; accent: string; urgent?: boolean; delay?: number;
 }) {
   const isNum = typeof value === 'number';
   const display: any = isNum ? <CountUp value={value as number} /> : value;
 
-  if (filled) {
-    return (
-      <div className="relative overflow-hidden rounded-2xl flex flex-col gap-1 p-5 transition-all hover:scale-[1.02] cursor-default fade-up-stagger"
-        style={{
-          background: `linear-gradient(135deg, ${accent} 0%, ${accent}dd 100%)`,
-          boxShadow: `0 4px 20px ${accent}40, 0 1px 3px ${accent}30`,
-          animationDelay: `${delay}ms`,
-        }}>
-        <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full opacity-10"
-          style={{ background: '#fff' }} />
-        <div className="absolute inset-0 opacity-25 pointer-events-none" style={{
-          background: 'radial-gradient(circle at 100% 0%, rgba(255,255,255,0.35) 0%, transparent 55%)',
-        }} />
-        <div className="flex items-center justify-between relative">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-white/70">{label}</div>
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-            <Icon size={15} className="text-white" />
-          </div>
-        </div>
-        <div className="text-3xl font-black tracking-tight leading-none text-white relative tabular-nums">{display}</div>
-        {sub && <div className="text-[11px] font-medium text-white/60 relative">{sub}</div>}
-      </div>
-    );
-  }
   return (
-    <div className="relative overflow-hidden bg-white rounded-2xl border flex flex-col gap-1 p-5 transition-all hover:shadow-md hover:scale-[1.01] cursor-default fade-up-stagger"
+    <div className="relative overflow-hidden bg-white rounded-2xl border border-slate-200/80 flex flex-col gap-1 p-5 transition-all hover:shadow-md hover:-translate-y-px cursor-default fade-up-stagger"
       style={{
-        borderColor: urgent ? `${accent}40` : 'rgba(210,218,228,0.8)',
-        boxShadow: urgent
-          ? `0 0 0 1px ${accent}18, 0 4px 16px ${accent}10`
-          : '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.025)',
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.03)',
         animationDelay: `${delay}ms`,
       }}>
-      {urgent && (
-        <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl" style={{ background: accent }} />
-      )}
       <div className="flex items-center justify-between">
-        <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: urgent ? accent : '#94a3b8' }}>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
           {label}
         </div>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
@@ -513,7 +486,7 @@ function StatCard({ label, value, sub, icon: Icon, accent, urgent, filled, delay
       <div className="text-3xl font-black tracking-tight leading-none tabular-nums" style={{ color: urgent ? accent : '#0f172a' }}>
         {display}
       </div>
-      {sub && <div className="text-[11px] font-medium" style={{ color: urgent ? `${accent}99` : '#94a3b8' }}>{sub}</div>}
+      {sub && <div className="text-[11px] font-medium" style={{ color: urgent ? accent : '#94a3b8' }}>{sub}</div>}
     </div>
   );
 }
@@ -667,16 +640,16 @@ function AttentionPanel({ items }: { items: OrgOverview['attention'] }) {
 /* ── PM Org pulse strip ───────────────────────────────────────────────────── */
 function OrgPulse({ totals, projects }: { totals: OrgOverview['totals']; projects: OrgOverview['projects'] }) {
   // projects is empty during the first paint (we patch totals before full org data arrives).
-  // Only describe org health once we have real projects, otherwise leave the sub-label neutral
-  // so cards don't flip from filled-green to white as data lands.
+  // Only describe org health once we have real projects, so the sub-label doesn't flip
+  // from a neutral string to a health summary as data lands.
   const hasProjects = projects.length > 0;
   const critical    = projects.filter(p => p.health === 'critical').length;
   const atRisk      = projects.filter(p => p.health === 'at_risk').length;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
       <StatCard label="Active projects" value={totals.activeProjects} icon={FolderKanban}
-        accent="#1565C0" filled delay={0}
-        sub={!hasProjects ? '' : critical > 0 ? `${critical} critical` : atRisk > 0 ? `${atRisk} at risk` : 'All healthy'} />
+        accent="#1565C0" delay={0}
+        sub={!hasProjects ? 'across the org' : critical > 0 ? `${critical} critical` : atRisk > 0 ? `${atRisk} at risk` : 'All healthy'} />
       <StatCard label="Open tasks" value={totals.tasksOpen} icon={Target} accent="#475569" delay={70}
         sub="across all projects" />
       <StatCard label="Overdue" value={totals.tasksOverdue} icon={AlertTriangle} delay={140}
@@ -871,16 +844,13 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           <StatCard icon={CheckCircle2} label="Open tasks" value={openCount} delay={0}
             accent={openCount === 0 ? '#16a34a' : '#1565C0'}
-            filled={openCount === 0}
             sub={openCount === 0 ? 'All clear!' : `${overdueCount > 0 ? overdueCount + ' overdue' : 'on track'}`} />
           <StatCard icon={AlertTriangle} label="Overdue" value={overdueCount} delay={70}
             accent={overdueCount > 0 ? '#dc2626' : '#94a3b8'}
-            filled={overdueCount > 0}
             urgent={overdueCount > 0}
             sub={overdueCount > 0 ? 'Act now' : 'None'} />
           <StatCard icon={BarChart2} label="Completion" value={`${rate}%`} delay={140}
             accent={rate >= 80 ? '#16a34a' : rate >= 50 ? '#1565C0' : '#d97706'}
-            filled={rate >= 80}
             sub={rate >= 80 ? 'Excellent' : rate >= 50 ? 'Good pace' : 'Needs focus'} />
           <StatCard icon={FolderKanban} label="Projects" value={projects.length} delay={210}
             accent="#0369a1" sub="active" />
@@ -929,20 +899,17 @@ export default function DashboardPage() {
             </div>
 
             {filteredTasks.length === 0 ? (
-              <div className="py-16 flex flex-col items-center text-center px-6">
+              <div className="py-10 flex flex-col items-center text-center px-6">
                 {filter === 'open' ? (
                   <>
-                    <div className="relative mb-4">
-                      <div className="absolute inset-0 rounded-2xl bg-forest-100 blur-xl opacity-60 animate-pulse-slow" />
-                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-forest-50 to-forest-100 border border-forest-200 flex items-center justify-center">
-                        <CheckCircle2 size={26} className="text-forest-600" />
-                      </div>
+                    <div className="w-11 h-11 rounded-2xl bg-forest-50 border border-forest-100 flex items-center justify-center mb-3">
+                      <CheckCircle2 size={20} className="text-forest-500" />
                     </div>
-                    <div className="text-base font-black text-slate-800">All clear!</div>
-                    <div className="text-xs text-slate-500 mt-1.5 max-w-[260px] leading-relaxed">
-                      No open tasks right now. Pour a chai, breathe, or get ahead by adding the next one.
+                    <div className="text-sm font-bold text-slate-700">All clear!</div>
+                    <div className="text-xs text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                      No open tasks. Pour a chai, breathe, or get ahead.
                     </div>
-                    <button onClick={() => setQaOpen(true)} className="mt-5 btn-primary text-xs gap-1.5">
+                    <button onClick={() => setQaOpen(true)} className="mt-4 btn-primary text-xs gap-1.5">
                       <Plus size={12} /> Add a task
                     </button>
                   </>
