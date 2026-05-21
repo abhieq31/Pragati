@@ -1,135 +1,459 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
-import { Card, Avatar } from '@/components/ui';
+import { Avatar } from '@/components/ui';
+import { Pencil, Plus, Users as UsersIcon, X, Check, Search } from 'lucide-react';
+
+interface TeamItem {
+  id: string;
+  name: string;
+  description?: string;
+  leadId?: string;
+  function: string;
+  memberIds: string[];
+  memberCount: number;
+  projectCount: number;
+}
+
+interface UserItem {
+  id: string;
+  name: string;
+  role: string;
+  title?: string;
+}
+
+const FUNCTION_LABEL: Record<string, string> = {
+  general: 'General',
+  csv_validation: 'CSV / Validation',
+  data_integrity: 'Data Integrity',
+  pharmacovigilance: 'Pharmacovigilance',
+  lab_informatics: 'Lab Informatics',
+  audit: 'Audit',
+  training: 'Training',
+};
+
+const FUNCTION_TONE: Record<string, { bg: string; text: string; border: string }> = {
+  general:           { bg: 'bg-slate-50',   text: 'text-slate-600',   border: 'border-slate-200'   },
+  csv_validation:    { bg: 'bg-brand-50',   text: 'text-brand-700',   border: 'border-brand-200'   },
+  data_integrity:    { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200'  },
+  pharmacovigilance: { bg: 'bg-pink-50',    text: 'text-pink-700',    border: 'border-pink-200'    },
+  lab_informatics:   { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200'    },
+  audit:             { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200'   },
+  training:          { bg: 'bg-forest-50',  text: 'text-forest-700',  border: 'border-forest-200'  },
+};
 
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [me, setMe] = useState<any>(null);
+  const [teams, setTeams]     = useState<TeamItem[]>([]);
+  const [users, setUsers]     = useState<UserItem[]>([]);
+  const [me, setMe]           = useState<any>(null);
+  const [query, setQuery]     = useState('');
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', leadId: '', function: 'general' });
+  const [editing, setEditing] = useState<TeamItem | null>(null);
 
   function load() {
-    api<any[]>('/teams').then(setTeams);
+    api<TeamItem[]>('/teams').then(setTeams);
   }
   useEffect(() => {
     load();
-    api<any[]>('/users').then(setUsers);
+    api<UserItem[]>('/users').then(setUsers);
     api<any>('/auth/me').then((d) => setMe(d.user));
   }, []);
 
-  async function create() {
-    if (!form.name.trim()) return;
-    await api('/teams', {
-      method: 'POST',
-      body: {
-        name: form.name.trim(),
-        description: form.description || undefined,
-        leadId: form.leadId || undefined,
-        function: form.function
-      }
-    });
-    setForm({ name: '', description: '', leadId: '', function: 'general' });
-    setCreating(false);
-    load();
-  }
-  const canCreate = me && me.role === 'pm';
+  const canManage = me?.role === 'pm';
+  const uMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+
+  const filtered = teams.filter((t) => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(q) ||
+      (t.description || '').toLowerCase().includes(q) ||
+      FUNCTION_LABEL[t.function]?.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Teams</h1>
-          <p className="text-sm text-slate-500">
-            Teams align to Quality Informatics functions — CSV, data integrity, PV, audit.
+          <h1 className="text-2xl font-black text-slate-900">Teams</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Quality Informatics functions — owners, members and the projects they ship.
           </p>
         </div>
-        {canCreate && (
-          <button className="btn-primary" onClick={() => setCreating((v) => !v)}>
-            {creating ? 'Close' : '+ New team'}
+        {canManage && (
+          <button className="btn-primary flex items-center gap-1.5" onClick={() => setCreating(true)}>
+            <Plus size={14} /> New team
           </button>
         )}
       </div>
 
-      {creating && (
-        <Card title="Create team">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input
-              className="input"
-              placeholder="Team name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <input
-              className="input"
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-            <select
-              className="select"
-              value={form.leadId}
-              onChange={(e) => setForm({ ...form, leadId: e.target.value })}
-            >
-              <option value="">Select team lead…</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.role})
-                </option>
-              ))}
-            </select>
-            <select
-              className="select"
-              value={form.function}
-              onChange={(e) => setForm({ ...form, function: e.target.value })}
-            >
-              <option value="general">General</option>
-              <option value="csv_validation">CSV / Validation</option>
-              <option value="data_integrity">Data Integrity</option>
-              <option value="pharmacovigilance">Pharmacovigilance</option>
-              <option value="lab_informatics">Lab Informatics</option>
-              <option value="audit">Audit</option>
-              <option value="training">Training</option>
-            </select>
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
+        <input
+          className="input pl-9"
+          placeholder="Search teams…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
+      {/* Cards grid */}
+      {filtered.length === 0 ? (
+        <div className="card p-10 text-center">
+          <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-3">
+            <UsersIcon size={20} className="text-slate-400" />
           </div>
-          <div className="mt-3 flex gap-2">
-            <button className="btn-primary" onClick={create}>
-              Create
-            </button>
-            <button className="btn-ghost" onClick={() => setCreating(false)}>
-              Cancel
-            </button>
+          <div className="text-sm font-semibold text-slate-700">
+            {teams.length === 0 ? 'No teams yet' : 'No teams match your search'}
           </div>
-        </Card>
+          {teams.length === 0 && canManage && (
+            <button className="btn-primary mt-3" onClick={() => setCreating(true)}>+ Create your first team</button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((t) => (
+            <TeamCard
+              key={t.id}
+              team={t}
+              lead={t.leadId ? uMap.get(t.leadId) : undefined}
+              members={(t.memberIds || []).map((id) => uMap.get(id)).filter(Boolean) as UserItem[]}
+              canManage={canManage}
+              onEdit={() => setEditing(t)}
+            />
+          ))}
+        </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {teams.map((t) => (
-          <Link
-            key={t.id}
-            href={`/teams/${t.id}`}
-            className="card p-4 hover:shadow-md transition"
-          >
-            <div className="flex items-center gap-3">
-              <Avatar name={t.name} size={40} />
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold">{t.name}</div>
-                <div className="text-xs text-slate-500">
-                  Function: {t.function}
-                </div>
-              </div>
-            </div>
-            {t.description && (
-              <p className="mt-3 text-sm text-slate-600 line-clamp-2">{t.description}</p>
-            )}
-            <div className="mt-4 flex justify-between text-xs text-slate-500">
-              <span>{t.memberCount} members</span>
-              <span>{t.projectCount} projects</span>
-            </div>
+      {creating && (
+        <TeamFormModal
+          mode="create"
+          users={users}
+          onClose={() => setCreating(false)}
+          onSaved={() => { setCreating(false); load(); }}
+        />
+      )}
+      {editing && (
+        <TeamFormModal
+          mode="edit"
+          team={editing}
+          users={users}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Team card — name, function tag, lead avatar, member stack, counts, edit.
+   ────────────────────────────────────────────────────────────────────────── */
+function TeamCard({
+  team, lead, members, canManage, onEdit,
+}: {
+  team: TeamItem;
+  lead?: UserItem;
+  members: UserItem[];
+  canManage: boolean;
+  onEdit: () => void;
+}) {
+  const tone = FUNCTION_TONE[team.function] || FUNCTION_TONE.general;
+  const visibleMembers = members.slice(0, 4);
+  const extra = Math.max(0, members.length - visibleMembers.length);
+
+  return (
+    <div className="card p-4 group hover:shadow-md transition-shadow flex flex-col">
+      <div className="flex items-start gap-3">
+        <Avatar name={team.name} size={40} />
+        <div className="flex-1 min-w-0">
+          <Link href={`/teams/${team.id}`} className="font-semibold text-slate-900 hover:text-brand-700 hover:underline truncate block">
+            {team.name}
           </Link>
-        ))}
+          <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${tone.bg} ${tone.text} ${tone.border}`}>
+            {FUNCTION_LABEL[team.function] || team.function}
+          </span>
+        </div>
+        {canManage && (
+          <button
+            onClick={onEdit}
+            className="p-1.5 rounded-md text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors opacity-0 group-hover:opacity-100"
+            aria-label="Edit team"
+            title="Edit team"
+          >
+            <Pencil size={13} />
+          </button>
+        )}
+      </div>
+
+      {team.description && (
+        <p className="mt-3 text-sm text-slate-600 line-clamp-2">{team.description}</p>
+      )}
+
+      {/* Lead */}
+      <div className="mt-3 text-[11px] text-slate-400">
+        <span className="font-semibold uppercase tracking-wider text-slate-400">Lead · </span>
+        <span className="text-slate-600 font-medium">{lead?.name || 'Unassigned'}</span>
+      </div>
+
+      {/* Member avatars */}
+      <div className="mt-3 flex items-center -space-x-1.5">
+        {visibleMembers.length === 0 ? (
+          <span className="text-[11px] text-slate-400 italic">No members yet</span>
+        ) : (
+          visibleMembers.map((m) => (
+            <div key={m.id} className="ring-2 ring-white rounded-full" title={m.name}>
+              <Avatar name={m.name} size={26} />
+            </div>
+          ))
+        )}
+        {extra > 0 && (
+          <div className="w-[26px] h-[26px] rounded-full ring-2 ring-white bg-slate-100 text-[10px] font-bold text-slate-500 flex items-center justify-center">
+            +{extra}
+          </div>
+        )}
+      </div>
+
+      {/* Footer counts + view link */}
+      <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-500">
+        <div className="flex gap-3">
+          <span><strong className="text-slate-700">{team.memberCount}</strong> members</span>
+          <span><strong className="text-slate-700">{team.projectCount}</strong> projects</span>
+        </div>
+        <Link href={`/teams/${team.id}`} className="text-brand-600 hover:text-brand-700 font-semibold">
+          View →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Create / Edit modal — same form for both flows.
+   ────────────────────────────────────────────────────────────────────────── */
+function TeamFormModal({
+  mode, team, users, onClose, onSaved,
+}: {
+  mode: 'create' | 'edit';
+  team?: TeamItem;
+  users: UserItem[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName]               = useState(team?.name || '');
+  const [description, setDescription] = useState(team?.description || '');
+  const [func, setFunc]               = useState<string>(team?.function || 'general');
+  const [leadId, setLeadId]           = useState(team?.leadId || '');
+  const [memberIds, setMemberIds]     = useState<string[]>(team?.memberIds || []);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState('');
+
+  const filteredUsers = users.filter((u) => {
+    if (!memberQuery.trim()) return true;
+    const q = memberQuery.toLowerCase();
+    return u.name.toLowerCase().includes(q) || (u.title || '').toLowerCase().includes(q);
+  });
+
+  function toggleMember(id: string) {
+    setMemberIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
+  async function save() {
+    if (!name.trim()) { setError('Team name is required'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      if (mode === 'create') {
+        await api('/teams', {
+          method: 'POST',
+          body: {
+            name: name.trim(),
+            description: description || undefined,
+            leadId: leadId || undefined,
+            memberIds: memberIds.length ? memberIds : undefined,
+            function: func,
+          },
+        });
+      } else if (team) {
+        await api(`/teams/${team.id}`, {
+          method: 'PATCH',
+          body: {
+            name: name.trim(),
+            description,
+            leadId: leadId || null,
+            memberIds,
+            function: func,
+          },
+        });
+      }
+      onSaved();
+    } catch (e: any) {
+      setError(e?.message || 'Could not save team');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-black text-slate-900">
+              {mode === 'create' ? 'Create team' : 'Edit team'}
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {mode === 'create' ? 'Set the basics — you can add members below.' : 'Update team details and membership.'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Team name <span className="text-red-500">*</span>
+            </label>
+            <input
+              className="input"
+              placeholder="e.g. CSV Validation Squad"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              maxLength={120}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Description
+            </label>
+            <textarea
+              className="input"
+              rows={2}
+              placeholder="What does this team focus on?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={2000}
+            />
+          </div>
+
+          {/* Function + Lead */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Function
+              </label>
+              <select className="select" value={func} onChange={(e) => setFunc(e.target.value)}>
+                {Object.entries(FUNCTION_LABEL).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Team lead
+              </label>
+              <select className="select" value={leadId} onChange={(e) => setLeadId(e.target.value)}>
+                <option value="">— No lead —</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}{u.role === 'pm' ? ' (PM)' : ''}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Members */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Members <span className="text-slate-400 normal-case font-normal">({memberIds.length} selected)</span>
+              </label>
+              {memberIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMemberIds([])}
+                  className="text-[11px] text-slate-400 hover:text-slate-600"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+            <div className="relative mb-2">
+              <Search size={13} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
+              <input
+                className="input pl-9 text-sm"
+                placeholder="Search people…"
+                value={memberQuery}
+                onChange={(e) => setMemberQuery(e.target.value)}
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+              {filteredUsers.length === 0 ? (
+                <div className="py-6 text-center text-xs text-slate-400">No people match.</div>
+              ) : (
+                filteredUsers.map((u) => {
+                  const selected = memberIds.includes(u.id);
+                  const isLead = leadId === u.id;
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => toggleMember(u.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                        selected ? 'bg-brand-50/60 hover:bg-brand-50' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <Avatar name={u.name} size={26} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-800 truncate">
+                          {u.name}
+                          {isLead && (
+                            <span className="ml-2 text-[10px] font-bold text-brand-600 uppercase tracking-wider">Lead</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">{u.title || u.role}</div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                        selected ? 'bg-brand-600 text-white' : 'border border-slate-300'
+                      }`}>
+                        {selected && <Check size={12} />}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+            {leadId && !memberIds.includes(leadId) && (
+              <p className="text-[11px] text-slate-400 mt-1.5">
+                The lead is automatically added as a team member when you save.
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 bg-white border-t border-slate-100 px-5 py-3 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-ghost" disabled={saving}>Cancel</button>
+          <button onClick={save} className="btn-primary" disabled={saving || !name.trim()}>
+            {saving ? 'Saving…' : mode === 'create' ? 'Create team' : 'Save changes'}
+          </button>
+        </div>
       </div>
     </div>
   );

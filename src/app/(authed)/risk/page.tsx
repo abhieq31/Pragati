@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import {
-  Activity, AlertTriangle, Info, ChevronDown, ChevronUp, RefreshCw,
-  UserPlus, Clock, ChevronRight, ExternalLink, Sparkles, X,
+  Activity, Info, ChevronDown, ChevronUp, RefreshCw,
+  UserPlus, Clock, ExternalLink,
 } from 'lucide-react';
 
 interface RiskFeature {
@@ -216,45 +216,6 @@ function TaskCard({ t, users, onChanged }: { t: RiskTask; users: any[]; onChange
   );
 }
 
-/* ────────────────────────────────────────────────────────────────────────
-   Top-3 banner — the highest-impact items to address before stand-up.
-   ──────────────────────────────────────────────────────────────────────── */
-function StandupBanner({ tasks }: { tasks: RiskTask[] }) {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed || tasks.length === 0) return null;
-
-  return (
-    <div className="rounded-xl border border-red-200 bg-gradient-to-r from-red-50 via-orange-50 to-amber-50 p-4 fade-in-soft">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-          <AlertTriangle size={17} className="text-red-600" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline justify-between gap-2 mb-1.5">
-            <h2 className="text-sm font-black text-red-700">
-              {tasks.length} thing{tasks.length > 1 ? 's' : ''} to fix before stand-up
-            </h2>
-            <button onClick={() => setDismissed(true)} className="text-red-400 hover:text-red-700" aria-label="Dismiss">
-              <X size={13} />
-            </button>
-          </div>
-          <ol className="space-y-1.5">
-            {tasks.map((t, i) => (
-              <li key={t.taskId} className="flex items-start gap-2 text-xs">
-                <span className="font-black text-red-400 shrink-0 w-4">{i + 1}.</span>
-                <Link href={`/tasks/${t.taskId}`} className="text-slate-700 hover:text-red-700 leading-snug min-w-0">
-                  <span className="font-semibold">{t.title}</span>
-                  <span className="text-slate-400"> — {t.recommendation}</span>
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function RiskRadarPage() {
   const [data, setData]       = useState<RiskData | null>(null);
   const [users, setUsers]     = useState<any[]>([]);
@@ -285,8 +246,6 @@ export default function RiskRadarPage() {
   const highCount   = tasks.filter(t => t.label === 'high').length;
   const mediumCount = tasks.filter(t => t.label === 'medium').length;
 
-  const top3 = tasks.filter(t => t.label === 'high').slice(0, 3);
-
   return (
     <div className="max-w-3xl space-y-5 pb-10">
       {/* Header */}
@@ -294,10 +253,10 @@ export default function RiskRadarPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Activity size={20} className="text-red-500" />
-            <h1 className="text-2xl font-black text-slate-900">Risk Radar</h1>
+            <h1 className="text-2xl font-black text-slate-900">Task Triage</h1>
           </div>
           <p className="text-sm text-slate-500">
-            Your team's open tasks, ranked by deadline-miss probability — with inline actions to fix them right here.
+            Open tasks ranked by deadline-miss probability — fix the riskiest first, right from here.
             {data && <span className="ml-1 text-slate-400">(model trained on {data.model.trainedOn} closed tasks)</span>}
           </p>
         </div>
@@ -306,9 +265,6 @@ export default function RiskRadarPage() {
           Refresh
         </button>
       </div>
-
-      {/* Top-3 stand-up banner */}
-      {!loading && top3.length > 0 && <StandupBanner tasks={top3} />}
 
       {/* Summary tiles */}
       {data && (

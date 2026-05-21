@@ -204,8 +204,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       title: 'Steer',
       items: [
         { href: '/org',      label: 'Operations Hub', icon: PieChart,  tour: 'nav-org',      iconColor: '#E65100', iconBg: '#FBE9E7' },
-        { href: '/risk',     label: 'Risk Radar',     icon: Activity,  tour: 'nav-risk',     iconColor: '#C62828', iconBg: '#FFEBEE' },
-        { href: '/insights', label: 'Insights',       icon: Lightbulb, badge: 'Live', tour: 'nav-insights', iconColor: '#F57F17', iconBg: '#FFF9C4' },
+        { href: '/risk',     label: 'Task Triage',    icon: Activity,  tour: 'nav-risk',     iconColor: '#C62828', iconBg: '#FFEBEE' },
+        { href: '/insights', label: 'Trends',         icon: Lightbulb, badge: 'Live', tour: 'nav-insights', iconColor: '#F57F17', iconBg: '#FFF9C4' },
       ],
     },
     {

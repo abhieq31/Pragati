@@ -4,9 +4,10 @@ import { Team } from '@/models/Team';
 import { User } from '@/models/User';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
-import { requireUser } from '@/lib/auth';
-import { handleError } from '@/lib/http';
+import { requireUser, requireRole } from '@/lib/auth';
+import { handleError, readBody } from '@/lib/http';
 import { team as teamS, u, project as projectS } from '@/lib/serialize';
+import { TeamUpdateSchema } from '@/lib/validations';
 
 export const runtime = 'nodejs';
 
@@ -46,6 +47,37 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         });
       })
     });
+  } catch (e) {
+    return handleError(e);
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { error } = await requireRole(req, 'pm');
+    if (error) return error;
+    await connectDB();
+
+    const body = await readBody(req, TeamUpdateSchema);
+    const current = await Team.findById(params.id).lean();
+    if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    const patch: any = {};
+    if (body.name !== undefined) patch.name = body.name.trim();
+    if (body.description !== undefined) patch.description = body.description;
+    if (body.function !== undefined) patch.function = body.function;
+    if (body.leadId !== undefined) patch.leadId = body.leadId || undefined;
+    if (body.memberIds !== undefined) {
+      // Ensure lead is included as a member if a lead is set.
+      const lead = body.leadId !== undefined ? body.leadId : (current as any).leadId;
+      const ids = new Set(body.memberIds);
+      if (lead) ids.add(String(lead));
+      patch.memberIds = Array.from(ids);
+    }
+
+    await Team.updateOne({ _id: params.id }, { $set: patch });
+    const fresh = await Team.findById(params.id).lean();
+    return NextResponse.json(teamS(fresh));
   } catch (e) {
     return handleError(e);
   }
