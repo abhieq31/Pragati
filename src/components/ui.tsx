@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 
 // ── Status dots ───────────────────────────────────────────────────────────────
 const STATUS_DOT: Record<string, string> = {
@@ -228,36 +228,20 @@ const AVATAR_PALETTE = [
 ];
 
 export function Avatar({ name, size = 28 }: { name?: string | null; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const initials = (name || '?').split(/\s+/).map((x) => x[0]).slice(0, 2).join('').toUpperCase();
-  const bg = AVATAR_PALETTE[(name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_PALETTE.length];
-  const radius = Math.round(size * 0.3);
-  const seed = encodeURIComponent(name || 'user');
-
-  if (failed) {
-    return (
-      <div
-        className="font-bold flex items-center justify-center text-white shrink-0 select-none"
-        style={{ width: size, height: size, fontSize: size * 0.38, background: bg, borderRadius: radius }}
-        title={name || ''}
-      >
-        {initials}
-      </div>
-    );
-  }
-
+  // First letter of the first name, deterministically coloured by full name.
+  const trimmed = (name || '').trim();
+  const letter = (trimmed[0] || '?').toUpperCase();
+  const bg = AVATAR_PALETTE[trimmed.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_PALETTE.length];
+  const radius = Math.round(size * 0.5);
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={`https://api.dicebear.com/9.x/shapes/png?seed=${seed}&size=128`}
-      alt={initials}
-      title={name || ''}
-      width={size}
-      height={size}
-      onError={() => setFailed(true)}
-      className="shrink-0 select-none object-cover"
-      style={{ width: size, height: size, borderRadius: radius }}
-    />
+    <div
+      className="font-bold flex items-center justify-center text-white shrink-0 select-none"
+      style={{ width: size, height: size, fontSize: size * 0.44, background: bg, borderRadius: radius, lineHeight: 1 }}
+      title={trimmed || ''}
+      aria-label={trimmed || 'User'}
+    >
+      {letter}
+    </div>
   );
 }
 

@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
-import { Pencil, Plus, Users as UsersIcon, X, Check, Search } from 'lucide-react';
+import { Pencil, Plus, Users as UsersIcon, X, Check, Search, Trash2, AlertTriangle } from 'lucide-react';
 
 interface TeamItem {
   id: string;
@@ -50,6 +50,7 @@ export default function TeamsPage() {
   const [query, setQuery]     = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<TeamItem | null>(null);
+  const [deleting, setDeleting] = useState<TeamItem | null>(null);
 
   function load() {
     api<TeamItem[]>('/teams').then(setTeams);
@@ -124,6 +125,7 @@ export default function TeamsPage() {
               members={(t.memberIds || []).map((id) => uMap.get(id)).filter(Boolean) as UserItem[]}
               canManage={canManage}
               onEdit={() => setEditing(t)}
+              onDelete={() => setDeleting(t)}
             />
           ))}
         </div>
@@ -146,6 +148,13 @@ export default function TeamsPage() {
           onSaved={() => { setEditing(null); load(); }}
         />
       )}
+      {deleting && (
+        <DeleteTeamModal
+          team={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => { setDeleting(null); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -154,13 +163,14 @@ export default function TeamsPage() {
    Team card — name, function tag, lead avatar, member stack, counts, edit.
    ────────────────────────────────────────────────────────────────────────── */
 function TeamCard({
-  team, lead, members, canManage, onEdit,
+  team, lead, members, canManage, onEdit, onDelete,
 }: {
   team: TeamItem;
   lead?: UserItem;
   members: UserItem[];
   canManage: boolean;
   onEdit: () => void;
+  onDelete: () => void;
 }) {
   const tone = FUNCTION_TONE[team.function] || FUNCTION_TONE.general;
   const visibleMembers = members.slice(0, 4);
@@ -179,14 +189,24 @@ function TeamCard({
           </span>
         </div>
         {canManage && (
-          <button
-            onClick={onEdit}
-            className="p-1.5 rounded-md text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors opacity-0 group-hover:opacity-100"
-            aria-label="Edit team"
-            title="Edit team"
-          >
-            <Pencil size={13} />
-          </button>
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={onEdit}
+              className="p-1.5 rounded-md text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+              aria-label="Edit team"
+              title="Edit team"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              onClick={onDelete}
+              className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              aria-label="Delete team"
+              title="Delete team"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
         )}
       </div>
 
@@ -452,6 +472,107 @@ function TeamFormModal({
           <button onClick={onClose} className="btn-ghost" disabled={saving}>Cancel</button>
           <button onClick={save} className="btn-primary" disabled={saving || !name.trim()}>
             {saving ? 'Saving…' : mode === 'create' ? 'Create team' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Delete confirmation — PM password re-entry (21 CFR 11 audit intent).
+   Uses raw fetch so a wrong password doesn't trigger the api helper's
+   global 401 -> /login redirect.
+   ────────────────────────────────────────────────────────────────────────── */
+function DeleteTeamModal({
+  team, onClose, onDeleted,
+}: {
+  team: TeamItem;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [password, setPassword] = useState('');
+  const [busy, setBusy]         = useState(false);
+  const [error, setError]       = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  async function confirm() {
+    if (!password) return;
+    setBusy(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/teams/${team.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (res.status === 401) {
+        setError('Incorrect password — try again.');
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || 'Could not delete team.');
+        return;
+      }
+      onDeleted();
+    } catch (e: any) {
+      setError(e?.message || 'Network error.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-3 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+            <AlertTriangle size={18} className="text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-black text-slate-900">Delete team?</h2>
+            <p className="text-sm text-slate-500 mt-1 leading-snug">
+              <span className="font-semibold text-slate-700">{team.name}</span> will be permanently removed.
+              Any projects linked to this team will be detached but their tasks and history will be kept intact.
+            </p>
+          </div>
+        </div>
+
+        <div className="px-5 pb-5 space-y-3">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Confirm with your password
+            </label>
+            <input
+              ref={inputRef}
+              type="password"
+              className="input"
+              placeholder="Your account password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') confirm(); }}
+              autoComplete="current-password"
+            />
+          </div>
+          {error && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+          )}
+        </div>
+
+        <div className="border-t border-slate-100 px-5 py-3 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-ghost" disabled={busy}>Cancel</button>
+          <button
+            onClick={confirm}
+            disabled={busy || !password}
+            className="px-3 py-1.5 rounded-lg text-sm font-bold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {busy ? 'Deleting…' : 'Delete permanently'}
           </button>
         </div>
       </div>
