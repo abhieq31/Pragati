@@ -785,19 +785,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="pb-20 max-w-5xl page-enter">
+    <div className="pb-20 max-w-5xl page-enter relative">
       {celebrating && <Celebration taskTitle={celebrating.title} onDone={() => setCelebrating(null)} />}
 
-      {/* ── Hero backdrop — fixed so it spans the full viewport width and
-              is never clipped by the parent overflow-auto on AppShell's
-              main element. z-index -1 places it behind all page content
-              but above the body background. top-14 keeps it below the
-              fixed app header (56px). ─────────────────────────────── */}
-      <div aria-hidden className="pointer-events-none fixed top-14 left-0 right-0 h-[200px]" style={{ zIndex: -1 }}>
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(180deg, rgba(21,101,192,0.09) 0%, rgba(21,101,192,0.05) 45%, rgba(21,101,192,0.01) 80%, transparent 100%)',
-        }} />
-      </div>
+      {/* PM-only hero backdrop — preserved at its original location and
+          width (max-w-5xl content column) since PM layout fills this column.
+          IC gets the wider main-anchored version from AppShell instead. */}
+      {isPM && (
+        <div aria-hidden className="pointer-events-none absolute top-0 left-0 right-0 h-[200px]" style={{ zIndex: -1 }}>
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(180deg, rgba(21,101,192,0.09) 0%, rgba(21,101,192,0.05) 45%, rgba(21,101,192,0.01) 80%, transparent 100%)',
+          }} />
+        </div>
+      )}
 
       {/* ── Page header ───────────────────────────────────────────────────── */}
       <div className="relative flex items-start justify-between pt-1 mb-6 gap-4">
