@@ -36,7 +36,7 @@ export async function sendPasswordResetEmail(
   // so create a dedicated send-only Gmail (e.g. pragati.noreply@gmail.com)
   // and set SMTP_USER + SMTP_FROM to that account to hide personal emails.
   const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER!;
-  const fromName  = process.env.SMTP_FROM_NAME || 'Pragati · Alembic Digital';
+  const fromName  = process.env.SMTP_FROM_NAME || 'Pragati';
   const from      = `"${fromName}" <${fromEmail}>`;
 
   await transport.sendMail({
@@ -57,7 +57,7 @@ export async function sendPasswordResetEmail(
           <td style="background:#0B1628;padding:28px 32px;">
             <p style="margin:0;color:#fff;font-size:18px;font-weight:800;letter-spacing:-0.02em;">Pragati</p>
             <p style="margin:4px 0 0;color:rgba(255,255,255,0.3);font-size:10px;letter-spacing:0.15em;text-transform:uppercase;">
-              Alembic Digital
+              Project Intelligence
             </p>
           </td>
         </tr>
@@ -102,7 +102,7 @@ export async function sendPasswordResetEmail(
         <tr>
           <td style="padding:16px 32px;background:#f8fafc;border-top:1px solid #f1f5f9;">
             <p style="margin:0;font-size:11px;color:#cbd5e1;text-align:center;">
-              Pragati · Alembic Limited · Vadodara · Est. 1907
+              Pragati · Project Intelligence for QA-IT
             </p>
           </td>
         </tr>

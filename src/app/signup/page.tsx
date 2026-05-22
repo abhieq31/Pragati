@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
-import { CheckCircle2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldCheck, Mail } from 'lucide-react';
 
 function StrengthMeter({ password }: { password: string }) {
   const checks = [
@@ -15,8 +15,8 @@ function StrengthMeter({ password }: { password: string }) {
     { label: '#!@',      ok: /[^A-Za-z0-9]/.test(password) },
   ];
   const score = checks.filter(c => c.ok).length;
-  const barColor = score <= 2 ? '#EF4444' : score <= 3 ? '#F59E0B' : '#43A047';
-  const labels = ['', 'Very weak', 'Weak', 'Okay', 'Strong', 'Excellent'];
+  const barColor = score <= 2 ? '#EF4444' : score <= 3 ? '#F59E0B' : '#22C55E';
+  const labels   = ['', 'Very weak', 'Weak', 'Okay', 'Strong', 'Excellent'];
   if (!password) return null;
   return (
     <div className="mt-2 space-y-1.5">
@@ -24,7 +24,7 @@ function StrengthMeter({ password }: { password: string }) {
         <div className="flex gap-0.5 flex-1">
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="h-1 flex-1 rounded-sm transition-all"
-              style={{ background: i <= score ? barColor : '#e2e8f0' }} />
+              style={{ background: i <= score ? barColor : '#E2E8F0' }} />
           ))}
         </div>
         <span className="text-[11px] font-bold" style={{ color: barColor }}>{labels[score]}</span>
@@ -78,7 +78,7 @@ function SignupForm() {
     try {
       await api('/auth/signup', { method: 'POST', body: { token, name: name.trim(), password, title: title.trim() } });
       setPhase('done');
-      setTimeout(() => router.replace('/'), 600);
+      setTimeout(() => router.replace('/'), 700);
     } catch (e: any) {
       setErr(e.message || 'Sign-up failed.');
       setPhase('ready');
@@ -87,27 +87,29 @@ function SignupForm() {
 
   if (phase === 'validating') {
     return (
-      <div className="text-center py-10">
-        <div className="w-8 h-8 mx-auto border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
-        <p className="text-sm text-slate-400 mt-3">Verifying your invite…</p>
+      <div className="text-center py-14">
+        <div className="w-7 h-7 mx-auto border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+        <p className="text-sm text-slate-400 mt-4">Verifying your invite…</p>
       </div>
     );
   }
 
   if (phase === 'invalid') {
     const message =
-      reason === 'expired'    ? 'This invite has expired. Ask your lead to send a new one.'
-    : reason === 'consumed'   ? 'This invite has already been used.'
-    : reason === 'revoked'    ? 'This invite was revoked by the lead who created it.'
-    : reason === 'not_found'  ? "We couldn't find this invite. Check the link and try again."
+      reason === 'expired'       ? 'This invite has expired. Ask your lead to send a new one.'
+    : reason === 'consumed'      ? 'This invite has already been used.'
+    : reason === 'revoked'       ? 'This invite was revoked by the lead who created it.'
+    : reason === 'not_found'     ? "We couldn't find this invite. Check the link and try again."
     : reason === 'missing_token' ? 'No invite token was provided in the link.'
                                  : 'This invite link is not valid.';
     return (
       <div className="text-center py-8">
-        <AlertTriangle size={28} className="mx-auto text-amber-500 mb-3" />
+        <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 flex items-center justify-center mb-4">
+          <AlertTriangle size={22} className="text-amber-500" />
+        </div>
         <h2 className="text-lg font-bold text-slate-800">Invite unavailable</h2>
-        <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto">{message}</p>
-        <Link href="/login" className="inline-block mt-5 text-sm font-semibold text-blue-600 hover:text-blue-700">
+        <p className="text-sm text-slate-500 mt-2 max-w-xs mx-auto leading-relaxed">{message}</p>
+        <Link href="/login" className="inline-flex items-center gap-1 mt-6 text-sm font-semibold text-blue-600 hover:text-blue-700">
           Back to sign in →
         </Link>
       </div>
@@ -116,33 +118,47 @@ function SignupForm() {
 
   if (phase === 'done') {
     return (
-      <div className="text-center py-10">
-        <CheckCircle2 size={36} className="mx-auto text-green-500 mb-3" />
-        <h2 className="text-lg font-bold text-slate-800">Welcome aboard</h2>
-        <p className="text-sm text-slate-500 mt-1">Redirecting to your dashboard…</p>
+      <div className="text-center py-14">
+        <div className="w-14 h-14 mx-auto rounded-full bg-green-50 flex items-center justify-center mb-4 animate-[pop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]">
+          <CheckCircle2 size={32} className="text-green-500" />
+        </div>
+        <h2 className="text-xl font-black text-slate-800">Welcome to Pragati</h2>
+        <p className="text-sm text-slate-500 mt-2">Taking you to your dashboard…</p>
+        <style jsx>{`@keyframes pop { from { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } to { transform: scale(1); } }`}</style>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <div className="bg-blue-50/60 border border-blue-100 rounded-lg px-3 py-2.5 text-xs text-slate-600">
-        Invited by <span className="font-semibold text-slate-800">{invitedBy || 'a team lead'}</span> · You're signing up as <span className="font-semibold text-slate-800">{email}</span>
+    <form onSubmit={submit} className="space-y-5">
+      <div>
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Invited by</div>
+        <div className="mt-1 text-sm text-slate-700 font-semibold">{invitedBy || 'A team lead'}</div>
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Your email</label>
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
+          <Mail size={13} className="text-slate-400 shrink-0" />
+          <span className="truncate">{email}</span>
+        </div>
       </div>
 
       <div>
         <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Full name</label>
-        <input className="input" value={name} onChange={e => setName(e.target.value)} required autoFocus />
+        <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Priya Sharma" required autoFocus />
       </div>
 
       <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Designation <span className="font-normal lowercase text-slate-300">(optional)</span></label>
+        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+          Designation <span className="font-normal lowercase text-slate-300">(optional)</span>
+        </label>
         <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Team Lead — QA-IT" />
       </div>
 
       <div>
         <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Password</label>
-        <input type="password" className="input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 chars, mixed case + number + symbol" autoComplete="new-password" required />
+        <input type="password" className="input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 chars + mixed case + number + symbol" autoComplete="new-password" required />
         <StrengthMeter password={password} />
       </div>
 
@@ -158,55 +174,51 @@ function SignupForm() {
       </div>
 
       {err && (
-        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+          <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" /> <span>{err}</span>
+        </div>
       )}
 
       <button
         type="submit"
-        className="btn-primary w-full justify-center"
+        className="btn-primary w-full justify-center text-sm py-2.5"
         disabled={!name.trim() || !strong || !matches || phase === 'submitting'}
       >
         {phase === 'submitting' ? 'Creating account…' : 'Create my account'}
       </button>
 
-      <p className="text-[11px] text-slate-400 text-center">
-        Already have an account? <Link href="/login" className="text-blue-600 font-semibold">Sign in</Link>
-      </p>
+      <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+        <ShieldCheck size={11} /> Single-use invite · 21 CFR Part 11 audit trail
+      </div>
     </form>
   );
 }
 
 export default function SignupPage() {
   return (
-    <div className="min-h-screen flex items-stretch bg-slate-50">
-      {/* Left hero — same vibe as /login */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 text-white"
-        style={{ background: 'linear-gradient(135deg, #0D47A1 0%, #1565C0 60%, #1976D2 100%)' }}>
-        <div className="flex items-center gap-3">
-          <Image src="/pragati-logo.png" alt="Pragati" width={40} height={40} className="rounded" />
-          <div>
-            <div className="text-lg font-black tracking-tight">Pragati</div>
-            <div className="text-[11px] uppercase tracking-widest opacity-70">Project Intelligence</div>
+    <div className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: 'radial-gradient(ellipse at top, #E3F2FD 0%, #F8FAFC 60%)' }}>
+      <div className="w-full max-w-[420px]">
+        {/* Pragati logo + tagline */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-md mb-3"
+            style={{ boxShadow: '0 4px 16px rgba(21,101,192,0.25)' }}>
+            <Image src="/logo-icon.png" alt="Pragati" width={26} height={26} priority style={{ objectFit: 'contain' }} />
           </div>
+          <div className="text-lg font-black tracking-tight text-slate-900">Pragati</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 mt-0.5">Project Intelligence</div>
         </div>
-        <div>
-          <h1 className="text-3xl font-black leading-tight tracking-tight">Set up your lead account.</h1>
-          <p className="mt-3 text-sm opacity-80 max-w-md">
-            One-time invite, single-use. Once you finish here, you'll land directly on your dashboard.
-          </p>
-          <div className="mt-6 flex items-center gap-2 text-xs opacity-70">
-            <ShieldCheck size={14} /> Audit trail recorded for 21 CFR Part 11 §11.10(d).
-          </div>
-        </div>
-        <div className="text-[11px] opacity-50">© Alembic Pharmaceuticals · QA-IT</div>
-      </div>
 
-      {/* Right form */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <Suspense fallback={<div className="text-center py-10 text-sm text-slate-400">Loading…</div>}>
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 px-6 py-7"
+          style={{ boxShadow: '0 4px 24px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04)' }}>
+          <Suspense fallback={<div className="text-center py-12 text-sm text-slate-400">Loading…</div>}>
             <SignupForm />
           </Suspense>
+        </div>
+
+        <div className="text-center mt-5 text-[11px] text-slate-400">
+          Already onboarded? <Link href="/login" className="text-blue-600 font-semibold hover:text-blue-700">Sign in →</Link>
         </div>
       </div>
     </div>

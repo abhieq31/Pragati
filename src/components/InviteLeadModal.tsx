@@ -125,7 +125,7 @@ export function InviteLeadModal({ open, onClose }: { open: boolean; onClose: () 
                 <input
                   type="email"
                   className="input pl-7"
-                  placeholder="name@alembic.com"
+                  placeholder="name@company.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
