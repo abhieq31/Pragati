@@ -5,12 +5,13 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar } from './ui';
 import { CommandPalette } from './CommandPalette';
+import { InviteLeadModal } from './InviteLeadModal';
 import { api } from '@/lib/client/api';
 import {
   LayoutDashboard, FolderKanban, Calendar,
   LogOut, Menu, X,
   Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle,
-  Search, CheckSquare,
+  Search, CheckSquare, UserPlus,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -131,6 +132,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
 
   const [open, setOpen]               = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [inviteOpen,  setInviteOpen]  = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [dark, toggleDark]            = useDarkMode();
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
@@ -306,6 +308,15 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
                   <Icon size={12} className="shrink-0" /> {label}
                 </Link>
               ))}
+              <button
+                type="button"
+                onClick={() => { setInviteOpen(true); setProfileOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors ${
+                  dark ? 'text-white/55 hover:text-white/90 hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <UserPlus size={12} className="shrink-0" /> Invite a lead
+              </button>
               <div className={`mx-3 my-1 h-px ${dark ? 'bg-white/6' : 'bg-slate-100'}`} />
               <div className="flex items-center gap-1 px-1">
                 <button onClick={toggleDark}
@@ -594,6 +605,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       {mustChangePw && (
         <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
       )}
+
+      <InviteLeadModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   );
 }
