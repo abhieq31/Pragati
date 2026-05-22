@@ -10,39 +10,36 @@ import {
   CheckCircle2, Users as UsersIcon,
 } from 'lucide-react';
 
-/* ── Types matching API responses ─────────────────────────────────────────── */
+/* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
 interface DashTask {
   id: string; projectId: string; projectCode?: string; projectName?: string;
   title: string; status: string; priority?: string;
   dueDate?: string | null; gxpCritical?: boolean;
 }
-interface DashResp {
-  user: { id: string; name: string; email: string; role: string };
-  summary: { totalAssigned: number; completed: number; overdue: number; dueThisWeek: number };
-  tasks: DashTask[];
-}
 
-interface FullProject {
+interface DashProject {
   id: string; code: string; name: string; lifecycle?: string;
   status: string; priority?: string;
   ownerId?: string; ownerName?: string;
   teamName?: string | null;
   dueDate?: string | null; startDate?: string | null;
   taskCount?: number; tasksDone?: number;
-  gxpImpact?: string;
+  openTasks: number; overdueCount: number;
+  health: 'healthy' | 'at_risk' | 'critical';
 }
 
-interface ProjectInsight {
-  id: string; score: number; health: 'healthy' | 'at_risk' | 'critical';
-  openTasks: number; overdueCount: number;
-  completedThisWeek: number; daysUntilDue: number | null;
-}
-interface PersonInsight {
+interface DashPerson {
   id: string; name: string; title: string;
   openTasks: number; overdueCount: number; completedThisWeek: number;
   loadScore: number; loadLevel: 'healthy' | 'busy' | 'overloaded';
 }
-interface InsightsResp { projects: ProjectInsight[]; people: PersonInsight[] }
+
+interface DashResp {
+  user: { id: string; name: string; email: string; role: string };
+  projects: DashProject[];
+  tasks: DashTask[];
+  people: DashPerson[];
+}
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 const HEALTH_COLOR: Record<string, string> = {
@@ -85,38 +82,25 @@ function bucketTasks(tasks: DashTask[]) {
 
 /* ── Main page ────────────────────────────────────────────────────────────── */
 export default function Dashboard() {
-  const [dash,     setDash]     = useState<DashResp | null>(null);
-  const [insights, setInsights] = useState<InsightsResp | null>(null);
-  const [projects, setProjects] = useState<FullProject[] | null>(null);
+  const [dash, setDash] = useState<DashResp | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      api('/dashboard').catch(() => null),
-      api('/insights').catch(() => null),
-      api('/projects').catch(() => []),
-    ]).then(([d, i, p]: any) => {
-      setDash(d);
-      setInsights(i ?? { projects: [], people: [] });
-      setProjects(Array.isArray(p) ? p : []);
-    });
+    api<DashResp>('/lead-dashboard').then(setDash).catch(() => setDash({
+      user: { id: '', name: '', email: '', role: '' },
+      projects: [], tasks: [], people: [],
+    }));
   }, []);
 
   const buckets = useMemo(() => bucketTasks(dash?.tasks ?? []), [dash?.tasks]);
 
   // Active projects come first, then planning, then everything else.
   const sortedProjects = useMemo(() => {
-    if (!projects) return [];
+    if (!dash) return [];
     const order: Record<string, number> = { in_progress: 0, planning: 1, on_hold: 2, completed: 3, cancelled: 4 };
-    return [...projects].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
-  }, [projects]);
+    return [...dash.projects].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+  }, [dash]);
 
-  const projectInsightMap = useMemo(() => {
-    const m = new Map<string, ProjectInsight>();
-    for (const p of insights?.projects ?? []) m.set(p.id, p);
-    return m;
-  }, [insights]);
-
-  if (!dash || !insights || !projects) return <LoadingSkeleton />;
+  if (!dash) return <LoadingSkeleton />;
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -135,8 +119,8 @@ export default function Dashboard() {
       {/* Two-column layout: main content + sticky pending-tasks rail */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
         <div className="space-y-6 min-w-0">
-          <ProjectsPanel projects={sortedProjects} insightMap={projectInsightMap} />
-          <PeoplePanel people={insights.people} />
+          <ProjectsPanel projects={sortedProjects} />
+          <PeoplePanel people={dash.people} />
         </div>
         <PendingTasksRail buckets={buckets} />
       </div>
@@ -145,9 +129,7 @@ export default function Dashboard() {
 }
 
 /* ── Projects panel ───────────────────────────────────────────────────────── */
-function ProjectsPanel({
-  projects, insightMap,
-}: { projects: FullProject[]; insightMap: Map<string, ProjectInsight> }) {
+function ProjectsPanel({ projects }: { projects: DashProject[] }) {
   if (projects.length === 0) {
     return (
       <Section title="Projects" count={0} icon={FolderKanban}>
@@ -165,20 +147,20 @@ function ProjectsPanel({
       action={<Link href="/projects" className="text-xs font-semibold text-blue-600 hover:text-blue-700">All projects →</Link>}
     >
       <div className="divide-y divide-slate-100">
-        {projects.map(p => <ProjectRow key={p.id} p={p} insight={insightMap.get(p.id)} />)}
+        {projects.map(p => <ProjectRow key={p.id} p={p} />)}
       </div>
     </Section>
   );
 }
 
-function ProjectRow({ p, insight }: { p: FullProject; insight?: ProjectInsight }) {
-  const total = p.taskCount ?? 0;
-  const done  = p.tasksDone ?? 0;
-  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
-  const open  = insight?.openTasks ?? Math.max(0, total - done);
-  const overdue = insight?.overdueCount ?? 0;
-  const dueIn = daysUntil(p.dueDate);
-  const health = insight?.health ?? null;
+function ProjectRow({ p }: { p: DashProject }) {
+  const total   = p.taskCount ?? 0;
+  const done    = p.tasksDone ?? 0;
+  const pct     = total > 0 ? Math.round((done / total) * 100) : 0;
+  const open    = p.openTasks;
+  const overdue = p.overdueCount;
+  const dueIn   = daysUntil(p.dueDate);
+  const health  = p.health;
 
   return (
     <Link
@@ -237,7 +219,7 @@ function ProjectRow({ p, insight }: { p: FullProject; insight?: ProjectInsight }
 }
 
 /* ── People workload panel ────────────────────────────────────────────────── */
-function PeoplePanel({ people }: { people: PersonInsight[] }) {
+function PeoplePanel({ people }: { people: DashPerson[] }) {
   if (people.length === 0) {
     return (
       <Section title="People" count={0} icon={UsersIcon}>

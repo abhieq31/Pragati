@@ -4,14 +4,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar } from './ui';
-import { CommandPalette } from './CommandPalette';
 import { InviteLeadModal } from './InviteLeadModal';
 import { api } from '@/lib/client/api';
 import {
-  LayoutDashboard, FolderKanban, Calendar,
+  LayoutDashboard, FolderKanban,
   LogOut, Menu, X,
-  Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle,
-  Search, CheckSquare, UserPlus,
+  Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle, UserPlus,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -136,34 +134,6 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [dark, toggleDark]            = useDarkMode();
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
-
-  /* Notifications */
-  const [notifOpen, setNotifOpen]       = useState(false);
-  const [notifSummary, setNotifSummary] = useState<any>(null);
-
-  useEffect(() => {
-    api('/me/summary').then(setNotifSummary).catch(() => {});
-  }, []);
-
-  const notifs = [
-    notifSummary?.overdueTasks > 0 && {
-      id: 'overdue', icon: AlertTriangle, color: '#ef4444',
-      title: `${notifSummary.overdueTasks} task${notifSummary.overdueTasks === 1 ? '' : 's'} overdue`,
-      sub: 'Requires immediate attention',
-    },
-    notifSummary?.dueThisWeek > 0 && {
-      id: 'due-week', icon: Calendar, color: '#f59e0b',
-      title: `${notifSummary.dueThisWeek} due this week`,
-      sub: 'Keep on schedule',
-    },
-    notifSummary?.openTasks > 0 && {
-      id: 'open', icon: CheckSquare, color: '#1565C0',
-      title: `${notifSummary.openTasks} open task${notifSummary.openTasks === 1 ? '' : 's'}`,
-      sub: 'Your current workload',
-    },
-  ].filter(Boolean) as Array<{ id: string; icon: any; color: string; title: string; sub: string }>;
-
-  const notifBadge = (notifSummary?.overdueTasks || 0) + (notifSummary?.dueThisWeek > 0 ? 1 : 0);
 
   /* Drawer & scroll lock */
   useEffect(() => { setOpen(false); }, [pathname]);
@@ -397,8 +367,6 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
 
-      {/* Command palette */}
-      <CommandPalette isPM={user.role === 'pm' || user.role === 'lead'} />
 
       {/* ── Top header (always visible — Alembic Academy style) ────────── */}
       <header
@@ -439,107 +407,6 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
           </div>
         </Link>
 
-        {/* Center search bar (desktop) */}
-        <div className="flex-1 max-w-sm mx-auto hidden md:block">
-          <button
-            onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all text-left ${
-              dark
-                ? 'bg-white/5 border-white/8 hover:bg-white/8 hover:border-white/12'
-                : 'bg-slate-50 border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm'
-            }`}>
-            <Search size={13} className={dark ? 'text-white/30 shrink-0' : 'text-slate-400 shrink-0'} />
-            <span className={`text-sm flex-1 ${dark ? 'text-white/30' : 'text-slate-400'}`}>
-              What do you want to find?
-            </span>
-            <kbd className={`font-mono text-[9px] border rounded px-1.5 py-0.5 hidden lg:block ${
-              dark ? 'text-white/20 border-white/10' : 'text-slate-400 border-slate-300 bg-white'
-            }`}>
-              ⌘K
-            </kbd>
-          </button>
-        </div>
-
-        {/* Right — search icon (small screens), bell, avatar */}
-        <div className="ml-auto flex items-center gap-1.5">
-          {/* Mobile search */}
-          <button
-            onClick={() => window.dispatchEvent(new Event('open-command-palette'))}
-            className={`md:hidden p-2 rounded-lg transition-colors ${
-              dark ? 'text-white/40 hover:text-white/70 hover:bg-white/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-            }`}>
-            <Search size={17} />
-          </button>
-
-          {/* Bell with notification dropdown */}
-          <div className="relative">
-            <button
-              data-tour="notifications" onClick={() => setNotifOpen(o => !o)}
-              className={`relative p-2 rounded-lg transition-colors ${
-                dark ? 'text-white/40 hover:text-white/70 hover:bg-white/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-              }`}>
-              <Bell size={17} className={notifBadge > 0 ? (dark ? 'text-amber-400/70' : 'text-amber-500') : ''} />
-              {notifBadge > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />
-              )}
-            </button>
-
-            {/* Notification panel */}
-            {notifOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                <div className="absolute top-full right-0 mt-2 w-72 rounded-xl overflow-hidden z-50"
-                  style={{
-                    background: dark ? '#0A1929' : '#ffffff',
-                    border: dark ? '1px solid rgba(255,255,255,0.09)' : '1px solid #e2e8f0',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                    animation: 'paletteIn 0.18s cubic-bezier(0.34,1.56,0.64,1)',
-                  }}>
-                  <div className="px-4 py-3 flex items-center justify-between"
-                    style={{ borderBottom: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #f1f5f9' }}>
-                    <span className={`text-sm font-bold ${dark ? 'text-white/80' : 'text-slate-700'}`}>Notifications</span>
-                    <button onClick={() => setNotifOpen(false)}>
-                      <Link href="/" style={{ fontSize: 11 }} className="text-brand-600 hover:text-brand-700 transition-colors">
-                        View dashboard
-                      </Link>
-                    </button>
-                  </div>
-                  {notifs.length === 0 ? (
-                    <div className={`px-4 py-6 text-center text-sm ${dark ? 'text-white/25' : 'text-slate-400'}`}>
-                      All clear — no pending items
-                    </div>
-                  ) : (
-                    <div className="py-1">
-                      {notifs.map(n => {
-                        const Icon = n.icon;
-                        const href = n.id === 'open' ? '/projects' : '/yearly';
-                        return (
-                          <Link href={href} key={n.id} onClick={() => setNotifOpen(false)}
-                            className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                              dark ? 'hover:bg-white/5' : 'hover:bg-slate-50'
-                            }`}>
-                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                              style={{ background: `${n.color}18` }}>
-                              <Icon size={13} style={{ color: n.color }} />
-                            </div>
-                            <div className="min-w-0">
-                              <div className={`text-xs font-semibold truncate ${dark ? 'text-white/80' : 'text-slate-700'}`}>
-                                {n.title}
-                              </div>
-                              <div style={{ fontSize: 10 }} className={dark ? 'text-white/30 mt-0.5' : 'text-slate-400 mt-0.5'}>
-                                {n.sub}
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
       </header>
 
       {/* Mobile backdrop */}
