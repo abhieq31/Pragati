@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#1565C0"/>
+      <stop offset="45%"  stop-color="#1769C8"/>
+      <stop offset="100%" stop-color="#2B8C29"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+      <stop offset="55%"  stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- iOS rounds the corners itself; full-bleed -->
+  <rect width="64" height="64" fill="url(#bg)"/>
+  <rect width="64" height="64" fill="url(#gloss)"/>
+
+  <!-- Stylised P (stem + upper-half bowl) -->
+  <g stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M18 12 V52"/>
+    <path d="M18 12 H32 a9 9 0 0 1 0 18 H18"/>
+  </g>
+
+  <!-- Forward-motion accent inside the bowl -->
+  <path d="M25 18 H30 a3.5 3.5 0 0 1 0 7 H25"
+        stroke="#A7E3B2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+        fill="none" opacity="0.9"/>
+</svg>

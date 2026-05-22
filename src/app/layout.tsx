@@ -11,11 +11,7 @@ export const metadata: Metadata = {
   },
   description:
     "Pragati — a bird's-eye view of your projects. Minimal, focused project intelligence for team leads.",
-  icons: {
-    icon: '/logo-icon.png',
-    apple: '/logo-icon.png',
-    shortcut: '/logo-icon.png'
-  },
+  // Favicon is supplied by src/app/icon.svg via the Next.js file convention.
   robots: { index: false, follow: false }
 };
 

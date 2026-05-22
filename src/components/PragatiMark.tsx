@@ -47,17 +47,23 @@ export function PragatiMark({
         }}
       />
 
-      {/* Stylised P */}
+      {/* Stylised P — vertical stem with a bowl that sits in the UPPER half
+         only (bowl from y=12 to y=30 of a 64-tall canvas; stem extends to
+         y=52). That's what makes it read as "P" rather than "d". A smaller
+         green accent inside the bowl suggests forward motion / progress. */}
       <svg width={size * 0.58} height={size * 0.58} viewBox="0 0 64 64" className="relative">
-        <rect x="14" y="10" width="8" height="44" rx="3" fill="#ffffff" />
+        {/* Stem + bowl outline drawn as a single stroked group */}
+        <g stroke="#ffffff" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          {/* Vertical stem */}
+          <path d="M18 12 V52" />
+          {/* Bowl — upper half only */}
+          <path d="M18 12 H32 a9 9 0 0 1 0 18 H18" />
+        </g>
+        {/* Forward-motion accent inside the bowl */}
         <path
-          d="M22 12 H34 a18 18 0 0 1 0 36 H22"
-          stroke="#ffffff" strokeWidth="8" strokeLinecap="round" fill="none"
-        />
-        <path
-          d="M28 22 H34 a8 8 0 0 1 0 16 H28"
-          stroke="#A7E3B2" strokeWidth="3" strokeLinecap="round" fill="none"
-          opacity="0.85"
+          d="M25 18 H30 a3.5 3.5 0 0 1 0 7 H25"
+          stroke="#A7E3B2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          fill="none" opacity="0.9"
         />
       </svg>
     </div>
