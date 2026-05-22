@@ -200,8 +200,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
             <Link key={n.href} href={n.href} prefetch
               className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                 active
-                  ? 'text-brand-700 dark:text-blue-300'
-                  : 'text-slate-600 dark:text-white/45 hover:text-slate-900 dark:hover:text-white/85 hover:bg-slate-50 dark:hover:bg-white/5'
+                  ? 'text-brand-700 dark:text-[#faf9f5]'
+                  : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
               }`}
               style={active ? {
                 background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
@@ -235,8 +235,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
         <div className={`absolute bottom-full left-2 right-2 mb-1.5 rounded-xl overflow-hidden z-50 transition-all duration-200 ${
           profileOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-1.5 pointer-events-none'
         }`} onClick={e => e.stopPropagation()} style={{
-          background: dark ? '#0A1929' : '#ffffff',
-          border: dark ? '1px solid rgba(255,255,255,0.09)' : '1px solid #e2e8f0',
+          background: dark ? '#30302e' : '#ffffff',
+          border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
           boxShadow: '0 -8px 32px rgba(0,0,0,0.15)',
         }}>
 
@@ -285,7 +285,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
                   {dark ? <Sun size={12} className="shrink-0 text-amber-400/70" /> : <Moon size={12} className="shrink-0" />}
                   <span>{dark ? 'Light mode' : 'Dark mode'}</span>
                   <span className="ml-auto w-7 h-3.5 rounded-full flex items-center shrink-0 transition-all duration-200"
-                    style={{ background: dark ? '#1565C0' : '#e2e8f0', padding: '2px' }}>
+                    style={{ background: dark ? '#c96442' : '#e2e8f0', padding: '2px' }}>
                     <span className="w-2.5 h-2.5 rounded-full bg-white shadow transition-all duration-200"
                       style={{ transform: dark ? 'translateX(13px)' : 'translateX(0)' }} />
                   </span>
@@ -370,7 +370,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{
-          background: dark ? '#0B1628' : '#ffffff',
+          background: dark ? '#262624' : '#ffffff',
           borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4',
         }}
       >
@@ -383,7 +383,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
         {/* Mobile-only slim top strip */}
         <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-11"
           style={{
-            background: dark ? '#0B1628' : '#ffffff',
+            background: dark ? '#262624' : '#ffffff',
             borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
           }}>
           <button
