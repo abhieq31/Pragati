@@ -73,7 +73,7 @@ function ResetPasswordContent() {
         {/* Logo */}
         <div className="flex justify-center mb-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <Image src="/logo-full.png" alt="Alembic Digital" width={180} height={36} priority style={{ width: 180, height: 'auto' }} />
+          <Image src="/logo-full.png" alt="Pragati" width={180} height={36} priority style={{ width: 180, height: 'auto' }} />
         </div>
 
         {done ? (

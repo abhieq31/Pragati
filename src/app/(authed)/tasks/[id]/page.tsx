@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, StatusSelect, formatDate, Avatar } from '@/components/ui';
-import { ChevronRight, Shield, FileText, Building2, GitBranch, MessageSquare, CalendarPlus, Timer, Activity } from 'lucide-react';
+import { ChevronRight, Shield, FileText, Building2, GitBranch, MessageSquare, Timer, Activity } from 'lucide-react';
 
 const STATUSES  = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 const TASK_TYPES = ['task','review','approval','test','issue','corrective_action','finding','data_review'] as const;
@@ -510,45 +510,14 @@ export default function TaskDetailPage() {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Schedule meeting + Log effort — Outlook/Calendar friendly via .ics
-   Open standard, no Microsoft API required.
+   Log effort — simple time-spent tracker on a task.
    ────────────────────────────────────────────────────────────────────────── */
 function ScheduleEffortCard({ task, onChanged }: { task: any; onChanged: () => void }) {
-  const [openSchedule, setOpenSchedule] = useState(false);
   const [openEffort, setOpenEffort] = useState(false);
   const [savingEffort, setSavingEffort] = useState(false);
-  const [scheduling, setScheduling] = useState(false);
-
-  function defaultDate() {
-    const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10);
-  }
-  const [date, setDate] = useState(defaultDate());
-  const [time, setTime] = useState('10:00');
-  const [duration, setDuration] = useState(30);
 
   const [minutes, setMinutes] = useState<number>(30);
   const [note, setNote] = useState('');
-
-  async function downloadIcs() {
-    setScheduling(true);
-    try {
-      const at = new Date(`${date}T${time}:00`);
-      const url = `/api/tasks/${task.id}/calendar?at=${encodeURIComponent(at.toISOString())}&dur=${duration}`;
-      const res = await fetch(url, { credentials: 'include' });
-      if (!res.ok) throw new Error('Calendar export failed');
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `task-${String(task.id).slice(-6).toUpperCase()}.ics`;
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-      setOpenSchedule(false);
-      onChanged();
-    } catch { /* swallow — best-effort UI */ } finally {
-      setScheduling(false);
-    }
-  }
 
   async function logEffort() {
     if (!minutes || minutes < 1) return;
@@ -582,56 +551,17 @@ function ScheduleEffortCard({ task, onChanged }: { task: any; onChanged: () => v
       </div>
 
       <div className="p-3 space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => { setOpenSchedule(v => !v); setOpenEffort(false); }}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
-              openSchedule
-                ? 'bg-brand-50 text-brand-700 border-brand-200'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-brand-200 hover:text-brand-700'
-            }`}
-          >
-            <CalendarPlus size={13} /> Schedule
-          </button>
-          <button
-            type="button"
-            onClick={() => { setOpenEffort(v => !v); setOpenSchedule(false); }}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
-              openEffort
-                ? 'bg-forest-50 text-forest-700 border-forest-200'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-forest-200 hover:text-forest-700'
-            }`}
-          >
-            <Timer size={13} /> Log effort
-          </button>
-        </div>
-
-        {openSchedule && (
-          <div className="rounded-lg border border-brand-100 bg-brand-50/40 p-3 space-y-2.5 fade-in-soft">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-brand-700">New calendar event</div>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="date" className="input text-xs py-1.5" value={date} onChange={(e) => setDate(e.target.value)} />
-              <input type="time" className="input text-xs py-1.5" value={time} onChange={(e) => setTime(e.target.value)} />
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {[15, 30, 45, 60, 90].map((m) => (
-                <button key={m} type="button" onClick={() => setDuration(m)}
-                  className={`px-2 py-1 rounded-full text-[11px] font-bold border transition-all ${
-                    duration === m ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-slate-500 border-slate-200 hover:border-brand-300'
-                  }`}>
-                  {m < 60 ? `${m}m` : `${m / 60}h`}
-                </button>
-              ))}
-            </div>
-            <button onClick={downloadIcs} disabled={scheduling} className="btn-primary w-full justify-center text-xs">
-              {scheduling ? 'Generating…' : 'Download .ics → Outlook'}
-            </button>
-            <p className="text-[10px] text-slate-400 leading-snug">
-              Opens in Outlook, Google Calendar, or Apple Calendar. Title carries the task code so PMs can trace it back.
-            </p>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setOpenEffort(v => !v)}
+          className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+            openEffort
+              ? 'bg-forest-50 text-forest-700 border-forest-200'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-forest-200 hover:text-forest-700'
+          }`}
+        >
+          <Timer size={13} /> Log effort
+        </button>
 
         {openEffort && (
           <div className="rounded-lg border border-forest-100 bg-forest-50/40 p-3 space-y-2.5 fade-in-soft">

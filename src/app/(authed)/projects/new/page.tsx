@@ -10,36 +10,42 @@ interface Phase { id: string; name: string; tasks: string[] }
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
+// Templates the typical QA-IT lead actually reaches for, ordered by frequency.
+// Generic 'Custom / Blank' is always the first option so a lead can start fast
+// with a project that doesn't match any pre-baked template.
 const LIFECYCLE_GROUPS = [
   {
-    label: 'General',
-    options: [
-      { value: 'generic',          label: 'Custom / Blank' },
-      { value: 'agile_sprint',     label: 'Agile Sprint' },
-      { value: 'software_release', label: 'Software Release' },
-      { value: 'product_launch',   label: 'Product Launch' },
-      { value: 'research',         label: 'Research' },
-    ]
-  },
-  {
     label: 'Quality Informatics',
+    description: 'Day-to-day QA-IT lifecycles',
     options: [
-      { value: 'deviation',          label: 'Deviation' },
-      { value: 'capa',               label: 'CAPA' },
-      { value: 'change_control',     label: 'Change Control' },
-      { value: 'software_change',    label: 'Software Change (QI)' },
-      { value: 'deviation_capa',     label: 'Deviation + CAPA (combined)' },
+      { value: 'generic',         label: 'Custom / Blank',         hint: 'Start from scratch' },
+      { value: 'change_control',  label: 'Change Control',         hint: 'Planned change to a validated system' },
+      { value: 'software_change', label: 'Software Change',        hint: 'Code/configuration release with QA gate' },
+      { value: 'deviation',       label: 'Deviation',              hint: 'Unplanned event needing investigation' },
+      { value: 'capa',            label: 'CAPA',                   hint: 'Corrective + preventive action' },
+      { value: 'deviation_capa',  label: 'Deviation + CAPA',       hint: 'Combined deviation→CAPA flow' },
     ]
   },
   {
     label: 'Life Sciences',
+    description: 'GxP-validated lifecycles',
     options: [
-      { value: 'csv',                label: 'CSV (Computer System Validation)' },
-      { value: 'sop',                label: 'SOP Development' },
-      { value: 'audit',              label: 'Audit' },
-      { value: 'validation',         label: 'Validation' },
-      { value: 'data_integrity',     label: 'Data Integrity' },
-      { value: 'pharmacovigilance',  label: 'Safety Reporting (PV)' },
+      { value: 'csv',               label: 'CSV / GAMP 5',          hint: 'Computer System Validation' },
+      { value: 'sop',               label: 'SOP Development',       hint: 'Author → review → train → release' },
+      { value: 'audit',             label: 'Audit',                 hint: 'Internal or external GxP audit' },
+      { value: 'validation',        label: 'Validation',            hint: 'Process / method validation' },
+      { value: 'data_integrity',    label: 'Data Integrity',        hint: 'ALCOA+ assessment' },
+      { value: 'pharmacovigilance', label: 'Safety Reporting (PV)', hint: 'ICSR / safety case' },
+    ]
+  },
+  {
+    label: 'General',
+    description: 'Non-GxP projects',
+    options: [
+      { value: 'agile_sprint',     label: 'Agile Sprint',     hint: 'Two-week development iteration' },
+      { value: 'software_release', label: 'Software Release', hint: 'Generic release pipeline' },
+      { value: 'product_launch',   label: 'Product Launch',   hint: 'Go-to-market workflow' },
+      { value: 'research',         label: 'Research',         hint: 'Scoping → analysis → reporting' },
     ]
   },
 ];
@@ -316,29 +322,69 @@ export default function NewProjectPage() {
             <p className="text-xs text-slate-400 mb-3 -mt-1">
               Pick a template to get predefined stages and tasks — you can edit everything in the next step.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="space-y-4">
               {LIFECYCLE_GROUPS.map(group => (
                 <div key={group.label}>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{group.label}</div>
-                  <div className="space-y-1">
-                    {group.options.map(opt => (
-                      <button key={opt.value} type="button"
-                        onClick={() => up('lifecycle', opt.value)}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all border"
-                        style={{
-                          background:   form.lifecycle === opt.value ? '#EFF6FF' : '#fff',
-                          borderColor:  form.lifecycle === opt.value ? '#1565C0' : '#e2e8f0',
-                          color:        form.lifecycle === opt.value ? '#1565C0' : '#475569',
-                          fontWeight:   form.lifecycle === opt.value ? 700 : 500,
-                        }}>
-                        {opt.value === 'generic' && <Sparkles size={10} className="inline mr-1 opacity-60" />}
-                        {opt.label}
-                      </button>
-                    ))}
+                  <div className="flex items-baseline gap-2 mb-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{group.label}</div>
+                    <div className="text-[10px] text-slate-300">{group.description}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                    {group.options.map(opt => {
+                      const active = form.lifecycle === opt.value;
+                      return (
+                        <button key={opt.value} type="button"
+                          onClick={() => up('lifecycle', opt.value)}
+                          className="text-left px-3 py-2 rounded-lg text-xs transition-all border"
+                          style={{
+                            background:   active ? '#EFF6FF' : '#fff',
+                            borderColor:  active ? '#1565C0' : '#E2E8F0',
+                            color:        active ? '#1565C0' : '#334155',
+                          }}>
+                          <div className="flex items-center gap-1.5">
+                            {opt.value === 'generic' && <Sparkles size={11} className="opacity-60 shrink-0" />}
+                            <span className={active ? 'font-bold' : 'font-semibold'}>{opt.label}</span>
+                          </div>
+                          <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80' : 'text-slate-400'}`}>
+                            {opt.hint}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
             </div>
+
+            {/* Preview of what the picked template ships with */}
+            {templateInfo && templateInfo.phases?.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-baseline justify-between mb-2">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    What you get
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {templateInfo.phases.length} stage{templateInfo.phases.length === 1 ? '' : 's'} · {' '}
+                    {templateInfo.phases.reduce((n: number, ph: any) => n + (ph.tasks?.length || 0), 0)} tasks
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {templateInfo.phases.map((ph: any, i: number) => (
+                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-50 border border-slate-100 text-slate-600">
+                      <span className="text-slate-400 font-bold">{i + 1}</span>
+                      {ph.name}
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-400">{ph.tasks?.length || 0}</span>
+                    </span>
+                  ))}
+                </div>
+                {templateInfo.regulatoryRefs && (
+                  <div className="mt-2 text-[11px] text-slate-400">
+                    Regulatory refs: <span className="font-semibold text-slate-500">{templateInfo.regulatoryRefs}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

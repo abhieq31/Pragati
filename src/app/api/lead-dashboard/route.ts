@@ -152,17 +152,27 @@ export async function GET(req: NextRequest) {
       };
     }).sort((a, b) => b.loadScore - a.loadScore);
 
-    return NextResponse.json({
-      user: {
-        id:    jwtUser.sub,
-        name:  jwtUser.name,
-        email: jwtUser.email,
-        role:  jwtUser.role,
+    // Cache the payload briefly: instant render on back/forward and quick
+    // page-refresh cycles, but never long enough for a status change to feel
+    // stale. private — never cache on a shared CDN since it's per-user data.
+    return NextResponse.json(
+      {
+        user: {
+          id:    jwtUser.sub,
+          name:  jwtUser.name,
+          email: jwtUser.email,
+          role:  jwtUser.role,
+        },
+        projects: projectList,
+        tasks:    taskList,
+        people,
       },
-      projects: projectList,
-      tasks:    taskList,
-      people,
-    });
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=10, stale-while-revalidate=60',
+        },
+      },
+    );
   } catch (e) {
     return handleError(e);
   }

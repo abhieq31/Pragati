@@ -7,7 +7,7 @@ import { Avatar } from './ui';
 import { InviteLeadModal } from './InviteLeadModal';
 import { api } from '@/lib/client/api';
 import {
-  LayoutDashboard, FolderKanban,
+  LayoutDashboard, FolderKanban, Users,
   LogOut, Menu, X,
   Bell, Lock, User, ChevronUp, Moon, Sun, AlertTriangle, UserPlus,
 } from 'lucide-react';
@@ -156,16 +156,17 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
     },
   ];
 
-  // Phase 1: minimal sidebar for team leads — Dashboard + Projects only.
-  // Trends, Operations Hub, Task Triage, QA Copilot, Teams, People, Yearly view
-  // are intentionally hidden from nav; routes remain reachable by URL and
-  // will be reintroduced in later phases.
+  // Phase 1: lead sidebar — Dashboard, Projects, Teams. Everything else
+  // (Trends, Operations Hub, Task Triage, QA Copilot, People, Yearly view)
+  // is hidden from nav but the routes remain reachable by URL for re-enable
+  // in later phases.
   const pmSections: NavSection[] = [
     {
       title: 'Plan',
       items: [
         { href: '/',         label: 'Dashboard', icon: LayoutDashboard, tour: 'nav-home',     iconColor: '#1565C0', iconBg: '#E3F2FD' },
         { href: '/projects', label: 'Projects',  icon: FolderKanban,    tour: 'nav-projects', iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
+        { href: '/teams',    label: 'Teams',     icon: Users,           tour: 'nav-teams',    iconColor: '#2E7D32', iconBg: '#E8F5E9' },
       ],
     },
   ];

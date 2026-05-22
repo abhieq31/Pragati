@@ -100,6 +100,13 @@ TaskSchema.index({ assigneeId: 1 });
 TaskSchema.index({ projectId: 1 });
 TaskSchema.index({ status: 1 });
 TaskSchema.index({ dueDate: 1 });
+// Compound indices that match the lead-dashboard aggregations directly —
+// open / overdue / done-this-week facets all key off (status, assigneeId)
+// or (status, dueDate). With these, Mongo serves the dashboard from
+// covering indices instead of full collection scans.
+TaskSchema.index({ status: 1, assigneeId: 1 });
+TaskSchema.index({ status: 1, dueDate: 1 });
+TaskSchema.index({ status: 1, completedAt: -1 });
 
 export type TaskDoc = InferSchemaType<typeof TaskSchema> & { _id: mongoose.Types.ObjectId };
 
