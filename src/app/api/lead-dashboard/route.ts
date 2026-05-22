@@ -44,11 +44,13 @@ export async function GET(req: NextRequest) {
     const [myTasks, teamTasksRaw, teams, owners, projectTaskAgg, perUserAgg, users] = await Promise.all([
       Task.find({ assigneeId: scope.userOid }).sort({ status: 1, dueDate: 1 }).lean(),
 
-      // All non-done tasks across visible projects for the Tasks table (limit 60)
+      // All tasks across visible projects for the new dashboard tables — we
+      // include done tasks too because we need their actual completion date.
+      // Limit kept generous (200) to cover typical team load without
+      // blowing the payload.
       Task.find({
         projectId: { $in: visibleProjectIds },
-        status: { $ne: 'done' },
-      }).sort({ dueDate: 1 }).limit(60).lean(),
+      }).sort({ status: 1, dueDate: 1 }).limit(200).lean(),
 
       Team.find({ _id: { $in: scope.teamOids } }).lean(),
       User.find({ _id: { $in: projects.map(p => p.ownerId).filter(Boolean) } }, '_id name').lean(),
@@ -154,7 +156,8 @@ export async function GET(req: NextRequest) {
       return taskS(t, { projectCode: p?.code, projectName: p?.name, lifecycle: p?.lifecycle });
     });
 
-    // ── Team tasks (all non-done across visible projects) ────────────────
+    // ── Team tasks (across visible projects — drives projects & contributor
+    //    sections on the dashboard) ───────────────────────────────────────
     const teamTasks = teamTasksRaw.map(t => {
       const p = projMap.get(String(t.projectId));
       return {
@@ -164,13 +167,16 @@ export async function GET(req: NextRequest) {
         priority:     t.priority,
         dueDate:      t.dueDate ?? null,
         ccTcd:        (t as any).ccTcd ?? null,
+        completedAt:  t.completedAt ?? null,
         projectId:    String(t.projectId),
         projectCode:  p?.code ?? '',
         projectName:  p?.name ?? '',
+        lifecycle:    p?.lifecycle ?? null,
         assigneeId:   t.assigneeId ? String(t.assigneeId) : null,
         assigneeName: t.assigneeId ? (assigneeMap.get(String(t.assigneeId)) ?? null) : null,
         subtaskCount: ((t as any).subtasks || []).length,
         subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
+        subtaskTitles: ((t as any).subtasks || []).slice(0, 3).map((s: any) => s.title),
         gxpCritical:  !!(t as any).gxpCritical,
       };
     });

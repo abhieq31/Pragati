@@ -8,7 +8,9 @@ import {
   StatusSelect, PROJECT_STATUS_OPTIONS,
   TaskLink, formatDate, useToast,
 } from '@/components/ui';
+import { DatePicker } from '@/components/DatePicker';
 import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, X } from 'lucide-react';
+import { chimeIfEnabled } from '@/lib/sound';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -200,8 +202,7 @@ function QuickAddTask({ projectId, phaseId, users, onAdded }: {
           <option value="">Unassigned</option>
           {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
         </select>
-        <input type="date" className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 focus:outline-none focus:border-blue-300"
-          value={due} onChange={e => setDue(e.target.value)} />
+        <DatePicker value={due} onChange={v => setDue(v || '')} placeholder="Due date" size="sm" />
         <button type="submit" disabled={!title.trim() || saving}
           className="px-3 py-1 text-xs font-bold rounded-lg bg-blue-600 text-white disabled:opacity-50 hover:bg-blue-700 transition-colors shrink-0">
           {saving ? '…' : 'Add'}
@@ -415,6 +416,7 @@ export default function ProjectDetailPage() {
   }
 
   async function moveTaskFromPhase(taskId: string, status: string) {
+    const wasNotDone = project.tasks.find((t: any) => t.id === taskId)?.status !== 'done';
     // Optimistic local update
     setProject((p: any) => ({
       ...p,
@@ -423,7 +425,10 @@ export default function ProjectDetailPage() {
     setPendingTaskIds(s => new Set([...s, taskId]));
     try {
       await api(`/tasks/${taskId}`, { method: 'PATCH', body: { status } });
-      if (status === 'done') showToast('Task completed ✓');
+      if (status === 'done' && wasNotDone) {
+        showToast('Task completed ✓');
+        chimeIfEnabled();
+      }
     } catch (e: any) {
       showToast(e.message || 'Failed to update task', 'err');
       load(); // revert

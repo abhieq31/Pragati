@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, formatDate, Avatar, useToast } from '@/components/ui';
+import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, Building2, GitBranch, MessageSquare, Timer, Activity } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -167,11 +168,15 @@ export default function TaskDetailPage() {
   }
 
   async function updateStatus(newStatus: string) {
+    const wasDone = task?.status === 'done';
     setSavingStatus(true);
     setTask((t: any) => ({ ...t, status: newStatus }));
     try {
       await api(`/tasks/${id}`, { method: 'PATCH', body: { status: newStatus } });
-      if (newStatus === 'done') showToast('Task marked done ✓');
+      if (newStatus === 'done' && !wasDone) {
+        showToast('Task marked done ✓');
+        chimeIfEnabled();
+      }
       load();
     } catch (e: any) {
       showToast(e.message || 'Failed to update status', 'err');

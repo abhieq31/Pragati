@@ -6,11 +6,11 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Pragati',
+    default: "Pragati: A Bird's-Eye View of Your Projects",
     template: '%s · Pragati'
   },
   description:
-    'A modern project & task management platform for quality-driven teams. Built for teams that care about execution.',
+    "Pragati — a bird's-eye view of your projects. Minimal, focused project intelligence for team leads.",
   icons: {
     icon: '/logo-icon.png',
     apple: '/logo-icon.png',
