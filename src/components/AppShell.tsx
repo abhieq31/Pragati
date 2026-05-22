@@ -3,9 +3,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Avatar } from './ui';
-import { InviteLeadModal } from './InviteLeadModal';
 import { api } from '@/lib/client/api';
+
+// Modal only shown when a TL clicks "Invite a lead" — defer its JS until needed.
+const InviteLeadModal = dynamic(
+  () => import('./InviteLeadModal').then(m => m.InviteLeadModal),
+  { ssr: false, loading: () => null },
+);
 import {
   LayoutDashboard, FolderKanban, Users,
   LogOut, Menu, X,
