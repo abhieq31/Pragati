@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Avatar } from './ui';
 import { CommandPalette } from './CommandPalette';
-import { Tour } from './Tour';
 import { api } from '@/lib/client/api';
 import {
   LayoutDashboard, FolderKanban, Calendar,
@@ -595,8 +594,6 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       {mustChangePw && (
         <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
       )}
-
-      {!mustChangePw && <Tour role={user.role} />}
     </div>
   );
 }
