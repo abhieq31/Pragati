@@ -23,7 +23,7 @@ export interface CurrentUser {
   id: string;
   name: string;
   email: string;
-  role: 'employee' | 'pm' | 'lead';
+  role: 'employee' | 'pm' | 'lead' | 'admin';
   title?: string;
   mustChangePassword?: boolean;
 }

@@ -6,7 +6,8 @@ import { UserPlus, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2 }
 
 /* ── role display helpers ─────────────────────────────────────────────── */
 const ROLE_COLOR: Record<string, string> = {
-  pm:       'bg-blue-50 text-blue-700 border-blue-200',
+  admin:    'bg-amber-50 text-amber-800 border-amber-200',
+  pm:       'bg-blue-50  text-blue-700  border-blue-200',
   employee: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 
@@ -360,9 +361,9 @@ export default function PeoplePage() {
     load();
   }
 
-  const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead');
-  const ics  = users.filter((u) => u.role !== 'pm' && u.role !== 'lead');
-  const isPM = (me?.role === 'pm' || me?.role === 'lead');
+  const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead' || u.role === 'admin');
+  const ics = users.filter((u) => u.role === 'employee');
+  const isPM = (me?.role === 'pm' || me?.role === 'lead' || me?.role === 'admin');
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -438,7 +439,9 @@ export default function PeoplePage() {
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
                   <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Team Lead'} · {u.email}</div>
                 </div>
-                <span className={`tag border text-xs font-semibold ${ROLE_COLOR.pm}`}>Lead</span>
+                <span className={`tag border text-xs font-semibold ${u.role === 'admin' ? ROLE_COLOR.admin : ROLE_COLOR.pm}`}>
+                  {u.role === 'admin' ? 'Admin' : 'Lead'}
+                </span>
                 {isPM && (
                   <button
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"

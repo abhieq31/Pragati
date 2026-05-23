@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireRole(req, 'pm', 'lead');
+    const { error } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
 
@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead');
+    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
 

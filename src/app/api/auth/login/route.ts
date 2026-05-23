@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
-import { signToken, setAuthCookie, isLead } from '@/lib/auth';
+import { signToken, setAuthCookie, isLead, isAdmin, configuredAdminEmail } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
 
@@ -20,10 +20,18 @@ export async function POST(req: NextRequest) {
     const ok = bcrypt.compareSync(body.password, user.passwordHash);
     if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
 
-    // Pragati is leads-only. Contributors are tracked as assignable records
-    // but cannot sign in. (Decision re-confirmed by product owner before
-    // the v1 launch — see CLAUDE.md for the long-term policy.)
-    if (!isLead(user.role)) {
+    // The configured ADMIN_EMAIL is auto-promoted on every successful login,
+    // so an existing lead account whose email matches becomes the admin
+    // without any manual SQL.
+    const adminEmail = configuredAdminEmail();
+    if (adminEmail && user.email === adminEmail && user.role !== 'admin') {
+      user.role = 'admin' as any;
+      await user.save();
+    }
+
+    // Pragati is leads + the single admin only. Contributors are tracked as
+    // assignable records but cannot sign in.
+    if (!isLead(user.role) && !isAdmin(user.role)) {
       return NextResponse.json(
         { error: 'This workspace is open to team leads only. Contact your administrator.' },
         { status: 403 },
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest) {
       email: user.email,
       role: user.role as any,
       name: user.name,
-      title: user.title || ''
+      title: user.title || '',
     });
 
     const res = NextResponse.json({ token, user: u(user) });

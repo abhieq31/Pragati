@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
-import { signToken, setAuthCookie } from '@/lib/auth';
+import { signToken, setAuthCookie, configuredAdminEmail } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { u } from '@/lib/serialize';
 
@@ -32,11 +32,15 @@ export async function POST(req: NextRequest) {
     const body = await readBody(req, Body);
     const exists = await User.findOne({ email: body.email.toLowerCase() });
     if (exists) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+    // Founder gets the admin role automatically when their email matches
+    // ADMIN_EMAIL, otherwise lead.
+    const email = body.email.toLowerCase();
+    const role  = email === configuredAdminEmail() ? 'admin' : 'lead';
     const user = await User.create({
-      email:        body.email.toLowerCase(),
+      email,
       name:         body.name,
       passwordHash: bcrypt.hashSync(body.password, 10),
-      role:         'lead',
+      role,
       title:        body.title || '',
       hasSeenTour:  false,
     });

@@ -27,7 +27,7 @@ export async function getLeadDashboardData(
   const now     = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 86400000);
 
-  const scope = await getLeadScope(jwtUser.sub);
+  const scope = await getLeadScope(jwtUser.sub, jwtUser.role);
   const projFilter = projectsVisibleFilter(scope);
 
   const projects = await Project.find(projFilter).sort({ createdAt: -1 }).lean();

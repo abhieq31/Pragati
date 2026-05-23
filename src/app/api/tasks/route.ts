@@ -12,12 +12,12 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead');
+    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
     const body = await readBody(req, TaskCreateSchema);
 
-    const scope = await getLeadScope(user!.sub);
+    const scope = await getLeadScope(user!.sub, user!.role);
     const project = await Project.findOne({ _id: body.projectId, ...projectsVisibleFilter(scope) }).select('_id').lean();
     if (!project) return NextResponse.json({ error: 'Project not found or not accessible' }, { status: 404 });
     const task = await Task.create({

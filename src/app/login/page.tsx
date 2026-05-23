@@ -278,14 +278,9 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
-                  {mode === 'login' && (
-                    <a href="/forgot-password" className="text-xs text-blue-600 font-semibold hover:text-blue-800 transition-colors">
-                      Forgot?
-                    </a>
-                  )}
-                </div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
                 <input className="input" type="password" required minLength={mode === 'setup' ? 8 : 1}
                   placeholder={mode === 'setup' ? 'Min 8 characters' : '••••••••'}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -325,7 +320,9 @@ export default function LoginPage() {
                     className="text-blue-600 font-semibold hover:underline">Sign in</button>
                 </>
               ) : (
-                <span className="text-xs text-slate-300">No account? Ask your team lead.</span>
+                <span className="text-xs text-slate-300">
+                  Forgot your password? Ask the admin to reset it for you.
+                </span>
               )}
             </p>
           </div>

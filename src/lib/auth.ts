@@ -10,7 +10,7 @@ import { User } from '@/models/User';
 //                records and JWTs issued before the rename.
 //   'lead'     — current name for the team-lead role. Phase-1 login is
 //                restricted to this role (plus legacy 'pm').
-export type Role = 'employee' | 'pm' | 'lead';
+export type Role = 'employee' | 'pm' | 'lead' | 'admin';
 
 export interface JwtPayload {
   sub: string;
@@ -21,10 +21,31 @@ export interface JwtPayload {
   mustChangePassword?: boolean;
 }
 
-// True for both the new 'lead' role and the legacy 'pm' role so callers don't
-// need to repeat the dual check at every guard.
+// True for both the current 'lead' role and the legacy 'pm' role so callers
+// don't need to repeat the dual check at every guard.
 export function isLead(role?: string | null): boolean {
   return role === 'lead' || role === 'pm';
+}
+
+// The 'admin' role is a single super-user with full visibility across every
+// team and project, used by the workspace owner for management + demo.
+export function isAdmin(role?: string | null): boolean {
+  return role === 'admin';
+}
+
+// Any role allowed to mutate shared records (create / edit / delete
+// projects, tasks, teams, users). Admin is implicitly included so the
+// product owner can use their account for everything.
+export function canMutate(role?: string | null): boolean {
+  return isAdmin(role) || isLead(role);
+}
+
+// The single configured admin email (lower-cased). When this address logs in
+// or registers we promote them to role:'admin' automatically. Set the
+// ADMIN_EMAIL env var in the production environment; unset everywhere else.
+export function configuredAdminEmail(): string | null {
+  const e = process.env.ADMIN_EMAIL;
+  return e ? e.trim().toLowerCase() : null;
 }
 
 // JWT_SECRET is REQUIRED in production. Without it any deployment would sign

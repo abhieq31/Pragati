@@ -10,12 +10,13 @@ In your production hosting dashboard (Vercel / Render / wherever), confirm
 
 | Variable | Why it matters | If missing |
 | --- | --- | --- |
-| `MONGODB_URI` | The database | App crashes on first request |
-| `JWT_SECRET` | Signs auth cookies | App boots with insecure dev fallback and logs a `[SECURITY]` warning every cold start |
-| `APP_URL` | Goes into reset-password links | Reset emails contain `http://localhost:3000` links — broken from the user's inbox |
-| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` | Sends password-reset email | Forgot-password page now shows a clear *"not set up"* banner instead of pretending it worked. Still: users will not be able to reset their password. |
-| `SMTP_FROM`, `SMTP_FROM_NAME` *(optional)* | Friendly sender on the reset email | Defaults to `SMTP_USER` |
-| `PM_EMAILS` *(optional)* | Comma-separated emails that auto-promote to lead role on registration | Without this the very first registrant becomes the lead anyway |
+| `MONGODB_URI` | The database | First API call fails with a clear `[CONFIG]` log line |
+| `JWT_SECRET` | Signs auth cookies | signToken/verifyToken throw a clear error on first request in production |
+| `ADMIN_EMAIL` | The single admin (super-user) account | No admin is created; only normal leads can sign in. Set this to YOUR email and your account is auto-promoted on next login. |
+
+Email-based password reset has been removed for v1. The admin resets
+passwords directly from People → Reset password, generating a temporary
+password to share over chat. No SMTP setup required.
 
 Confirmed in your env: ☐
 
@@ -56,13 +57,10 @@ Sign in to production with **your own admin account** and walk through:
 - ☐ Open a team → see *"Membership is the tag — no separate permissions needed"*
   helper above the member list
 - ☐ Click **+ Add member**, add a contributor (employee) to the team
-- ☐ Log out, log in as **that contributor**:
-   - ☐ They land on a dashboard (no 500)
-   - ☐ They see the team's project in the projects column
-   - ☐ The *+ New project* / *+ New task* buttons either are hidden or
-     return a polite error (server returns 403)
-- ☐ Forgot-password flow: enter an email, see the *check your email* page
-  (you should also receive the reset mail — if not, recheck SMTP env)
+- ☐ Sign in as the admin account (`ADMIN_EMAIL`):
+   - ☐ Every team and every project is visible
+   - ☐ People page → pick any lead → **Reset password** → temp password
+     modal appears with a copyable `Pragati-XXXX` value
 
 ## 5. Day-one operational notes
 

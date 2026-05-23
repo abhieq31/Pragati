@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const scope = await getLeadScope(user!.sub);
+    const scope = await getLeadScope(user!.sub, user!.role);
     const p = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).lean();
     if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const [team, owner, tasks] = await Promise.all([
@@ -59,10 +59,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead');
+    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
-    const scope = await getLeadScope(user!.sub);
+    const scope = await getLeadScope(user!.sub, user!.role);
     const body = await readBody(req, ProjectUpdateSchema);
     const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -102,11 +102,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead');
+    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
 
-    const scope = await getLeadScope(user.sub);
+    const scope = await getLeadScope(user.sub, user.role);
     const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('_id').lean();
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

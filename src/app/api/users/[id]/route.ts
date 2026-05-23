@@ -20,7 +20,7 @@ const Body = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user: caller } = await requireRole(req, 'pm', 'lead');
+    const { error, user: caller } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
     const body = await readBody(req, Body);
@@ -47,7 +47,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user: caller } = await requireRole(req, 'pm', 'lead');
+    const { error, user: caller } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
 
