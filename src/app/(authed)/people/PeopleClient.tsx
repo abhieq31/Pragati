@@ -133,12 +133,12 @@ function AddMemberModal({ onClose, onCreated }: {
               value={form.name} onChange={(e) => onNameChange(e.target.value)} />
           </div>
           <div>
-            <label className="label">Username</label>
+            <label className="label">Corporate username</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono pointer-events-none">@</span>
               <input
                 className="input pl-7 font-mono text-sm"
-                placeholder="priya"
+                placeholder="priya.sharma"
                 required
                 minLength={3}
                 maxLength={30}
@@ -150,8 +150,10 @@ function AddMemberModal({ onClose, onCreated }: {
                 onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
               />
             </div>
-            <div className="text-[11px] text-slate-400 mt-1">
-              Lower-case letters, digits, dots, underscores. This is how they sign in.
+            <div className="text-[11px] text-slate-400 mt-1 leading-snug">
+              Use the same identifier their company email uses before the
+              <span className="font-mono px-1">@</span>
+              — e.g. for <span className="font-mono">priya.sharma@company.com</span> enter <span className="font-mono">priya.sharma</span>.
             </div>
           </div>
           <div>

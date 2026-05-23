@@ -275,7 +275,7 @@ export default function LoginPage() {
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  {mode === 'login' ? 'Username or email' : 'Email'}
+                  {mode === 'login' ? 'Corporate username' : 'Email'}
                 </label>
                 <input
                   className="input"
@@ -284,7 +284,7 @@ export default function LoginPage() {
                   // check. On the register mode we still want email
                   // semantics for autocomplete + format hints.
                   type={mode === 'login' ? 'text' : 'email'}
-                  placeholder={mode === 'login' ? 'priya  ·  or  priya@company.com' : 'you@company.com'}
+                  placeholder={mode === 'login' ? 'priya.sharma' : 'you@company.com'}
                   required
                   autoComplete={mode === 'login' ? 'username' : 'email'}
                   spellCheck={false}
@@ -292,6 +292,14 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+                {mode === 'login' && (
+                  <div className="text-[11px] text-slate-400 mt-1.5 leading-snug">
+                    The same handle your work email uses before the
+                    <span className="font-mono px-1">@</span> — e.g.
+                    <span className="font-mono"> priya.sharma</span> for
+                    <span className="font-mono"> priya.sharma@company.com</span>.
+                  </div>
+                )}
               </div>
 
               <div>

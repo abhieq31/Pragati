@@ -19,11 +19,19 @@ You (admin):
 
 For each lead, in order, in **People → + Add lead**:
 
-1. Type their name + work email → generates a temp `Pragati-XXXX`
-   password. The modal shows the password once — copy it.
-2. Share over chat (not email): "Sign in at pragatialm.vercel.app,
-   you'll be asked to set a real password on first login."
+1. Type their **full name** and **corporate username** (the part of
+   their work email before the `@` — e.g. for `priya.sharma@company.com`
+   you enter `priya.sharma`). Hit submit; Pragati generates a temp
+   `Pragati-XXXX` password and shows it once. Copy it.
+2. Share both lines over chat (not email): "Username `priya.sharma`,
+   password `Pragati-XXXX`. Sign in at pragatialm.vercel.app — you'll
+   be asked to set a real password on first login."
 3. They sign in. The onboarding tour fires once, then never again.
+
+**Why the username == corporate handle:** zero confusion for the lead
+(it's the identifier they already know), zero accounts to keep in sync
+with HR, and no email-format requirement so we never accidentally try
+to mail them.
 
 The lead now has admin-of-their-own-team scope: they can create their
 team, add team members, create projects, and assign tasks.
