@@ -21,10 +21,11 @@ export interface JwtPayload {
   mustChangePassword?: boolean;
 }
 
-// True for both the current 'lead' role and the legacy 'pm' role so callers
-// don't need to repeat the dual check at every guard.
+// True for the lead/pm/admin roles — anyone who can lead a team or manage the
+// workspace satisfies this gate. Use `isAdmin()` when you specifically want
+// to surface admin-only affordances.
 export function isLead(role?: string | null): boolean {
-  return role === 'lead' || role === 'pm';
+  return role === 'lead' || role === 'pm' || role === 'admin';
 }
 
 // The 'admin' role is a single super-user with full visibility across every
