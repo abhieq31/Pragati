@@ -14,20 +14,9 @@
   <rect width="64" height="64" rx="16" fill="url(#bg)"/>
   <rect width="64" height="64" rx="16" fill="url(#gloss)"/>
 
-  <!-- Three ascending stairs -->
-  <g fill="#ffffff">
-    <rect x="6"  y="46" width="14" height="12" rx="1.5"/>
-    <rect x="20" y="38" width="14" height="20" rx="1.5"/>
-    <rect x="34" y="30" width="14" height="28" rx="1.5"/>
-  </g>
-
-  <!-- Climbing figure -->
-  <g stroke="#B7E4C2" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <circle cx="41" cy="13" r="3.4" fill="#B7E4C2" stroke="none"/>
-    <path d="M41 17 L41 25"/>
-    <path d="M41 21 L47 15"/>
-    <path d="M41 21 L36 24"/>
-    <path d="M41 25 L37 30"/>
-    <path d="M41 25 L45 29"/>
+  <!-- Two rising chevrons: progress / forward motion -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 40 L32 22 L50 40" stroke="#ffffff" stroke-width="7"/>
+    <path d="M18 52 L32 38 L46 52" stroke="#B7E4C2" stroke-width="5" opacity="0.92"/>
   </g>
 </svg>

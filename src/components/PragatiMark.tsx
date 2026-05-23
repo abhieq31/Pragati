@@ -1,11 +1,12 @@
 /** Pragati's brand mark — CSS / SVG only, no image asset.
  *
- *  A figure mid-climb on a flight of three rising stairs, set inside a
- *  rounded-square gradient tile. The literal reading — "progress, one step
- *  at a time" — matches the meaning of "pragati". No external assets.
+ *  Two rising chevrons stacked inside a rounded-square gradient tile. Reads
+ *  as forward / upward motion — the literal meaning of "pragati" (progress).
+ *  Pairs cleanly with the wordmark "Pragati" rendered alongside it; the mark
+ *  is symbolic, not a literal P.
  *
- *  Used on login, signup, sidebar, loading state, and the favicon files
- *  (src/app/icon.svg, src/app/apple-icon.svg).
+ *  Use this everywhere the app needs a logo (login, signup, forgot-password,
+ *  sidebar, loading state, favicon). No external assets, no corporate logo.
  */
 export function PragatiMark({
   size      = 96,
@@ -47,36 +48,22 @@ export function PragatiMark({
         }}
       />
 
-      {/* Climber on stairs — three rising treads in white, climbing figure
-         in soft mint green so it pops against the blue→green gradient. */}
+      {/* Two stacked rising chevrons — reads as "progress / forward motion".
+         The lower chevron is the same white as the wordmark; the upper one
+         carries a soft forest tint to echo the brand gradient. */}
       <svg
-        width={size * 0.78}
-        height={size * 0.78}
+        width={size * 0.58}
+        height={size * 0.58}
         viewBox="0 0 64 64"
         className="relative"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        {/* Three ascending stairs */}
-        <g fill="#ffffff">
-          <rect x="6"  y="46" width="14" height="12" rx="1.5" />
-          <rect x="20" y="38" width="14" height="20" rx="1.5" />
-          <rect x="34" y="30" width="14" height="28" rx="1.5" />
-        </g>
-
-        {/* Climbing figure — head + torso + reaching arm + striding legs */}
-        <g
-          stroke="#B7E4C2"
-          strokeWidth="2.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        >
-          <circle cx="41" cy="13" r="3.4" fill="#B7E4C2" stroke="none" />
-          <path d="M41 17 L41 25" />
-          <path d="M41 21 L47 15" />
-          <path d="M41 21 L36 24" />
-          <path d="M41 25 L37 30" />
-          <path d="M41 25 L45 29" />
-        </g>
+        <path d="M14 40 L32 22 L50 40"
+          stroke="#ffffff" strokeWidth="7" />
+        <path d="M18 52 L32 38 L46 52"
+          stroke="#B7E4C2" strokeWidth="5" opacity="0.92" />
       </svg>
     </div>
   );
