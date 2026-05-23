@@ -21,8 +21,12 @@ async function resolveUri(): Promise<string> {
     return g.__mongoMemoryServer.getUri();
   }
 
+  // First request after a misconfigured deploy lands here — make the
+  // message obvious in the logs.
+  const where = process.env.NODE_ENV === 'production' ? '[CONFIG]' : '[db]';
   throw new Error(
-    'Database not configured: set MONGODB_URI in your environment, or set USE_IN_MEMORY_MONGO=true for local dev.'
+    `${where} MONGODB_URI is not set. Configure it in the hosting dashboard, ` +
+    'or set USE_IN_MEMORY_MONGO=true for local dev.',
   );
 }
 

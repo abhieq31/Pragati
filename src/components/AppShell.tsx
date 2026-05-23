@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Avatar } from './ui';
 import { PragatiMark } from './PragatiMark';
+import { CurrentUserProvider } from './CurrentUserContext';
 import { api } from '@/lib/client/api';
 
 // Modal only shown when a TL clicks "Invite a lead" — defer its JS until needed.
@@ -348,6 +349,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   );
 
   return (
+    <CurrentUserProvider user={user}>
     <div className="min-h-screen flex" style={{ background: 'var(--bg-page)' }}>
 
       {/* Mobile backdrop */}
@@ -421,5 +423,6 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       )}
       <InviteLeadModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
+    </CurrentUserProvider>
   );
 }

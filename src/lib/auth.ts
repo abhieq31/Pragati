@@ -27,17 +27,30 @@ export function isLead(role?: string | null): boolean {
   return role === 'lead' || role === 'pm';
 }
 
+// JWT_SECRET is REQUIRED in production. Without it any deployment would sign
+// tokens with a publicly-known constant; every cookie issued would also be
+// invalidated on the next restart since the secret would differ across
+// instances. We check at first-use (signToken / verifyToken) rather than at
+// module load so `next build` (which sets NODE_ENV=production) can still
+// produce an artifact on a CI box that doesn't have the secret available.
 const SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  console.error('[SECURITY] JWT_SECRET env var is not set. Using insecure fallback. Set JWT_SECRET immediately.');
+
+function assertSecretConfigured() {
+  if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      '[SECURITY] JWT_SECRET env var is not set in production. Refusing to sign/verify auth tokens with the insecure dev fallback.',
+    );
+  }
 }
 const COOKIE = 'pragati_token';
 
 export function signToken(payload: JwtPayload): string {
+  assertSecretConfigured();
   return jwt.sign(payload, SECRET, { expiresIn: '7d' });
 }
 
 export function verifyToken(token: string): JwtPayload {
+  assertSecretConfigured();
   return jwt.verify(token, SECRET) as JwtPayload;
 }
 

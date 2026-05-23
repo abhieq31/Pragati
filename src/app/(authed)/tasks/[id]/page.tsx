@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, formatDate, Avatar, useToast } from '@/components/ui';
+import { useIsLead } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, Building2, GitBranch, MessageSquare, Timer, Activity } from 'lucide-react';
 
@@ -73,6 +74,7 @@ const SITE_OPTIONS = [
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const isLead = useIsLead();
   const [task, setTask] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [me, setMe] = useState<any>(null);
@@ -419,9 +421,20 @@ export default function TaskDetailPage() {
       <div className="space-y-4">
         <Card title="Properties">
           <div className="space-y-3 text-sm">
-            {/* Status — visual button flow */}
+            {/* Status — visual button flow. Contributors who are not the
+                assignee see a read-only status badge instead of the
+                clickable flow (the API would 403 them anyway). */}
             <div>
               <label className="label">Status</label>
+              {!isLead && me && task.assigneeId !== me.id ? (
+                <div className="mt-1">
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 capitalize">
+                    <span className="w-2 h-2 rounded-full"
+                      style={{ background: STATUS_META[task.status]?.dot || '#94a3b8' }} />
+                    {(STATUS_META[task.status]?.label) || String(task.status || '').replace(/_/g, ' ')}
+                  </span>
+                </div>
+              ) : (
               <div className="flex flex-col gap-1 mt-1">
                 {STATUSES.map(s => {
                   const meta  = STATUS_META[s];
@@ -454,6 +467,7 @@ export default function TaskDetailPage() {
                   );
                 })}
               </div>
+              )}
             </div>
             <div>
               <label className="label">Assignee</label>

@@ -7,6 +7,7 @@ import {
   LIFECYCLE_LABELS, STATUS_COLORS,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
+import { useIsLead } from '@/components/CurrentUserContext';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles,
@@ -199,6 +200,7 @@ function SummaryChip({
 function ProjectsColumn({
   projects, tasksByProject,
 }: { projects: DashProject[]; tasksByProject: Map<string, TeamTask[]> }) {
+  const isLead = useIsLead();
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
@@ -222,9 +224,11 @@ function ProjectsColumn({
           <div className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
             When you start or join a team project, it will show up here with all its tasks.
           </div>
-          <Link href="/projects/new" className="btn-primary text-xs mt-4 inline-flex">
-            + New project
-          </Link>
+          {isLead && (
+            <Link href="/projects/new" className="btn-primary text-xs mt-4 inline-flex">
+              + New project
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
