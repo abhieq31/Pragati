@@ -6,8 +6,9 @@ const UserSchema = new Schema(
     name:         { type: String, required: true },
     passwordHash: { type: String, required: true },
     // 'pm' kept in the enum for backwards compat with existing records;
-    // new lead promotions use 'lead'. See src/lib/auth.ts → isLead().
-    role:         { type: String, enum: ['employee', 'pm', 'lead'], default: 'employee' },
+    // new lead promotions use 'lead'. 'admin' is the single super-user
+    // configured via the ADMIN_EMAIL env var. See src/lib/auth.ts.
+    role:         { type: String, enum: ['employee', 'pm', 'lead', 'admin'], default: 'employee' },
 
     // ── Identity fields ─────────────────────────────────────────────────
     // These can be set manually or overwritten by LDAP sync.
@@ -37,6 +38,12 @@ const UserSchema = new Schema(
 
     // ── First-login flag ────────────────────────────────────────────────
     mustChangePassword: { type: Boolean, default: false },
+
+    // ── Onboarding tour ─────────────────────────────────────────────────
+    // Defaults to true so existing users don't see the tour on first
+    // login after this change. The register + invite paths explicitly
+    // set this to false so a fresh lead sees the tour exactly once.
+    hasSeenTour: { type: Boolean, default: true },
 
     // ── Notification preferences ────────────────────────────────────────
     notifTaskAssigned:  { type: Boolean, default: true  },

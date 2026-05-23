@@ -4,7 +4,7 @@ import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
 import { Team } from '@/models/Team';
 import { User } from '@/models/User';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { project as projectS } from '@/lib/serialize';
 import { LIFECYCLES, LifecycleKey } from '@/lib/lifecycles';
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     if (error) return error;
     await connectDB();
 
-    const scope = await getLeadScope(user!.sub);
+    const scope = await getLeadScope(user!.sub, user!.role);
     const visibilityFilter = projectsVisibleFilter(scope);
 
     const { searchParams } = req.nextUrl;
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { error, user } = await requireUser(req);
+    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
     const body = await readBody(req, ProjectCreateSchema);

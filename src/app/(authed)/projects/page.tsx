@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { LifecycleTag, StatusTag, formatDate } from '@/components/ui';
+import { useIsLead } from '@/components/CurrentUserContext';
 import { Plus, Search, SlidersHorizontal } from 'lucide-react';
 
 export default function ProjectsPage() {
+  const isLead = useIsLead();
   const [projects, setProjects] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [lifecycles, setLifecycles] = useState<any[]>([]);
@@ -72,9 +74,11 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Projects</h1>
           <p className="text-xs text-slate-400 mt-1">All quality projects across teams &amp; lifecycles.</p>
         </div>
-        <Link href="/projects/new" className="btn-primary gap-2 shrink-0">
-          <Plus size={15} /> New project
-        </Link>
+        {isLead && (
+          <Link href="/projects/new" className="btn-primary gap-2 shrink-0">
+            <Plus size={15} /> New project
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}
@@ -237,7 +241,7 @@ export default function ProjectsPage() {
           <div className="text-xs text-slate-400 mb-4">
             {q || team || lc || status ? 'No projects match those filters.' : 'Create your first project to get started.'}
           </div>
-          {!q && !team && !lc && !status && (
+          {isLead && !q && !team && !lc && !status && (
             <Link href="/projects/new" className="btn-primary text-sm gap-2 inline-flex">
               <Plus size={14} /> New project
             </Link>

@@ -6,7 +6,8 @@ import { UserPlus, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2 }
 
 /* ── role display helpers ─────────────────────────────────────────────── */
 const ROLE_COLOR: Record<string, string> = {
-  pm:       'bg-blue-50 text-blue-700 border-blue-200',
+  admin:    'bg-amber-50 text-amber-800 border-amber-200',
+  pm:       'bg-blue-50  text-blue-700  border-blue-200',
   employee: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 
@@ -335,15 +336,34 @@ export default function PeoplePage() {
     } finally { setRemoving(false); }
   }
 
+  // Admin-driven password reset. Avoids the SMTP round-trip entirely:
+  // we generate a temp password server-side and surface it through the
+  // same CredentialsModal used after creating a new user.
+  async function resetPassword(user: any) {
+    if (!confirm(`Generate a new temporary password for ${user.name}?\nThey'll be forced to change it on next sign-in.`)) return;
+    setSaving(user.id);
+    try {
+      const res = await api<{ tempPassword: string; user: { name: string; email: string } }>(
+        `/users/${user.id}/reset-password`,
+        { method: 'POST' },
+      );
+      setCreds({ name: res.user.name, email: res.user.email, tempPassword: res.tempPassword });
+    } catch (e: any) {
+      setRoleErr(e.message || 'Failed to reset password.');
+    } finally {
+      setSaving(null);
+    }
+  }
+
   function handleCreated(name: string, email: string, tempPassword: string) {
     setShowAdd(false);
     setCreds({ name, email, tempPassword });
     load();
   }
 
-  const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead');
-  const ics  = users.filter((u) => u.role !== 'pm' && u.role !== 'lead');
-  const isPM = (me?.role === 'pm' || me?.role === 'lead');
+  const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead' || u.role === 'admin');
+  const ics = users.filter((u) => u.role === 'employee');
+  const isPM = (me?.role === 'pm' || me?.role === 'lead' || me?.role === 'admin');
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -419,12 +439,23 @@ export default function PeoplePage() {
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
                   <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Team Lead'} · {u.email}</div>
                 </div>
-                <span className={`tag border text-xs font-semibold ${ROLE_COLOR.pm}`}>Lead</span>
+                <span className={`tag border text-xs font-semibold ${u.role === 'admin' ? ROLE_COLOR.admin : ROLE_COLOR.pm}`}>
+                  {u.role === 'admin' ? 'Admin' : 'Lead'}
+                </span>
                 {isPM && (
                   <button
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                     onClick={() => setEditUser(u)} title="Edit profile">
                     <Pencil size={13} />
+                  </button>
+                )}
+                {isPM && (
+                  <button
+                    className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                    onClick={() => resetPassword(u)}
+                    disabled={saving === u.id}
+                    title="Generate a temporary password for this lead">
+                    Reset password
                   </button>
                 )}
                 {isPM && me?.id !== u.id && (

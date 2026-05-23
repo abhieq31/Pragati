@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 // preserved (audit) and cannot be revoked.
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireRole(req, 'pm', 'lead');
+    const { error } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
 

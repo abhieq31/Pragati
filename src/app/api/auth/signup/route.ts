@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 import { Invite } from '@/models/Invite';
-import { signToken, setAuthCookie } from '@/lib/auth';
+import { signToken, setAuthCookie, configuredAdminEmail } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { u } from '@/lib/serialize';
 
@@ -54,12 +54,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A user with this email already exists.' }, { status: 409 });
     }
 
+    const role = invite.email === configuredAdminEmail() ? 'admin' : 'lead';
     const user = await User.create({
       email:        invite.email,
       name:         body.name,
       passwordHash: bcrypt.hashSync(body.password, 10),
-      role:         'lead',
+      role,
       title:        body.title || '',
+      hasSeenTour:  false,
     });
 
     invite.consumedByUserId = user._id;

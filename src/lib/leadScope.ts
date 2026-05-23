@@ -1,27 +1,53 @@
 import { Team } from '@/models/Team';
+import { User } from '@/models/User';
 import mongoose from 'mongoose';
+import { isAdmin } from '@/lib/auth';
 
-// Scope of records visible to a single team lead.
+// Scope of records visible to the current viewer.
 //
-// Phase-1 visibility rule (decided in PR #35):
+// Default (lead/pm) visibility rule:
 //   A lead sees ONLY:
 //     • projects where they are the owner (project.ownerId === userId), OR
-//     • projects assigned to a team where they're the leadId.
-//   The people-workload panel on the dashboard surfaces ONLY members of
-//   teams they lead.
+//     • projects assigned to a team where they are the leadId OR a member.
+//   The people-workload panel surfaces members of all teams the lead
+//   belongs to (as leadId or memberIds).
 //
-// Other leads' projects, tasks, and team members are invisible — both in
-// the dashboard rollup and on the projects list / detail pages.
+// Admin override:
+//   The single configured 'admin' role sees EVERY team, project, and user
+//   in the workspace. The `unrestricted` flag signals callers to skip the
+//   visibility filter entirely.
+//
+// Other roles' projects, tasks, and team members remain invisible to a
+// non-admin lead — both in the dashboard rollup and on the projects list.
 export interface LeadScope {
-  userOid:    mongoose.Types.ObjectId;
-  teamOids:   mongoose.Types.ObjectId[];     // teams where this user is leadId
-  memberOids: mongoose.Types.ObjectId[];     // union of memberIds across those teams (incl. the lead themselves)
+  userOid:      mongoose.Types.ObjectId;
+  teamOids:     mongoose.Types.ObjectId[];     // teams the lead leads or belongs to
+  memberOids:   mongoose.Types.ObjectId[];     // union of memberIds across those teams (incl. the lead themselves)
+  unrestricted: boolean;                       // true ⇒ admin: ignore the visibility filter
 }
 
-export async function getLeadScope(userId: string): Promise<LeadScope> {
+export async function getLeadScope(userId: string, role?: string | null): Promise<LeadScope> {
   const userOid = new mongoose.Types.ObjectId(userId);
+
+  // Admin sees everything. Pre-compute teamOids/memberOids as the full set
+  // so the people-workload panel & per-assignee filters can still aggregate
+  // without a separate code path.
+  if (isAdmin(role)) {
+    const [allTeams, allUsers] = await Promise.all([
+      Team.find({}, '_id memberIds').lean(),
+      User.find({}, '_id').lean(),
+    ]);
+    return {
+      userOid,
+      teamOids:     allTeams.map(t => t._id),
+      memberOids:   allUsers.map(u => u._id),
+      unrestricted: true,
+    };
+  }
+
+  // A team lead can see projects for any team they lead OR belong to as a member.
   const teams = await Team.find(
-    { leadId: userOid },
+    { $or: [{ leadId: userOid }, { memberIds: userOid }] },
     '_id memberIds',
   ).lean();
 
@@ -35,12 +61,14 @@ export async function getLeadScope(userId: string): Promise<LeadScope> {
   }
   const memberOids = [...memberSet].map(id => new mongoose.Types.ObjectId(id));
 
-  return { userOid, teamOids, memberOids };
+  return { userOid, teamOids, memberOids, unrestricted: false };
 }
 
-// Mongo filter that returns true for every project the lead can see.
+// Mongo filter that returns true for every project the viewer can see.
 // Pass as the first arg to Project.find / countDocuments / aggregate $match.
+// Admin scopes return an empty filter (match everything).
 export function projectsVisibleFilter(scope: LeadScope) {
+  if (scope.unrestricted) return {};
   return {
     $or: [
       { ownerId: scope.userOid },

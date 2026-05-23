@@ -1,11 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Avatar } from './ui';
-import { InviteLeadModal } from './InviteLeadModal';
+import { PragatiMark } from './PragatiMark';
+import { CurrentUserProvider } from './CurrentUserContext';
 import { api } from '@/lib/client/api';
+
+// Modal only shown when a TL clicks "Invite a lead" — defer its JS until needed.
+const InviteLeadModal = dynamic(
+  () => import('./InviteLeadModal').then(m => m.InviteLeadModal),
+  { ssr: false, loading: () => null },
+);
 import {
   LayoutDashboard, FolderKanban, Users,
   LogOut, Menu, X,
@@ -16,7 +23,7 @@ export interface CurrentUser {
   id: string;
   name: string;
   email: string;
-  role: 'employee' | 'pm' | 'lead';
+  role: 'employee' | 'pm' | 'lead' | 'admin';
   title?: string;
   mustChangePassword?: boolean;
 }
@@ -167,14 +174,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       <div className="flex items-center gap-2.5 px-4 h-14 shrink-0 border-b"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
         <Link href="/" className="flex items-center gap-2 flex-1 min-w-0">
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            background: 'linear-gradient(135deg, #1256B0 0%, #1E88E5 100%)',
-            borderRadius: 8, padding: '4px 5px', lineHeight: 0, flexShrink: 0,
-          }}>
-            <Image src="/logo-icon.png" alt="" width={18} height={18} priority
-              style={{ display: 'block', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-          </span>
+          <PragatiMark size={28} flat />
           <div className="min-w-0">
             <div className={`font-black text-[13px] tracking-tight leading-none ${dark ? 'text-white' : 'text-slate-900'}`}>
               Pragati
@@ -200,8 +200,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
             <Link key={n.href} href={n.href} prefetch
               className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                 active
-                  ? 'text-brand-700 dark:text-blue-300'
-                  : 'text-slate-600 dark:text-white/45 hover:text-slate-900 dark:hover:text-white/85 hover:bg-slate-50 dark:hover:bg-white/5'
+                  ? 'text-brand-700 dark:text-[#faf9f5]'
+                  : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
               }`}
               style={active ? {
                 background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
@@ -235,8 +235,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
         <div className={`absolute bottom-full left-2 right-2 mb-1.5 rounded-xl overflow-hidden z-50 transition-all duration-200 ${
           profileOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-1.5 pointer-events-none'
         }`} onClick={e => e.stopPropagation()} style={{
-          background: dark ? '#0A1929' : '#ffffff',
-          border: dark ? '1px solid rgba(255,255,255,0.09)' : '1px solid #e2e8f0',
+          background: dark ? '#30302e' : '#ffffff',
+          border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
           boxShadow: '0 -8px 32px rgba(0,0,0,0.15)',
         }}>
 
@@ -285,7 +285,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
                   {dark ? <Sun size={12} className="shrink-0 text-amber-400/70" /> : <Moon size={12} className="shrink-0" />}
                   <span>{dark ? 'Light mode' : 'Dark mode'}</span>
                   <span className="ml-auto w-7 h-3.5 rounded-full flex items-center shrink-0 transition-all duration-200"
-                    style={{ background: dark ? '#1565C0' : '#e2e8f0', padding: '2px' }}>
+                    style={{ background: dark ? '#c96442' : '#e2e8f0', padding: '2px' }}>
                     <span className="w-2.5 h-2.5 rounded-full bg-white shadow transition-all duration-200"
                       style={{ transform: dark ? 'translateX(13px)' : 'translateX(0)' }} />
                   </span>
@@ -349,6 +349,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
   );
 
   return (
+    <CurrentUserProvider user={user}>
     <div className="min-h-screen flex" style={{ background: 'var(--bg-page)' }}>
 
       {/* Mobile backdrop */}
@@ -370,7 +371,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{
-          background: dark ? '#0B1628' : '#ffffff',
+          background: dark ? '#262624' : '#ffffff',
           borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4',
         }}
       >
@@ -383,7 +384,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
         {/* Mobile-only slim top strip */}
         <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-11"
           style={{
-            background: dark ? '#0B1628' : '#ffffff',
+            background: dark ? '#262624' : '#ffffff',
             borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
           }}>
           <button
@@ -394,15 +395,8 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
             aria-label="Open navigation">
             <Menu size={18} />
           </button>
-          <Link href="/" className="flex items-center gap-1.5">
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: 'linear-gradient(135deg, #1256B0 0%, #1E88E5 100%)',
-              borderRadius: 7, padding: '3px 4px', lineHeight: 0,
-            }}>
-              <Image src="/logo-icon.png" alt="" width={15} height={15} priority
-                style={{ display: 'block', objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <PragatiMark size={22} flat />
             <span className={`font-black text-sm tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>Pragati</span>
           </Link>
         </div>
@@ -429,5 +423,6 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
       )}
       <InviteLeadModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
+    </CurrentUserProvider>
   );
 }
