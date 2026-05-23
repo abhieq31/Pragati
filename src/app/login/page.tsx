@@ -289,8 +289,13 @@ export default function LoginPage() {
               </div>
 
               {err && (
-                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-snug">
-                  {err}
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-snug flex items-start gap-2 fade-in-soft"
+                >
+                  <span aria-hidden="true" className="font-bold leading-none mt-0.5">!</span>
+                  <span>{err}</span>
                 </div>
               )}
 
