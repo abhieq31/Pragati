@@ -10,6 +10,7 @@
     "lint": "next lint",
     "seed": "tsx scripts/seed.ts",
     "cleanup-users": "tsx scripts/cleanup-users.ts",
+    "keep-mes-only": "tsx scripts/keep-mes-only.ts",
     "set-admin": "tsx scripts/set-admin.ts",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",

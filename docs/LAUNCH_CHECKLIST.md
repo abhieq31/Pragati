@@ -62,7 +62,28 @@ Sign in to production with **your own admin account** and walk through:
    - ☐ People page → pick any lead → **Reset password** → temp password
      modal appears with a copyable `Pragati-XXXX` value
 
-## 5. Day-one operational notes
+## 5. Workspace cleanup (run against production DB)
+
+Strip seed / test artefacts so day-one users only see real work. Both
+scripts dry-run by default; re-run with `--confirm` to actually delete.
+
+```bash
+# Users — drops everyone who didn't come in via the invite flow.
+# Survivors: the workspace founder (first registered account) and
+# anyone with a consumed invite record.
+MONGODB_URI=<prod-uri> npm run cleanup-users
+MONGODB_URI=<prod-uri> npm run cleanup-users -- --confirm
+
+# Projects — keeps only projects whose team is MES (the only team
+# actively tracking real work at launch). Tasks under dropped projects
+# are cascaded.
+MONGODB_URI=<prod-uri> npm run keep-mes-only
+MONGODB_URI=<prod-uri> npm run keep-mes-only -- --confirm
+```
+
+Confirmed: ☐
+
+## 6. Day-one operational notes
 
 - The **onboarding tour** fires automatically the first time a fresh lead
   signs in, and never returns after they dismiss it. Tell your team this in
@@ -73,7 +94,7 @@ Sign in to production with **your own admin account** and walk through:
   to do to give that person visibility into all of the team's projects.
   There is no separate "permissions" tab — that's intentional.
 
-## 6. Rollback
+## 7. Rollback
 
 If a regression slips in:
 
