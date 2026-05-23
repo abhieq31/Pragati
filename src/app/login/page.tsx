@@ -65,7 +65,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (mode === 'login') {
-        await api('/auth/login', { method: 'POST', body: { email, password } });
+        // `identifier` accepts either a username or an email — backend
+        // routes the lookup based on whether it contains an "@".
+        await api('/auth/login', { method: 'POST', body: { identifier: email, password } });
       } else {
         await api('/auth/register', { method: 'POST', body: { email, password, name, title } });
       }
@@ -272,9 +274,24 @@ export default function LoginPage() {
               )}
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
-                <input className="input" type="email" placeholder="you@company.com" required
-                  autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} />
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  {mode === 'login' ? 'Username or email' : 'Email'}
+                </label>
+                <input
+                  className="input"
+                  // `text` (not `email`) on the login mode so a plain
+                  // username doesn't trigger the browser's email validity
+                  // check. On the register mode we still want email
+                  // semantics for autocomplete + format hints.
+                  type={mode === 'login' ? 'text' : 'email'}
+                  placeholder={mode === 'login' ? 'priya  ·  or  priya@company.com' : 'you@company.com'}
+                  required
+                  autoComplete={mode === 'login' ? 'username' : 'email'}
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
 
               <div>

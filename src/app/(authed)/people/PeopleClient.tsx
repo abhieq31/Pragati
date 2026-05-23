@@ -44,7 +44,7 @@ function CredentialsModal({ name, email, tempPassword, onClose }: {
 
         <div className="space-y-3 mb-5">
           <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Username</div>
             <div className="flex items-center">
               <span className="text-sm font-mono font-semibold text-slate-800 flex-1">{email}</span>
               <CopyBtn text={email} />
@@ -74,9 +74,26 @@ function AddMemberModal({ onClose, onCreated }: {
   onClose: () => void;
   onCreated: (name: string, email: string, tempPassword: string) => void;
 }) {
-  const [form, setForm] = useState({ name: '', email: '', title: '' });
+  const [form, setForm]     = useState({ name: '', username: '', title: '' });
   const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
+  const [err, setErr]       = useState('');
+
+  // Suggest a username from the typed full name as the lead types it —
+  // saves the admin a step. They can still edit it before submitting.
+  function onNameChange(value: string) {
+    const suggested = value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9.]+/g, '.')
+      .replace(/^\.+|\.+$/g, '')
+      .slice(0, 30);
+    setForm((f) => ({
+      ...f,
+      name: value,
+      // only auto-fill while the user hasn't typed in the username box
+      username: f.username && f.username !== suggested ? f.username : suggested,
+    }));
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,9 +102,9 @@ function AddMemberModal({ onClose, onCreated }: {
     try {
       const res = await api<{ user: any; tempPassword: string }>('/users', {
         method: 'POST',
-        body: { name: form.name, email: form.email, title: form.title },
+        body: { name: form.name, username: form.username, title: form.title },
       });
-      onCreated(res.user.name, res.user.email, res.tempPassword);
+      onCreated(res.user.name, res.user.username || res.user.email, res.tempPassword);
     } catch (e: any) {
       setErr(e.message || 'Failed to create account.');
     } finally {
@@ -113,12 +130,29 @@ function AddMemberModal({ onClose, onCreated }: {
           <div>
             <label className="label">Full name</label>
             <input className="input" placeholder="e.g. Priya Sharma" required
-              value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              value={form.name} onChange={(e) => onNameChange(e.target.value)} />
           </div>
           <div>
-            <label className="label">Work email</label>
-            <input className="input" type="email" placeholder="priya@company.com" required
-              value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <label className="label">Username</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono pointer-events-none">@</span>
+              <input
+                className="input pl-7 font-mono text-sm"
+                placeholder="priya"
+                required
+                minLength={3}
+                maxLength={30}
+                pattern="[a-z][a-z0-9_.]{1,28}[a-z0-9_]"
+                autoCapitalize="none"
+                autoComplete="off"
+                spellCheck={false}
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+              />
+            </div>
+            <div className="text-[11px] text-slate-400 mt-1">
+              Lower-case letters, digits, dots, underscores. This is how they sign in.
+            </div>
           </div>
           <div>
             <label className="label">Job title <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
@@ -212,7 +246,7 @@ function EditUserModal({ user, onClose, onSaved }: {
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Edit profile</div>
-            <div className="text-sm text-slate-400 mt-0.5">{user.email}</div>
+            <div className="text-sm text-slate-400 mt-0.5 font-mono">@{user.username || user.email}</div>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
         </div>
@@ -360,11 +394,17 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
     if (!confirm(`Generate a new temporary password for ${user.name}?\nThey'll be forced to change it on next sign-in.`)) return;
     setSaving(user.id);
     try {
-      const res = await api<{ tempPassword: string; user: { name: string; email: string } }>(
+      const res = await api<{ tempPassword: string; user: { name: string; email: string; username?: string } }>(
         `/users/${user.id}/reset-password`,
         { method: 'POST' },
       );
-      setCreds({ name: res.user.name, email: res.user.email, tempPassword: res.tempPassword });
+      // Surface the username if the account has one, else fall back to email
+      // for legacy accounts that haven't been backfilled yet.
+      setCreds({
+        name: res.user.name,
+        email: res.user.username || res.user.email,
+        tempPassword: res.tempPassword,
+      });
     } catch (e: any) {
       setRoleErr(e.message || 'Failed to reset password.');
     } finally {
@@ -454,7 +494,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                 <Avatar name={u.name} size={36} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Team Lead'} · {u.email}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Team Lead'} · <span className="font-mono">@{u.username || u.email}</span></div>
                 </div>
                 <span className={`tag border text-xs font-semibold ${u.role === 'admin' ? ROLE_COLOR.admin : ROLE_COLOR.pm}`}>
                   {u.role === 'admin' ? 'Admin' : 'Lead'}
@@ -524,7 +564,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                 <Avatar name={u.name} size={36} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Individual Contributor'} · {u.email}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Individual Contributor'} · <span className="font-mono">@{u.username || u.email}</span></div>
                 </div>
                 <span className={`tag border text-xs ${ROLE_COLOR.employee}`}>IC</span>
                 {isPM && (

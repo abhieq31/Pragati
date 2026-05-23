@@ -10,9 +10,16 @@ import { rateLimit } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
+/**
+ * Login body accepts either a `username` (Instagram-style handle) or an
+ * `email`. The form ships a single `identifier` field that can hold either;
+ * we resolve which database column to query based on whether the string
+ * contains an "@". Either is valid; ambiguous input (e.g. someone with a
+ * username that happens to look like an email) prefers the email column.
+ */
 const Body = z.object({
-  email:    z.string().email().max(254),
-  password: z.string().min(1).max(200),
+  identifier: z.string().min(1).max(254),
+  password:   z.string().min(1).max(200),
 });
 
 // After this many consecutive wrong passwords the account is locked
@@ -41,9 +48,14 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
-    const body = await readBody(req, Body);
-    const email = body.email.toLowerCase().trim();
-    const user  = await User.findOne({ email });
+    const body  = await readBody(req, Body);
+    const ident = body.identifier.toLowerCase().trim();
+    // Look up by email if the string looks like an address, otherwise by
+    // username. Treat either column as the canonical identifier — they're
+    // both unique and case-insensitive at the schema level.
+    const user  = ident.includes('@')
+      ? await User.findOne({ email: ident })
+      : await User.findOne({ username: ident });
 
     // Unified "invalid" path for missing user, locked user, and wrong
     // password. We still do the bcrypt comparison against a dummy hash

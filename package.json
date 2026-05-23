@@ -13,6 +13,7 @@
     "keep-mes-only": "tsx scripts/keep-mes-only.ts",
     "set-admin": "tsx scripts/set-admin.ts",
     "set-password": "tsx scripts/set-password.ts",
+    "backfill-usernames": "tsx scripts/backfill-usernames.ts",
     "smoke-prod": "tsx scripts/smoke-prod.ts",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",

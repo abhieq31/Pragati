@@ -14,6 +14,7 @@ export function u(user: any) {
   return {
     id: id(user._id),
     email: user.email,
+    username: user.username || null,
     name: user.name,
     role: user.role,
     title: user.title,

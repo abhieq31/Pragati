@@ -7,6 +7,7 @@ import { Team } from '@/models/Team';
 import { requireUser, requireRole } from '@/lib/auth';
 import { u } from '@/lib/serialize';
 import { handleError, readBody } from '@/lib/http';
+import { UsernameSchema } from '@/lib/validations';
 import crypto from 'crypto';
 
 export const runtime = 'nodejs';
@@ -40,11 +41,15 @@ export async function GET(req: NextRequest) {
 }
 
 const CreateBody = z.object({
-  name:  z.string().min(1),
-  email: z.string().email(),
-  title: z.string().optional(),
-  // role is intentionally excluded — all new accounts are IC
-  // Promotion to PM requires a separate explicit PATCH action
+  name:     z.string().min(1).max(120),
+  // Username is the Instagram-style login handle and the primary identifier.
+  username: UsernameSchema,
+  // Email kept optional for legacy reasons (audit trail, future SSO) but
+  // no longer required — leads sign in with their username.
+  email:    z.string().email().optional(),
+  title:    z.string().max(120).optional(),
+  // role is intentionally excluded — all new accounts are IC.
+  // Promotion to PM requires a separate explicit PATCH action.
 });
 
 function generateTempPassword(): string {
@@ -62,11 +67,25 @@ export async function POST(req: NextRequest) {
     if (error) return error;
     await connectDB();
     const body = await readBody(req, CreateBody);
-    const exists = await User.findOne({ email: body.email.toLowerCase() });
-    if (exists) return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
+
+    // Reject duplicates on either column the user will use to sign in.
+    const username = body.username;                // already lowercased + trimmed
+    const email    = body.email?.toLowerCase().trim()
+                  // Email is optional; synthesise an internal placeholder so
+                  // legacy code that still references `user.email` keeps
+                  // working without a separate migration.
+                  || `${username}@pragati.local`;
+
+    const conflict = await User.findOne({ $or: [{ email }, { username }] }, '_id email username').lean();
+    if (conflict) {
+      const which = (conflict as any).username === username ? 'Username' : 'Email';
+      return NextResponse.json({ error: `${which} already in use` }, { status: 409 });
+    }
+
     const tempPassword = generateTempPassword();
     const user = await User.create({
-      email:              body.email.toLowerCase(),
+      email,
+      username,
       name:               body.name,
       passwordHash:       bcrypt.hashSync(tempPassword, 10),
       role:               'employee',
