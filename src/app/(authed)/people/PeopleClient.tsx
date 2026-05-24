@@ -70,29 +70,36 @@ function CredentialsModal({ name, email, tempPassword, onClose }: {
 }
 
 /* ── Add member modal — role is always IC, no picker needed ───────────── */
+// Title-case a corporate username into a display name:
+//   priya.sharma → "Priya Sharma",  p_kumar → "P Kumar"
+function deriveName(username: string): string {
+  return username
+    .split(/[._]+/)
+    .filter(Boolean)
+    .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+    .join(' ');
+}
+
 function AddMemberModal({ onClose, onCreated }: {
   onClose: () => void;
-  onCreated: (name: string, email: string, tempPassword: string) => void;
+  onCreated: (name: string) => void;
 }) {
-  const [form, setForm]     = useState({ name: '', username: '', title: '' });
-  const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  // Two inputs only: the corporate username and the employee ID. The
+  // display name auto-derives from the username (editable if it looks
+  // wrong). No password is collected or shown — contributors sign in with
+  // the standard convention the admin communicates out-of-band.
+  const [username, setUsername]     = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [name, setName]             = useState('');
+  const [nameEdited, setNameEdited] = useState(false);
+  const [title, setTitle]           = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [err, setErr]               = useState('');
 
-  // Suggest a username from the typed full name as the lead types it —
-  // saves the admin a step. They can still edit it before submitting.
-  function onNameChange(value: string) {
-    const suggested = value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9.]+/g, '.')
-      .replace(/^\.+|\.+$/g, '')
-      .slice(0, 30);
-    setForm((f) => ({
-      ...f,
-      name: value,
-      // only auto-fill while the user hasn't typed in the username box
-      username: f.username && f.username !== suggested ? f.username : suggested,
-    }));
+  function onUsernameChange(value: string) {
+    const v = value.toLowerCase();
+    setUsername(v);
+    if (!nameEdited) setName(deriveName(v));
   }
 
   async function submit(e: React.FormEvent) {
@@ -100,13 +107,13 @@ function AddMemberModal({ onClose, onCreated }: {
     setErr('');
     setSaving(true);
     try {
-      const res = await api<{ user: any; tempPassword: string }>('/users', {
+      const res = await api<{ user: any }>('/users', {
         method: 'POST',
-        body: { name: form.name, username: form.username, title: form.title },
+        body: { name: name.trim() || deriveName(username), username, employeeId, title },
       });
-      onCreated(res.user.name, res.user.username || res.user.email, res.tempPassword);
+      onCreated(res.user.name);
     } catch (e: any) {
-      setErr(e.message || 'Failed to create account.');
+      setErr(e.message || 'Failed to add member.');
     } finally {
       setSaving(false);
     }
@@ -119,20 +126,14 @@ function AddMemberModal({ onClose, onCreated }: {
           <div>
             <div className="text-base font-bold text-slate-900">Add team member</div>
             <div className="text-sm text-slate-400 mt-0.5">
-              New accounts are <strong>Contributors</strong>: they sign in to see
-              their team's board and update the status, subtasks &amp; comments of
-              tasks assigned to them. Promote to Lead later if needed.
+              Enter their company username and employee ID. They'll appear in
+              your assignee lists and team board straight away.
             </div>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="label">Full name</label>
-            <input className="input" placeholder="e.g. Priya Sharma" required
-              value={form.name} onChange={(e) => onNameChange(e.target.value)} />
-          </div>
           <div>
             <label className="label">Corporate username</label>
             <div className="relative">
@@ -147,25 +148,45 @@ function AddMemberModal({ onClose, onCreated }: {
                 autoCapitalize="none"
                 autoComplete="off"
                 spellCheck={false}
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+                value={username}
+                onChange={(e) => onUsernameChange(e.target.value)}
               />
             </div>
             <div className="text-[11px] text-slate-400 mt-1 leading-snug">
-              Use the same identifier their company email uses before the
+              The part of their work email before the
               <span className="font-mono px-1">@</span>
-              — e.g. for <span className="font-mono">priya.sharma@company.com</span> enter <span className="font-mono">priya.sharma</span>.
+              — e.g. <span className="font-mono">priya.sharma</span> for <span className="font-mono">priya.sharma@company.com</span>.
             </div>
           </div>
+
           <div>
-            <label className="label">Job title <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-            <input className="input" placeholder="e.g. Frontend Engineer"
-              value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label className="label">Employee ID</label>
+            <input
+              className="input font-mono text-sm"
+              placeholder="e.g. 100245"
+              required
+              maxLength={40}
+              autoComplete="off"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+            />
           </div>
 
-          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 flex items-center gap-2">
-            <User size={13} className="text-slate-400 shrink-0" />
-            <span className="text-xs text-slate-500">Account role: <strong>Individual Contributor</strong></span>
+          <div>
+            <label className="label">Display name <span className="text-slate-300 font-normal normal-case">(auto-filled)</span></label>
+            <input
+              className="input"
+              placeholder="Priya Sharma"
+              required
+              value={name}
+              onChange={(e) => { setName(e.target.value); setNameEdited(true); }}
+            />
+          </div>
+
+          <div>
+            <label className="label">Job title <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
+            <input className="input" placeholder="e.g. Validation Analyst"
+              value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           {err && (
@@ -173,7 +194,7 @@ function AddMemberModal({ onClose, onCreated }: {
           )}
 
           <button type="submit" disabled={saving} className="btn-primary w-full justify-center">
-            {saving ? 'Creating…' : 'Create account'}
+            {saving ? 'Adding…' : 'Add member'}
           </button>
         </form>
       </div>
@@ -336,6 +357,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
   const [users, setUsers] = useState<any[]>(initialUsers);
   const [saving, setSaving] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
   const [creds, setCreds] = useState<{ name: string; email: string; tempPassword: string } | null>(null);
   const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'pm' | 'employee' } | null>(null);
   const [roleErr, setRoleErr] = useState('');
@@ -415,10 +437,12 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
     }
   }
 
-  function handleCreated(name: string, email: string, tempPassword: string) {
+  function handleCreated(name: string) {
     setShowAdd(false);
-    setCreds({ name, email, tempPassword });
+    setJustAdded(name);
     load();
+    // auto-dismiss the confirmation after a few seconds
+    setTimeout(() => setJustAdded(null), 4000);
   }
 
   const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead' || u.role === 'admin');
@@ -427,6 +451,11 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {justAdded && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 fade-in-soft">
+          <strong>{justAdded}</strong> added. They're now available to assign on your team's tasks.
+        </div>
+      )}
       {/* Modals */}
       {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onCreated={handleCreated} />}
       {creds && <CredentialsModal {...creds} onClose={() => setCreds(null)} />}
