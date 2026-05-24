@@ -49,6 +49,18 @@ this order; each step takes 30 - 90 seconds.
 | 4 | Open the new project. Use **+ Add task** to seed 5–10 known tasks. Pick assignees from the team-scoped list. | Day-one dashboard isn't empty. |
 | 5 | Back to **Dashboard**. They should see "1 ongoing project · N open tasks · M overdue · K team". This is the view their manager will see. | The dashboard is the promise of the tool; it has to look populated. |
 
+## Roles, in one paragraph
+
+- **Lead** — creates teams, projects, tasks; assigns work; full edit on
+  everything in their teams.
+- **Contributor** — signs in with their corporate username, sees their
+  team's board read-only, and can update the **status, subtasks, and
+  comments of tasks assigned to them** (nothing else). This is optional:
+  add a contributor without ever giving them the password and they're
+  just an assignable name.
+- **Admin** (you) — sees every team/project/user; resets passwords and
+  unlocks accounts.
+
 ## What we tell leads explicitly
 
 - **Forgot your password?** Message the admin (you). Reset takes one
@@ -56,9 +68,10 @@ this order; each step takes 30 - 90 seconds.
 - **Locked out after 5 wrong attempts?** Same — message the admin.
   Unlock is one click. The admin doesn't see your real password and
   doesn't need to.
-- **Your team members don't need accounts.** Add them as contributors;
-  they show up in assignee dropdowns and on every task you assign,
-  but they can't sign in. No invites to manage, no extra licences.
+- **Contributors can update their own tasks.** If you want a team member
+  to mark their own work done, share their username + temp password.
+  If you'd rather keep status changes in your own hands, just don't hand
+  out the password — the account still works as an assignable name.
 - **Effort tracking lives behind a disclosure** on the task page.
   Open it when you need to log time; leave it shut the rest of the
   time. The day-to-day workflow is title + assignee + status + due.

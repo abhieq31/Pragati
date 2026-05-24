@@ -119,8 +119,9 @@ function AddMemberModal({ onClose, onCreated }: {
           <div>
             <div className="text-base font-bold text-slate-900">Add team member</div>
             <div className="text-sm text-slate-400 mt-0.5">
-              New accounts are always <strong>Individual Contributors</strong>.
-              You can promote to PM after creation.
+              New accounts are <strong>Contributors</strong>: they sign in to see
+              their team's board and update the status, subtasks &amp; comments of
+              tasks assigned to them. Promote to Lead later if needed.
             </div>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>

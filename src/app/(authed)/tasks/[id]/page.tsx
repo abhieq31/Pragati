@@ -215,6 +215,12 @@ export default function TaskDetailPage() {
   const canSignoff = task.requiresQaSignoff && !task.qaSignoffAt && (me?.role === 'pm' || me?.role === 'lead' || me?.role === 'admin');
   const hasReferenceData = task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
 
+  // Assignee-level actions: a lead/admin, OR the contributor this task is
+  // assigned to. Controls the status pills, subtask toggles, and the
+  // comment box. Everyone else with mere visibility sees them read-only.
+  const isAssignee  = !!(me && task.assigneeId && String(task.assigneeId) === String(me.id));
+  const canActOnTask = isLead || isAssignee;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl page-enter">
       {ToastEl}
@@ -374,10 +380,11 @@ export default function TaskDetailPage() {
             {task.subtasks.map((s: any) => (
               <div key={s.id} className="flex items-center gap-2.5 text-sm py-1 group">
                 <button
-                  onClick={() => toggleSub(s)}
+                  onClick={() => canActOnTask && toggleSub(s)}
+                  disabled={!canActOnTask}
                   className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
                     s.status === 'done' ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-blue-400'
-                  }`}
+                  } ${canActOnTask ? '' : 'opacity-60 cursor-default'}`}
                 >
                   {s.status === 'done' && <span className="text-white text-[8px] font-black">✓</span>}
                 </button>
@@ -417,12 +424,18 @@ export default function TaskDetailPage() {
               <div className="text-xs text-slate-400">No comments yet.</div>
             )}
           </div>
-          <div className="flex gap-2">
-            <input className="input text-sm" placeholder="Add a comment…"
-              value={comment} onChange={(e) => setComment(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addComment()} />
-            <button className="btn-primary text-sm" onClick={addComment}>Post</button>
-          </div>
+          {canActOnTask ? (
+            <div className="flex gap-2">
+              <input className="input text-sm" placeholder="Add a comment…"
+                value={comment} onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addComment()} />
+              <button className="btn-primary text-sm" onClick={addComment}>Post</button>
+            </div>
+          ) : (
+            <div className="text-xs text-slate-400 italic">
+              Only the assignee and team leads can comment on this task.
+            </div>
+          )}
         </Card>
       </div>
 

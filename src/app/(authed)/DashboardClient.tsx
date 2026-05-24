@@ -207,7 +207,7 @@ function ProjectsColumn({
         <div className="flex items-center gap-2">
           <FolderKanban size={14} className="text-slate-400" />
           <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-            Projects you lead
+            {isLead ? 'Projects you lead' : 'Your team’s projects'}
           </h2>
           <span className="text-[10px] text-slate-300 font-semibold">{projects.length}</span>
         </div>

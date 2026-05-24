@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
-import { signToken, setAuthCookie, isLead, isAdmin, configuredAdminEmail } from '@/lib/auth';
+import { signToken, setAuthCookie, configuredAdminEmail } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
 import { rateLimit } from '@/lib/rateLimit';
@@ -122,11 +122,15 @@ export async function POST(req: NextRequest) {
     }
     if (user.isModified()) await user.save();
 
-    // Pragati is leads + the single admin only. Contributors are tracked
-    // as assignable records but cannot sign in.
-    if (!isLead(user.role) && !isAdmin(user.role)) {
+    // Every provisioned account can sign in: leads + admin get full
+    // management, contributors (employee) get a read-only view of their
+    // team's board plus the ability to update the status / subtasks /
+    // comments of tasks assigned to them. Accounts with an unknown role
+    // are still refused.
+    const KNOWN_ROLES = ['employee', 'pm', 'lead', 'admin'];
+    if (!KNOWN_ROLES.includes(String(user.role))) {
       return NextResponse.json(
-        { error: 'This workspace is open to team leads only. Contact your administrator.' },
+        { error: 'Your account is not active. Contact your administrator.' },
         { status: 403 },
       );
     }
