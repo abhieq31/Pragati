@@ -46,22 +46,21 @@ const CreateBody = z.object({
   // Corporate login handle (the part before @ in their work email).
   username:   UsernameSchema,
   // Company employee ID. Combined with the first name it forms the
-  // standard default password (see below) so contributors never need a
-  // password handed to them — their lead just tells them the convention.
+  // standard default password (FirstName@employeeId).
   employeeId: z.string().trim().min(1).max(40),
-  title:      z.string().max(120).optional(),
   // role is intentionally excluded — all new accounts are contributors.
   // Promotion to Lead requires a separate explicit PATCH action.
+  // No job title — a person is shown by their role, nothing else.
 });
 
 /**
- * Standard default password for a contributor: lower-cased first name,
- * "@", then the employee ID exactly as entered. Deterministic so a lead
- * can tell a team member their credentials verbally without anything
- * being displayed in the UI. e.g. "Priya Sharma" + "12345" → "priya@12345".
+ * Standard default password for a new account: the person's first name
+ * exactly as written, "@", then the employee ID. e.g. "Abhi Patel" +
+ * "29218" → "Abhi@29218". Deterministic so it can be communicated
+ * verbally; the user is forced to change it on first login.
  */
 function defaultContributorPassword(name: string, employeeId: string): string {
-  const firstName = name.trim().split(/\s+/)[0]?.toLowerCase() || 'user';
+  const firstName = name.trim().split(/\s+/)[0] || 'User';
   return `${firstName}@${employeeId.trim()}`;
 }
 
@@ -91,10 +90,9 @@ export async function POST(req: NextRequest) {
       name:               body.name,
       passwordHash:       bcrypt.hashSync(password, 10),
       role:               'employee',
-      title:              body.title || '',
-      // Contributors keep the standard default password — no forced reset,
-      // no credential handoff. The convention is communicated out-of-band.
-      mustChangePassword: false,
+      // Sign in with the standard default (FirstName@employeeId), then set
+      // your own password on first login.
+      mustChangePassword: true,
     });
     // Deliberately does NOT return the password — the UI never displays it.
     return NextResponse.json({ user: u(user) });

@@ -23,7 +23,11 @@ interface UserItem {
   title?: string;
 }
 
+// Two functions only: every team either keeps the lights on (RTB) or
+// delivers change (CTB). Legacy values still render if any old team has one.
 const FUNCTION_LABEL: Record<string, string> = {
+  rtb: 'Run the Business',
+  ctb: 'Change the Business',
   general: 'General',
   csv_validation: 'CSV / Validation',
   data_integrity: 'Data Integrity',
@@ -34,6 +38,8 @@ const FUNCTION_LABEL: Record<string, string> = {
 };
 
 const FUNCTION_TONE: Record<string, { bg: string; text: string; border: string }> = {
+  rtb:               { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
+  ctb:               { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
   general:           { bg: 'bg-slate-50',   text: 'text-slate-600',   border: 'border-slate-200'   },
   csv_validation:    { bg: 'bg-brand-50',   text: 'text-brand-700',   border: 'border-brand-200'   },
   data_integrity:    { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200'  },
@@ -266,7 +272,7 @@ function TeamFormModal({
 }) {
   const [name, setName]               = useState(team?.name || '');
   const [description, setDescription] = useState(team?.description || '');
-  const [func, setFunc]               = useState<string>(team?.function || 'general');
+  const [func, setFunc]               = useState<string>(team?.function || 'rtb');
   const [leadId, setLeadId]           = useState(team?.leadId || '');
   const [memberIds, setMemberIds]     = useState<string[]>(team?.memberIds || []);
   const [memberQuery, setMemberQuery] = useState('');
@@ -320,9 +326,13 @@ function TeamFormModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
+    // Outer scrolls; inner min-h-full + items-center keeps the modal centred
+    // when it fits and reachable from the top when it's taller than the
+    // viewport (previously a tall form clipped at the top edge).
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 overlay-in" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto modal-in"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl modal-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
@@ -370,27 +380,29 @@ function TeamFormModal({
             />
           </div>
 
-          {/* Function + Lead */}
+          {/* Function + Owner */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                 Function
               </label>
               <select className="select" value={func} onChange={(e) => setFunc(e.target.value)}>
-                {Object.entries(FUNCTION_LABEL).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
+                <option value="rtb">Run the Business</option>
+                <option value="ctb">Change the Business</option>
               </select>
             </div>
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Team lead
+                Team owner
               </label>
               <select className="select" value={leadId} onChange={(e) => setLeadId(e.target.value)}>
-                <option value="">— No lead —</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name}{(u.role === 'pm' || u.role === 'lead' || u.role === 'admin') ? ' (Lead)' : ''}</option>
-                ))}
+                <option value="">— No owner —</option>
+                {/* Only team leads can own a team; the admin is never listed. */}
+                {users
+                  .filter((u) => u.role === 'pm' || u.role === 'lead')
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
               </select>
             </div>
           </div>
@@ -444,7 +456,9 @@ function TeamFormModal({
                             <span className="ml-2 text-[10px] font-bold text-brand-600 uppercase tracking-wider">Lead</span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate">{u.title || u.role}</div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          {(u.role === 'pm' || u.role === 'lead') ? 'Team Leader' : u.role === 'admin' ? 'Admin' : 'Individual Contributor'}
+                        </div>
                       </div>
                       <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
                         selected ? 'bg-brand-600 text-white' : 'border border-slate-300'
@@ -458,7 +472,7 @@ function TeamFormModal({
             </div>
             {leadId && !memberIds.includes(leadId) && (
               <p className="text-[11px] text-slate-400 mt-1.5">
-                The lead is automatically added as a team member when you save.
+                The owner is automatically added as a team member when you save.
               </p>
             )}
           </div>
@@ -474,6 +488,7 @@ function TeamFormModal({
             {saving ? 'Saving…' : mode === 'create' ? 'Create team' : 'Save changes'}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

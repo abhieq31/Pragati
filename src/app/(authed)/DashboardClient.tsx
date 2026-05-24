@@ -176,10 +176,10 @@ export default function DashboardClient({
         <>
           {/* ── Summary strip ──────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2.5 mb-6">
-            <SummaryChip label="Ongoing projects" value={ongoingProjects.length} accent="blue" />
-            <SummaryChip label="Open tasks"       value={totalOpen}              accent="slate" />
-            <SummaryChip label="Overdue"          value={totalOverdue}           accent={totalOverdue > 0 ? 'red' : 'slate'} />
-            <SummaryChip label="Team"             value={dash.people.length}     accent="green" />
+            <SummaryChip label="Ongoing projects" value={ongoingProjects.length} accent="blue"  href="/projects" />
+            <SummaryChip label="Open tasks"       value={totalOpen}              accent="slate" href="/projects" />
+            <SummaryChip label="Overdue"          value={totalOverdue}           accent={totalOverdue > 0 ? 'red' : 'slate'} href="/projects" />
+            <SummaryChip label="Team"             value={dash.people.length}     accent="green" href="/teams" />
           </div>
         </>
       )}
@@ -210,8 +210,8 @@ export default function DashboardClient({
 
 /* ── Summary chip ────────────────────────────────────────────────────────── */
 function SummaryChip({
-  label, value, accent,
-}: { label: string; value: number; accent: 'blue' | 'red' | 'slate' | 'green' }) {
+  label, value, accent, href,
+}: { label: string; value: number; accent: 'blue' | 'red' | 'slate' | 'green'; href: string }) {
   const styles = {
     blue:  'bg-blue-50  text-blue-700',
     red:   'bg-red-50   text-red-600',
@@ -219,11 +219,15 @@ function SummaryChip({
     green: 'bg-emerald-50 text-emerald-700',
   }[accent];
 
+  // Clickable — each chip drills into the relevant view.
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${styles}`}>
+    <Link
+      href={href}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:brightness-95 hover:shadow-sm ${styles}`}
+    >
       <span className="text-sm font-black">{value}</span>
-      <span className="text-xs text-slate-500 font-medium">{label}</span>
-    </div>
+      <span className="text-xs font-medium opacity-80">{label}</span>
+    </Link>
   );
 }
 

@@ -116,6 +116,33 @@ export function Tag({ children, className = '' }: { children: ReactNode; classNa
   );
 }
 
+/* ── Role badge — the only thing we show for a person besides their name.
+   No job titles or designations anywhere: a person is a Team Leader
+   (green), an Individual Contributor (blue), or the Admin (amber). */
+export const ROLE_LABEL: Record<string, string> = {
+  admin:    'Admin',
+  pm:       'Team Leader',
+  lead:     'Team Leader',
+  employee: 'Individual Contributor',
+};
+const ROLE_BADGE_CLASS: Record<string, string> = {
+  admin:    'bg-amber-50 text-amber-800 border-amber-200',
+  pm:       'bg-emerald-50 text-emerald-700 border-emerald-200',
+  lead:     'bg-emerald-50 text-emerald-700 border-emerald-200',
+  employee: 'bg-blue-50 text-blue-700 border-blue-200',
+};
+export function roleLabel(role?: string | null): string {
+  return ROLE_LABEL[role || 'employee'] ?? 'Individual Contributor';
+}
+export function RoleBadge({ role, className = '' }: { role?: string | null; className?: string }) {
+  const r = role || 'employee';
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${ROLE_BADGE_CLASS[r] ?? ROLE_BADGE_CLASS.employee} ${className}`}>
+      {roleLabel(r)}
+    </span>
+  );
+}
+
 export function StatusTag({ status }: { status?: string | null }) {
   if (!status) return null;
   const dot = STATUS_DOT[status] ?? '#94a3b8';

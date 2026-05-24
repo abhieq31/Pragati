@@ -183,10 +183,15 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
                 <div className={`text-[12px] font-bold truncate leading-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}>
                   {user.name}
                 </div>
-                <div style={{ fontSize: 10 }} className={dark ? 'text-white/35 truncate' : 'text-slate-400 truncate'}>
+                <div style={{ fontSize: 10 }}
+                  className={
+                    user.role === 'admin' ? 'text-amber-500'
+                    : (user.role === 'pm' || user.role === 'lead') ? 'text-emerald-500'
+                    : 'text-blue-400'
+                  }>
                   {user.role === 'admin'
-                    ? 'Workspace Admin'
-                    : (user.role === 'pm' || user.role === 'lead') ? 'Team Lead' : 'Individual Contributor'}
+                    ? 'Admin'
+                    : (user.role === 'pm' || user.role === 'lead') ? 'Team Leader' : 'Individual Contributor'}
                 </div>
               </div>
             </div>
@@ -274,8 +279,13 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
           <Avatar name={user.name} size={28} />
           <div className="flex-1 min-w-0">
             <div className={`text-xs font-semibold truncate ${dark ? 'text-white/80' : 'text-slate-700'}`}>{user.name}</div>
-            <div style={{ fontSize: 10 }} className={dark ? 'text-white/30 truncate' : 'text-slate-400 truncate'}>
-              {user.title || (user.role === 'admin' ? 'Workspace Admin' : (user.role === 'pm' || user.role === 'lead') ? 'Team Lead' : 'Contributor')}
+            <div style={{ fontSize: 10 }}
+              className={`truncate ${
+                user.role === 'admin' ? 'text-amber-500'
+                : (user.role === 'pm' || user.role === 'lead') ? 'text-emerald-500'
+                : 'text-blue-400'
+              }`}>
+              {user.role === 'admin' ? 'Admin' : (user.role === 'pm' || user.role === 'lead') ? 'Team Leader' : 'Individual Contributor'}
             </div>
           </div>
           <ChevronUp size={11} className={`shrink-0 transition-transform duration-150 ${dark ? 'text-white/20' : 'text-slate-300'} ${profileOpen ? '' : 'rotate-180'}`} />

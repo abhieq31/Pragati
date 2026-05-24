@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/client/api';
-import { Avatar } from '@/components/ui';
+import { Avatar, RoleBadge } from '@/components/ui';
 import {
-  User, Bell, Lock, Briefcase, Building2, MapPin, Mail, Phone,
+  User, Bell, Lock,
 } from 'lucide-react';
 
 /* ── Section wrapper ──────────────────────────────────────────────────────── */
@@ -105,8 +105,6 @@ function StrengthMeter({ password }: { password: string }) {
   );
 }
 
-const COMPANY_NAME = 'Alembic Pharmaceuticals Ltd';
-
 /* ════════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════════════════════════════════ */
@@ -114,10 +112,6 @@ export default function SettingsPage() {
   const [user, setUser]   = useState<any>(null);
 
   const [name, setName]           = useState('');
-  const [title, setTitle]         = useState('');
-  const [department, setDept]     = useState('');
-  const [phone, setPhone]         = useState('');
-  const [location, setLocation]   = useState('');
   const [employeeId, setEmpId]    = useState('');
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityMsg, setIdentityMsg] = useState('');
@@ -140,10 +134,6 @@ export default function SettingsPage() {
       const u = d.user;
       setUser(u);
       setName(u.name || '');
-      setTitle(u.title || '');
-      setDept(u.department || '');
-      setPhone(u.phone || '');
-      setLocation(u.location || '');
       setEmpId(u.employeeId || '');
       setNA(u.notifTaskAssigned  ?? true);
       setNDS(u.notifTaskDueSoon  ?? true);
@@ -158,7 +148,7 @@ export default function SettingsPage() {
     e?.preventDefault();
     setIdentityMsg(''); setIdentitySaving(true);
     try {
-      await api('/users/me', { method: 'PATCH', body: { name, title, department, phone, location, employeeId } });
+      await api('/users/me', { method: 'PATCH', body: { name } });
       setIdentityMsg('Saved');
       setTimeout(() => setIdentityMsg(''), 2500);
     } catch (err: any) { setIdentityMsg(err.message || 'Save failed.'); }
@@ -197,7 +187,6 @@ export default function SettingsPage() {
   );
 
   // Render name with employee ID in parentheses if both present.
-  const nameWithId = employeeId ? `${user.name} (${employeeId})` : user.name;
 
   return (
     <div className="max-w-4xl pb-12 space-y-5">
@@ -211,19 +200,10 @@ export default function SettingsPage() {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">{nameWithId}</h1>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{
-              background: isPM ? '#E3F2FD' : '#E8F5E9',
-              color: isPM ? '#1565C0' : '#2E7D32',
-            }}>
-              {isPM ? 'Lead' : 'Individual Contributor'}
-            </span>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">{user.name}</h1>
+            <RoleBadge role={user.role} />
           </div>
-          <div className="mt-1 text-sm text-slate-500">{COMPANY_NAME}</div>
-          <div className="mt-0.5 text-xs text-slate-400 flex items-center gap-1.5">
-            <Mail size={11} className="text-slate-300" />
-            {user.email}
-          </div>
+          <div className="mt-1 text-xs text-slate-400 font-mono">@{user.username || user.email}</div>
         </div>
       </div>
 
@@ -232,29 +212,15 @@ export default function SettingsPage() {
 
         {/* Left: Identity form */}
         <div className="lg:col-span-3">
-          <Section icon={User} title="Personal details" subtitle="Your profile as it appears across Pragati.">
+          <Section icon={User} title="Personal details" subtitle="Your name as it appears across Pragati.">
             <form onSubmit={saveIdentity} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Full name">
                   <input className="input" value={name} onChange={e => setName(e.target.value)} required />
                 </Field>
-                <Field label="Employee ID">
-                  <input className="input" value={employeeId} onChange={e => setEmpId(e.target.value)} placeholder="e.g. 27207" />
-                </Field>
-                <ReadonlyField label="Company" value={COMPANY_NAME} />
-                <ReadonlyField label="Email" value={user.email} />
-                <Field label="Designation">
-                  <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Executive" />
-                </Field>
-                <Field label="Function">
-                  <input className="input" value={department} onChange={e => setDept(e.target.value)} placeholder="e.g. QA-IT" />
-                </Field>
-                <Field label="Location">
-                  <input className="input" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Panelav" />
-                </Field>
-                <Field label="Extension / phone">
-                  <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="—" />
-                </Field>
+                <ReadonlyField label="Username" value={`@${user.username || user.email}`} />
+                <ReadonlyField label="Employee ID" value={employeeId || '—'} />
+                <ReadonlyField label="Role" value={isPM ? 'Team Leader' : 'Individual Contributor'} />
               </div>
 
               <div className="flex items-center gap-3 pt-1">
@@ -272,7 +238,7 @@ export default function SettingsPage() {
 
           {/* Notifications */}
           <div id="notifications" className="scroll-mt-6">
-          <Section icon={Bell} title="Notifications" subtitle="Emails Pragati sends you.">
+          <Section icon={Bell} title="Notifications" subtitle="What shows up on your dashboard.">
             <div className={notifSaving ? 'opacity-60 pointer-events-none transition-opacity' : 'transition-opacity'}>
               <Toggle label="Task assigned to me"  description="When a PM assigns you a new task."
                 checked={notifTaskAssigned} onChange={v => { setNA(v); saveNotif('notifTaskAssigned', v); }} />
@@ -284,7 +250,7 @@ export default function SettingsPage() {
                 checked={notifProjectUpdate} onChange={v => { setNPU(v); saveNotif('notifProjectUpdate', v); }} />
             </div>
             <p className="text-[11px] text-slate-400 mt-3 leading-snug">
-              Sent to <span className="font-semibold text-slate-500">{user.email}</span>
+              These appear on your dashboard — Pragati never sends email.
             </p>
           </Section>
           </div>

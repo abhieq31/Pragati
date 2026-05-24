@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { api } from '@/lib/client/api';
-import { Avatar } from '@/components/ui';
+import { Avatar, RoleBadge } from '@/components/ui';
 import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 
 /* ── role display helpers ─────────────────────────────────────────────── */
@@ -92,7 +92,6 @@ function AddMemberModal({ onClose, onCreated }: {
   const [employeeId, setEmployeeId] = useState('');
   const [name, setName]             = useState('');
   const [nameEdited, setNameEdited] = useState(false);
-  const [title, setTitle]           = useState('');
   const [saving, setSaving]         = useState(false);
   const [err, setErr]               = useState('');
 
@@ -109,7 +108,7 @@ function AddMemberModal({ onClose, onCreated }: {
     try {
       const res = await api<{ user: any }>('/users', {
         method: 'POST',
-        body: { name: name.trim() || deriveName(username), username, employeeId, title },
+        body: { name: name.trim() || deriveName(username), username, employeeId },
       });
       onCreated(res.user.name);
     } catch (e: any) {
@@ -181,12 +180,6 @@ function AddMemberModal({ onClose, onCreated }: {
               value={name}
               onChange={(e) => { setName(e.target.value); setNameEdited(true); }}
             />
-          </div>
-
-          <div>
-            <label className="label">Job title <span className="text-slate-300 font-normal normal-case">(optional)</span></label>
-            <input className="input" placeholder="e.g. Validation Analyst"
-              value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           {err && (
@@ -364,11 +357,7 @@ function EditUserModal({ user, onClose, onSaved }: {
   user: any; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name:       user.name       || '',
-    title:      user.title      || '',
-    department: user.department || '',
-    phone:      user.phone      || '',
-    location:   user.location   || '',
+    name: user.name || '',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
@@ -396,32 +385,10 @@ function EditUserModal({ user, onClose, onSaved }: {
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
         </div>
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <label className="label">Full name</label>
-              <input className="input" required value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">Job title</label>
-              <input className="input" placeholder="e.g. QA Specialist"
-                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">Department</label>
-              <input className="input" placeholder="e.g. Quality"
-                value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">Phone</label>
-              <input className="input" placeholder="+91 98765 43210"
-                value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">Location</label>
-              <input className="input" placeholder="Mumbai"
-                value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
-            </div>
+          <div>
+            <label className="label">Full name</label>
+            <input className="input" required value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })} />
           </div>
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">{err}</div>}
           <div className="flex gap-2 pt-1">
@@ -657,11 +624,9 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                 <Avatar name={u.name} size={36} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Team Lead'} · <span className="font-mono">@{u.username || u.email}</span></div>
+                  <div className="text-xs text-slate-400 mt-0.5 font-mono">@{u.username || u.email}</div>
                 </div>
-                <span className={`tag border text-xs font-semibold ${u.role === 'admin' ? ROLE_COLOR.admin : ROLE_COLOR.pm}`}>
-                  {u.role === 'admin' ? 'Admin' : 'Lead'}
-                </span>
+                <RoleBadge role={u.role} />
                 {u.lockedAt && (
                   <span className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
                         title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}>
@@ -728,9 +693,9 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                 <Avatar name={u.name} size={36} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Individual Contributor'} · <span className="font-mono">@{u.username || u.email}</span></div>
+                  <div className="text-xs text-slate-400 mt-0.5 font-mono">@{u.username || u.email}</div>
                 </div>
-                <span className={`tag border text-xs ${ROLE_COLOR.employee}`}>Contributor</span>
+                <RoleBadge role={u.role} />
                 {u.lockedAt && (
                   <span className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
                         title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}>
