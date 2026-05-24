@@ -11,10 +11,11 @@ import { handleError, readBody } from '@/lib/http';
 export const runtime = 'nodejs';
 
 const Body = z.object({
-  // 'admin' is intentionally absent — admin elevation only happens via
-  // the workspace-owner email + the bootstrap endpoint, never through
-  // a generic PATCH that a compromised lead could call.
-  role:       z.enum(['employee', 'pm']).optional(),
+  // The admin can move anyone between Contributor (employee) and Team Lead.
+  // 'admin' is intentionally NOT assignable here — there is a single
+  // workspace admin (the owner), provisioned via env/bootstrap, never
+  // through a generic PATCH. 'pm' is accepted only for legacy records.
+  role:       z.enum(['employee', 'lead', 'pm']).optional(),
   title:      z.string().max(120).optional(),
   name:       z.string().max(120).optional(),
   department: z.string().max(120).optional(),

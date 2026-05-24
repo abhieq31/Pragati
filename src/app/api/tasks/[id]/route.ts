@@ -67,16 +67,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const current = await Task.findById(params.id).select('status assigneeId').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Contributors (non-leads) can only update their own task's status.
-    // All other edits — title, due date, assignee, priority, etc. —
-    // require lead role. Leads keep full edit rights.
+    // Contributors (non-leads) on their OWN task may update the status and
+    // flag who it's stuck/pending with — nothing else. Title, due date,
+    // assignee, priority, etc. remain lead-only. Leads keep full edit rights.
     if (!canMutate(user!.role)) {
       const isAssignee = current.assigneeId && String(current.assigneeId) === String(user!.sub);
       const keys = Object.keys(body).filter(k => body[k as keyof typeof body] !== undefined);
-      const onlyStatusChange = isAssignee && keys.length === 1 && keys[0] === 'status';
-      if (!onlyStatusChange) {
+      const ALLOWED_FOR_ASSIGNEE = new Set(['status', 'pendingWith']);
+      const onlyAllowed = isAssignee && keys.length > 0 && keys.every(k => ALLOWED_FOR_ASSIGNEE.has(k));
+      if (!onlyAllowed) {
         return NextResponse.json(
-          { error: 'Only leads can edit task fields. Contributors can change status on their own tasks.' },
+          { error: 'Contributors can only change the status and "waiting on" of their own tasks.' },
           { status: 403 },
         );
       }

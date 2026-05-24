@@ -117,6 +117,7 @@ export function task(t: any, extras: Any = {}) {
     applicableSite: t.applicableSite || 'na',
     deployStage:    t.deployStage   || 'na',
     remarks:        t.remarks  || '',
+    pendingWith:    t.pendingWith || '',
     aiTriage: t.aiTriage
       ? {
           severity: t.aiTriage.severity,

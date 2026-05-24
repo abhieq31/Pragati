@@ -9,7 +9,8 @@ import {
   TaskLink, formatDate, useToast,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
+import { weightedProgress } from '@/lib/progress';
 import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { chimeIfEnabled } from '@/lib/sound';
 
@@ -409,7 +410,8 @@ function DeleteProjectModal({ projectName, projectId, onClose, onDeleted }: {
 /* ── Main page ────────────────────────────────────────────────────────────── */
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const isLead = useIsLead();
+  const isLead  = useIsLead();
+  const isAdmin = useIsAdmin();
   const [project, setProject] = useState<any>(null);
   const [users, setUsers]     = useState<any[]>([]);
   const [me, setMe]           = useState<any>(null);
@@ -485,10 +487,11 @@ export default function ProjectDetailPage() {
   const tasks:  any[] = Array.isArray((project as any).tasks)  ? (project as any).tasks  : [];
   const phases: any[] = Array.isArray((project as any).phases) ? (project as any).phases : [];
 
-  const pct = tasks.length
-    ? Math.round(tasks.filter((t: any) => t.status === 'done').length / tasks.length * 100)
-    : 0;
+  // Priority-weighted progress — a critical task done moves the bar more
+  // than a low one. See src/lib/progress.ts.
+  const pct = weightedProgress(tasks);
   const pendingQa = tasks.filter((t: any) => t.requiresQaSignoff && !t.qaSignoffAt && t.status === 'done').length;
+  const waitingCount = tasks.filter((t: any) => t.pendingWith && t.status !== 'done').length;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const overdue = tasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < today && t.status !== 'done').length;
   const openTaskCount = tasks.filter((t: any) => t.status !== 'done').length;
@@ -586,11 +589,6 @@ export default function ProjectDetailPage() {
             )}
           </div>
           {project.description && <p className="mt-2 text-sm text-slate-600 max-w-3xl">{project.description}</p>}
-          {project.lifecycleMeta?.regulatoryRefs && (
-            <p className="mt-1.5 text-xs text-slate-500">
-              <span className="font-semibold">Regulatory refs:</span> {project.lifecycleMeta.regulatoryRefs}
-            </p>
-          )}
         </div>
 
         <div className="flex flex-col items-end gap-2 shrink-0">
@@ -625,7 +623,8 @@ export default function ProjectDetailPage() {
             className="btn-secondary flex items-center gap-1.5 text-xs w-44 justify-center">
             <Download size={13} /> Export to Excel
           </button>
-          {(me?.role === 'pm' || me?.role === 'lead' || me?.role === 'admin') && (
+          {/* Archive + Delete are destructive lifecycle actions → admin only. */}
+          {isAdmin && (
             <button
               onClick={async () => {
                 const archiving = !project.archived;
@@ -644,7 +643,7 @@ export default function ProjectDetailPage() {
               <Archive size={13} /> {project.archived ? 'Restore from archive' : 'Archive project'}
             </button>
           )}
-          {(me?.role === 'pm' || me?.role === 'lead' || me?.role === 'admin') && (
+          {isAdmin && (
             <button onClick={() => setDeleteOpen(true)}
               className="flex items-center gap-1.5 text-xs w-44 justify-center px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
               <Trash2 size={13} /> Delete project
@@ -656,10 +655,10 @@ export default function ProjectDetailPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Progress', value: `${pct}%`, sub: `${tasks.filter((t: any) => t.status === 'done').length}/${tasks.length} tasks`, bar: pct },
+          { label: 'Progress', value: `${pct}%`, sub: `${tasks.filter((t: any) => t.status === 'done').length}/${tasks.length} tasks · weighted`, bar: pct },
           { label: 'Phases', value: phases.length, sub: 'lifecycle stages' },
           { label: 'QA sign-off', value: pendingQa, sub: pendingQa > 0 ? 'awaiting review' : 'all approved', warn: pendingQa > 0 },
-          { label: 'GxP critical', value: tasks.filter((t: any) => t.gxpCritical).length, sub: 'compliance tasks' },
+          { label: 'Waiting on', value: waitingCount, sub: waitingCount > 0 ? 'pending on someone' : 'nothing stuck', warn: waitingCount > 0 },
           { label: 'Overdue', value: overdue, sub: overdue > 0 ? 'past deadline' : 'none — on track', danger: overdue > 0 },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-1"
@@ -694,7 +693,7 @@ export default function ProjectDetailPage() {
           {phases.map((ph: any, i: number) => {
             const ts = tasks.filter((t: any) => t.phaseId === ph.id);
             const done = ts.filter((t: any) => t.status === 'done').length;
-            const pctP = ts.length ? Math.round((done / ts.length) * 100) : 0;
+            const pctP = weightedProgress(ts);
             return (
               <Card key={ph.id}>
                 <div className="flex items-center justify-between mb-1">
@@ -735,6 +734,12 @@ export default function ProjectDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
+                        {t.pendingWith && t.status !== 'done' && (
+                          <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
+                                title={`Waiting on ${t.pendingWith}`}>
+                            ⏳ {t.pendingWith}
+                          </span>
+                        )}
                         {t.gxpCritical && <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>}
                         {t.requiresQaSignoff && (t.qaSignoffAt
                           ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">QA ✓</span>
@@ -776,6 +781,12 @@ export default function ProjectDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {t.pendingWith && t.status !== 'done' && (
+                      <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
+                            title={`Waiting on ${t.pendingWith}`}>
+                        ⏳ {t.pendingWith}
+                      </span>
+                    )}
                     {t.gxpCritical && <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>}
                     {t.requiresQaSignoff && (t.qaSignoffAt
                       ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">QA ✓</span>

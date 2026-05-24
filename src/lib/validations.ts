@@ -243,5 +243,6 @@ export const TaskUpdateSchema = z.object({
   applicableSite: ApplicableSiteEnum.optional(),
   deployStage: DeployStageEnum.optional(),
   remarks: z.string().max(5000).optional(),
+  pendingWith: z.string().max(120).optional(),
 });
 export type TaskUpdateInput = z.infer<typeof TaskUpdateSchema>;

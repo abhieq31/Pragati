@@ -74,13 +74,12 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   const isLeadOrAdmin = user.role === 'pm' || user.role === 'lead' || user.role === 'admin';
 
   // Team-lead nav: run teams, projects and tasks. NOT People — workspace
-  // user management (create/reset/unlock/delete accounts) is an admin-only
-  // surface. Admin gets the same plus People.
+  // user management (create/reset/unlock/delete/promote accounts) is an
+  // admin-only surface, appended via adminExtra below.
   const leadNav: NavItem[] = [
     { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
     { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams',    label: 'Team',      icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
-    { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
   ];
   const adminExtra: NavItem[] = [
     { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
