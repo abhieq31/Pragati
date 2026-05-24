@@ -47,8 +47,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await connectDB();
+    // Validate the body BEFORE touching the database, so malformed input
+    // fails fast with a 400 regardless of DB health.
     const body  = await readBody(req, Body);
+    await connectDB();
     const ident = body.identifier.toLowerCase().trim();
     // Look up by email if the string looks like an address, otherwise by
     // username. Treat either column as the canonical identifier — they're
