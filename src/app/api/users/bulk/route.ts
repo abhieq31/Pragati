@@ -17,17 +17,17 @@ const Row = z.object({
   username:   UsernameSchema,
   employeeId: z.string().trim().min(1).max(40),
   name:       z.string().trim().max(120).optional(),
-  title:      z.string().trim().max(120).optional(),
 });
 
 const Body = z.object({
   rows: z.array(Row).min(1).max(100),
 });
 
-/** Same convention as the single-create flow:
- *  <firstname lower-cased>@<employee id>  e.g. "Priya Sharma" + 12345 → priya@12345 */
+/** Same convention as the single-create flow: first name as written, "@",
+ *  employee ID. e.g. "Abhi Patel" + 29218 → "Abhi@29218". Forced to change
+ *  on first login. */
 function defaultPassword(name: string, employeeId: string): string {
-  const first = name.trim().split(/\s+/)[0]?.toLowerCase() || 'user';
+  const first = name.trim().split(/\s+/)[0] || 'User';
   return `${first}@${employeeId.trim()}`;
 }
 
@@ -92,8 +92,7 @@ export async function POST(req: NextRequest) {
           name,
           passwordHash:       bcrypt.hashSync(defaultPassword(name, employeeId), 10),
           role:               'employee',
-          title:              r.title || '',
-          mustChangePassword: false,
+          mustChangePassword: true,
         });
         created.push({ username: r.username, name });
       } catch {

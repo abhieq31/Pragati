@@ -52,12 +52,12 @@ export async function POST(req: NextRequest) {
     const body  = await readBody(req, Body);
     await connectDB();
     const ident = body.identifier.toLowerCase().trim();
-    // Look up by email if the string looks like an address, otherwise by
-    // username. Treat either column as the canonical identifier — they're
-    // both unique and case-insensitive at the schema level.
+    // Sign in with whatever the person remembers — username, employee ID,
+    // or (legacy) email. We match any of the three; all are unique. The
+    // employeeId match is case-insensitive via a trimmed exact compare.
     const user  = ident.includes('@')
       ? await User.findOne({ email: ident })
-      : await User.findOne({ username: ident });
+      : await User.findOne({ $or: [{ username: ident }, { employeeId: body.identifier.trim() }] });
 
     // Unified "invalid" path for missing user, locked user, and wrong
     // password. We still do the bcrypt comparison against a dummy hash

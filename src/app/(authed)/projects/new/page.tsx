@@ -285,25 +285,14 @@ export default function NewProjectPage() {
               <textarea className="textarea" rows={2} placeholder="What's this project about?"
                 value={form.description} onChange={e => up('description', e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Priority</label>
-                <select className="select" value={form.priority} onChange={e => up('priority', e.target.value)}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">GxP impact</label>
-                <select className="select" value={form.gxpImpact} onChange={e => up('gxpImpact', e.target.value)}>
-                  <option value="none">None</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
+            <div>
+              <label className="label">Priority</label>
+              <select className="select" value={form.priority} onChange={e => up('priority', e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

@@ -584,16 +584,13 @@ export default function ProjectDetailPage() {
             )}
             <LifecycleTag lifecycle={project.lifecycle} />
             <PriorityTag priority={project.priority} />
-            {project.gxpImpact && project.gxpImpact !== 'none' && (
-              <span className="tag bg-red-50 text-red-700 border border-red-200">GxP: {project.gxpImpact}</span>
-            )}
           </div>
           {project.description && <p className="mt-2 text-sm text-slate-600 max-w-3xl">{project.description}</p>}
         </div>
 
         <div className="flex flex-col items-end gap-2 shrink-0">
           <div className="text-right text-xs text-slate-500 space-y-0.5">
-            <div>Owner: <span className="font-medium text-slate-700">{project.ownerName || '—'}</span></div>
+            <div>Project owner: <span className="font-medium text-slate-700">{project.ownerName || '—'}</span></div>
             <div>Team: {project.teamId
               ? <Link href={`/teams/${project.teamId}`} className="text-blue-600 hover:underline">{project.teamName || '—'}</Link>
               : '—'}</div>
@@ -619,36 +616,39 @@ export default function ProjectDetailPage() {
             )}
           </div>
 
-          <button onClick={exportProject}
-            className="btn-secondary flex items-center gap-1.5 text-xs w-44 justify-center">
-            <Download size={13} /> Export to Excel
-          </button>
-          {/* Archive + Delete are destructive lifecycle actions → admin only. */}
-          {isAdmin && (
-            <button
-              onClick={async () => {
-                const archiving = !project.archived;
-                const msg = archiving
-                  ? `Archive "${project.name}"?\nIt will be hidden from the dashboard and project list, but tasks and audit history remain.`
-                  : `Restore "${project.name}" from the archive?`;
-                if (!confirm(msg)) return;
-                await api(`/projects/${project.id}/archive`, { method: 'POST', body: { archived: archiving } });
-                load();
-              }}
-              className={`flex items-center gap-1.5 text-xs w-44 justify-center px-3 py-2 rounded-lg border transition-colors ${
-                project.archived
-                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                  : 'border-amber-200 text-amber-700 hover:bg-amber-50'
-              }`}>
-              <Archive size={13} /> {project.archived ? 'Restore from archive' : 'Archive project'}
+          {/* Actions — right-aligned row. Export for everyone; Archive +
+             Delete (destructive lifecycle) are admin-only. */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button onClick={exportProject}
+              className="btn-secondary flex items-center gap-1.5 text-xs">
+              <Download size={13} /> Export
             </button>
-          )}
-          {isAdmin && (
-            <button onClick={() => setDeleteOpen(true)}
-              className="flex items-center gap-1.5 text-xs w-44 justify-center px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
-              <Trash2 size={13} /> Delete project
-            </button>
-          )}
+            {isAdmin && (
+              <button
+                onClick={async () => {
+                  const archiving = !project.archived;
+                  const msg = archiving
+                    ? `Archive "${project.name}"?\nIt will be hidden from the dashboard and project list, but tasks and audit history remain.`
+                    : `Restore "${project.name}" from the archive?`;
+                  if (!confirm(msg)) return;
+                  await api(`/projects/${project.id}/archive`, { method: 'POST', body: { archived: archiving } });
+                  load();
+                }}
+                className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors ${
+                  project.archived
+                    ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                    : 'border-amber-200 text-amber-700 hover:bg-amber-50'
+                }`}>
+                <Archive size={13} /> {project.archived ? 'Restore' : 'Archive'}
+              </button>
+            )}
+            {isAdmin && (
+              <button onClick={() => setDeleteOpen(true)}
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
+                <Trash2 size={13} /> Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
