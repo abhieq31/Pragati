@@ -204,9 +204,9 @@ function AddMemberModal({ onClose, onCreated }: {
 
 /* ── Role-change confirmation dialog ──────────────────────────────────── */
 function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
-  user: any; targetRole: 'pm' | 'employee'; onConfirm: () => void; onCancel: () => void; saving: boolean;
+  user: any; targetRole: 'lead' | 'employee'; onConfirm: () => void; onCancel: () => void; saving: boolean;
 }) {
-  const promote = targetRole === 'pm';
+  const promote = targetRole === 'lead';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[380px] modal-in" onClick={(e) => e.stopPropagation()}>
@@ -216,12 +216,12 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
           </div>
           <div>
             <div className="text-base font-black text-slate-900 tracking-tight">
-              {promote ? `Promote ${user.name} to PM?` : `Remove PM from ${user.name}?`}
+              {promote ? `Promote ${user.name} to Team Lead?` : `Make ${user.name} a Contributor?`}
             </div>
             <p className="text-sm text-slate-400 mt-2 leading-relaxed">
               {promote
-                ? 'PMs have full access to all projects, teams, org analytics, and AI insights. Only promote trusted team members.'
-                : 'They will lose access to org analytics, AI insights, and team management. Their tasks and projects remain intact.'}
+                ? 'Team Leads can create and run teams, allocate projects, and assign tasks. Only promote trusted members.'
+                : 'They will go back to contributor access — read their team board and update their own tasks. Their work stays intact.'}
             </p>
           </div>
           <div className="flex gap-2 w-full">
@@ -229,7 +229,7 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
             <button onClick={onConfirm} disabled={saving}
               className={`flex-1 justify-center btn ${promote ? 'btn-primary' : ''}`}
               style={!promote ? { background: 'linear-gradient(135deg,#b45309,#d97706)', color: '#fff', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' } : {}}>
-              {saving ? '…' : promote ? 'Promote to PM' : 'Remove PM access'}
+              {saving ? '…' : promote ? 'Promote to Lead' : 'Make Contributor'}
             </button>
           </div>
         </div>
@@ -359,7 +359,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [creds, setCreds] = useState<{ name: string; email: string; tempPassword: string } | null>(null);
-  const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'pm' | 'employee' } | null>(null);
+  const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'lead' | 'employee' } | null>(null);
   const [roleErr, setRoleErr] = useState('');
   const [editUser, setEditUser] = useState<any | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState<any | null>(null);
@@ -483,14 +483,12 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">People</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Manage team members and access. PMs see everything — ICs see their own work.
+            Workspace user management — add people, promote contributors to leads, reset passwords, and unlock accounts.
           </p>
         </div>
-        {isPM && (
-          <button onClick={() => setShowAdd(true)} className="btn-primary shrink-0 gap-2">
-            <UserPlus size={14} /> Add member
-          </button>
-        )}
+        <button onClick={() => setShowAdd(true)} className="btn-primary shrink-0 gap-2">
+          <UserPlus size={14} /> Add member
+        </button>
       </div>
 
       {/* Role info banner */}
@@ -498,10 +496,10 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         <div className="flex items-start gap-3">
           <Shield size={16} className="text-blue-600 shrink-0 mt-0.5" />
           <div className="text-sm text-slate-600 leading-relaxed">
-            <strong className="text-blue-700">Access levels:</strong>{' '}
-            <strong>Individual Contributors</strong> see their tasks, projects, and yearly view.{' '}
-            <strong>PMs</strong> additionally access Teams, Org analytics, and AI Insights.{' '}
-            {isPM && <span className="text-slate-400">Promote ICs to PM only when needed — PM access cannot be self-assigned.</span>}
+            <strong className="text-blue-700">Roles:</strong>{' '}
+            <strong>Contributors</strong> read their team board and update their own tasks.{' '}
+            <strong>Team Leads</strong> create teams, allocate projects, and assign tasks.{' '}
+            <strong>Admin</strong> (you) manages everyone. Promote and demote anyone below.
           </div>
         </div>
       </div>
@@ -514,11 +512,11 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
       <div className="card overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
           <Shield size={14} className="text-blue-500" />
-          <h2 className="text-sm font-bold text-slate-700">Project Managers</h2>
+          <h2 className="text-sm font-bold text-slate-700">Team Leads &amp; Admin</h2>
           <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">{pms.length}</span>
         </div>
         {pms.length === 0 ? (
-          <div className="px-5 py-5 text-sm text-slate-400">No PMs yet.</div>
+          <div className="px-5 py-5 text-sm text-slate-400">No leads yet.</div>
         ) : (
           <div className="divide-y divide-slate-50">
             {pms.map((u) => (
@@ -562,12 +560,14 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                     Reset password
                   </button>
                 )}
-                {isPM && me?.id !== u.id && (
+                {/* Demote a lead to contributor. Never offered for the
+                   admin row or the admin's own row. */}
+                {me?.id !== u.id && u.role !== 'admin' && (
                   <button
                     className="text-xs text-slate-500 hover:text-amber-600 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-amber-50 transition-colors border border-transparent hover:border-amber-200"
                     onClick={() => setRoleConfirm({ user: u, targetRole: 'employee' })}
                     disabled={saving === u.id}>
-                    Remove PM
+                    Make contributor
                   </button>
                 )}
               </div>
@@ -580,14 +580,13 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
       <div className="card overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
           <User size={14} className="text-slate-400" />
-          <h2 className="text-sm font-bold text-slate-700">Individual Contributors</h2>
+          <h2 className="text-sm font-bold text-slate-700">Contributors</h2>
           <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 ml-1">{ics.length}</span>
         </div>
         {ics.length === 0 ? (
           <div className="px-5 py-5 text-sm text-slate-400">
-            No ICs yet.{isPM && (
-              <> <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button></>
-            )}
+            No contributors yet.{' '}
+            <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button>
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
@@ -598,29 +597,45 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                   <div className="font-semibold text-slate-800 text-sm leading-tight">{u.name}</div>
                   <div className="text-xs text-slate-400 mt-0.5">{u.title || 'Individual Contributor'} · <span className="font-mono">@{u.username || u.email}</span></div>
                 </div>
-                <span className={`tag border text-xs ${ROLE_COLOR.employee}`}>IC</span>
-                {isPM && (
+                <span className={`tag border text-xs ${ROLE_COLOR.employee}`}>Contributor</span>
+                {u.lockedAt && (
+                  <span className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
+                        title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}>
+                    Locked
+                  </span>
+                )}
+                <button
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  onClick={() => setEditUser(u)} title="Edit profile">
+                  <Pencil size={13} />
+                </button>
+                {u.lockedAt && (
                   <button
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    onClick={() => setEditUser(u)} title="Edit profile">
-                    <Pencil size={13} />
+                    className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors border border-rose-200"
+                    onClick={() => unlockAccount(u)}
+                    disabled={saving === u.id}
+                    title="Clear the failed-login counter so this user can sign in again">
+                    Unlock
                   </button>
                 )}
-                {isPM && (
-                  <button
-                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
-                    onClick={() => setRoleConfirm({ user: u, targetRole: 'pm' })}
-                    disabled={saving === u.id}>
-                    Promote to PM
-                  </button>
-                )}
-                {isPM && (
-                  <button
-                    className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                    onClick={() => setRemoveConfirm(u)} title="Remove member">
-                    <Trash2 size={13} />
-                  </button>
-                )}
+                <button
+                  className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                  onClick={() => resetPassword(u)}
+                  disabled={saving === u.id}
+                  title="Generate a temporary password">
+                  Reset password
+                </button>
+                <button
+                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
+                  onClick={() => setRoleConfirm({ user: u, targetRole: 'lead' })}
+                  disabled={saving === u.id}>
+                  Promote to Lead
+                </button>
+                <button
+                  className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  onClick={() => setRemoveConfirm(u)} title="Remove member">
+                  <Trash2 size={13} />
+                </button>
               </div>
             ))}
           </div>

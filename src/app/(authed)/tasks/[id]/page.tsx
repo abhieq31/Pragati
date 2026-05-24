@@ -6,7 +6,7 @@ import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, formatDate, Avatar, useToast } from '@/components/ui';
 import { useIsLead } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, Building2, GitBranch, MessageSquare, Timer, Activity } from 'lucide-react';
+import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -23,53 +23,6 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   issue: 'Issue', corrective_action: 'Corrective Action', finding: 'Finding', data_review: 'Data Review',
   deviation: 'Issue', capa: 'Corrective Action', audit_finding: 'Finding',
 };
-
-/* ── Deploy-stage pipeline pill ─────────────────────────────────────────── */
-const STAGES = [
-  { key: 'dev', label: 'DEV', color: '#7c3aed', bg: '#f5f3ff' },
-  { key: 'int', label: 'INT', color: '#0369a1', bg: '#f0f9ff' },
-  { key: 'prd', label: 'PRD', color: '#15803d', bg: '#f0fdf4' },
-] as const;
-
-function StagePipeline({ current, onChange }: { current: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-1">
-      {STAGES.map((s, i) => {
-        const active = current === s.key;
-        const passed = STAGES.findIndex(x => x.key === current) > i;
-        return (
-          <div key={s.key} className="flex items-center gap-1">
-            <button
-              onClick={() => onChange(current === s.key ? 'na' : s.key)}
-              className="px-3 py-1 rounded-md text-xs font-bold border transition-all"
-              style={{
-                background: active ? s.bg : passed ? '#f8fafc' : '#fff',
-                color: active ? s.color : passed ? '#94a3b8' : '#cbd5e1',
-                borderColor: active ? s.color : '#e2e8f0',
-                opacity: active ? 1 : passed ? 0.6 : 1,
-              }}
-            >
-              {s.label}
-            </button>
-            {i < STAGES.length - 1 && (
-              <ChevronRight size={12} className={passed || active ? 'text-slate-400' : 'text-slate-200'} />
-            )}
-          </div>
-        );
-      })}
-      {current === 'na' && (
-        <span className="text-xs text-slate-300 ml-1">Not set</span>
-      )}
-    </div>
-  );
-}
-
-const SITE_OPTIONS = [
-  { value: 'na',      label: 'N/A' },
-  { value: 'val',     label: 'Staging' },
-  { value: 'prd',     label: 'Production' },
-  { value: 'val_prd', label: 'Staging + Production' },
-];
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -310,44 +263,17 @@ export default function TaskDetailPage() {
               </div>
             </div>
 
-            {/* Document No. + Applicable Site */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="label flex items-center gap-1">
-                  <FileText size={11} /> Document No.
-                </label>
-                <input
-                  className="input text-sm font-mono"
-                  placeholder="SOP / Protocol / Doc ref"
-                  value={task.documentNo || ''}
-                  onChange={(e) => setTask({ ...task, documentNo: e.target.value })}
-                  onBlur={(e) => update({ documentNo: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label flex items-center gap-1">
-                  <Building2 size={11} /> Environment
-                </label>
-                <select
-                  className="select text-sm"
-                  value={task.applicableSite || 'na'}
-                  onChange={(e) => update({ applicableSite: e.target.value })}
-                >
-                  {SITE_OPTIONS.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Deploy stage pipeline */}
+            {/* Document No. */}
             <div>
-              <label className="label flex items-center gap-1 mb-2">
-                <GitBranch size={11} /> Deployment Stage
+              <label className="label flex items-center gap-1">
+                <FileText size={11} /> Document No.
               </label>
-              <StagePipeline
-                current={task.deployStage || 'na'}
-                onChange={(v) => { setTask({ ...task, deployStage: v }); update({ deployStage: v }); }}
+              <input
+                className="input text-sm font-mono"
+                placeholder="SOP / Protocol / Doc ref"
+                value={task.documentNo || ''}
+                onChange={(e) => setTask({ ...task, documentNo: e.target.value })}
+                onBlur={(e) => update({ documentNo: e.target.value })}
               />
             </div>
 
@@ -498,6 +424,26 @@ export default function TaskDetailPage() {
                 {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
+            {/* Waiting on — who the task is stuck/pending with (QA, a person,
+               a department). Editable by the assignee or a lead. */}
+            <div>
+              <label className="label flex items-center gap-1">
+                <Clock size={11} /> Waiting on <span className="text-slate-300 font-normal normal-case">(if stuck)</span>
+              </label>
+              <input
+                className="input text-sm"
+                placeholder="e.g. QA review · Sachin · IT Helpdesk"
+                value={task.pendingWith || ''}
+                disabled={!canActOnTask}
+                onChange={(e) => setTask({ ...task, pendingWith: e.target.value })}
+                onBlur={(e) => canActOnTask && update({ pendingWith: e.target.value })}
+              />
+              {task.pendingWith && (
+                <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+                  <Clock size={11} /> Pending with {task.pendingWith}
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="label">Priority</label>
@@ -522,18 +468,6 @@ export default function TaskDetailPage() {
                 <label className="label">Due date</label>
                 <input type="date" className="input" value={task.dueDate?.slice(0,10)||''}
                   onChange={(e) => update({ dueDate: e.target.value || null })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="label">Est. hrs</label>
-                <input type="number" className="input" value={task.estimatedHours??''}
-                  onChange={(e) => update({ estimatedHours: e.target.value===''?null:Number(e.target.value) })} />
-              </div>
-              <div>
-                <label className="label">Actual hrs</label>
-                <input type="number" className="input" value={task.actualHours??''}
-                  onChange={(e) => update({ actualHours: e.target.value===''?null:Number(e.target.value) })} />
               </div>
             </div>
             {/* Compliance toggles live behind a disclosure so the default

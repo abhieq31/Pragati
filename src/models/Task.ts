@@ -88,6 +88,11 @@ const TaskSchema = new Schema(
     },
     remarks: { type: String, default: '' },
 
+    // Who the task is currently stuck/waiting on — a person, role, or
+    // department (e.g. "QA", "Sachin", "IT Helpdesk"). Free text so a lead
+    // can name whoever the bottleneck is. Empty = not waiting on anyone.
+    pendingWith: { type: String, default: '' },
+
     subtasks: { type: [SubtaskSchema], default: [] },
     comments: { type: [CommentSchema], default: [] },
     effortLog: { type: [EffortEntrySchema], default: [] },

@@ -102,7 +102,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
+    // Deleting a project is destructive + irreversible → admin only.
+    const { error, user } = await requireRole(req, 'admin');
     if (error) return error;
     await connectDB();
 

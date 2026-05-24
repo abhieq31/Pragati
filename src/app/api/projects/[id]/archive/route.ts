@@ -19,7 +19,7 @@ const Body = z.object({ archived: z.boolean() });
 // every team member and counts as a workspace-level decision.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
+    const { error, user } = await requireRole(req, 'admin');
     if (error) return error;
 
     // Guard against a CastError 500 on malformed IDs (anything not a
