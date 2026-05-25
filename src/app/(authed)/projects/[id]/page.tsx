@@ -163,13 +163,15 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
         const isOver = dragOverCol === col;
         const isDragging = !!draggingId;
         return (
-          <div key={col} className="shrink-0 flex flex-col rounded-xl transition-all duration-150"
+          <div key={col} className={`shrink-0 flex flex-col rounded-xl transition-all duration-150 border-2 ${
+              isOver ? '' : 'bg-slate-50 dark:bg-white/[0.03] border-slate-200/70 dark:border-white/10'
+            }`}
             style={{
               width: COLUMN_WIDTH,
               scrollSnapAlign: 'start',
-              background: isOver ? meta.bg : '#f8fafc',
-              border: `2px solid ${isOver ? meta.border : '#e9eef5'}`,
-              boxShadow: isOver ? `0 0 0 3px ${meta.border}` : undefined,
+              ...(isOver
+                ? { background: meta.bg, borderColor: meta.border, boxShadow: `0 0 0 3px ${meta.border}` }
+                : {}),
             }}
             onDragEnter={e => handleColDragEnter(e, col)}
             onDragLeave={e => handleColDragLeave(e, col)}
@@ -191,12 +193,11 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
                   <div key={t.id} draggable
                     onDragStart={e => handleDragStart(e, t.id)}
                     onDragEnd={handleDragEnd}
-                    className="group relative bg-white rounded-lg border transition-all duration-150 cursor-grab active:cursor-grabbing"
+                    className="group relative bg-white dark:bg-[#30302e] rounded-lg border border-slate-200 dark:border-white/10 transition-all duration-150 cursor-grab active:cursor-grabbing"
                     style={{
-                      borderColor: isDraggingThis ? meta.color : '#e2e8f0',
-                      boxShadow: isDraggingThis
-                        ? `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}`
-                        : '0 1px 3px rgba(0,0,0,0.06)',
+                      ...(isDraggingThis
+                        ? { borderColor: meta.color, boxShadow: `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}` }
+                        : { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }),
                       opacity: isDraggingThis ? 0.5 : isDragging ? 0.85 : 1,
                       transform: isDraggingThis ? 'rotate(1.5deg) scale(1.02)' : undefined,
                     }}
@@ -231,8 +232,10 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
                 );
               })}
               {colTasks.length === 0 && (
-                <div className="rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150 text-center px-2"
-                  style={{ borderColor: isOver ? meta.color : '#e2e8f0', background: isOver ? meta.bg : 'transparent' }}>
+                <div className={`rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150 text-center px-2 ${
+                    isOver ? '' : 'border-slate-200 dark:border-white/10'
+                  }`}
+                  style={isOver ? { borderColor: meta.color, background: meta.bg } : {}}>
                   <span className="text-xs leading-tight" style={{ color: isOver ? meta.color : '#94a3b8' }}>
                     {isOver ? 'Drop here' : isDragging ? 'Move card here' : 'No tasks'}
                   </span>

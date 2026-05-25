@@ -128,47 +128,17 @@ export default function DashboardClient({
 
   const firstName  = (dash.user.name || '').split(' ')[0] || 'there';
   const today      = new Date();
-  const dateLabel  = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   const totalOpen     = dash.teamTasks.filter(t => t.status !== 'done').length;
   const totalOverdue  = dash.teamTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < today).length;
 
   return (
     <div className="pb-12 max-w-[1440px]">
 
-      {/* ── Greeting hero ───────────────────────────────────────────────── */}
-      <div className="brand-mesh mb-6 rounded-3xl border border-slate-200/70 px-6 py-5 overflow-hidden relative">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={14} className="text-blue-500" />
-          {/* Date + greeting are intentionally client-local (browser TZ) and
-             will differ from the UTC server render near a day boundary —
-             suppressHydrationWarning lets React patch to the client value
-             without logging a mismatch. */}
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700/90" suppressHydrationWarning>
-            {dateLabel}
-          </span>
-        </div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
-          <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
+      {/* ── Greeting ────────────────────────────────────────────────────── */}
+      <div className="mb-6 pt-1">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight text-slate-900">
+          <span suppressHydrationWarning>{greeting()}, {firstName}.</span>
         </h1>
-        {/* At-a-glance status line — replaces the old generic tagline with
-           the numbers a lead actually wants the moment they land. */}
-        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-          {ongoingProjects.length === 0 ? (
-            <>No active projects yet — your board fills in as you create them.</>
-          ) : (
-            <>
-              <span className="font-semibold text-slate-800">{ongoingProjects.length}</span>
-              {' '}active {ongoingProjects.length === 1 ? 'project' : 'projects'} ·{' '}
-              <span className="font-semibold text-slate-800">{totalOpen}</span>
-              {' '}open {totalOpen === 1 ? 'task' : 'tasks'}
-              {totalOverdue > 0 ? (
-                <> · <span className="font-semibold text-red-600">{totalOverdue} overdue</span> need attention.</>
-              ) : (
-                <> · <span className="font-semibold text-emerald-600">nothing overdue.</span></>
-              )}
-            </>
-          )}
-        </p>
       </div>
 
       {isFirstRun ? (

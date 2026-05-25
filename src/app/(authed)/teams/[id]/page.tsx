@@ -14,6 +14,18 @@ import {
   TaskLink
 } from '@/components/ui';
 
+const FUNCTION_LABEL: Record<string, string> = {
+  general: 'General',
+  ctb: 'Change the Business',
+  rtb: 'Run the Business',
+  csv_validation: 'CSV / Validation',
+  data_integrity: 'Data Integrity',
+  pharmacovigilance: 'Pharmacovigilance',
+  lab_informatics: 'Lab Informatics',
+  audit: 'Audit',
+  training: 'Training',
+};
+
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [team, setTeam] = useState<any>(null);
@@ -95,7 +107,7 @@ export default function TeamDetailPage() {
       <div>
         <h1 className="text-2xl font-bold">{team.name}</h1>
         {team.description && <p className="text-slate-600 mt-1">{team.description}</p>}
-        <p className="text-sm text-slate-500 mt-1">Function: {team.function}</p>
+        <p className="text-sm text-slate-500 mt-1">Function: {FUNCTION_LABEL[team.function] || team.function}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

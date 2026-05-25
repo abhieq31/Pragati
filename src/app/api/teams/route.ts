@@ -6,6 +6,8 @@ import { Project } from '@/models/Project';
 import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
+import { TeamFunctionEnum } from '@/lib/validations';
+import { getLeadScope } from '@/lib/leadScope';
 
 export const runtime = 'nodejs';
 
@@ -14,17 +16,19 @@ const Create = z.object({
   description: z.string().optional(),
   leadId: z.string().optional(),
   memberIds: z.array(z.string()).optional(),
-  function: z
-    .enum(['data_integrity', 'csv_validation', 'pharmacovigilance', 'lab_informatics', 'audit', 'training', 'general'])
-    .optional()
+  function: TeamFunctionEnum.optional(),
 });
 
 export async function GET(req: NextRequest) {
   try {
-    const { error } = await requireUser(req);
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const teams = await Team.find({}).sort({ name: 1 }).lean();
+    // Non-admins only see teams they own (leadId) or belong to (memberIds);
+    // admins see every team in the workspace.
+    const scope = await getLeadScope(user!.sub, user!.role);
+    const teamFilter = scope.unrestricted ? {} : { _id: { $in: scope.teamOids } };
+    const teams = await Team.find(teamFilter).sort({ name: 1 }).lean();
     const counts = await Project.aggregate([{ $group: { _id: '$teamId', c: { $sum: 1 } } }]);
     const cmap = new Map(counts.map((c) => [String(c._id), c.c]));
     return NextResponse.json(

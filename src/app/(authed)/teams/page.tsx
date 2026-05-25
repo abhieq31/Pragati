@@ -389,12 +389,8 @@ function TeamFormModal({
               </label>
               <select className="select" value={func} onChange={(e) => setFunc(e.target.value)}>
                 <option value="general">General</option>
-                <option value="data_integrity">Data Integrity</option>
-                <option value="csv_validation">CSV / Validation</option>
-                <option value="pharmacovigilance">Pharmacovigilance</option>
-                <option value="lab_informatics">Lab Informatics</option>
-                <option value="audit">Audit</option>
-                <option value="training">Training</option>
+                <option value="ctb">Change the Business</option>
+                <option value="rtb">Run the Business</option>
               </select>
             </div>
             <div>

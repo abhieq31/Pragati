@@ -17,7 +17,7 @@ export default async function ProjectsPage() {
     listProjectsForUser(jwt.sub, jwt.role, {
       statuses: ['planning', 'in_progress', 'on_hold'],
     }),
-    listTeamsForFilter(),
+    listTeamsForFilter(jwt.sub, jwt.role),
     // Only the templates the user actually has projects under — keeps the
     // filter relevant instead of dumping the whole catalogue.
     listTemplatesInUse(jwt.sub, jwt.role),
