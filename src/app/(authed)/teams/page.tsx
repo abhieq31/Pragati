@@ -272,7 +272,7 @@ function TeamFormModal({
 }) {
   const [name, setName]               = useState(team?.name || '');
   const [description, setDescription] = useState(team?.description || '');
-  const [func, setFunc]               = useState<string>(team?.function || 'rtb');
+  const [func, setFunc]               = useState<string>(team?.function || 'general');
   const [leadId, setLeadId]           = useState(team?.leadId || '');
   const [memberIds, setMemberIds]     = useState<string[]>(team?.memberIds || []);
   const [memberQuery, setMemberQuery] = useState('');
@@ -388,8 +388,13 @@ function TeamFormModal({
                 Function
               </label>
               <select className="select" value={func} onChange={(e) => setFunc(e.target.value)}>
-                <option value="rtb">Run the Business</option>
-                <option value="ctb">Change the Business</option>
+                <option value="general">General</option>
+                <option value="data_integrity">Data Integrity</option>
+                <option value="csv_validation">CSV / Validation</option>
+                <option value="pharmacovigilance">Pharmacovigilance</option>
+                <option value="lab_informatics">Lab Informatics</option>
+                <option value="audit">Audit</option>
+                <option value="training">Training</option>
               </select>
             </div>
             <div>
