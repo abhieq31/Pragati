@@ -158,18 +158,11 @@ export default function NewProjectPage() {
   const router = useRouter();
   const isLead = useIsLead();
 
-  // Creating projects is a lead/admin action. The "+ New project" button is
-  // already hidden for contributors, but the route is still reachable by
-  // direct URL — guard it so a contributor sees the dashboard instead of a
-  // form that would 403 on submit.
-  useEffect(() => {
-    if (isLead === false) router.replace('/');
-  }, [isLead, router]);
-
   const [form, setForm] = useState({
     name: '', description: '', lifecycle: 'generic',
     priority: 'medium', gxpImpact: 'none',
     teamId: '', startDate: '', dueDate: '',
+    isPersonal: !isLead,
   });
   const [phases, setPhases]     = useState<Phase[]>([]);
   const [teams, setTeams]       = useState<any[]>([]);
@@ -181,6 +174,10 @@ export default function NewProjectPage() {
   useEffect(() => {
     api<any[]>('/teams').then(setTeams);
   }, []);
+
+  useEffect(() => {
+    if (!isLead) setForm((f) => ({ ...f, isPersonal: true }));
+  }, [isLead]);
 
   useEffect(() => {
     if (!form.lifecycle) return;
@@ -231,6 +228,7 @@ export default function NewProjectPage() {
           teamId:      form.teamId || undefined,
           startDate:   form.startDate || undefined,
           dueDate:     form.dueDate || undefined,
+          isPersonal:  form.isPersonal,
           useTemplate: false,
           customPhases: phases.map(ph => ({ name: ph.name, tasks: ph.tasks })),
         },
@@ -253,6 +251,7 @@ export default function NewProjectPage() {
           <p className="text-xs text-slate-400 mt-0.5">
             Step {step} of 2 — {step === 1 ? 'Project details' : 'Stages & workflow'}
           </p>
+          {!isLead && <p className="text-xs text-emerald-700 mt-0.5">Creating a private personal project.</p>}
         </div>
         {/* Step pills */}
         <div className="ml-auto flex items-center gap-2">
@@ -304,7 +303,7 @@ export default function NewProjectPage() {
                 <input type="date" className="input" value={form.dueDate} onChange={e => up('dueDate', e.target.value)} />
               </div>
             </div>
-            {teams.length > 0 && (
+            {teams.length > 0 && !form.isPersonal && (
               <div>
                 <label className="label">Team</label>
                 <select className="select" value={form.teamId} onChange={e => up('teamId', e.target.value)}>
@@ -313,6 +312,13 @@ export default function NewProjectPage() {
                 </select>
               </div>
             )}
+            <div>
+              <label className="label">Visibility</label>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={form.isPersonal} disabled={!isLead} onChange={(e) => up('isPersonal', e.target.checked)} />
+                Personal project (only visible to me)
+              </label>
+            </div>
           </div>
 
           {/* Lifecycle template picker */}

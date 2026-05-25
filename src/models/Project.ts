@@ -40,6 +40,7 @@ const ProjectSchema = new Schema(
     },
     teamId: { type: Schema.Types.ObjectId, ref: 'Team' },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User' },
+    isPersonal: { type: Boolean, default: false },
     startDate: { type: Date },
     dueDate: { type: Date },
     completedAt: { type: Date },

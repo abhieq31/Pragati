@@ -68,11 +68,18 @@ export async function getLeadScope(userId: string, role?: string | null): Promis
 // Pass as the first arg to Project.find / countDocuments / aggregate $match.
 // Admin scopes return an empty filter (match everything).
 export function projectsVisibleFilter(scope: LeadScope) {
-  if (scope.unrestricted) return {};
+  if (scope.unrestricted) {
+    return {
+      $or: [
+        { isPersonal: { $ne: true } },
+        { ownerId: scope.userOid },
+      ],
+    };
+  }
   return {
     $or: [
       { ownerId: scope.userOid },
-      { teamId:  { $in: scope.teamOids } },
+      { teamId:  { $in: scope.teamOids }, isPersonal: { $ne: true } },
     ],
   };
 }

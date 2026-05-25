@@ -4,7 +4,7 @@ import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
 import { Team } from '@/models/Team';
 import { User } from '@/models/User';
-import { requireUser, requireRole } from '@/lib/auth';
+import { requireUser, requireRole, canMutate } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { project as projectS, task as taskS } from '@/lib/serialize';
 import { LIFECYCLES } from '@/lib/lifecycles';
@@ -59,13 +59,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
     const scope = await getLeadScope(user!.sub, user!.role);
     const body = await readBody(req, ProjectUpdateSchema);
-    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status').lean();
+    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status ownerId isPersonal').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const canManagePersonal =
+      Boolean((current as any).isPersonal) && String((current as any).ownerId) === String(user!.sub);
+    if (!canMutate(user!.role) && !canManagePersonal) {
+      return NextResponse.json({ error: 'Only leads can edit shared projects.' }, { status: 403 });
+    }
 
     // Block marking completed when open tasks remain
     if (body.status === 'completed') {

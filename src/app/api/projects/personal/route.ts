@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const userId = user.sub;
     const code = `PRSN-${String(userId).slice(-6).toUpperCase()}`;
 
-    let proj = await Project.findOne({ code }).lean();
+    let proj = await Project.findOne({ ownerId: userId, isPersonal: true }).lean();
 
     if (!proj) {
       const u = await User.findById(userId).select('name').lean();
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
         status: 'in_progress',
         priority: 'medium',
         ownerId: userId,
+        isPersonal: true,
       });
       proj = created.toObject();
     }

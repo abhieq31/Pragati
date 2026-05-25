@@ -128,6 +128,7 @@ export const ProjectCreateSchema = z.object({
       }),
     )
     .optional(),
+  isPersonal: z.boolean().optional(),
 });
 export type ProjectCreateInput = z.infer<typeof ProjectCreateSchema>;
 
