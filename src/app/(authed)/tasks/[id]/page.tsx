@@ -35,6 +35,8 @@ export default function TaskDetailPage() {
   const [newSub, setNewSub] = useState('');
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
   const { showToast, ToastEl } = useToast();
 
   async function load() {
@@ -190,7 +192,32 @@ export default function TaskDetailPage() {
             <ChevronRight size={12} />
             <span className="text-slate-300">Task</span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900 leading-snug">{task.title}</h1>
+          {editingTitle ? (
+            <input
+              autoFocus
+              className="input text-xl font-bold text-slate-900 leading-snug py-1.5"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => {
+                const next = titleDraft.trim();
+                setEditingTitle(false);
+                if (next && next !== task.title) update({ title: next }, { optimistic: { title: next } });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+                if (e.key === 'Escape') { setEditingTitle(false); }
+              }}
+              maxLength={300}
+            />
+          ) : (
+            <h1
+              className={`text-xl font-bold text-slate-900 leading-snug ${isLead ? 'cursor-text hover:bg-slate-50 rounded-md -mx-1 px-1 transition-colors' : ''}`}
+              title={isLead ? 'Click to rename' : undefined}
+              onClick={() => { if (isLead) { setTitleDraft(task.title); setEditingTitle(true); } }}
+            >
+              {task.title}
+            </h1>
+          )}
           <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />

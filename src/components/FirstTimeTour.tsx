@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, FolderKanban, Users, ListChecks, Kanban, Sun, ArrowRight, X } from 'lucide-react';
+import { Sparkles, Kanban, Sun, ArrowRight, X } from 'lucide-react';
 
 // Authoritative state lives on the User record server-side (User.hasSeenTour),
 // so once dismissed the tour never reappears even on a new browser / device.
@@ -17,45 +17,25 @@ interface Step {
   iconColor: string;
 }
 
+// Kept deliberately short — three precise steps, no fluff.
 const STEPS: Step[] = [
   {
-    title: "Welcome to Pragati",
-    body:  "A bird's-eye view of your projects. Everything you need to lead your team — projects, actions, and people — on a single page.",
+    title: 'Welcome to Pragati',
+    body:  'Your quality work in one place — projects, the team, and what needs attention, all on a single dashboard.',
     icon: Sparkles,
     iconBg: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
     iconColor: '#1565C0',
   },
   {
-    title: 'Your projects, fully visible',
-    body:  "Each ongoing project shows its tasks, who's on them, target completion dates and live status. Tap a project to drill in.",
-    icon: FolderKanban,
-    iconBg: 'linear-gradient(135deg, #F3E8FF 0%, #E9D5FF 100%)',
-    iconColor: '#7B1FA2',
-  },
-  {
-    title: 'Actions that need you',
-    body:  'The Actions panel surfaces what is due this week, next week, this month — or until any custom date. Catch things before they slip.',
-    icon: ListChecks,
-    iconBg: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-    iconColor: '#B45309',
-  },
-  {
-    title: 'Your team at a glance',
-    body:  "See each contributor's open work, due dates, and load. Spot overloads before they become bottlenecks.",
-    icon: Users,
-    iconBg: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)',
-    iconColor: '#2E7D32',
-  },
-  {
-    title: 'Drag tasks across the board',
-    body:  'Open any project to its Kanban board. Drag a card between columns to move it through To do → In progress → Done, or grab the handle to reorder within a phase. The board saves instantly.',
+    title: 'Open a project, work the board',
+    body:  'Each project opens to a Kanban board. Drag a card between columns to change its status, or grab the handle to reorder within a phase — it saves instantly.',
     icon: Kanban,
     iconBg: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)',
     iconColor: '#0369A1',
   },
   {
-    title: 'Start your day in My Day',
-    body:  'A private scratchpad for the loose thoughts a spreadsheet can’t hold — jot what is on your mind, then turn the keepers into real tasks. It’s only ever visible to you.',
+    title: 'My Day is yours alone',
+    body:  'A private scratchpad to empty your head, then turn the lines that matter into tracked tasks. Only you can see it.',
     icon: Sun,
     iconBg: 'linear-gradient(135deg, #FEF9C3 0%, #FDE68A 100%)',
     iconColor: '#A16207',

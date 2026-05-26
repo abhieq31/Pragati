@@ -10,7 +10,7 @@ import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
-  ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
+  ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus, Circle,
 } from 'lucide-react';
 
 // Lazy-loaded — only ships when the user actually sees the tour.
@@ -131,14 +131,36 @@ export default function DashboardClient({
   const totalOpen     = dash.teamTasks.filter(t => t.status !== 'done').length;
   const totalOverdue  = dash.teamTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < today).length;
 
+  const workspaceLabel =
+    dash.user.role === 'admin' ? 'Workspace command center'
+    : (dash.user.role === 'pm' || dash.user.role === 'lead') ? 'Your team workspace'
+    : 'Your workspace';
+  // A short, purposeful subline (rotated by the day) — gives the greeting
+  // some character without repeating the numbers shown in the chips below.
+  const MISSION_LINES = [
+    'Every task traceable, every deadline in view.',
+    'Quality work, organized and on schedule.',
+    'Your single source of truth for quality projects.',
+    'Move fast — keep the audit trail intact.',
+  ];
+  const missionLine = MISSION_LINES[today.getDate() % MISSION_LINES.length];
+
   return (
     <div className="pb-12 max-w-[1440px]">
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="mb-6 pt-1">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ background: 'linear-gradient(135deg,#1565C0,#2E7D32)' }} />
+          <span className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
+            {workspaceLabel}
+          </span>
+        </div>
         <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
         </h1>
+        <p className="text-sm text-slate-500 mt-1.5" suppressHydrationWarning>{missionLine}</p>
       </div>
 
       {isFirstRun ? (
@@ -165,10 +187,18 @@ export default function DashboardClient({
             tasksByProject={tasksByProject}
           />
 
-          {/* Right column — Actions + Contributors */}
-          <div className="space-y-4 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto pr-1">
+          {/* Right column — Actions + Contributors. The "Actions" header
+              mirrors the Projects column header so both cards start on the
+              same line. */}
+          <div className="xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto pr-1">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp size={14} className="text-slate-400" />
+              <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Actions</h2>
+            </div>
             <ActionsPanel tasks={dash.teamTasks} />
-            <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />
+            <div className="mt-4">
+              <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />
+            </div>
           </div>
         </div>
       )}
@@ -544,6 +574,19 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
       })
     : [];
 
+  // Open work that has no target date yet — surfaced so the panel is never
+  // empty just because tasks haven't been scheduled. Prompts the manager to
+  // set due dates (which then graduate into the Overdue / Due groups).
+  const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+  const STATUS_RANK: Record<string, number> = { in_progress: 0, blocked: 1, review: 2, todo: 3 };
+  const noDue = tasks
+    .filter(t => t.status !== 'done' && !(t.ccTcd || t.dueDate))
+    .sort((a, b) => {
+      const p = (PRIORITY_RANK[a.priority || 'medium'] ?? 2) - (PRIORITY_RANK[b.priority || 'medium'] ?? 2);
+      if (p !== 0) return p;
+      return (STATUS_RANK[a.status || 'todo'] ?? 3) - (STATUS_RANK[b.status || 'todo'] ?? 3);
+    });
+
   // Sort each by due ascending
   const sortByDue = (a: TeamTask, b: TeamTask) => {
     const da = a.ccTcd ? new Date(a.ccTcd).getTime() : a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
@@ -564,10 +607,6 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
     <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div className="px-4 pt-3 pb-2 border-b border-slate-100">
-        <div className="flex items-center gap-2 mb-2.5">
-          <TrendingUp size={13} className="text-slate-400" />
-          <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Actions</h3>
-        </div>
         <div className="flex gap-1 flex-wrap">
           {FILTERS.map(f => (
             <button key={f.key}
@@ -614,18 +653,37 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
           icon={<Clock size={11} className="text-blue-500" />}
           dotClass="bg-blue-400"
           tasks={due}
-          emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming actions.' : 'Nothing due — all clear.'}
+          emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming actions.' : 'Nothing scheduled in this window.'}
         />
+
+        {/* No-due-date group — open work that still needs a target date */}
+        {noDue.length > 0 && (
+          <ActionGroup
+            title="No due date"
+            count={noDue.length}
+            icon={<Circle size={10} className="text-slate-400" />}
+            dotClass="bg-slate-300"
+            tasks={noDue}
+            showPriority
+          />
+        )}
       </div>
     </section>
   );
 }
 
+const PRIORITY_CHIP: Record<string, { label: string; cls: string }> = {
+  critical: { label: 'Critical', cls: 'text-red-600 bg-red-50' },
+  high:     { label: 'High',     cls: 'text-amber-600 bg-amber-50' },
+  medium:   { label: 'Medium',   cls: 'text-slate-500 bg-slate-100' },
+  low:      { label: 'Low',      cls: 'text-slate-400 bg-slate-50' },
+};
+
 function ActionGroup({
-  title, count, icon, dotClass, tasks, isOverdue, emptyHint,
+  title, count, icon, dotClass, tasks, isOverdue, emptyHint, showPriority,
 }: {
   title: string; count: number; icon: React.ReactNode; dotClass: string;
-  tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string;
+  tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showPriority?: boolean;
 }) {
   return (
     <div>
@@ -658,6 +716,14 @@ function ActionGroup({
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 flex-wrap">
                         <span className="font-semibold">{t.projectCode}</span>
+                        {showPriority && t.priority && (
+                          <>
+                            <span>·</span>
+                            <span className={`font-bold px-1.5 py-0.5 rounded ${(PRIORITY_CHIP[t.priority] || PRIORITY_CHIP.medium).cls}`}>
+                              {(PRIORITY_CHIP[t.priority] || PRIORITY_CHIP.medium).label}
+                            </span>
+                          </>
+                        )}
                         {due && (
                           <>
                             <span>·</span>

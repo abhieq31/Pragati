@@ -291,7 +291,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
           </button>
           <Link href="/" className="flex items-center gap-2">
             <PragatiMark size={22} flat />
-            <span className={`font-black text-sm tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>Pragati</span>
+            <span className={`font-display font-bold text-base tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>Pragati</span>
           </Link>
         </div>
 

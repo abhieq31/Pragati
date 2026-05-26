@@ -154,6 +154,7 @@ export async function POST(req: NextRequest) {
       role:  user.role as any,
       name:  user.name,
       title: user.title || '',
+      mustChangePassword: !!user.mustChangePassword,
     });
 
     const res = NextResponse.json({ token, user: u(user) });
