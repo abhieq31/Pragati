@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/client/api';
 import { Avatar, RoleBadge } from '@/components/ui';
-import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, ScrollText } from 'lucide-react';
 
 /* ── role display helpers ─────────────────────────────────────────────── */
 const ROLE_COLOR: Record<string, string> = {
@@ -461,10 +461,22 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
   const [editUser, setEditUser] = useState<any | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState<any | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [audit, setAudit] = useState<any[] | null>(null);
+
+  const isAdmin = me?.role === 'admin';
+
+  function refreshAudit() {
+    if (isAdmin) api<any[]>('/audit?limit=100').then(setAudit).catch(() => setAudit([]));
+  }
+  // Operations log is admin-only; load it once on mount.
+  useEffect(() => { refreshAudit(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   // Background refresh after a mutation. The initial render uses the
   // server-provided list, so no fetch fires on mount.
-  function load() { api<any[]>('/users').then(setUsers).catch(() => {}); }
+  function load() {
+    api<any[]>('/users').then(setUsers).catch(() => {});
+    refreshAudit();
+  }
 
   async function confirmRoleChange() {
     if (!roleConfirm) return;
@@ -573,7 +585,8 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
     setTimeout(() => setJustAdded(null), 4000);
   }
 
-  const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead' || u.role === 'admin');
+  const admins = users.filter((u) => u.role === 'admin');
+  const pms = users.filter((u) => u.role === 'pm' || u.role === 'lead');
   const ics = users.filter((u) => u.role === 'employee');
   const isPM = (me?.role === 'pm' || me?.role === 'lead' || me?.role === 'admin');
 
@@ -647,15 +660,51 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{roleErr}</div>
       )}
 
-      {/* PM section */}
+      {/* Administrator — the single workspace owner, set apart from leads */}
+      {admins.length > 0 && (
+        <div className="card overflow-hidden" style={{ borderColor: 'rgba(245,158,11,0.35)' }}>
+          <div className="px-5 py-3.5 border-b border-amber-100 bg-amber-50/60 flex items-center gap-2">
+            <Shield size={14} className="text-amber-500" />
+            <h2 className="text-sm font-bold text-slate-700">Administrator</h2>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {admins.map((u) => (
+              <div key={u.id} className="flex items-center gap-3 px-5 py-4 flex-wrap">
+                <Avatar name={u.name} size={36} />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-slate-800 text-sm leading-tight">
+                    {u.name}{me?.id === u.id && <span className="text-slate-400 font-normal"> · you</span>}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5 font-mono">@{handleOf(u)}</div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
+                  <span className="tag border border-amber-200 bg-amber-50 text-amber-700 font-semibold">Admin</span>
+                  {me?.id === u.id && (
+                    <a href="/settings"
+                      className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200">
+                      Change password
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-3 border-t border-amber-100 bg-amber-50/30 text-[11px] text-slate-500 leading-relaxed">
+            The administrator is the single workspace owner — this account can’t be locked, demoted, or deleted.
+            Forgot the password? Recover it from the secure setup page at <span className="font-mono">/bootstrap</span> using your bootstrap token.
+          </div>
+        </div>
+      )}
+
+      {/* Team Leads */}
       <div className="card overflow-hidden">
         <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
           <Shield size={14} className="text-blue-500" />
-          <h2 className="text-sm font-bold text-slate-700">Team Leads &amp; Admin</h2>
+          <h2 className="text-sm font-bold text-slate-700">Team Leads</h2>
           <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">{pms.length}</span>
         </div>
         {pms.length === 0 ? (
-          <div className="px-5 py-5 text-sm text-slate-400">No leads yet.</div>
+          <div className="px-5 py-5 text-sm text-slate-400">No team leads yet.</div>
         ) : (
           <div className="divide-y divide-slate-50">
             {pms.map((u) => (
@@ -816,6 +865,67 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
           </div>
         )}
       </div>
+
+      {/* Operations log — admin-only append-only audit trail of who did what */}
+      {isAdmin && (
+        <div className="card overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+            <ScrollText size={14} className="text-slate-500" />
+            <h2 className="text-sm font-bold text-slate-700">Operations log</h2>
+            {audit && <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 ml-1">{audit.length}</span>}
+            <span className="ml-auto text-[11px] text-slate-400">Newest first · most recent 100</span>
+          </div>
+          {audit === null ? (
+            <div className="divide-y divide-slate-50">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="px-5 py-3 flex items-center gap-3">
+                  <div className="skeleton h-3 w-40" />
+                  <div className="skeleton h-3 w-20 ml-auto" />
+                </div>
+              ))}
+            </div>
+          ) : audit.length === 0 ? (
+            <div className="px-5 py-6 text-sm text-slate-400 text-center">No operations recorded yet.</div>
+          ) : (
+            <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-50">
+              {audit.map((e) => (
+                <div key={e.id} className="px-5 py-2.5 flex items-start gap-3 text-sm">
+                  <span className={`mt-0.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded shrink-0 ${auditTone(e.action)}`}>
+                    {e.action.split('.')[0]}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-slate-700 leading-snug">
+                      <span className="font-semibold">{e.actorName}</span>{' '}
+                      <span className="text-slate-500">{e.summary}</span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-slate-400 shrink-0 whitespace-nowrap" title={new Date(e.createdAt).toLocaleString()}>
+                    {timeAgo(e.createdAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+// Compact relative time for the operations log ("3m ago", "2h ago", …).
+function timeAgo(iso: string): string {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24); if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function auditTone(action: string): string {
+  const head = action.split('.')[0];
+  if (head === 'user')    return 'bg-blue-50 text-blue-700';
+  if (head === 'project') return 'bg-purple-50 text-purple-700';
+  if (head === 'team')    return 'bg-emerald-50 text-emerald-700';
+  return 'bg-slate-100 text-slate-600';
 }

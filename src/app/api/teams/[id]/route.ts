@@ -8,6 +8,7 @@ import { requireUser, requireRole, isAdmin } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS, u, project as projectS } from '@/lib/serialize';
 import { TeamUpdateSchema, DeleteTeamSchema } from '@/lib/validations';
+import { logOperation } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 
 export const runtime = 'nodejs';
@@ -105,10 +106,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
     }
 
+    const doomed = await Team.findById(params.id).select('name').lean();
+
     // Detach projects from this team rather than cascade-deleting them — projects
     // and their tasks represent real work and must survive a team disband.
     await Project.updateMany({ teamId: params.id }, { $set: { teamId: null } });
     await Team.deleteOne({ _id: params.id });
+    await logOperation({
+      actor: user,
+      action: 'team.delete',
+      entityType: 'team',
+      entityId: params.id,
+      summary: `deleted team "${(doomed as any)?.name ?? params.id}"`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);

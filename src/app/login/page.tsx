@@ -370,6 +370,13 @@ export default function LoginPage() {
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={password} onChange={e => setPassword(e.target.value)} />
                 {mode === 'setup' && <StrengthMeter password={password} />}
+                {mode === 'login' && (
+                  <div className="text-right mt-1.5">
+                    <a href="/forgot-password" className="text-[11px] font-semibold text-slate-400 hover:text-blue-600 transition-colors">
+                      Forgot password?
+                    </a>
+                  </div>
+                )}
               </div>
 
               {err && (

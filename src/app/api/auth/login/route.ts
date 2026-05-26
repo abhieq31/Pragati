@@ -7,6 +7,7 @@ import { signToken, setAuthCookie, configuredAdminEmail } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
 import { rateLimit } from '@/lib/rateLimit';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -155,6 +156,14 @@ export async function POST(req: NextRequest) {
       name:  user.name,
       title: user.title || '',
       mustChangePassword: !!user.mustChangePassword,
+    });
+
+    await logOperation({
+      actor: { sub: String(user._id), name: user.name, role: user.role as any },
+      action: 'auth.login',
+      entityType: 'auth',
+      entityId: String(user._id),
+      summary: `${user.name} signed in`,
     });
 
     const res = NextResponse.json({ token, user: u(user) });

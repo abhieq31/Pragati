@@ -8,6 +8,7 @@ import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
 import { TeamFunctionEnum } from '@/lib/validations';
 import { getLeadScope } from '@/lib/leadScope';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -56,6 +57,13 @@ export async function POST(req: NextRequest) {
       leadId: body.leadId || undefined,
       memberIds: body.memberIds || (body.leadId ? [body.leadId] : []),
       function: body.function || 'general'
+    });
+    await logOperation({
+      actor: user,
+      action: 'team.create',
+      entityType: 'team',
+      entityId: String(team._id),
+      summary: `created team "${team.name}"`,
     });
     return NextResponse.json(teamS(team));
   } catch (e) {

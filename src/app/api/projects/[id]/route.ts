@@ -10,6 +10,7 @@ import { project as projectS, task as taskS } from '@/lib/serialize';
 import { LIFECYCLES } from '@/lib/lifecycles';
 import { ProjectUpdateSchema, DeleteProjectSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { logOperation } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 
 export const runtime = 'nodejs';
@@ -114,7 +115,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await connectDB();
 
     const scope = await getLeadScope(user!.sub, user!.role);
-    const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('_id ownerId personal').lean();
+    const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('_id ownerId personal name code').lean();
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const ownsPersonal = !!(existing as any).personal && String((existing as any).ownerId || '') === String(user!.sub);
@@ -130,6 +131,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     await Task.deleteMany({ projectId: params.id });
     await Project.deleteOne({ _id: params.id });
+
+    await logOperation({
+      actor: user,
+      action: 'project.delete',
+      entityType: 'project',
+      entityId: params.id,
+      summary: `deleted project "${(existing as any).name}" (${(existing as any).code})`,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);

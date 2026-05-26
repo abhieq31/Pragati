@@ -7,6 +7,7 @@ import { Task } from '@/models/Task';
 import { requireRole, isAdmin } from '@/lib/auth';
 import { u } from '@/lib/serialize';
 import { handleError, readBody } from '@/lib/http';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -79,6 +80,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const updated = await User.findByIdAndUpdate(params.id, { $set: set }, { new: true }).lean();
     if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    // Operations log — record the meaningful admin actions on this account.
+    const parts: string[] = [];
+    if (body.role) parts.push(`role set to ${body.role}`);
+    if (body.locked === true) parts.push('account locked');
+    if (body.locked === false) parts.push('account unlocked');
+    if (body.mustChangePassword) parts.push('forced password reset');
+    if (body.name !== undefined) parts.push('profile edited');
+    if (parts.length) {
+      const action =
+        body.locked === true ? 'user.lock'
+        : body.locked === false ? 'user.unlock'
+        : body.mustChangePassword ? 'user.force_password'
+        : body.role ? 'user.role'
+        : 'user.update';
+      await logOperation({
+        actor: caller,
+        action,
+        entityType: 'user',
+        entityId: params.id,
+        summary: `${parts.join(', ')} for ${(updated as any).name}`,
+        meta: { role: body.role, locked: body.locked, mustChangePassword: body.mustChangePassword },
+      });
+    }
     return NextResponse.json(u(updated));
   } catch (e) {
     return handleError(e);
@@ -122,6 +147,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await Task.updateMany({ assigneeId: params.id }, { $unset: { assigneeId: '', assigneeName: '' } });
     await User.findByIdAndDelete(params.id);
 
+    await logOperation({
+      actor: caller,
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: params.id,
+      summary: `removed user ${(target as any).name}`,
+      meta: { role: (target as any).role },
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);
