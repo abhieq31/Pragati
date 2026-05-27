@@ -101,8 +101,8 @@ export function DatePicker({
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-1.5 rounded-lg border bg-white transition-all font-medium text-slate-700 ${
-          open ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+        className={`inline-flex items-center gap-1.5 rounded-xl border bg-white transition-all duration-150 font-medium text-slate-700 shadow-sm ${
+          open ? 'border-blue-300 ring-2 ring-blue-100 bg-blue-50/40' : 'border-slate-200 hover:border-blue-200 hover:bg-slate-50'
         } ${pad}`}
       >
         <Calendar size={size === 'sm' ? 11 : 12} className="text-slate-400 shrink-0" />
@@ -125,13 +125,13 @@ export function DatePicker({
       {mounted && open && coords && createPortal(
         <div
           ref={popRef}
-          className="fixed bg-white rounded-xl border border-slate-100 p-3 fade-in-soft datepicker-pop"
+          className="fixed bg-white rounded-2xl border border-slate-100 p-3.5 fade-in-soft datepicker-pop"
           style={{
             top: coords.top,
             left: coords.left,
             width: 260,
             zIndex: 9999,
-            boxShadow: '0 8px 32px rgba(15,23,42,0.18), 0 2px 8px rgba(15,23,42,0.08)',
+            boxShadow: '0 14px 40px rgba(15,23,42,0.20), 0 2px 8px rgba(15,23,42,0.08)',
           }}
           onClick={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
