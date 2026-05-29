@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { useIsLead } from '@/components/CurrentUserContext';
 import { Plus, Check, Trash2, ArrowRight, X, Sparkles } from 'lucide-react';
+import { DatePicker } from '@/components/DatePicker';
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
 
@@ -121,21 +122,34 @@ export default function MyDayPage() {
 
       <div className="space-y-1.5">
         {open.map((n) => (
-          <div key={n.id} className="group flex items-center gap-3 bg-white border border-slate-200/80 rounded-xl px-3.5 py-3 fluid-card">
+          <div key={n.id} className={`group flex gap-3 bg-white border border-slate-200/80 rounded-xl px-3.5 py-3 fluid-card ${editingId === n.id ? 'items-start' : 'items-center'}`}>
             <button
               onClick={() => toggle(n)}
               aria-label="Mark done"
-              className="w-5 h-5 rounded-md border border-slate-300 hover:border-emerald-400 flex items-center justify-center shrink-0 transition-colors"
+              className={`w-5 h-5 rounded-md border border-slate-300 hover:border-emerald-400 flex items-center justify-center shrink-0 transition-colors ${editingId === n.id ? 'mt-1' : ''}`}
             />
             {editingId === n.id ? (
-              <input
+              <textarea
                 autoFocus
-                className="input flex-1 text-sm py-1"
+                rows={1}
+                className="input flex-1 text-sm py-1 resize-none leading-snug whitespace-pre-wrap break-words overflow-hidden"
                 value={editText}
                 maxLength={2000}
-                onChange={(e) => setEditText(e.target.value)}
+                onFocus={(e) => {
+                  // Grow to fit existing content and place caret at the end.
+                  e.currentTarget.style.height = 'auto';
+                  e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                  const len = e.currentTarget.value.length;
+                  e.currentTarget.setSelectionRange(len, len);
+                }}
+                onChange={(e) => {
+                  setEditText(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = e.target.scrollHeight + 'px';
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveEdit(n);
+                  // Enter saves; Shift+Enter inserts a newline for longer notes.
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(n); }
                   if (e.key === 'Escape') cancelEdit();
                 }}
                 onBlur={() => saveEdit(n)}
@@ -211,6 +225,13 @@ export default function MyDayPage() {
 function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => void; onDone: () => void }) {
   const [projects, setProjects] = useState<any[]>([]);
   const [projectId, setProjectId] = useState('');
+  const [phases, setPhases]   = useState<{ id: string; name: string }[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [phaseId, setPhaseId]     = useState('');
+  const [priority, setPriority]   = useState('medium');
+  const [assigneeId, setAssignee] = useState('');
+  const [due, setDue]         = useState('');
+  const [loadingMeta, setLoadingMeta] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -218,11 +239,31 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
     api<any[]>('/projects').then((p) => { setProjects(p); if (p[0]) setProjectId(p[0].id); }).catch(() => {});
   }, []);
 
+  // When the chosen project changes, pull its phases + assignable roster so the
+  // lead can allocate the task to a phase and a person in one go.
+  useEffect(() => {
+    if (!projectId) { setPhases([]); setMembers([]); return; }
+    setLoadingMeta(true);
+    setPhaseId(''); setAssignee('');
+    api<any>(`/projects/${projectId}`)
+      .then(async (p) => {
+        setPhases((p.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
+        const roster = await api<any[]>(`/users${p.teamId ? `?teamId=${p.teamId}` : ''}`).catch(() => []);
+        setMembers(roster);
+      })
+      .catch(() => { setPhases([]); setMembers([]); })
+      .finally(() => setLoadingMeta(false));
+  }, [projectId]);
+
   async function go() {
     if (!projectId) { setErr('Pick a project.'); return; }
     setSaving(true); setErr('');
     try {
-      const task = await api<{ id: string }>('/tasks', { method: 'POST', body: { projectId, title: note.text } });
+      const body: any = { projectId, title: note.text, priority };
+      if (phaseId) body.phaseId = phaseId;
+      if (assigneeId) body.assigneeId = assigneeId;
+      if (due) body.dueDate = due;
+      const task = await api<{ id: string }>('/tasks', { method: 'POST', body });
       await api(`/scratch/${note.id}`, { method: 'PATCH', body: { done: true, promotedTaskId: task.id } });
       onDone();
     } catch (e: any) {
@@ -242,11 +283,46 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
             <button onClick={onClose} className="text-slate-300 hover:text-slate-500"><X size={18} /></button>
           </div>
           <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-sm text-slate-700 mb-4">{note.text}</div>
+
           <label className="label">Project</label>
-          <select className="select mb-1" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+          <select className="select mb-3" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             {projects.length === 0 && <option value="">No projects available</option>}
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="label">Phase</label>
+              <select className="select" value={phaseId} onChange={(e) => setPhaseId(e.target.value)} disabled={loadingMeta || phases.length === 0}>
+                <option value="">{phases.length === 0 ? 'No phases' : 'Unassigned'}</option>
+                {phases.map((ph) => <option key={ph.id} value={ph.id}>{ph.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Priority</label>
+              <select className="select" value={priority} onChange={(e) => setPriority(e.target.value)}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Assign to</label>
+              <select className="select" value={assigneeId} onChange={(e) => setAssignee(e.target.value)} disabled={loadingMeta}>
+                <option value="">Unassigned</option>
+                {members.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Target completion</label>
+              <DatePicker value={due} onChange={(v) => setDue(v || '')} />
+            </div>
+          </div>
+
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 mt-3">{err}</div>}
           <div className="flex gap-2 mt-5">
             <button onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>

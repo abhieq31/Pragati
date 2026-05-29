@@ -10,6 +10,7 @@ import {
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
+import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
 import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { chimeIfEnabled } from '@/lib/sound';
@@ -34,6 +35,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
   isLead: boolean;
   onDelete: (taskId: string) => void;
 }) {
+  const dark = useIsDark();
   const [localTasks, setLocalTasks] = useState<any[]>(tasks);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   // Where the dragged card would land: a column + the insertion index within it.
@@ -168,7 +170,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
         type="button"
         aria-label="Scroll left"
         onClick={() => scrollByCols(-1)}
-        className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-md transition-all ${
+        className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 shadow-md transition-all ${
           canLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -180,7 +182,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
         type="button"
         aria-label="Scroll right"
         onClick={() => scrollByCols(1)}
-        className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-md transition-all ${
+        className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 shadow-md transition-all ${
           canRight ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -202,8 +204,8 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
             style={{
               width: COLUMN_WIDTH,
               scrollSnapAlign: 'start',
-              background: isOver ? meta.bg : '#f8fafc',
-              border: `2px solid ${isOver ? meta.border : '#e9eef5'}`,
+              background: isOver ? (dark ? 'rgba(255,255,255,0.04)' : meta.bg) : (dark ? 'rgba(255,255,255,0.02)' : '#f8fafc'),
+              border: `2px solid ${isOver ? meta.border : (dark ? 'rgba(255,255,255,0.08)' : '#e9eef5')}`,
               boxShadow: isOver ? `0 0 0 3px ${meta.border}` : undefined,
             }}
             onDragOver={e => handleColDragOver(e, col)}
@@ -228,9 +230,10 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                     onDragStart={e => handleDragStart(e, t.id)}
                     onDragEnd={handleDragEnd}
                     onDragOver={e => handleCardDragOver(e, col, index)}
-                    className="group relative bg-white rounded-lg border transition-all duration-150 cursor-grab active:cursor-grabbing"
+                    className="group relative rounded-lg border transition-all duration-150 cursor-grab active:cursor-grabbing"
                     style={{
-                      borderColor: isDraggingThis ? meta.color : '#e2e8f0',
+                      background: dark ? '#1e293b' : '#ffffff',
+                      borderColor: isDraggingThis ? meta.color : (dark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'),
                       boxShadow: isDraggingThis
                         ? `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}`
                         : '0 1px 3px rgba(0,0,0,0.06)',
@@ -252,7 +255,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                       </button>
                     )}
                     <Link href={`/tasks/${t.id}`} className="block p-3 pl-4" onClick={e => isDragging && e.preventDefault()}>
-                      <div className="text-xs font-semibold text-slate-800 leading-snug line-clamp-2">{t.title}</div>
+                      <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2">{t.title}</div>
                       {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                         <div className="mt-1.5 flex gap-1 flex-wrap">
                           {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
@@ -267,7 +270,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                       </div>
                       {t.subtaskCount > 0 && (
                         <div className="mt-2">
-                          <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-1 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
                             <div className="h-full rounded-full transition-all" style={{ width: `${Math.round((t.subtasksDone / t.subtaskCount) * 100)}%`, background: meta.color }} />
                           </div>
                           <div className="text-[9px] text-slate-400 mt-0.5">{t.subtasksDone}/{t.subtaskCount} subtasks</div>
@@ -284,7 +287,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
               )}
               {colTasks.length === 0 && (
                 <div className="rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150 text-center px-2"
-                  style={{ borderColor: isOver ? meta.color : '#e2e8f0', background: isOver ? meta.bg : 'transparent' }}>
+                  style={{ borderColor: isOver ? meta.color : (dark ? 'rgba(255,255,255,0.12)' : '#e2e8f0'), background: isOver ? (dark ? 'rgba(255,255,255,0.04)' : meta.bg) : 'transparent' }}>
                   <span className="text-xs leading-tight" style={{ color: isOver ? meta.color : '#94a3b8' }}>
                     {isOver ? 'Drop here' : isDragging ? 'Move card here' : 'No tasks'}
                   </span>
