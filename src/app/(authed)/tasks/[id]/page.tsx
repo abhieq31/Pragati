@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, formatDate, Avatar, useToast } from '@/components/ui';
+import { DatePicker } from '@/components/DatePicker';
 import { useIsLead } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock } from 'lucide-react';
@@ -254,12 +255,13 @@ export default function TaskDetailPage() {
               </div>
               <div>
                 <label className="label">Target Completion Date</label>
-                <input
-                  type="date"
-                  className="input text-sm"
-                  value={task.ccTcd?.slice(0, 10) || ''}
-                  onChange={(e) => update({ ccTcd: e.target.value || null })}
-                />
+                <div>
+                  <DatePicker
+                    value={task.ccTcd ? task.ccTcd.slice(0, 10) : null}
+                    onChange={(v) => update({ ccTcd: v })}
+                    placeholder="Set date"
+                  />
+                </div>
               </div>
             </div>
 
@@ -461,13 +463,23 @@ export default function TaskDetailPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="label">Start date</label>
-                <input type="date" className="input" value={task.startDate?.slice(0,10)||''}
-                  onChange={(e) => update({ startDate: e.target.value || null })} />
+                <div>
+                  <DatePicker
+                    value={task.startDate ? task.startDate.slice(0, 10) : null}
+                    onChange={(v) => update({ startDate: v })}
+                    placeholder="Set date"
+                  />
+                </div>
               </div>
               <div>
                 <label className="label">Due date</label>
-                <input type="date" className="input" value={task.dueDate?.slice(0,10)||''}
-                  onChange={(e) => update({ dueDate: e.target.value || null })} />
+                <div>
+                  <DatePicker
+                    value={task.dueDate ? task.dueDate.slice(0, 10) : null}
+                    onChange={(v) => update({ dueDate: v })}
+                    placeholder="Set date"
+                  />
+                </div>
               </div>
             </div>
             {/* Compliance toggles live behind a disclosure so the default

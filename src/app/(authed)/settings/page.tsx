@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/client/api';
 import { Avatar, RoleBadge } from '@/components/ui';
+import { ActivityGraph } from '@/components/ActivityGraph';
 import {
-  User, Bell, Lock, ShieldCheck, Copy, Check, RefreshCw, X,
+  User, Bell, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity,
 } from 'lucide-react';
 
 /* ── Section wrapper ──────────────────────────────────────────────────────── */
@@ -303,6 +304,14 @@ export default function SettingsPage() {
               </div>
             </form>
           </Section>
+
+          {/* Activity heatmap — sits in the left column, beside the Security
+              card on the right (#7). */}
+          <div className="mt-5">
+            <Section icon={Activity} title="Activity" subtitle="Your completed tasks over the last year.">
+              <ActivityGraph />
+            </Section>
+          </div>
         </div>
 
         {/* Right: Notifications + Security stacked */}
