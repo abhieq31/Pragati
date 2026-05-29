@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/client/api';
 import { useIsLead } from '@/components/CurrentUserContext';
-import { Plus, Check, Trash2, ArrowRight, X, Sparkles, Pencil } from 'lucide-react';
+import { Plus, Check, Trash2, ArrowRight, X, Sparkles } from 'lucide-react';
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
 
@@ -77,17 +77,16 @@ export default function MyDayPage() {
   return (
     <div className="max-w-2xl mx-auto pb-12">
       {/* Header */}
-      <div className="brand-mesh rounded-3xl border border-slate-200/70 px-6 py-5 mb-5 overflow-hidden">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={14} className="text-blue-500" />
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700/90">My Day</span>
+      <div className="mb-5 pt-1">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Sparkles size={12} className="text-blue-400" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">My Day</span>
         </div>
         <h1 className="text-2xl font-black tracking-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}.</span>
         </h1>
-        <p className="text-sm text-slate-600 mt-1 leading-relaxed">
-          Empty your head here. Jot anything you need to do today — then turn the ones that
-          matter into tracked tasks. Nothing formal, nothing shared. Just yours.
+        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+          Jot anything on your mind — tap a note to edit, or promote it to a tracked task.
         </p>
       </div>
 
@@ -143,9 +142,9 @@ export default function MyDayPage() {
               />
             ) : (
               <span
-                className="flex-1 text-sm text-slate-700 break-words cursor-text"
-                onDoubleClick={() => startEdit(n)}
-                title="Double-click to edit"
+                className="flex-1 text-sm text-slate-700 break-words cursor-text hover:text-slate-900"
+                onClick={() => startEdit(n)}
+                title="Tap to edit"
               >
                 {n.text}
               </span>
@@ -155,18 +154,12 @@ export default function MyDayPage() {
             ) : isLead && editingId !== n.id ? (
               <button
                 onClick={() => setPromote(n)}
-                title="Turn this into a tracked task"
+                title="Add to a project as a tracked task"
                 className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                To task <ArrowRight size={12} />
+                Add to project <ArrowRight size={12} />
               </button>
             ) : null}
-            {editingId !== n.id && (
-              <button onClick={() => startEdit(n)} aria-label="Edit"
-                className="text-slate-300 hover:text-blue-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Pencil size={13} />
-              </button>
-            )}
             <button onClick={() => remove(n)} aria-label="Delete"
               className="text-slate-300 hover:text-red-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
               <Trash2 size={14} />
@@ -243,8 +236,8 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
         <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-sm modal-in" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-start justify-between mb-4">
             <div>
-              <div className="text-base font-bold text-slate-900">Turn into a task</div>
-              <div className="text-xs text-slate-400 mt-0.5">It’ll be tracked under a project.</div>
+              <div className="text-base font-bold text-slate-900">Add to project</div>
+              <div className="text-xs text-slate-400 mt-0.5">This note becomes a tracked task.</div>
             </div>
             <button onClick={onClose} className="text-slate-300 hover:text-slate-500"><X size={18} /></button>
           </div>

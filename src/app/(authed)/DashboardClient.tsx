@@ -147,31 +147,25 @@ export default function DashboardClient({
   return (
     <div className="pb-12 max-w-[1440px]">
 
-      {/* ── Greeting hero ───────────────────────────────────────────────── */}
-      <div className="brand-mesh mb-6 rounded-3xl border border-slate-200/70 px-6 py-5 overflow-hidden relative">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles size={14} className="text-blue-500" />
-          {/* Date + greeting are intentionally client-local (browser TZ) and
-             will differ from the UTC server render near a day boundary —
-             suppressHydrationWarning lets React patch to the client value
-             without logging a mismatch. */}
-          <span className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700/90" suppressHydrationWarning>
+      {/* ── Greeting ────────────────────────────────────────────────────── */}
+      <div className="mb-6 pt-1">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Sparkles size={12} className="text-blue-400" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400" suppressHydrationWarning>
             {dateLabel}
           </span>
         </div>
         <h1 className="text-3xl font-black tracking-tight leading-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
         </h1>
-        {/* At-a-glance status line — replaces the old generic tagline with
-           the numbers a lead actually wants the moment they land. */}
-        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+        <p className="text-sm text-slate-500 mt-1.5 leading-relaxed">
           {ongoingProjects.length === 0 ? (
             <>No active projects yet — your board fills in as you create them.</>
           ) : (
             <>
-              <span className="font-semibold text-slate-800">{ongoingProjects.length}</span>
+              <span className="font-semibold text-slate-700">{ongoingProjects.length}</span>
               {' '}active {ongoingProjects.length === 1 ? 'project' : 'projects'} ·{' '}
-              <span className="font-semibold text-slate-800">{totalOpen}</span>
+              <span className="font-semibold text-slate-700">{totalOpen}</span>
               {' '}open {totalOpen === 1 ? 'task' : 'tasks'}
               {totalOverdue > 0 ? (
                 <> · <span className="font-semibold text-red-600">{totalOverdue} overdue</span> need attention.</>
@@ -197,7 +191,7 @@ export default function DashboardClient({
         </>
       )}
 
-      {/* ── Main layout: 2/3 projects · 1/3 actions+contributors ──────── */}
+      {/* ── Main layout: Projects (left) · Actions (right, same row) ───── */}
       {!isFirstRun && (
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-5 items-start">
 
@@ -207,11 +201,10 @@ export default function DashboardClient({
             tasksByProject={tasksByProject}
           />
 
-          {/* Right column — Actions + Contributors. The Contributors panel
-              (other people's progress) is for leads/admins only; an IC never
-              sees their teammates' workload. */}
+          {/* Right column — Actions + "My tasks" (for leads: also Contributors). */}
           <div className="space-y-4 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto pr-1">
             <ActionsPanel tasks={visibleTasks} />
+            <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {isLead && <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />}
           </div>
         </div>
@@ -581,6 +574,86 @@ function TaskTableRow({ t }: { t: TeamTask }) {
           : <span className="text-slate-300 text-xs">—</span>}
       </td>
     </tr>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  MY TASKS PANEL — tasks assigned to the current user (all roles)           */
+/* ────────────────────────────────────────────────────────────────────────── */
+function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
+  const myTasks = tasks.filter(t => t.assigneeId === myId && t.status !== 'done');
+  const myDone  = tasks.filter(t => t.assigneeId === myId && t.status === 'done').length;
+  const myOverdue = myTasks.filter(t => {
+    const due = t.ccTcd || t.dueDate;
+    return due && new Date(due) < new Date();
+  }).length;
+
+  if (myTasks.length === 0 && myDone === 0) return null;
+
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+      <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+        <CheckCircle2 size={13} className="text-slate-400" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">My tasks</h3>
+        <span className="ml-auto text-[10px] font-bold text-slate-300">{myTasks.length} open</span>
+        {myOverdue > 0 && (
+          <span className="text-[10px] font-bold text-red-400">{myOverdue} overdue</span>
+        )}
+      </div>
+      {myTasks.length === 0 ? (
+        <div className="py-7 text-center">
+          <CheckCircle2 size={18} className="mx-auto text-emerald-300 mb-1.5" />
+          <div className="text-[11px] text-slate-400">All caught up — {myDone} done.</div>
+        </div>
+      ) : (
+        <ul className="divide-y divide-slate-50 max-h-72 overflow-y-auto">
+          {myTasks.slice(0, 15).map(t => {
+            const due = t.ccTcd || t.dueDate;
+            const dueIn = daysUntil(due);
+            const overdue = due && new Date(due) < new Date() && t.status !== 'done';
+            return (
+              <li key={t.id}>
+                <Link href={`/tasks/${t.id}`}
+                  className="block px-4 py-2.5 hover:bg-slate-50 transition-colors group">
+                  <div className="flex items-start gap-2">
+                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[t.status] ? '' : 'bg-slate-300'}`}
+                      style={{ background: t.status === 'in_progress' ? '#3B82F6' : t.status === 'review' ? '#8B5CF6' : t.status === 'blocked' ? '#EF4444' : '#94A3B8' }} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-slate-700 line-clamp-1 group-hover:text-blue-700">
+                        {t.title}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 flex-wrap">
+                        <span className="font-semibold">{t.projectCode}</span>
+                        {due && (
+                          <>
+                            <span>·</span>
+                            <span className={overdue ? 'text-red-500 font-semibold' : ''}>
+                              {dueIn === null ? formatDate(due)
+                                : dueIn < 0 ? `${Math.abs(dueIn)}d overdue`
+                                : dueIn === 0 ? 'today'
+                                : `in ${dueIn}d`}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+                      {STATUS_LABEL[t.status] || t.status}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+          {myTasks.length > 15 && (
+            <li className="px-4 py-2 text-[10px] text-slate-400 border-t border-slate-50">
+              +{myTasks.length - 15} more — <Link href="/my-day" className="text-blue-600 font-semibold">view in My Day →</Link>
+            </li>
+          )}
+        </ul>
+      )}
+    </section>
   );
 }
 

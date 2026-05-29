@@ -41,7 +41,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     return NextResponse.json({
       ...teamS(t),
-      members: users.map(u),
+      // Admin users are workspace owners, not team contributors — exclude from
+      // the member list so they don't inflate workload or count displays.
+      members: users.filter((m: any) => m.role !== 'admin').map(u),
       projects: projects.map((p) => {
         const agg = projectAgg.get(String(p._id));
         return projectS(p, {

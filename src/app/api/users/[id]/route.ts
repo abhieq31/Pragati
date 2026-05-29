@@ -58,17 +58,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    // When an admin changes *another* user's account, force them to re-auth
-    // and set a new password on next login (21 CFR Part 11 access control):
-    //   • bump sessionVersion → every existing token for them is invalidated
-    //     (they're logged out wherever they're signed in), and
-    //   • set mustChangePassword → they must pick a new password to continue.
-    // Editing your own account here (admins can) does not lock you out.
+    // When an admin changes *another* user's account, force re-auth by bumping
+    // sessionVersion (invalidates all existing tokens) and clearing activeSessionId.
+    // mustChangePassword is NOT set here — that only happens at reset-password.
     const isSelfEdit = caller.sub === params.id;
     const mutation: Record<string, any> = isSelfEdit
       ? { $set: body }
       : {
-          $set: { ...body, mustChangePassword: true, activeSessionId: null },
+          $set: { ...body, activeSessionId: null },
           $inc: { sessionVersion: 1 },
         };
 

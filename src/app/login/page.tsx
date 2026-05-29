@@ -5,17 +5,30 @@ import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
-/* Quiet, rotating wisdom on the brand panel — fades between lines every
-   few seconds. Deliberately unattributed. */
+/* Rotating wisdom from leaders in technology and quality. Unattributed. */
 const QUOTES = [
-  'The most important skill is learning how to learn.',
-  'You make progress by being specific about what you want.',
-  'A clear mind is a productive mind.',
-  'Do the thing you’ve been avoiding. That’s usually the right one.',
-  'Inspiration is perishable — act on it immediately.',
-  'Focus on being productive instead of busy.',
-  'Done is better than perfect, every single day.',
-  'Small steps, taken daily, compound into everything.',
+  "The more you work, the luckier you get.",
+  "You cannot afford to be anything other than excellent.",
+  "What is dangerous is not to evolve.",
+  "Failure and invention are inseparable twins.",
+  "We are stubborn on vision. We are flexible on details.",
+  "Focus on the things that do not change.",
+  "If something is important enough, even if the odds are against you, you should still do it.",
+  "Persistence is very important. You should not give up unless you are forced to give up.",
+  "You want to be extra rigorous about making the best possible thing you can.",
+  "The first step is to establish that something is possible; then probability will occur.",
+  "Details matter — it is worth waiting to get it right.",
+  "Quality is more important than quantity. One home run is much better than two doubles.",
+  "Design is not just what it looks like and feels like. Design is how it works.",
+  "Simplicity is the ultimate sophistication.",
+  "Innovation distinguishes between a leader and a follower.",
+  "An investment in knowledge pays the best interest.",
+  "By failing to prepare, you are preparing to fail.",
+  "Well done is better than well said.",
+  "Lost time is never found again.",
+  "For every minute spent in organizing, an hour is earned.",
+  "When you innovate, you have to be prepared for everyone telling you that you are nuts.",
+  "See things in the present, even if they are in the future.",
 ];
 
 function RotatingQuote() {
@@ -190,20 +203,26 @@ export default function LoginPage() {
           <div className="relative flex flex-col flex-1 px-14 py-12">
             <div className="flex-1 flex flex-col justify-center">
 
-              {/* Custom Pragati mark with two dots orbiting close around it. */}
+              {/* Custom Pragati mark with two dots orbiting around it. */}
               <div className="flex justify-center mb-10">
                 <div className="relative logo-float" style={{ width: 112, height: 112 }}>
                   <PragatiMark size={112} />
-                  {/* Orbit ring — the dots ride the edge of this box */}
-                  <div className="absolute inset-0 orbit-a pointer-events-none">
-                    <span className="absolute left-1/2 -top-1.5 -translate-x-1/2" style={{
+                  {/* Each orbit ring wraps a dot fixed at top-center.
+                      The ring rotates around its own center (50% 50%), which
+                      coincides with the logo center, so the dot circles the mark. */}
+                  <div className="absolute pointer-events-none orbit-a"
+                    style={{ top: -10, left: -10, right: -10, bottom: -10 }}>
+                    <span className="absolute" style={{
                       width: 8, height: 8, borderRadius: '50%',
+                      top: 0, left: '50%', transform: 'translateX(-50%)',
                       background: '#42A5F5', boxShadow: '0 0 12px rgba(66,165,245,0.9)',
                     }} />
                   </div>
-                  <div className="absolute inset-0 orbit-b pointer-events-none">
-                    <span className="absolute left-1/2 -bottom-1.5 -translate-x-1/2" style={{
+                  <div className="absolute pointer-events-none orbit-b"
+                    style={{ top: -10, left: -10, right: -10, bottom: -10 }}>
+                    <span className="absolute" style={{
                       width: 6, height: 6, borderRadius: '50%',
+                      bottom: 0, left: '50%', transform: 'translateX(-50%)',
                       background: '#67D376', boxShadow: '0 0 10px rgba(103,211,118,0.9)',
                     }} />
                   </div>

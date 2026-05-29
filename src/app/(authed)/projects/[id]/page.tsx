@@ -11,7 +11,7 @@ import {
 import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { weightedProgress } from '@/lib/progress';
-import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { chimeIfEnabled } from '@/lib/sound';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -800,22 +800,6 @@ export default function ProjectDetailPage() {
                     const canEdit = isLead || (me && t.assigneeId === me.id);
                     return (
                     <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
-                      {isLead && (
-                        <div className="flex flex-col -my-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" aria-label="Move up"
-                            disabled={ti === 0}
-                            onClick={() => reorderInPhase(ph.id, t.id, -1)}
-                            className="text-slate-300 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-300 leading-none">
-                            <ChevronUp size={13} />
-                          </button>
-                          <button type="button" aria-label="Move down"
-                            disabled={ti === ts.length - 1}
-                            onClick={() => reorderInPhase(ph.id, t.id, 1)}
-                            className="text-slate-300 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-300 leading-none">
-                            <ChevronDown size={13} />
-                          </button>
-                        </div>
-                      )}
                       {canEdit ? (
                         <StatusSelect
                           value={t.status}

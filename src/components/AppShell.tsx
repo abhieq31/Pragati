@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -52,8 +52,10 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
 
   const [open, setOpen]               = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [idleWarning, setIdleWarning] = useState(false);
   const [dark, toggleDark]            = useDarkMode(initialDark);
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
+  const lastActivityRef = useRef(Date.now());
 
   // Desktop "distraction-free" collapse: shrinks the sidebar to an icon rail
   // (icons + avatar only). Persisted in localStorage so it survives reloads.
@@ -74,25 +76,27 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   }, [open]);
 
   // ── Idle auto-logout ────────────────────────────────────────────────
-  // Sign the user out after 30 minutes with no interaction. We record the
-  // last-activity time on cheap passive listeners and poll once a minute,
-  // rather than resetting a timer on every mousemove. (21 CFR Part 11
-  // §11.10(d) — unattended sessions shouldn't stay open indefinitely.)
+  // 21 CFR Part 11 §11.10(d): unattended sessions must not stay open.
+  // At 25 min idle we show a "Still there?" modal; at 30 min we force log out.
   useEffect(() => {
+    const WARN_MS = 25 * 60 * 1000;
     const IDLE_MS = 30 * 60 * 1000;
-    let last = Date.now();
-    const mark = () => { last = Date.now(); };
+    const mark = () => { lastActivityRef.current = Date.now(); setIdleWarning(false); };
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
     events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
     const iv = setInterval(() => {
-      if (Date.now() - last >= IDLE_MS) {
+      const idle = Date.now() - lastActivityRef.current;
+      if (idle >= IDLE_MS) {
         clearInterval(iv);
+        setIdleWarning(false);
         api('/auth/logout', { method: 'POST' }).finally(() => {
           router.replace('/login');
           router.refresh();
         });
+      } else if (idle >= WARN_MS) {
+        setIdleWarning(true);
       }
-    }, 60_000);
+    }, 30_000);
     return () => {
       clearInterval(iv);
       events.forEach((e) => window.removeEventListener(e, mark));
@@ -107,9 +111,10 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   // Team-lead nav: run teams, projects and tasks. NOT People — workspace
   // user management (create/reset/unlock/delete/promote accounts) is an
   // admin-only surface, appended via adminExtra below.
+  // My Day is NOT in the main nav list — it renders pinned just above the user
+  // footer so it's always reachable without scrolling.
   const leadNav: NavItem[] = [
     { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
-    { href: '/my-day',   label: 'My Day',    icon: NotebookPen,     iconColor: '#D97706', iconBg: '#FEF3C7' },
     { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams',    label: 'Team',      icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
@@ -120,9 +125,10 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
 
   const employeeNav: NavItem[] = [
     { href: '/',         label: 'My Tasks', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
-    { href: '/my-day',   label: 'My Day',   icon: NotebookPen,     iconColor: '#D97706', iconBg: '#FEF3C7' },
     { href: '/projects', label: 'Projects', icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
   ];
+
+  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#D97706', iconBg: '#FEF3C7' };
 
   const nav = isAdmin
     ? [...leadNav, ...adminExtra]
@@ -143,93 +149,119 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   /* ── Sidebar inner content ─────────────────────────────────────────── */
   const SidebarInner = (
     <>
-      {/* Brand header — same visual weight as the old top bar */}
-      <div className={`flex items-center ${showCollapsed ? 'justify-center' : 'gap-2.5'} px-4 h-14 shrink-0 border-b`}
+      {/* Brand header */}
+      <div className="flex items-center gap-2.5 px-4 h-14 shrink-0 border-b overflow-hidden"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
-        {showCollapsed ? (
-          <Link href="/" className="flex items-center justify-center"><PragatiMark size={28} flat /></Link>
-        ) : (
-          <>
-            <Link href="/" className="flex items-center gap-2.5 flex-1 min-w-0">
-              <PragatiMark size={30} flat />
-              <span className={`font-black text-[20px] tracking-tight leading-none ${dark ? 'text-white' : 'text-slate-900'}`}>
-                Pragati
-              </span>
-            </Link>
-            <div className="ml-auto flex items-center gap-1">
-              <NotificationBell dark={dark} />
-              {/* Desktop collapse toggle */}
-              <button className={`hidden lg:inline-flex p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
-                onClick={toggleCollapsed} title="Collapse sidebar" aria-label="Collapse sidebar">
-                <PanelLeftClose size={15} />
-              </button>
-              {/* Close on mobile */}
-              <button className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
-                onClick={() => setOpen(false)}>
-                <X size={15} />
-              </button>
-            </div>
-          </>
+        <Link href="/" className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center w-full' : 'flex-1 min-w-0'}`}>
+          <PragatiMark size={showCollapsed ? 28 : 30} flat />
+          <span className={`font-black text-[20px] tracking-tight leading-none whitespace-nowrap transition-all duration-200 ${
+            showCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+          } ${dark ? 'text-white' : 'text-slate-900'}`}>
+            Pragati
+          </span>
+        </Link>
+        {!showCollapsed && (
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            {/* Desktop collapse toggle */}
+            <button className={`hidden lg:inline-flex p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
+              onClick={toggleCollapsed} title="Collapse sidebar" aria-label="Collapse sidebar">
+              <PanelLeftClose size={15} />
+            </button>
+            {/* Close on mobile */}
+            <button className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
+              onClick={() => setOpen(false)}>
+              <X size={15} />
+            </button>
+          </div>
         )}
       </div>
 
       {/* Nav items */}
-      <nav className="flex-1 px-3 py-4 overflow-auto space-y-0.5">
-        {/* When collapsed, the expand toggle + the relocated notification and
-            sign-out controls sit at the top of the rail — above the nav icons
-            (and therefore above My Day). */}
-        {showCollapsed && (
-          <div className="flex flex-col items-center gap-1 pb-2 mb-1 border-b"
-            style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}>
-            <button onClick={toggleCollapsed} title="Expand sidebar" aria-label="Expand sidebar"
-              className={`p-2 rounded-lg transition-colors ${dark ? 'text-white/45 hover:text-white/80 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}>
-              <PanelLeftOpen size={16} />
-            </button>
-            <NotificationBell dark={dark} openUp />
-            <button type="button" onClick={logout} title="Sign out"
-              className={`p-2 rounded-lg transition-colors ${dark ? 'text-red-400/55 hover:text-red-400 hover:bg-white/5' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
-              <LogOut size={16} />
-            </button>
-          </div>
-        )}
-        {nav.map(n => {
-          const Icon   = n.icon;
-          const active = isActive(n.href);
-          return (
-            <Link key={n.href} href={n.href} prefetch title={showCollapsed ? n.label : undefined}
-              className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                active
-                  ? 'text-brand-700 dark:text-[#faf9f5]'
-                  : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
-              }`}
-              style={active ? (showCollapsed ? {
-                background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-              } : {
-                background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                borderLeft: `3px solid ${n.iconColor}`,
-                paddingLeft: '9px',
-              }) : {}}
-            >
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
-                style={{
-                  background: active
-                    ? (dark ? `${n.iconColor}30` : n.iconBg)
-                    : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
-                }}>
-                <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
-              </div>
-              {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 overflow-auto flex flex-col">
+        <div className="space-y-0.5 flex-1">
+          {nav.map(n => {
+            const Icon   = n.icon;
+            const active = isActive(n.href);
+            return (
+              <Link key={n.href} href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+                className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                  active
+                    ? 'text-brand-700 dark:text-[#faf9f5]'
+                    : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
+                }`}
+                style={active ? (showCollapsed ? {
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                } : {
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                  borderLeft: `3px solid ${n.iconColor}`,
+                  paddingLeft: '9px',
+                }) : {}}
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                  style={{
+                    background: active
+                      ? (dark ? `${n.iconColor}30` : n.iconBg)
+                      : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
+                  }}>
+                  <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
+                </div>
+                {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* My Day — pinned just above the footer so it's always reachable */}
+        <div className="mt-2 pt-2 border-t" style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}>
+          {(() => {
+            const n = myDayItem;
+            const Icon   = n.icon;
+            const active = isActive(n.href);
+            return (
+              <Link href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+                className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                  active
+                    ? 'text-brand-700 dark:text-[#faf9f5]'
+                    : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
+                }`}
+                style={active ? (showCollapsed ? {
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                } : {
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                  borderLeft: `3px solid ${n.iconColor}`,
+                  paddingLeft: '9px',
+                }) : {}}
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                  style={{
+                    background: active
+                      ? (dark ? `${n.iconColor}30` : n.iconBg)
+                      : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
+                  }}>
+                  <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
+                </div>
+                {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
+              </Link>
+            );
+          })()}
+        </div>
       </nav>
 
-      {/* Collapsed footer — just the avatar (theme toggle). */}
+      {/* Collapsed footer — expand + notification + logout + avatar (theme toggle). */}
       {showCollapsed ? (
-        <div className="px-2 py-3 border-t shrink-0 flex justify-center"
+        <div className="px-2 py-3 border-t shrink-0 flex flex-col items-center gap-1.5"
           style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
+          <button onClick={toggleCollapsed} title="Expand sidebar" aria-label="Expand sidebar"
+            className={`p-2 rounded-lg transition-colors ${dark ? 'text-white/45 hover:text-white/80 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}>
+            <PanelLeftOpen size={16} />
+          </button>
+          <NotificationBell dark={dark} openUp />
+          <button type="button" onClick={() => setConfirmLogout(true)} title="Sign out"
+            className={`p-2 rounded-lg transition-colors ${dark ? 'text-red-400/55 hover:text-red-400 hover:bg-white/5' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+            <LogOut size={16} />
+          </button>
           <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="relative shrink-0 rounded-full focus:outline-none">
+            className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
             <Avatar name={user.name} size={32} />
             <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border"
               style={{ background: dark ? '#30302e' : '#ffffff', borderColor: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }}>
@@ -396,6 +428,39 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
 
       {mustChangePw && (
         <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
+      )}
+
+      {/* Idle session warning — 5 min before automatic sign-out */}
+      {idleWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-[320px] rounded-2xl p-6 flex flex-col gap-4 text-center shadow-2xl"
+            style={{ background: dark ? '#262624' : '#ffffff', border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0' }}>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+              style={{ background: dark ? 'rgba(245,158,11,0.12)' : '#FEF3C7' }}>
+              <AlertTriangle size={22} className="text-amber-500" />
+            </div>
+            <div>
+              <div className={`text-base font-bold ${dark ? 'text-white/90' : 'text-slate-800'}`}>Still there?</div>
+              <div className={`text-xs mt-1 leading-snug ${dark ? 'text-white/45' : 'text-slate-500'}`}>
+                You'll be signed out in 5 minutes due to inactivity.
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => {
+                lastActivityRef.current = Date.now();
+                setIdleWarning(false);
+              }} className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors"
+                style={dark ? { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)' } : { background: '#F1F5F9', color: '#475569' }}>
+                Continue
+              </button>
+              <button onClick={logout}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-red-500 transition-colors"
+                style={dark ? { background: 'rgba(239,68,68,0.18)' } : { background: '#FEF2F2' }}>
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
     </CurrentUserProvider>
