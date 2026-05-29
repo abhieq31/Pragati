@@ -87,21 +87,37 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
+    // Personal projects are private to-do workspaces any authenticated user may
+    // create. Real (GxP) projects remain restricted to team leads / admins.
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
     const body = await readBody(req, ProjectCreateSchema);
-    const lc = LIFECYCLES[body.lifecycle as LifecycleKey] || LIFECYCLES.generic;
-    const code =
-      body.code ||
-      `${(body.lifecycle || 'generic').toUpperCase()}-${new Date().getFullYear()}-${String(
-        (await Project.countDocuments({})) + 1
-      ).padStart(4, '0')}`;
+    const isPersonal = body.isPersonal === true;
 
-    // Use customPhases if provided, otherwise fall back to lifecycle template
-    const sourcePhases = body.customPhases && body.customPhases.length > 0
-      ? body.customPhases.map((ph, i) => ({ name: ph.name || `Stage ${i + 1}`, tasks: ph.tasks }))
-      : lc.phases.map(ph => ({ name: ph.name, tasks: ph.tasks.map(t => t.title) }));
+    if (!isPersonal && !['pm', 'lead', 'admin'].includes(user!.role)) {
+      return NextResponse.json(
+        { error: 'Only team leaders can create shared projects. You can still create a personal project.' },
+        { status: 403 },
+      );
+    }
+
+    const lc = LIFECYCLES[body.lifecycle as LifecycleKey] || LIFECYCLES.generic;
+    const code = isPersonal
+      ? `PRSN-${String(user!.sub).slice(-6)}-${Date.now().toString(36).toUpperCase()}`
+      : body.code ||
+        `${(body.lifecycle || 'generic').toUpperCase()}-${new Date().getFullYear()}-${String(
+          (await Project.countDocuments({})) + 1
+        ).padStart(4, '0')}`;
+
+    // Use customPhases if provided, otherwise fall back to lifecycle template.
+    // Personal projects start empty — they are an unstructured private list,
+    // not a validated lifecycle, so no regulatory phases/tasks are seeded.
+    const sourcePhases = isPersonal
+      ? []
+      : body.customPhases && body.customPhases.length > 0
+        ? body.customPhases.map((ph, i) => ({ name: ph.name || `Stage ${i + 1}`, tasks: ph.tasks }))
+        : lc.phases.map(ph => ({ name: ph.name, tasks: ph.tasks.map(t => t.title) }));
 
     const phaseDocs = sourcePhases.map((ph, i) => ({
       _id: new mongoose.Types.ObjectId(),
@@ -113,14 +129,17 @@ export async function POST(req: NextRequest) {
       code,
       name: body.name,
       description: body.description || '',
-      lifecycle: body.lifecycle,
+      lifecycle: isPersonal ? 'generic' : body.lifecycle,
       priority: body.priority || 'medium',
-      teamId: body.teamId || undefined,
-      ownerId: body.ownerId || user.sub,
+      // A personal project is never attached to a team and is always owned by
+      // its creator — that is what keeps it private to them.
+      teamId: isPersonal ? undefined : (body.teamId || undefined),
+      ownerId: isPersonal ? user!.sub : (body.ownerId || user!.sub),
+      isPersonal,
       startDate: body.startDate ? new Date(body.startDate) : undefined,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-      gxpImpact: body.gxpImpact || 'none',
-      regulatoryRefs: lc.regulatoryRefs,
+      gxpImpact: isPersonal ? 'none' : (body.gxpImpact || 'none'),
+      regulatoryRefs: isPersonal ? '' : lc.regulatoryRefs,
       phases: phaseDocs
     });
 
@@ -141,11 +160,14 @@ export async function POST(req: NextRequest) {
     });
     if (taskDocs.length) await Task.insertMany(taskDocs);
 
-    await logOperation({
-      action: 'project.create', category: 'project', actor: user,
-      targetType: 'project', targetId: String(project._id), targetLabel: project.name,
-      summary: `Created project ${project.code} — ${project.name}`,
-    });
+    // Personal projects are private and never enter the cross-user audit trail.
+    if (!isPersonal) {
+      await logOperation({
+        action: 'project.create', category: 'project', actor: user,
+        targetType: 'project', targetId: String(project._id), targetLabel: project.name,
+        summary: `Created project ${project.code} — ${project.name}`,
+      });
+    }
 
     return NextResponse.json(projectS(project));
   } catch (e) {

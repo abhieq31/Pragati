@@ -12,7 +12,7 @@ import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { chimeIfEnabled } from '@/lib/sound';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -471,6 +471,10 @@ export default function ProjectDetailPage() {
   const [users, setUsers]     = useState<any[]>([]);
   const [me, setMe]           = useState<any>(null);
   const [view, setView]       = useState<'phases' | 'board'>('phases');
+  // The owner of a personal project may fully manage it even as an IC — that
+  // is the whole point of a private workspace. Everywhere we'd gate on isLead
+  // for task management, we gate on canManage instead.
+  const canManage = isLead || !!(project?.isPersonal && me && project?.ownerId === me.id);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen]           = useState(false);
   const [blockCompleteOpen, setBlockComplete] = useState(false);
@@ -683,16 +687,21 @@ export default function ProjectDetailPage() {
       <div className="flex items-start justify-between gap-6 flex-wrap">
         {/* Left — identity, description, then status directly below it */}
         <div className="min-w-0 flex-1">
-          <div className="text-xs text-slate-400 font-mono">{project.code}</div>
+          <div className="text-xs text-slate-400 font-mono">{project.isPersonal ? 'Personal · private to you' : project.code}</div>
           <h1 className="text-2xl font-bold mt-0.5">{project.name}</h1>
           <div className="flex flex-wrap gap-2 mt-2">
+            {project.isPersonal && (
+              <span className="tag border border-violet-200 bg-violet-50 text-violet-700 font-semibold inline-flex items-center gap-1.5">
+                <Lock size={11} /> Private
+              </span>
+            )}
             {project.archived && (
               <span className="tag border border-amber-200 bg-amber-50 text-amber-800 font-semibold inline-flex items-center gap-1.5"
                     title={project.archivedAt ? `Archived ${new Date(project.archivedAt).toLocaleString()}` : 'Archived'}>
                 <Archive size={11} /> Archived
               </span>
             )}
-            <LifecycleTag lifecycle={project.lifecycle} />
+            {!project.isPersonal && <LifecycleTag lifecycle={project.lifecycle} />}
             <PriorityTag priority={project.priority} />
           </div>
           {project.description && <p className="mt-2 text-sm text-slate-600 max-w-3xl">{project.description}</p>}
@@ -752,7 +761,7 @@ export default function ProjectDetailPage() {
                 <Archive size={13} /> {project.archived ? 'Restore' : 'Archive'}
               </button>
             )}
-            {isAdmin && (
+            {(isAdmin || (project?.isPersonal && me && project.ownerId === me.id)) && (
               <button onClick={() => setDeleteOpen(true)}
                 className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
                 <Trash2 size={13} /> Delete
@@ -821,7 +830,7 @@ export default function ProjectDetailPage() {
                 <ProgressBar value={pctP} className="mb-3" />
                 <div className="divide-y divide-slate-100">
                   {ts.map((t: any, ti: number) => {
-                    const canEdit = isLead || (me && t.assigneeId === me.id);
+                    const canEdit = canManage || (me && t.assigneeId === me.id);
                     return (
                     <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
                       {canEdit ? (
@@ -857,7 +866,7 @@ export default function ProjectDetailPage() {
                         )}
                         <PriorityTag priority={t.priority} />
                         <span className="text-xs text-slate-400 w-16 text-right">{formatDate(t.dueDate)}</span>
-                        {isLead && (
+                        {canManage && (
                           <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
                             className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 rounded transition-all">
                             <Trash2 size={13} />
@@ -868,7 +877,7 @@ export default function ProjectDetailPage() {
                     );
                   })}
                 </div>
-                {isLead && (
+                {canManage && (
                   <QuickAddTask projectId={project.id} phaseId={ph.id} users={users} onAdded={load} />
                 )}
               </Card>
@@ -879,7 +888,7 @@ export default function ProjectDetailPage() {
           <Card title="Unphased tasks">
             <div className="divide-y divide-slate-100">
               {tasks.filter((t: any) => !t.phaseId).map((t: any) => {
-                const canEdit = isLead || (me && t.assigneeId === me.id);
+                const canEdit = canManage || (me && t.assigneeId === me.id);
                 return (
                 <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
                   {canEdit ? (
@@ -910,7 +919,7 @@ export default function ProjectDetailPage() {
                     )}
                     <PriorityTag priority={t.priority} />
                     <span className="text-xs text-slate-400 w-16 text-right">{formatDate(t.dueDate)}</span>
-                    {isLead && (
+                    {canManage && (
                       <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
                         className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 rounded transition-all">
                         <Trash2 size={13} />
@@ -924,14 +933,14 @@ export default function ProjectDetailPage() {
                 <div className="text-xs text-slate-400 py-3">None</div>
               )}
             </div>
-            {isLead && (
+            {canManage && (
               <QuickAddTask projectId={project.id} users={users} onAdded={load} />
             )}
           </Card>
         </div>
       )}
 
-      {view === 'board' && <KanbanBoard tasks={tasks} onDropReorder={dropReorder} isLead={isLead} onDelete={deleteTask} />}
+      {view === 'board' && <KanbanBoard tasks={tasks} onDropReorder={dropReorder} isLead={canManage} onDelete={deleteTask} />}
 
       {/* Modals */}
       {blockCompleteOpen && (

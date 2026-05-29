@@ -14,14 +14,22 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
-    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
+    // Any authenticated user may add tasks to a personal project they own;
+    // shared (GxP) projects still require team-lead / admin authority.
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
     const body = await readBody(req, TaskCreateSchema);
 
     const scope = await getLeadScope(user!.sub, user!.role);
-    const project = await Project.findOne({ _id: body.projectId, ...projectsVisibleFilter(scope) }).select('_id').lean();
+    const project = await Project.findOne({ _id: body.projectId, ...projectsVisibleFilter(scope) })
+      .select('_id isPersonal ownerId').lean();
     if (!project) return NextResponse.json({ error: 'Project not found or not accessible' }, { status: 404 });
+
+    const ownsPersonal = (project as any).isPersonal && String((project as any).ownerId) === user!.sub;
+    if (!ownsPersonal && !['pm', 'lead', 'admin'].includes(user!.role)) {
+      return NextResponse.json({ error: 'Only team leaders can add tasks to shared projects' }, { status: 403 });
+    }
     const task = await Task.create({
       projectId: body.projectId,
       phaseId: body.phaseId,
@@ -57,11 +65,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    await logOperation({
-      action: 'task.create', category: 'task', actor: user,
-      targetType: 'task', targetId: String(task._id), targetLabel: task.title,
-      summary: `Created task "${task.title}"`, meta: { projectId: String(body.projectId) },
-    });
+    // Tasks inside a personal project stay out of the cross-user audit trail.
+    if (!(project as any).isPersonal) {
+      await logOperation({
+        action: 'task.create', category: 'task', actor: user,
+        targetType: 'task', targetId: String(task._id), targetLabel: task.title,
+        summary: `Created task "${task.title}"`, meta: { projectId: String(body.projectId) },
+      });
+    }
 
     return NextResponse.json(taskS(task));
   } catch (e) {

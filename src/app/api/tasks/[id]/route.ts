@@ -15,10 +15,14 @@ export const runtime = 'nodejs';
 
 async function assertTaskInScope(taskId: string, userId: string, role?: string | null) {
   const t = await Task.findById(taskId).select('projectId').lean();
-  if (!t) return { t: null, forbidden: false };
+  if (!t) return { t: null, forbidden: false, ownsPersonal: false };
   const scope = await getLeadScope(userId, role);
-  const proj = await Project.findOne({ _id: t.projectId, ...projectsVisibleFilter(scope) }).select('_id').lean();
-  return { t, forbidden: !proj };
+  const proj = await Project.findOne({ _id: t.projectId, ...projectsVisibleFilter(scope) })
+    .select('_id isPersonal ownerId').lean();
+  // The owner of a personal project has full authority over its tasks, even as
+  // an IC — a private workspace would be pointless otherwise.
+  const ownsPersonal = !!(proj && (proj as any).isPersonal && String((proj as any).ownerId) === String(userId));
+  return { t, forbidden: !proj, ownsPersonal };
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -63,7 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const { forbidden } = await assertTaskInScope(params.id, user!.sub, user!.role);
+    const { forbidden, ownsPersonal } = await assertTaskInScope(params.id, user!.sub, user!.role);
     if (forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const body = await readBody(req, TaskUpdateSchema);
     const current = await Task.findById(params.id).select('status assigneeId').lean();
@@ -72,7 +76,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Contributors (non-leads) on their OWN task may update the status and
     // flag who it's stuck/pending with — nothing else. Title, due date,
     // assignee, priority, etc. remain lead-only. Leads keep full edit rights.
-    if (!canMutate(user!.role)) {
+    // Exception: inside their own personal project, the owner edits freely.
+    if (!canMutate(user!.role) && !ownsPersonal) {
       const isAssignee = current.assigneeId && String(current.assigneeId) === String(user!.sub);
       const keys = Object.keys(body).filter(k => body[k as keyof typeof body] !== undefined);
       const ALLOWED_FOR_ASSIGNEE = new Set(['status', 'pendingWith']);
@@ -149,12 +154,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
-    if (!canMutate(user!.role)) {
+    await connectDB();
+    const { t, forbidden, ownsPersonal } = await assertTaskInScope(params.id, user!.sub, user!.role);
+    if (!t || forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // Leads delete any task; ICs may delete tasks inside their own personal project.
+    if (!canMutate(user!.role) && !ownsPersonal) {
       return NextResponse.json({ error: 'Only leads can delete tasks.' }, { status: 403 });
     }
-    await connectDB();
-    const { t, forbidden } = await assertTaskInScope(params.id, user!.sub, user!.role);
-    if (!t || forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const doomed = await Task.findById(params.id).select('title projectId').lean();
     await Task.deleteOne({ _id: params.id });
 

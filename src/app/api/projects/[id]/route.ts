@@ -113,17 +113,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Deleting a project is destructive + irreversible → admin only.
-    const { error, user } = await requireRole(req, 'admin');
+    // Deleting a project is destructive + irreversible. Shared projects → admin
+    // only; a personal project can only ever be deleted by its owner (no one
+    // else can even see it).
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
 
-    const scope = await getLeadScope(user.sub, user.role);
-    const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('_id name').lean();
+    const scope = await getLeadScope(user!.sub, user!.role);
+    const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) })
+      .select('_id name isPersonal ownerId').lean();
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    const ownsPersonal = !!((existing as any).isPersonal && String((existing as any).ownerId) === user!.sub);
+    if (!ownsPersonal && user!.role !== 'admin') {
+      return NextResponse.json({ error: 'Only an admin can delete a shared project.' }, { status: 403 });
+    }
+
     const body = await readBody(req, DeleteProjectSchema);
-    const pmUser = await User.findById(user.sub).select('passwordHash').lean();
+    const pmUser = await User.findById(user!.sub).select('passwordHash').lean();
     if (!pmUser || !bcrypt.compareSync(body.password, (pmUser as any).passwordHash)) {
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
     }
@@ -134,7 +142,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     if (!((existingFull as any)?.isPersonal || String((existingFull as any)?.code || '').startsWith('PRSN-'))) {
       await logOperation({
-        action: 'project.delete', category: 'project', actor: user,
+        action: 'project.delete', category: 'project', actor: user!,
         targetType: 'project', targetId: params.id, targetLabel: (existing as any)?.name || '',
         summary: `Deleted project ${(existing as any)?.name || ''}`.trim(),
       });
