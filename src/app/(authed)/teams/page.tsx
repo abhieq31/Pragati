@@ -438,7 +438,7 @@ function TeamFormModal({
               {filteredUsers.length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-400">No people match.</div>
               ) : (
-                filteredUsers.map((u) => {
+                filteredUsers.map((u) => {   if (u.id === leadId) return null;
                   const selected = memberIds.includes(u.id);
                   const isLead = leadId === u.id;
                   return (
