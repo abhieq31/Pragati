@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 import { requireRole } from '@/lib/auth';
 import { handleError } from '@/lib/http';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,7 @@ export const runtime = 'nodejs';
 // for the single workspace admin.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireRole(req, 'admin');
+    const { error, user } = await requireRole(req, 'admin');
     if (error) return error;
     await connectDB();
 
@@ -26,6 +27,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     target.failedLoginAttempts = 0;
     target.lockedAt = null;
     await target.save();
+
+    await logOperation({
+      action: 'user.unlock', category: 'user', actor: user,
+      targetType: 'user', targetId: params.id, targetLabel: target.name,
+      summary: `Unlocked account for ${target.name}`,
+    });
 
     return NextResponse.json({
       ok: true,

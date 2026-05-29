@@ -6,6 +6,7 @@ import { Project } from '@/models/Project';
 import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -52,6 +53,11 @@ export async function POST(req: NextRequest) {
       leadId: body.leadId || undefined,
       memberIds: body.memberIds || (body.leadId ? [body.leadId] : []),
       function: body.function || 'general'
+    });
+    await logOperation({
+      action: 'team.create', category: 'team', actor: user,
+      targetType: 'team', targetId: String(team._id), targetLabel: team.name,
+      summary: `Created team ${team.name}`,
     });
     return NextResponse.json(teamS(team));
   } catch (e) {

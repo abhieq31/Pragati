@@ -6,6 +6,7 @@ import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
 import { requireUser, requireRole } from '@/lib/auth';
 import { guardTeamOwner } from '@/lib/teamAuth';
+import { logOperation } from '@/lib/audit';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS, u, project as projectS } from '@/lib/serialize';
 import { TeamUpdateSchema, DeleteTeamSchema } from '@/lib/validations';
@@ -82,6 +83,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     await Team.updateOne({ _id: params.id }, { $set: patch });
     const fresh = await Team.findById(params.id).lean();
+    await logOperation({
+      action: 'team.update', category: 'team', actor: user,
+      targetType: 'team', targetId: params.id, targetLabel: (fresh as any)?.name || '',
+      summary: 'Updated team',
+    });
     return NextResponse.json(teamS(fresh));
   } catch (e) {
     return handleError(e);
@@ -103,10 +109,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
     }
 
+    const doomed = await Team.findById(params.id).select('name').lean();
+
     // Detach projects from this team rather than cascade-deleting them — projects
     // and their tasks represent real work and must survive a team disband.
     await Project.updateMany({ teamId: params.id }, { $set: { teamId: null } });
     await Team.deleteOne({ _id: params.id });
+
+    await logOperation({
+      action: 'team.delete', category: 'team', actor: user,
+      targetType: 'team', targetId: params.id, targetLabel: (doomed as any)?.name || '',
+      summary: `Deleted team ${(doomed as any)?.name || ''}`.trim(),
+    });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);

@@ -7,6 +7,7 @@ import { Task } from '@/models/Task';
 import { requireRole, isAdmin } from '@/lib/auth';
 import { u } from '@/lib/serialize';
 import { handleError, readBody } from '@/lib/http';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -73,6 +74,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const updated = await User.findByIdAndUpdate(params.id, mutation, { new: true }).lean();
     if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    await logOperation({
+      action: body.role ? 'user.role' : 'user.update', category: 'user', actor: caller,
+      targetType: 'user', targetId: params.id, targetLabel: (updated as any)?.name || '',
+      summary: body.role ? `Changed role → ${body.role}` : 'Updated user account',
+    });
+
     return NextResponse.json(u(updated));
   } catch (e) {
     return handleError(e);
@@ -115,6 +123,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     // Unassign all their tasks
     await Task.updateMany({ assigneeId: params.id }, { $unset: { assigneeId: '', assigneeName: '' } });
     await User.findByIdAndDelete(params.id);
+
+    await logOperation({
+      action: 'user.delete', category: 'user', actor: caller,
+      targetType: 'user', targetId: params.id, targetLabel: (target as any)?.name || '',
+      summary: `Removed user ${(target as any)?.name || ''}`.trim(),
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -17,7 +17,7 @@ const ForcePasswordModal = dynamic(
 );
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
-  LogOut, Menu, X, Moon, Sun, AlertTriangle, PanelLeftClose, PanelLeftOpen,
+  LogOut, Menu, X, Moon, Sun, AlertTriangle, PanelLeftClose, PanelLeftOpen, ScrollText,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -115,6 +115,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   ];
   const adminExtra: NavItem[] = [
     { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
+    { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF' },
   ];
 
   const employeeNav: NavItem[] = [

@@ -7,6 +7,7 @@ import { signToken, setAuthCookie, configuredAdminEmail, newSessionId } from '@/
 import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
 import { rateLimit } from '@/lib/rateLimit';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -176,6 +177,13 @@ export async function POST(req: NextRequest) {
       mustChangePassword: !!user.mustChangePassword,
       sv:    user.sessionVersion ?? 0,
       sid,
+    });
+
+    await logOperation({
+      action: 'auth.login', category: 'auth',
+      actor: { id: String(user._id), name: user.name },
+      targetType: 'user', targetId: String(user._id), targetLabel: user.name,
+      summary: securityKeyOk ? 'Signed in with recovery key' : 'Signed in',
     });
 
     const res = NextResponse.json({ token, user: u(user) });

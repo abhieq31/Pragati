@@ -7,6 +7,7 @@ import { User } from '@/models/User';
 import { requireRole } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import { rateLimit } from '@/lib/rateLimit';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -60,6 +61,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     target.sessionVersion      = (target.sessionVersion ?? 0) + 1;
     target.activeSessionId     = null;
     await target.save();
+
+    await logOperation({
+      action: 'user.reset', category: 'user', actor: user,
+      targetType: 'user', targetId: params.id, targetLabel: target.name,
+      summary: `Reset password for ${target.name}`,
+    });
 
     return NextResponse.json({
       ok: true,

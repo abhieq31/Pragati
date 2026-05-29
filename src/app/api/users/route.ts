@@ -8,6 +8,7 @@ import { requireUser, requireRole } from '@/lib/auth';
 import { u } from '@/lib/serialize';
 import { handleError, readBody } from '@/lib/http';
 import { UsernameSchema } from '@/lib/validations';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -66,7 +67,7 @@ function defaultContributorPassword(name: string, employeeId: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { error } = await requireRole(req, 'admin');
+    const { error, user: caller } = await requireRole(req, 'admin');
     if (error) return error;
     await connectDB();
     const body = await readBody(req, CreateBody);
@@ -94,6 +95,12 @@ export async function POST(req: NextRequest) {
       // your own password on first login.
       mustChangePassword: true,
     });
+    await logOperation({
+      action: 'user.create', category: 'user', actor: caller,
+      targetType: 'user', targetId: String(user._id), targetLabel: body.name,
+      summary: `Created contributor ${body.name}`,
+    });
+
     // Deliberately does NOT return the password — the UI never displays it.
     return NextResponse.json({ user: u(user) });
   } catch (e) {
