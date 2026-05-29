@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       name: body.name,
       description: body.description || '',
       leadId: body.leadId || undefined,
-      memberIds: body.memberIds || (body.leadId ? [body.leadId] : []),
+      memberIds: body.memberIds || [],
       function: body.function || 'general'
     });
     await logOperation({
