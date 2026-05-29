@@ -4,13 +4,12 @@ import { Team } from '@/models/Team';
 import { User } from '@/models/User';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
-import { requireUser, requireRole } from '@/lib/auth';
+import { requireUser, requireRole, isAdmin } from '@/lib/auth';
 import { guardTeamOwner } from '@/lib/teamAuth';
 import { logOperation } from '@/lib/audit';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS, u, project as projectS } from '@/lib/serialize';
 import { TeamUpdateSchema, DeleteTeamSchema } from '@/lib/validations';
-import { logOperation } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 
 export const runtime = 'nodejs';

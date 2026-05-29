@@ -6,6 +6,8 @@ import { Project } from '@/models/Project';
 import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
+import { TeamFunctionEnum } from '@/lib/validations';
+import { getLeadScope } from '@/lib/leadScope';
 import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';

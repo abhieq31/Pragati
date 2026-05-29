@@ -147,11 +147,40 @@ export default function DashboardClient({
   return (
     <div className="pb-12 max-w-[1440px]">
 
-      {/* ── Greeting ────────────────────────────────────────────────────── */}
-      <div className="mb-6 pt-1">
-        <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
+      {/* ── Greeting hero ───────────────────────────────────────────────── */}
+      <div className="brand-mesh mb-6 rounded-3xl border border-slate-200/70 px-6 py-5 overflow-hidden relative">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles size={14} className="text-blue-500" />
+          {/* Date + greeting are intentionally client-local (browser TZ) and
+             will differ from the UTC server render near a day boundary —
+             suppressHydrationWarning lets React patch to the client value
+             without logging a mismatch. */}
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-blue-700/90" suppressHydrationWarning>
+            {dateLabel}
+          </span>
+        </div>
+        <h1 className="text-3xl font-black tracking-tight leading-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
         </h1>
+        {/* At-a-glance status line — replaces the old generic tagline with
+           the numbers a lead actually wants the moment they land. */}
+        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+          {ongoingProjects.length === 0 ? (
+            <>No active projects yet — your board fills in as you create them.</>
+          ) : (
+            <>
+              <span className="font-semibold text-slate-800">{ongoingProjects.length}</span>
+              {' '}active {ongoingProjects.length === 1 ? 'project' : 'projects'} ·{' '}
+              <span className="font-semibold text-slate-800">{totalOpen}</span>
+              {' '}open {totalOpen === 1 ? 'task' : 'tasks'}
+              {totalOverdue > 0 ? (
+                <> · <span className="font-semibold text-red-600">{totalOverdue} overdue</span> need attention.</>
+              ) : (
+                <> · <span className="font-semibold text-emerald-600">nothing overdue.</span></>
+              )}
+            </>
+          )}
+        </p>
       </div>
 
       {isFirstRun ? (
@@ -594,19 +623,6 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
       })
     : [];
 
-  // Open work that has no target date yet — surfaced so the panel is never
-  // empty just because tasks haven't been scheduled. Prompts the manager to
-  // set due dates (which then graduate into the Overdue / Due groups).
-  const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
-  const STATUS_RANK: Record<string, number> = { in_progress: 0, blocked: 1, review: 2, todo: 3 };
-  const noDue = tasks
-    .filter(t => t.status !== 'done' && !(t.ccTcd || t.dueDate))
-    .sort((a, b) => {
-      const p = (PRIORITY_RANK[a.priority || 'medium'] ?? 2) - (PRIORITY_RANK[b.priority || 'medium'] ?? 2);
-      if (p !== 0) return p;
-      return (STATUS_RANK[a.status || 'todo'] ?? 3) - (STATUS_RANK[b.status || 'todo'] ?? 3);
-    });
-
   // Sort each by due ascending
   const sortByDue = (a: TeamTask, b: TeamTask) => {
     const da = a.ccTcd ? new Date(a.ccTcd).getTime() : a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
@@ -682,18 +698,6 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
           showAll={expanded}
           emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming actions.' : 'Nothing due — all clear.'}
         />
-
-        {/* No-due-date group — open work that still needs a target date */}
-        {noDue.length > 0 && (
-          <ActionGroup
-            title="No due date"
-            count={noDue.length}
-            icon={<Circle size={10} className="text-slate-400" />}
-            dotClass="bg-slate-300"
-            tasks={noDue}
-            showPriority
-          />
-        )}
       </div>
     </section>
   );
@@ -703,13 +707,6 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
 }
-
-const PRIORITY_CHIP: Record<string, { label: string; cls: string }> = {
-  critical: { label: 'Critical', cls: 'text-red-600 bg-red-50' },
-  high:     { label: 'High',     cls: 'text-amber-600 bg-amber-50' },
-  medium:   { label: 'Medium',   cls: 'text-slate-500 bg-slate-100' },
-  low:      { label: 'Low',      cls: 'text-slate-400 bg-slate-50' },
-};
 
 function ActionGroup({
   title, count, icon, dotClass, tasks, isOverdue, emptyHint, showAll,
@@ -749,14 +746,6 @@ function ActionGroup({
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 flex-wrap">
                         <span className="font-semibold">{t.projectCode}</span>
-                        {showPriority && t.priority && (
-                          <>
-                            <span>·</span>
-                            <span className={`font-bold px-1.5 py-0.5 rounded ${(PRIORITY_CHIP[t.priority] || PRIORITY_CHIP.medium).cls}`}>
-                              {(PRIORITY_CHIP[t.priority] || PRIORITY_CHIP.medium).label}
-                            </span>
-                          </>
-                        )}
                         {due && (
                           <>
                             <span>·</span>
