@@ -5,30 +5,24 @@ import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
-/* Rotating wisdom from leaders in technology and quality. Unattributed. */
+/* Rotating wisdom from Elon Musk. Unattributed. */
 const QUOTES = [
-  "The more you work, the luckier you get.",
-  "You cannot afford to be anything other than excellent.",
-  "What is dangerous is not to evolve.",
-  "Failure and invention are inseparable twins.",
-  "We are stubborn on vision. We are flexible on details.",
-  "Focus on the things that do not change.",
   "If something is important enough, even if the odds are against you, you should still do it.",
   "Persistence is very important. You should not give up unless you are forced to give up.",
-  "You want to be extra rigorous about making the best possible thing you can.",
   "The first step is to establish that something is possible; then probability will occur.",
-  "Details matter — it is worth waiting to get it right.",
-  "Quality is more important than quantity. One home run is much better than two doubles.",
-  "Design is not just what it looks like and feels like. Design is how it works.",
-  "Simplicity is the ultimate sophistication.",
-  "Innovation distinguishes between a leader and a follower.",
-  "An investment in knowledge pays the best interest.",
-  "By failing to prepare, you are preparing to fail.",
-  "Well done is better than well said.",
-  "Lost time is never found again.",
-  "For every minute spent in organizing, an hour is earned.",
   "When you innovate, you have to be prepared for everyone telling you that you are nuts.",
-  "See things in the present, even if they are in the future.",
+  "Failure is an option here. If things are not failing, you are not innovating enough.",
+  "Some people do not like change, but you need to embrace change if the alternative is disaster.",
+  "I think it is possible for ordinary people to choose to be extraordinary.",
+  "Constantly think about how you could be doing things better.",
+  "Great companies are built on great products.",
+  "Brand is just a perception, and perception will match reality over time.",
+  "It is OK to have your eggs in one basket as long as you control what happens to that basket.",
+  "Work like hell. Put in eighty- to a-hundred-hour weeks every week.",
+  "When something is important enough, you do it even if the odds are not in your favor.",
+  "If you get up in the morning and think the future is going to be better, it is a bright day.",
+  "People should pursue what they are passionate about. That will make them happier than anything else.",
+  "The path to the CEO's office should not be through the CFO's office, and it should not be through the marketing department. It needs to be through engineering and design.",
 ];
 
 function RotatingQuote() {
@@ -203,26 +197,33 @@ export default function LoginPage() {
           <div className="relative flex flex-col flex-1 px-14 py-12">
             <div className="flex-1 flex flex-col justify-center">
 
-              {/* Custom Pragati mark with two dots orbiting around it. */}
+              {/* Custom Pragati mark with two dots orbiting around it.
+                  The logo is 112px (radius 56). Each orbit ring is an absolute
+                  box centred on the logo; the dot sits at the ring's top edge,
+                  and the ring spins around its centre, so the dot traces a
+                  circle of radius = half the ring box.
+                  • The two rings have DIFFERENT radii (28px gap), so the dots
+                    travel on separate circles and can never collide.
+                  • Both radii clear the logo edge, so the dots never ride
+                    across the mark itself. */}
               <div className="flex justify-center mb-10">
                 <div className="relative logo-float" style={{ width: 112, height: 112 }}>
                   <PragatiMark size={112} />
-                  {/* Each orbit ring wraps a dot fixed at top-center.
-                      The ring rotates around its own center (50% 50%), which
-                      coincides with the logo center, so the dot circles the mark. */}
+                  {/* Inner orbit (blue) — box 168px → radius 84, clears logo (56). */}
                   <div className="absolute pointer-events-none orbit-a"
-                    style={{ top: -10, left: -10, right: -10, bottom: -10 }}>
+                    style={{ top: -28, left: -28, right: -28, bottom: -28 }}>
                     <span className="absolute" style={{
                       width: 8, height: 8, borderRadius: '50%',
-                      top: 0, left: '50%', transform: 'translateX(-50%)',
+                      top: -4, left: '50%', transform: 'translateX(-50%)',
                       background: '#42A5F5', boxShadow: '0 0 12px rgba(66,165,245,0.9)',
                     }} />
                   </div>
+                  {/* Outer orbit (green) — box 224px → radius 112, well outside blue. */}
                   <div className="absolute pointer-events-none orbit-b"
-                    style={{ top: -10, left: -10, right: -10, bottom: -10 }}>
+                    style={{ top: -56, left: -56, right: -56, bottom: -56 }}>
                     <span className="absolute" style={{
                       width: 6, height: 6, borderRadius: '50%',
-                      bottom: 0, left: '50%', transform: 'translateX(-50%)',
+                      top: -3, left: '50%', transform: 'translateX(-50%)',
                       background: '#67D376', boxShadow: '0 0 10px rgba(103,211,118,0.9)',
                     }} />
                   </div>
