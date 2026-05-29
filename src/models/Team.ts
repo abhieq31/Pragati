@@ -6,10 +6,12 @@ const TeamSchema = new Schema(
     description: { type: String, default: '' },
     leadId: { type: Schema.Types.ObjectId, ref: 'User' },
     memberIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    // informatics function: data_integrity, csv_validation, pv, lab, audit, training
+    // Operating function: general, ctb (change the business), rtb (run the
+    // business). Legacy informatics values kept in the enum so historical
+    // teams still load/save.
     function: {
       type: String,
-      enum: ['data_integrity', 'csv_validation', 'pharmacovigilance', 'lab_informatics', 'audit', 'training', 'general'],
+      enum: ['general', 'ctb', 'rtb', 'data_integrity', 'csv_validation', 'pharmacovigilance', 'lab_informatics', 'audit', 'training'],
       default: 'general'
     }
   },

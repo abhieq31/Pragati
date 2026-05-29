@@ -1,4 +1,10 @@
 import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
+import { LIFECYCLES } from '@/lib/lifecycles';
+
+// Single source of truth for the lifecycle enum — mirrors the template
+// catalogue so a template added in lifecycles.ts is automatically a valid
+// project lifecycle (no more "X is not a valid enum value" on create).
+const LIFECYCLE_KEYS = Object.keys(LIFECYCLES);
 
 const PhaseSchema = new Schema(
   {
@@ -15,17 +21,7 @@ const ProjectSchema = new Schema(
     description: { type: String, default: '' },
     lifecycle: {
       type: String,
-      enum: [
-        'csv',
-        'sop',
-        'deviation_capa',
-        'change_control',
-        'audit',
-        'validation',
-        'data_integrity',
-        'pharmacovigilance',
-        'generic'
-      ],
+      enum: LIFECYCLE_KEYS,
       default: 'generic'
     },
     status: {
@@ -60,6 +56,12 @@ const ProjectSchema = new Schema(
     archived:   { type: Boolean, default: false },
     archivedAt: { type: Date,    default: null   },
     archivedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+
+    // ── Personal projects ───────────────────────────────────────────────
+    // A personal project is private to its owner — never surfaced to other
+    // users (including admins) anywhere in the app. Any authenticated user
+    // can create one; it carries no team.
+    personal: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

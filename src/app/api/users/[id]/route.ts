@@ -22,6 +22,11 @@ const Body = z.object({
   department: z.string().max(120).optional(),
   phone:      z.string().max(40).optional(),
   location:   z.string().max(120).optional(),
+  // Admin operations lock — true suspends the account (blocks sign-in),
+  // false lifts the lock and clears the failed-login counter.
+  locked:     z.boolean().optional(),
+  // Force the user to set a new password on their next sign-in.
+  mustChangePassword: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -49,6 +54,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (body.role && caller.sub === params.id) {
       return NextResponse.json({ error: 'You cannot change your own role.' }, { status: 403 });
+    }
+
+    if (body.locked && caller.sub === params.id) {
+      return NextResponse.json({ error: 'You cannot lock your own account.' }, { status: 403 });
     }
 
     if (body.role === 'employee') {

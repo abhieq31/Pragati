@@ -114,6 +114,8 @@ export const ProjectCreateSchema = z.object({
   priority: PriorityEnum.optional(),
   teamId: optionalObjectId,
   ownerId: optionalObjectId,
+  // Personal project — private to the creator, carries no team.
+  personal: z.boolean().optional(),
   startDate: dateString.optional(),
   dueDate: dateString.optional(),
   // GxP impact is a regulatory classification — explicitly enumerated, never
@@ -152,14 +154,21 @@ export type DeleteProjectInput = z.infer<typeof DeleteProjectSchema>;
 
 /* ── Team schemas ────────────────────────────────────────────────────────── */
 
+// Teams are scoped to one of three operating functions: keeping the lights
+// on (RTB), delivering change (CTB), or a catch-all (General). The legacy
+// informatics values are still accepted so existing teams keep validating
+// on edit — they're just no longer offered when creating a team.
 export const TeamFunctionEnum = z.enum([
+  'general',
+  'ctb',
+  'rtb',
+  // legacy — accepted for backward compatibility, not offered in the UI
   'data_integrity',
   'csv_validation',
   'pharmacovigilance',
   'lab_informatics',
   'audit',
   'training',
-  'general',
 ]);
 
 // PM-only update. Each field independently optional so callers can patch

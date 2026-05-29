@@ -109,7 +109,6 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   // admin-only surface, appended via adminExtra below.
   const leadNav: NavItem[] = [
     { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
-    { href: '/my-day',   label: 'My Day',    icon: NotebookPen,     iconColor: '#D97706', iconBg: '#FEF3C7' },
     { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams',    label: 'Team',      icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
@@ -120,9 +119,12 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
 
   const employeeNav: NavItem[] = [
     { href: '/',         label: 'My Tasks', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
-    { href: '/my-day',   label: 'My Day',   icon: NotebookPen,     iconColor: '#D97706', iconBg: '#FEF3C7' },
     { href: '/projects', label: 'Projects', icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
   ];
+
+  // "My Day" sits at the bottom of the nav, just above the profile — a
+  // personal space, slightly set apart from the team/project workspace.
+  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#D97706', iconBg: '#FEF3C7' };
 
   const nav = isAdmin
     ? [...leadNav, ...adminExtra]
@@ -373,7 +375,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
           </button>
           <Link href="/" className="flex items-center gap-2">
             <PragatiMark size={22} flat />
-            <span className={`font-black text-sm tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>Pragati</span>
+            <span className={`font-display font-bold text-base tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>Pragati</span>
           </Link>
         </div>
 

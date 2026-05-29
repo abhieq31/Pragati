@@ -16,6 +16,18 @@ import {
 } from '@/components/ui';
 import { downloadTeamReport } from './report';
 
+const FUNCTION_LABEL: Record<string, string> = {
+  general: 'General',
+  ctb: 'Change the Business',
+  rtb: 'Run the Business',
+  csv_validation: 'CSV / Validation',
+  data_integrity: 'Data Integrity',
+  pharmacovigilance: 'Pharmacovigilance',
+  lab_informatics: 'Lab Informatics',
+  audit: 'Audit',
+  training: 'Training',
+};
+
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [team, setTeam] = useState<any>(null);
@@ -250,7 +262,8 @@ export default function TeamDetailPage() {
                 </div>
               </Card>
               <Card title="Per-member load">
-                <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[460px]">
                   <thead className="text-xs text-slate-500 uppercase">
                     <tr>
                       <th className="text-left font-semibold py-2">Member</th>
@@ -286,6 +299,7 @@ export default function TeamDetailPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </Card>
             </>
           )}

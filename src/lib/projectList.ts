@@ -126,9 +126,36 @@ export async function listProjectsForUser(
   });
 }
 
-/** Lightweight team list for filter dropdowns. */
-export async function listTeamsForFilter(): Promise<Array<{ id: string; name: string }>> {
+/**
+ * Lightweight team list for filter dropdowns — scoped to the viewer so a
+ * lead/contributor only sees teams they own or belong to (admins see all).
+ */
+export async function listTeamsForFilter(
+  userId: string,
+  role: string | undefined,
+): Promise<Array<{ id: string; name: string }>> {
   await connectDB();
-  const teams = await Team.find({}, '_id name').sort({ name: 1 }).lean();
+  const scope = await getLeadScope(userId, role);
+  const filter = scope.unrestricted ? {} : { _id: { $in: scope.teamOids } };
+  const teams = await Team.find(filter, '_id name').sort({ name: 1 }).lean();
   return teams.map((t) => ({ id: String(t._id), name: t.name }));
+}
+
+/**
+ * The distinct project templates (lifecycles) actually in use across the
+ * viewer's projects — so the Projects filter lists only relevant templates
+ * the user has, not the whole catalog. Labels come from LIFECYCLES.
+ */
+export async function listTemplatesInUse(
+  userId: string,
+  role: string | undefined,
+): Promise<Array<{ key: string; label: string }>> {
+  await connectDB();
+  const scope = await getLeadScope(userId, role);
+  const keys: string[] = await Project.distinct('lifecycle', projectsVisibleFilter(scope));
+  const { LIFECYCLES } = await import('@/lib/lifecycles');
+  return keys
+    .filter(Boolean)
+    .map((k) => ({ key: k, label: (LIFECYCLES as any)[k]?.label || k.replace(/_/g, ' ') }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }

@@ -202,7 +202,7 @@ export default function SignupPage() {
         {/* Pragati mark + wordmark */}
         <div className="flex flex-col items-center mb-6">
           <PragatiMark size={56} className="mb-3" />
-          <div className="text-lg font-black tracking-tight text-slate-900">Pragati</div>
+          <div className="font-display text-xl font-bold tracking-tight text-slate-900">Pragati</div>
           <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 mt-0.5">Project Intelligence</div>
         </div>
 

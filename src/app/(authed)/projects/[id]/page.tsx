@@ -11,7 +11,7 @@ import {
 import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { weightedProgress } from '@/lib/progress';
-import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { chimeIfEnabled } from '@/lib/sound';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -198,13 +198,15 @@ function KanbanBoard({ tasks, onDropReorder }: {
         const isOver = dragOver?.col === col;
         const isDragging = !!draggingId;
         return (
-          <div key={col} className="shrink-0 flex flex-col rounded-xl transition-all duration-150"
+          <div key={col} className={`shrink-0 flex flex-col rounded-xl transition-all duration-150 border-2 ${
+              isOver ? '' : 'bg-slate-50 dark:bg-white/[0.03] border-slate-200/70 dark:border-white/10'
+            }`}
             style={{
               width: COLUMN_WIDTH,
               scrollSnapAlign: 'start',
-              background: isOver ? meta.bg : '#f8fafc',
-              border: `2px solid ${isOver ? meta.border : '#e9eef5'}`,
-              boxShadow: isOver ? `0 0 0 3px ${meta.border}` : undefined,
+              ...(isOver
+                ? { background: meta.bg, borderColor: meta.border, boxShadow: `0 0 0 3px ${meta.border}` }
+                : {}),
             }}
             onDragOver={e => handleColDragOver(e, col)}
             onDrop={e => handleDrop(e, col)}
@@ -230,10 +232,9 @@ function KanbanBoard({ tasks, onDropReorder }: {
                     onDragOver={e => handleCardDragOver(e, col, index)}
                     className="group relative bg-white rounded-lg border transition-all duration-150 cursor-grab active:cursor-grabbing"
                     style={{
-                      borderColor: isDraggingThis ? meta.color : '#e2e8f0',
-                      boxShadow: isDraggingThis
-                        ? `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}`
-                        : '0 1px 3px rgba(0,0,0,0.06)',
+                      ...(isDraggingThis
+                        ? { borderColor: meta.color, boxShadow: `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}` }
+                        : { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }),
                       opacity: isDraggingThis ? 0.5 : isDragging ? 0.85 : 1,
                       transform: isDraggingThis ? 'rotate(1.5deg) scale(1.02)' : undefined,
                     }}
@@ -273,8 +274,10 @@ function KanbanBoard({ tasks, onDropReorder }: {
                 <div className="h-0.5 rounded-full" style={{ background: meta.color }} />
               )}
               {colTasks.length === 0 && (
-                <div className="rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150 text-center px-2"
-                  style={{ borderColor: isOver ? meta.color : '#e2e8f0', background: isOver ? meta.bg : 'transparent' }}>
+                <div className={`rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150 text-center px-2 ${
+                    isOver ? '' : 'border-slate-200 dark:border-white/10'
+                  }`}
+                  style={isOver ? { borderColor: meta.color, background: meta.bg } : {}}>
                   <span className="text-xs leading-tight" style={{ color: isOver ? meta.color : '#94a3b8' }}>
                     {isOver ? 'Drop here' : isDragging ? 'Move card here' : 'No tasks'}
                   </span>
@@ -463,6 +466,7 @@ export default function ProjectDetailPage() {
   const [blockCompleteOpen, setBlockComplete] = useState(false);
   const [savingStatus, setSavingStatus]       = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
+  const [dragId, setDragId] = useState<string | null>(null);
   const { showToast, ToastEl } = useToast();
 
   async function load() {
@@ -540,6 +544,11 @@ export default function ProjectDetailPage() {
   const overdue = tasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < today && t.status !== 'done').length;
   const openTaskCount = tasks.filter((t: any) => t.status !== 'done').length;
 
+  // The owner of a project (e.g. the creator of a personal project) can
+  // manage it and its tasks even when they aren't a team lead.
+  const isOwner = !!(me && project.ownerId && String(project.ownerId) === String(me.id));
+  const canManage = isLead || isOwner;
+
   async function updateStatus(newStatus: string) {
     if (newStatus === 'completed' && openTaskCount > 0) {
       setBlockComplete(true);
@@ -608,19 +617,20 @@ export default function ProjectDetailPage() {
     }
   }
 
-  // Move a task up/down within its phase. Computes the phase's new order
-  // and persists it (position = index) via the reorder endpoint.
-  async function reorderInPhase(phaseId: string | null, taskId: string, dir: -1 | 1) {
+  // Drag-and-drop reorder: move `draggedId` to where `targetId` sits within
+  // the same phase, then persist the whole phase order.
+  async function reorderDrop(phaseId: string | null, draggedId: string, targetId: string) {
+    if (draggedId === targetId) return;
     const phaseTasks = tasks
       .filter((t: any) => (t.phaseId || null) === (phaseId || null))
       .slice()
       .sort((a: any, b: any) => (a.position ?? 0) - (b.position ?? 0));
-    const idx = phaseTasks.findIndex((t: any) => t.id === taskId);
-    const swap = idx + dir;
-    if (idx < 0 || swap < 0 || swap >= phaseTasks.length) return;
-    [phaseTasks[idx], phaseTasks[swap]] = [phaseTasks[swap], phaseTasks[idx]];
+    const from = phaseTasks.findIndex((t: any) => t.id === draggedId);
+    const to   = phaseTasks.findIndex((t: any) => t.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = phaseTasks.splice(from, 1);
+    phaseTasks.splice(to, 0, moved);
     const orderedIds = phaseTasks.map((t: any) => t.id);
-    // Optimistic: reflect the new positions locally right away.
     setProject((p: any) => ({
       ...p,
       tasks: (p.tasks || []).map((t: any) =>
@@ -662,6 +672,12 @@ export default function ProjectDetailPage() {
           <div className="text-xs text-slate-400 font-mono">{project.code}</div>
           <h1 className="text-2xl font-bold mt-0.5">{project.name}</h1>
           <div className="flex flex-wrap gap-2 mt-2">
+            {project.personal && (
+              <span className="tag border border-blue-200 bg-blue-50 text-blue-700 font-semibold"
+                    title="Personal project — only visible to you">
+                Personal
+              </span>
+            )}
             {project.archived && (
               <span className="tag border border-amber-200 bg-amber-50 text-amber-800 font-semibold inline-flex items-center gap-1.5"
                     title={project.archivedAt ? `Archived ${new Date(project.archivedAt).toLocaleString()}` : 'Archived'}>
@@ -675,7 +691,7 @@ export default function ProjectDetailPage() {
 
           {/* Status — directly under the description */}
           <div className="flex items-center gap-2 mt-3">
-            {isLead ? (
+            {canManage ? (
               <StatusPillRow
                 value={project.status}
                 onChange={updateStatus}
@@ -728,7 +744,7 @@ export default function ProjectDetailPage() {
                 <Archive size={13} /> {project.archived ? 'Restore' : 'Archive'}
               </button>
             )}
-            {isAdmin && (
+            {(isAdmin || (isOwner && project.personal)) && (
               <button onClick={() => setDeleteOpen(true)}
                 className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
                 <Trash2 size={13} /> Delete
@@ -796,26 +812,15 @@ export default function ProjectDetailPage() {
                 </div>
                 <ProgressBar value={pctP} className="mb-3" />
                 <div className="divide-y divide-slate-100">
-                  {ts.map((t: any, ti: number) => {
-                    const canEdit = isLead || (me && t.assigneeId === me.id);
+                  {ts.map((t: any) => {
+                    const canEdit = canManage || (me && t.assigneeId === me.id);
                     return (
-                    <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
-                      {isLead && (
-                        <div className="flex flex-col -my-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" aria-label="Move up"
-                            disabled={ti === 0}
-                            onClick={() => reorderInPhase(ph.id, t.id, -1)}
-                            className="text-slate-300 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-300 leading-none">
-                            <ChevronUp size={13} />
-                          </button>
-                          <button type="button" aria-label="Move down"
-                            disabled={ti === ts.length - 1}
-                            onClick={() => reorderInPhase(ph.id, t.id, 1)}
-                            className="text-slate-300 hover:text-slate-600 disabled:opacity-30 disabled:hover:text-slate-300 leading-none">
-                            <ChevronDown size={13} />
-                          </button>
-                        </div>
-                      )}
+                    <div key={t.id}
+                      onDragOver={canManage ? (e) => e.preventDefault() : undefined}
+                      onDrop={canManage ? () => { if (dragId) reorderDrop(ph.id, dragId, t.id); setDragId(null); } : undefined}
+                      className={`py-2.5 flex items-center gap-2.5 text-sm group transition-colors ${
+                        dragId === t.id ? 'opacity-40' : ''
+                      }`}>
                       {canEdit ? (
                         <StatusSelect
                           value={t.status}
@@ -835,9 +840,9 @@ export default function ProjectDetailPage() {
                           {t.subtaskCount > 0 && ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end max-w-[48%] sm:max-w-none">
                         {t.pendingWith && t.status !== 'done' && (
-                          <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
+                          <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1 max-w-[120px] truncate"
                                 title={`Waiting on ${t.pendingWith}`}>
                             ⏳ {t.pendingWith}
                           </span>
@@ -848,13 +853,28 @@ export default function ProjectDetailPage() {
                           : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
                         )}
                         <PriorityTag priority={t.priority} />
-                        <span className="text-xs text-slate-400 w-16 text-right">{formatDate(t.dueDate)}</span>
+                        {t.dueDate && (
+                          <span className="text-xs text-slate-400 sm:w-16 text-right">{formatDate(t.dueDate)}</span>
+                        )}
+                        {/* Drag handle — leads (or the project owner) grab
+                           this to reshuffle tasks within the phase. */}
+                        {canManage && (
+                          <span
+                            draggable
+                            onDragStart={() => setDragId(t.id)}
+                            onDragEnd={() => setDragId(null)}
+                            title="Drag to reorder"
+                            className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 shrink-0"
+                          >
+                            <GripVertical size={15} />
+                          </span>
+                        )}
                       </div>
                     </div>
                     );
                   })}
                 </div>
-                {isLead && (
+                {canManage && (
                   <QuickAddTask projectId={project.id} phaseId={ph.id} users={users} onAdded={load} />
                 )}
               </Card>
@@ -865,7 +885,7 @@ export default function ProjectDetailPage() {
           <Card title="Unphased tasks">
             <div className="divide-y divide-slate-100">
               {tasks.filter((t: any) => !t.phaseId).map((t: any) => {
-                const canEdit = isLead || (me && t.assigneeId === me.id);
+                const canEdit = canManage || (me && t.assigneeId === me.id);
                 return (
                 <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
                   {canEdit ? (
@@ -882,9 +902,9 @@ export default function ProjectDetailPage() {
                       {t.subtaskCount > 0 && ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end max-w-[48%] sm:max-w-none">
                     {t.pendingWith && t.status !== 'done' && (
-                      <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
+                      <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1 max-w-[120px] truncate"
                             title={`Waiting on ${t.pendingWith}`}>
                         ⏳ {t.pendingWith}
                       </span>
@@ -895,7 +915,7 @@ export default function ProjectDetailPage() {
                       : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
                     )}
                     <PriorityTag priority={t.priority} />
-                    <span className="text-xs text-slate-400 w-16 text-right">{formatDate(t.dueDate)}</span>
+                    <span className="text-xs text-slate-400 sm:w-16 text-right">{formatDate(t.dueDate)}</span>
                   </div>
                 </div>
                 );
@@ -904,7 +924,7 @@ export default function ProjectDetailPage() {
                 <div className="text-xs text-slate-400 py-3">None</div>
               )}
             </div>
-            {isLead && (
+            {canManage && (
               <QuickAddTask projectId={project.id} users={users} onAdded={load} />
             )}
           </Card>

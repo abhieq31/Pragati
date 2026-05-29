@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { useIsLead } from '@/components/CurrentUserContext';
 import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
@@ -156,15 +155,11 @@ function PhaseRow({
 ════════════════════════════════════════════════════════════════════════════ */
 export default function NewProjectPage() {
   const router = useRouter();
-  const isLead = useIsLead();
 
-  // Creating projects is a lead/admin action. The "+ New project" button is
-  // already hidden for contributors, but the route is still reachable by
-  // direct URL — guard it so a contributor sees the dashboard instead of a
-  // form that would 403 on submit.
-  useEffect(() => {
-    if (isLead === false) router.replace('/');
-  }, [isLead, router]);
+  // Every user can create a project; the Personal toggle decides whether it
+  // is a shared team project or a private to-do list. There is no separate
+  // entry point — one form, one toggle.
+  const [personal, setPersonal] = useState(false);
 
   const [form, setForm] = useState({
     name: '', description: '', lifecycle: 'generic',
@@ -228,7 +223,8 @@ export default function NewProjectPage() {
           lifecycle:   form.lifecycle,
           priority:    form.priority,
           gxpImpact:   form.gxpImpact,
-          teamId:      form.teamId || undefined,
+          personal,
+          teamId:      personal ? undefined : (form.teamId || undefined),
           startDate:   form.startDate || undefined,
           dueDate:     form.dueDate || undefined,
           useTemplate: false,
@@ -304,7 +300,30 @@ export default function NewProjectPage() {
                 <input type="date" className="input" value={form.dueDate} onChange={e => up('dueDate', e.target.value)} />
               </div>
             </div>
-            {teams.length > 0 && (
+            {/* Personal toggle — flip it on to keep the project private to
+                you (no team, hidden from everyone else). Off = a shared
+                project belonging to a team. */}
+            <div className="rounded-lg border border-slate-200 px-3 py-2.5 flex items-start gap-3">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={personal}
+                onClick={() => setPersonal(p => !p)}
+                className={`mt-0.5 relative w-9 h-5 rounded-full shrink-0 transition-colors cursor-pointer ${
+                  personal ? 'bg-blue-600' : 'bg-slate-300'
+                }`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${personal ? 'left-4' : 'left-0.5'}`} />
+              </button>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-slate-700">Personal project</div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Only visible to you — no team, hidden from everyone else (including admins).
+                </div>
+              </div>
+            </div>
+
+            {!personal && teams.length > 0 && (
               <div>
                 <label className="label">Team</label>
                 <select className="select" value={form.teamId} onChange={e => up('teamId', e.target.value)}>

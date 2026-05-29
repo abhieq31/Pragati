@@ -4,7 +4,7 @@ import { Team } from '@/models/Team';
 import { User } from '@/models/User';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
-import { requireUser, requireRole } from '@/lib/auth';
+import { requireUser, requireRole, isAdmin } from '@/lib/auth';
 import { guardTeamOwner } from '@/lib/teamAuth';
 import { logOperation } from '@/lib/audit';
 import { handleError, readBody } from '@/lib/http';
@@ -16,11 +16,20 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireUser(req);
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
     const t = await Team.findById(params.id).lean();
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // Non-admins may only view a team they own (leadId) or belong to.
+    if (!isAdmin(user!.role)) {
+      const me = String(user!.sub);
+      const isMember =
+        String((t as any).leadId || '') === me ||
+        ((t as any).memberIds || []).some((m: any) => String(m) === me);
+      if (!isMember) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     const memberIds = ((t as any).memberIds || []);
     const [users, projects] = await Promise.all([
       User.find({ _id: { $in: memberIds } }).lean(),
