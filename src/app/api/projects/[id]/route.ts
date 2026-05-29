@@ -100,6 +100,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     await Project.updateOne({ _id: params.id }, { $set: patch });
     const fresh = await Project.findById(params.id).lean();
+
+    const statusChanged = !!body.status && body.status !== current.status;
+    await logOperation({
+      action: statusChanged ? 'project.status' : 'project.update', category: 'project', actor: user,
+      targetType: 'project', targetId: params.id, targetLabel: (fresh as any)?.name || '',
+      summary: statusChanged ? `Project status → ${body.status}` : 'Updated project details',
+    });
+
     return NextResponse.json(projectS(fresh));
   } catch (e) {
     return handleError(e);
@@ -114,8 +122,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (error) return error;
     await connectDB();
 
-    const scope = await getLeadScope(user!.sub, user!.role);
-    const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('_id ownerId personal name code').lean();
+    const scope = await getLeadScope(user.sub, user.role);
+    const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('_id name').lean();
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const ownsPersonal = !!(existing as any).personal && String((existing as any).ownerId || '') === String(user!.sub);
@@ -133,12 +141,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await Project.deleteOne({ _id: params.id });
 
     await logOperation({
-      actor: user,
-      action: 'project.delete',
-      entityType: 'project',
-      entityId: params.id,
-      summary: `deleted project "${(existing as any).name}" (${(existing as any).code})`,
+      action: 'project.delete', category: 'project', actor: user,
+      targetType: 'project', targetId: params.id, targetLabel: (existing as any)?.name || '',
+      summary: `Deleted project ${(existing as any)?.name || ''}`.trim(),
     });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);

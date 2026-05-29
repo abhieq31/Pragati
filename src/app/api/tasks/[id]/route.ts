@@ -9,6 +9,7 @@ import { task as taskS } from '@/lib/serialize';
 import { TaskUpdateSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { notify } from '@/lib/notify';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -131,6 +132,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    const statusChanged = !!body.status && body.status !== current.status;
+    await logOperation({
+      action: statusChanged ? 'task.status' : 'task.update', category: 'task', actor: user,
+      targetType: 'task', targetId: params.id, targetLabel: (fresh as any)?.title || '',
+      summary: statusChanged ? `Task status → ${body.status}` : 'Updated task',
+    });
+
     return NextResponse.json(taskS(fresh));
   } catch (e) {
     return handleError(e);
@@ -148,7 +156,18 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (!canMutate(user!.role) && !ownsProject) {
       return NextResponse.json({ error: 'Only leads can delete tasks.' }, { status: 403 });
     }
+    await connectDB();
+    const { t, forbidden } = await assertTaskInScope(params.id, user!.sub, user!.role);
+    if (!t || forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const doomed = await Task.findById(params.id).select('title').lean();
     await Task.deleteOne({ _id: params.id });
+
+    await logOperation({
+      action: 'task.delete', category: 'task', actor: user,
+      targetType: 'task', targetId: params.id, targetLabel: (doomed as any)?.title || '',
+      summary: `Deleted task "${(doomed as any)?.title || ''}"`,
+    });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);

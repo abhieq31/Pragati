@@ -154,13 +154,11 @@ export async function POST(req: NextRequest) {
     if (taskDocs.length) await Task.insertMany(taskDocs);
 
     await logOperation({
-      actor: user,
-      action: 'project.create',
-      entityType: 'project',
-      entityId: String(project._id),
-      summary: `created ${personal ? 'personal ' : ''}project "${project.name}" (${code})`,
-      meta: { lifecycle: body.lifecycle, personal },
+      action: 'project.create', category: 'project', actor: user,
+      targetType: 'project', targetId: String(project._id), targetLabel: project.name,
+      summary: `Created project ${project.code} — ${project.name}`,
     });
+
     return NextResponse.json(projectS(project));
   } catch (e) {
     return handleError(e);

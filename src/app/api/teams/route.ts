@@ -6,8 +6,6 @@ import { Project } from '@/models/Project';
 import { requireUser, requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
-import { TeamFunctionEnum } from '@/lib/validations';
-import { getLeadScope } from '@/lib/leadScope';
 import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -55,15 +53,13 @@ export async function POST(req: NextRequest) {
       name: body.name,
       description: body.description || '',
       leadId: body.leadId || undefined,
-      memberIds: body.memberIds || (body.leadId ? [body.leadId] : []),
+      memberIds: body.memberIds || [],
       function: body.function || 'general'
     });
     await logOperation({
-      actor: user,
-      action: 'team.create',
-      entityType: 'team',
-      entityId: String(team._id),
-      summary: `created team "${team.name}"`,
+      action: 'team.create', category: 'team', actor: user,
+      targetType: 'team', targetId: String(team._id), targetLabel: team.name,
+      summary: `Created team ${team.name}`,
     });
     return NextResponse.json(teamS(team));
   } catch (e) {

@@ -64,27 +64,30 @@ export async function getLeadScope(userId: string, role?: string | null): Promis
   return { userOid, teamOids, memberOids, unrestricted: false };
 }
 
+// Matches projects that are NOT someone's private personal to-do list.
+// A project is personal if isPersonal === true OR (legacy rows) its code
+// starts with "PRSN-". Spread into any raw Project query that an admin or
+// other user can see, to keep personal projects out of cross-user rollups.
+export const NOT_PERSONAL = {
+  isPersonal: { $ne: true },
+  code: { $not: /^PRSN-/ },
+} as const;
+
 // Mongo filter that returns true for every project the viewer can see.
 // Pass as the first arg to Project.find / countDocuments / aggregate $match.
 //
-// Personal projects are private to their owner and never leak to anyone
-// else — not even an admin. That carve-out applies in BOTH branches below.
+// Personal projects are private to their owner: they're only ever returned
+// when the viewer owns them — never to another lead, and never to the admin
+// (even though the admin otherwise sees everything).
 export function projectsVisibleFilter(scope: LeadScope) {
-  if (scope.unrestricted) {
-    // Admin sees the whole workspace EXCEPT other users' personal projects.
-    return {
-      $or: [
-        { personal: { $ne: true } },
-        { ownerId: scope.userOid },
-      ],
-    };
-  }
+  const minePersonalOrNotPersonal = {
+    $or: [{ ownerId: scope.userOid }, NOT_PERSONAL],
+  };
+  if (scope.unrestricted) return minePersonalOrNotPersonal;
   return {
-    $or: [
-      // My own projects (personal or not).
-      { ownerId: scope.userOid },
-      // Non-personal projects belonging to a team I lead or belong to.
-      { teamId: { $in: scope.teamOids }, personal: { $ne: true } },
+    $and: [
+      minePersonalOrNotPersonal,
+      { $or: [{ ownerId: scope.userOid }, { teamId: { $in: scope.teamOids } }] },
     ],
   };
 }

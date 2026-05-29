@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/client/api';
-import { Plus, Check, Trash2, ArrowRight, X, Sparkles } from 'lucide-react';
+import { useIsLead } from '@/components/CurrentUserContext';
+import { Plus, Check, Trash2, ArrowRight, X, Sparkles, Pencil } from 'lucide-react';
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
 
@@ -21,7 +22,19 @@ export default function MyDayPage() {
   const [loaded, setLoaded] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [promote, setPromote] = useState<Note | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText]   = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function startEdit(n: Note) { setEditingId(n.id); setEditText(n.text); }
+  function cancelEdit() { setEditingId(null); setEditText(''); }
+  async function saveEdit(n: Note) {
+    const t = editText.trim();
+    if (!t || t === n.text) { cancelEdit(); return; }
+    setOpen((o) => o.map((x) => (x.id === n.id ? { ...x, text: t } : x)));
+    cancelEdit();
+    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { text: t } }); } finally { load(); }
+  }
 
   async function load() {
     try {
@@ -114,16 +127,43 @@ export default function MyDayPage() {
               aria-label="Mark done"
               className="w-5 h-5 rounded-md border border-slate-300 hover:border-emerald-400 flex items-center justify-center shrink-0 transition-colors"
             />
-            <span className="flex-1 text-sm text-slate-700 break-words">{n.text}</span>
+            {editingId === n.id ? (
+              <input
+                autoFocus
+                className="input flex-1 text-sm py-1"
+                value={editText}
+                maxLength={2000}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveEdit(n);
+                  if (e.key === 'Escape') cancelEdit();
+                }}
+                onBlur={() => saveEdit(n)}
+              />
+            ) : (
+              <span
+                className="flex-1 text-sm text-slate-700 break-words cursor-text"
+                onDoubleClick={() => startEdit(n)}
+                title="Double-click to edit"
+              >
+                {n.text}
+              </span>
+            )}
             {n.promotedTaskId ? (
               <a href={`/tasks/${n.promotedTaskId}`} className="text-[11px] font-semibold text-emerald-600 shrink-0">→ tracked</a>
-            ) : (
+            ) : isLead && editingId !== n.id ? (
               <button
                 onClick={() => setPromote(n)}
                 title="Turn this into a tracked task"
                 className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 shrink-0 transition-colors"
               >
                 To task <ArrowRight size={12} />
+              </button>
+            ) : null}
+            {editingId !== n.id && (
+              <button onClick={() => startEdit(n)} aria-label="Edit"
+                className="text-slate-300 hover:text-blue-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Pencil size={13} />
               </button>
             )}
             <button onClick={() => remove(n)} aria-label="Delete"

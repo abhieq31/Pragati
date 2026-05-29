@@ -28,12 +28,21 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; bo
 const COLUMN_WIDTH = 230;
 const COLUMN_GAP   = 12;
 
-function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string, status: string) => void }) {
+function KanbanBoard({ tasks, onDropReorder }: {
+  tasks: any[];
+  // Persists a drop: moves taskId to toStatus (if changed) and writes the new
+  // order of that column (orderedIds).
+  onDropReorder: (taskId: string, toStatus: string, orderedIds: string[]) => void;
+}) {
   const [localTasks, setLocalTasks] = useState<any[]>(tasks);
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
-  const dragCounter = useRef<Record<string, number>>({});
+  // Where the dragged card would land: a column + the insertion index within it.
+  const [dragOver, setDragOver] = useState<{ col: string; index: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Tasks of one column, in persisted order.
+  const colSorted = (col: string) =>
+    localTasks.filter(t => t.status === col).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const [canLeft,  setCanLeft]  = useState(false);
   const [canRight, setCanRight] = useState(false);
 
@@ -67,26 +76,52 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', taskId);
   }
-  function handleDragEnd() { setDraggingId(null); setDragOverCol(null); dragCounter.current = {}; }
-  function handleColDragEnter(e: React.DragEvent, col: string) {
+  function handleDragEnd() { setDraggingId(null); setDragOver(null); }
+
+  // Hovering a specific card: insert before it or after it depending on which
+  // half of the card the pointer is over. stopPropagation so the column-level
+  // handler doesn't override this precise index.
+  function handleCardDragOver(e: React.DragEvent, col: string, index: number) {
     e.preventDefault();
-    dragCounter.current[col] = (dragCounter.current[col] || 0) + 1;
-    setDragOverCol(col);
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const after = e.clientY > rect.top + rect.height / 2;
+    setDragOver({ col, index: after ? index + 1 : index });
   }
-  function handleColDragLeave(e: React.DragEvent, col: string) {
-    dragCounter.current[col] = (dragCounter.current[col] || 0) - 1;
-    if (dragCounter.current[col] <= 0) { dragCounter.current[col] = 0; if (dragOverCol === col) setDragOverCol(null); }
-  }
-  function handleColDragOver(e: React.DragEvent) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
-  function handleDrop(e: React.DragEvent, toStatus: string) {
+  // Hovering the column but not a card → drop at the end.
+  function handleColDragOver(e: React.DragEvent, col: string) {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('text/plain');
-    if (!taskId) return;
-    const task = localTasks.find(t => t.id === taskId);
-    if (!task || task.status === toStatus) { setDraggingId(null); setDragOverCol(null); return; }
-    setLocalTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: toStatus } : t));
-    setDraggingId(null); setDragOverCol(null); dragCounter.current = {};
-    onMove(taskId, toStatus);
+    e.dataTransfer.dropEffect = 'move';
+    setDragOver({ col, index: colSorted(col).length });
+  }
+
+  function handleDrop(e: React.DragEvent, col: string) {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain') || draggingId;
+    const dragged = taskId ? localTasks.find(t => t.id === taskId) : null;
+    if (!taskId || !dragged) { setDraggingId(null); setDragOver(null); return; }
+
+    const insertIndex = dragOver && dragOver.col === col ? dragOver.index : colSorted(col).length;
+    const list = colSorted(col).filter(t => t.id !== taskId);
+    const clamped = Math.max(0, Math.min(insertIndex, list.length));
+    list.splice(clamped, 0, dragged);
+    const orderedIds = list.map(t => t.id);
+
+    // No-op guard: same column, same position.
+    const before = colSorted(col).map(t => t.id);
+    if (dragged.status === col && before.join() === orderedIds.join()) {
+      setDraggingId(null); setDragOver(null); return;
+    }
+
+    // Optimistic: apply the new status + positions immediately.
+    setLocalTasks(prev => prev.map(t => {
+      const i = orderedIds.indexOf(t.id);
+      if (t.id === taskId) return { ...t, status: col, position: i >= 0 ? i : t.position };
+      return i >= 0 ? { ...t, position: i } : t;
+    }));
+    setDraggingId(null); setDragOver(null);
+    onDropReorder(taskId, col, orderedIds);
   }
 
   // ── Top scrollbar — mirrors the bottom one so a Kanban with many
@@ -159,8 +194,8 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
       >
         {STATUSES.map(col => {
         const meta = STATUS_META[col];
-        const colTasks = localTasks.filter(t => t.status === col);
-        const isOver = dragOverCol === col;
+        const colTasks = colSorted(col);
+        const isOver = dragOver?.col === col;
         const isDragging = !!draggingId;
         return (
           <div key={col} className={`shrink-0 flex flex-col rounded-xl transition-all duration-150 border-2 ${
@@ -173,9 +208,7 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
                 ? { background: meta.bg, borderColor: meta.border, boxShadow: `0 0 0 3px ${meta.border}` }
                 : {}),
             }}
-            onDragEnter={e => handleColDragEnter(e, col)}
-            onDragLeave={e => handleColDragLeave(e, col)}
-            onDragOver={handleColDragOver}
+            onDragOver={e => handleColDragOver(e, col)}
             onDrop={e => handleDrop(e, col)}
           >
             <div className="px-3 pt-3 pb-2 flex items-center justify-between">
@@ -187,13 +220,17 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
                 style={{ background: meta.border, color: meta.color }}>{colTasks.length}</span>
             </div>
             <div className="flex-1 px-2 pb-2 space-y-2 min-h-[80px]">
-              {colTasks.map(t => {
+              {colTasks.map((t, index) => {
                 const isDraggingThis = draggingId === t.id;
+                const showLineBefore = isDragging && !isDraggingThis && dragOver?.col === col && dragOver.index === index;
                 return (
-                  <div key={t.id} draggable
+                  <div key={t.id}>
+                  {showLineBefore && <div className="h-0.5 rounded-full mb-2" style={{ background: meta.color }} />}
+                  <div draggable
                     onDragStart={e => handleDragStart(e, t.id)}
                     onDragEnd={handleDragEnd}
-                    className="group relative bg-white dark:bg-[#30302e] rounded-lg border border-slate-200 dark:border-white/10 transition-all duration-150 cursor-grab active:cursor-grabbing"
+                    onDragOver={e => handleCardDragOver(e, col, index)}
+                    className="group relative bg-white rounded-lg border transition-all duration-150 cursor-grab active:cursor-grabbing"
                     style={{
                       ...(isDraggingThis
                         ? { borderColor: meta.color, boxShadow: `0 8px 24px rgba(0,0,0,0.15), 0 0 0 2px ${meta.color}` }
@@ -229,8 +266,13 @@ function KanbanBoard({ tasks, onMove }: { tasks: any[]; onMove: (taskId: string,
                       )}
                     </Link>
                   </div>
+                  </div>
                 );
               })}
+              {/* Trailing insertion indicator (drop at end of column) */}
+              {isDragging && colTasks.length > 0 && dragOver?.col === col && dragOver.index >= colTasks.length && (
+                <div className="h-0.5 rounded-full" style={{ background: meta.color }} />
+              )}
               {colTasks.length === 0 && (
                 <div className={`rounded-lg border-2 border-dashed flex items-center justify-center h-16 transition-all duration-150 text-center px-2 ${
                     isOver ? '' : 'border-slate-200 dark:border-white/10'
@@ -524,11 +566,26 @@ export default function ProjectDetailPage() {
     }
   }
 
-  async function moveTask(taskId: string, status: string) {
+  // Kanban drop: persist a status change (if any) and the new column order.
+  async function dropReorder(taskId: string, toStatus: string, orderedIds: string[]) {
+    const cur = tasks.find((t: any) => t.id === taskId);
+    const statusChanged = !!cur && cur.status !== toStatus;
+    const wasNotDone = cur?.status !== 'done';
     setPendingTaskIds(s => new Set([...s, taskId]));
     try {
-      await api(`/tasks/${taskId}`, { method: 'PATCH', body: { status } });
-      // Optimistic state is already applied by KanbanBoard; just reconcile silently
+      if (statusChanged) {
+        await api(`/tasks/${taskId}`, { method: 'PATCH', body: { status: toStatus } });
+      }
+      // Persisting column order is a lead/admin action; an IC dragging their
+      // own card still gets the status change, just not a saved reorder.
+      if (isLead) {
+        await api(`/projects/${id}/reorder-tasks`, { method: 'POST', body: { orderedIds } });
+      }
+      if (toStatus === 'done' && wasNotDone) {
+        showToast('Task completed ✓');
+        chimeIfEnabled();
+      }
+      // Optimistic state is already applied by KanbanBoard; reconcile silently.
       load();
     } catch (e: any) {
       showToast(e.message || 'Failed to update task', 'err');
@@ -874,7 +931,7 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {view === 'board' && <KanbanBoard tasks={tasks} onMove={moveTask} />}
+      {view === 'board' && <KanbanBoard tasks={tasks} onDropReorder={dropReorder} />}
 
       {/* Modals */}
       {blockCompleteOpen && (

@@ -96,12 +96,11 @@ export async function POST(req: NextRequest) {
       mustChangePassword: true,
     });
     await logOperation({
-      actor: caller,
-      action: 'user.create',
-      entityType: 'user',
-      entityId: String(user._id),
-      summary: `created contributor ${user.name} (@${username})`,
+      action: 'user.create', category: 'user', actor: caller,
+      targetType: 'user', targetId: String(user._id), targetLabel: body.name,
+      summary: `Created contributor ${body.name}`,
     });
+
     // Deliberately does NOT return the password — the UI never displays it.
     return NextResponse.json({ user: u(user) });
   } catch (e) {

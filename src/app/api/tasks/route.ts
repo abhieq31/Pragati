@@ -8,6 +8,7 @@ import { task as taskS } from '@/lib/serialize';
 import { TaskCreateSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { notify } from '@/lib/notify';
+import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +64,12 @@ export async function POST(req: NextRequest) {
         projectId: String(body.projectId),
       });
     }
+
+    await logOperation({
+      action: 'task.create', category: 'task', actor: user,
+      targetType: 'task', targetId: String(task._id), targetLabel: task.title,
+      summary: `Created task "${task.title}"`, meta: { projectId: String(body.projectId) },
+    });
 
     return NextResponse.json(taskS(task));
   } catch (e) {

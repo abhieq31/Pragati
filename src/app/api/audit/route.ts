@@ -6,34 +6,34 @@ import { handleError } from '@/lib/http';
 
 export const runtime = 'nodejs';
 
-/**
- * Operations log feed — admin only. Returns the most recent entries,
- * newest first, with an optional ?action= filter and ?limit= (capped).
- * The log is append-only; there is no write/delete path here.
- */
+// Read the operational audit trail. Admin-only — the trail records management
+// actions across the whole workspace, so only the workspace owner sees it.
 export async function GET(req: NextRequest) {
   try {
     const { error } = await requireRole(req, 'admin');
     if (error) return error;
     await connectDB();
 
-    const { searchParams } = req.nextUrl;
-    const action = searchParams.get('action');
-    const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 100, 1), 300);
+    const { searchParams } = new URL(req.url);
+    const category = searchParams.get('category');
+    const limit = Math.min(Number(searchParams.get('limit')) || 150, 500);
 
-    const q: any = {};
-    if (action) q.action = action;
+    const filter: Record<string, any> = {};
+    if (category && category !== 'all') filter.category = category;
 
-    const entries = await AuditLog.find(q).sort({ createdAt: -1 }).limit(limit).lean();
+    const rows = await AuditLog.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+
     return NextResponse.json(
-      entries.map((e) => ({
-        id:        String(e._id),
-        actorName: e.actorName || 'System',
-        actorRole: e.actorRole || '',
-        action:    e.action,
-        entityType: e.entityType,
-        summary:   e.summary,
-        createdAt: e.createdAt,
+      rows.map((r: any) => ({
+        id: String(r._id),
+        action: r.action,
+        category: r.category,
+        actorName: r.actorName || 'System',
+        targetType: r.targetType || '',
+        targetId: r.targetId || '',
+        targetLabel: r.targetLabel || '',
+        summary: r.summary || '',
+        createdAt: r.createdAt,
       })),
     );
   } catch (e) {

@@ -67,43 +67,29 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    // Build the update, translating the admin-facing `locked` flag into the
-    // underlying lockedAt / failedLoginAttempts fields.
-    const { locked, ...rest } = body;
-    const set: any = { ...rest };
-    if (locked === true) {
-      set.lockedAt = new Date();
-    } else if (locked === false) {
-      set.lockedAt = null;
-      set.failedLoginAttempts = 0;
-    }
+    // When an admin changes *another* user's account, force them to re-auth
+    // and set a new password on next login (21 CFR Part 11 access control):
+    //   • bump sessionVersion → every existing token for them is invalidated
+    //     (they're logged out wherever they're signed in), and
+    //   • set mustChangePassword → they must pick a new password to continue.
+    // Editing your own account here (admins can) does not lock you out.
+    const isSelfEdit = caller.sub === params.id;
+    const mutation: Record<string, any> = isSelfEdit
+      ? { $set: body }
+      : {
+          $set: { ...body, mustChangePassword: true, activeSessionId: null },
+          $inc: { sessionVersion: 1 },
+        };
 
-    const updated = await User.findByIdAndUpdate(params.id, { $set: set }, { new: true }).lean();
+    const updated = await User.findByIdAndUpdate(params.id, mutation, { new: true }).lean();
     if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    // Operations log — record the meaningful admin actions on this account.
-    const parts: string[] = [];
-    if (body.role) parts.push(`role set to ${body.role}`);
-    if (body.locked === true) parts.push('account locked');
-    if (body.locked === false) parts.push('account unlocked');
-    if (body.mustChangePassword) parts.push('forced password reset');
-    if (body.name !== undefined) parts.push('profile edited');
-    if (parts.length) {
-      const action =
-        body.locked === true ? 'user.lock'
-        : body.locked === false ? 'user.unlock'
-        : body.mustChangePassword ? 'user.force_password'
-        : body.role ? 'user.role'
-        : 'user.update';
-      await logOperation({
-        actor: caller,
-        action,
-        entityType: 'user',
-        entityId: params.id,
-        summary: `${parts.join(', ')} for ${(updated as any).name}`,
-        meta: { role: body.role, locked: body.locked, mustChangePassword: body.mustChangePassword },
-      });
-    }
+    await logOperation({
+      action: body.role ? 'user.role' : 'user.update', category: 'user', actor: caller,
+      targetType: 'user', targetId: params.id, targetLabel: (updated as any)?.name || '',
+      summary: body.role ? `Changed role → ${body.role}` : 'Updated user account',
+    });
+
     return NextResponse.json(u(updated));
   } catch (e) {
     return handleError(e);
@@ -148,13 +134,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await User.findByIdAndDelete(params.id);
 
     await logOperation({
-      actor: caller,
-      action: 'user.delete',
-      entityType: 'user',
-      entityId: params.id,
-      summary: `removed user ${(target as any).name}`,
-      meta: { role: (target as any).role },
+      action: 'user.delete', category: 'user', actor: caller,
+      targetType: 'user', targetId: params.id, targetLabel: (target as any)?.name || '',
+      summary: `Removed user ${(target as any)?.name || ''}`.trim(),
     });
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);
