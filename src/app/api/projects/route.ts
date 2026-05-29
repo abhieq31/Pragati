@@ -10,6 +10,7 @@ import { project as projectS } from '@/lib/serialize';
 import { LIFECYCLES, LifecycleKey } from '@/lib/lifecycles';
 import { ProjectCreateSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { logOperation } from '@/lib/audit';
 import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
@@ -139,6 +140,12 @@ export async function POST(req: NextRequest) {
       }
     });
     if (taskDocs.length) await Task.insertMany(taskDocs);
+
+    await logOperation({
+      action: 'project.create', category: 'project', actor: user,
+      targetType: 'project', targetId: String(project._id), targetLabel: project.name,
+      summary: `Created project ${project.code} — ${project.name}`,
+    });
 
     return NextResponse.json(projectS(project));
   } catch (e) {

@@ -17,7 +17,7 @@ const ForcePasswordModal = dynamic(
 );
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
-  LogOut, Menu, X, Moon, Sun, AlertTriangle,
+  LogOut, Menu, X, Moon, Sun, AlertTriangle, PanelLeftClose, PanelLeftOpen, ScrollText,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -55,11 +55,49 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   const [dark, toggleDark]            = useDarkMode(initialDark);
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
 
+  // Desktop "distraction-free" collapse: shrinks the sidebar to an icon rail
+  // (icons + avatar only). Persisted in localStorage so it survives reloads.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    setCollapsed(localStorage.getItem('pragati_sidebar_collapsed') === '1');
+  }, []);
+  const toggleCollapsed = () => setCollapsed((c) => {
+    const next = !c;
+    localStorage.setItem('pragati_sidebar_collapsed', next ? '1' : '0');
+    return next;
+  });
+
   useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
+
+  // ── Idle auto-logout ────────────────────────────────────────────────
+  // Sign the user out after 30 minutes with no interaction. We record the
+  // last-activity time on cheap passive listeners and poll once a minute,
+  // rather than resetting a timer on every mousemove. (21 CFR Part 11
+  // §11.10(d) — unattended sessions shouldn't stay open indefinitely.)
+  useEffect(() => {
+    const IDLE_MS = 30 * 60 * 1000;
+    let last = Date.now();
+    const mark = () => { last = Date.now(); };
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
+    const iv = setInterval(() => {
+      if (Date.now() - last >= IDLE_MS) {
+        clearInterval(iv);
+        api('/auth/logout', { method: 'POST' }).finally(() => {
+          router.replace('/login');
+          router.refresh();
+        });
+      }
+    }, 60_000);
+    return () => {
+      clearInterval(iv);
+      events.forEach((e) => window.removeEventListener(e, mark));
+    };
+  }, [router]);
 
   type NavItem = { href: string; label: string; icon: any; iconColor: string; iconBg: string };
 
@@ -77,6 +115,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   ];
   const adminExtra: NavItem[] = [
     { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
+    { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF' },
   ];
 
   const employeeNav: NavItem[] = [
@@ -96,45 +135,80 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     router.refresh();
   }
 
+  // Icon-only rail on desktop when collapsed. On mobile the drawer is always
+  // shown full-width (the collapse toggle is desktop-only), so we suppress the
+  // collapsed look whenever the mobile drawer is open.
+  const showCollapsed = collapsed && !open;
+
   /* ── Sidebar inner content ─────────────────────────────────────────── */
   const SidebarInner = (
     <>
       {/* Brand header — same visual weight as the old top bar */}
-      <div className="flex items-center gap-2.5 px-4 h-14 shrink-0 border-b"
+      <div className={`flex items-center ${showCollapsed ? 'justify-center' : 'gap-2.5'} px-4 h-14 shrink-0 border-b`}
         style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
-        <Link href="/" className="flex items-center gap-2.5 flex-1 min-w-0">
-          <PragatiMark size={30} flat />
-          <span className={`font-black text-[20px] tracking-tight leading-none ${dark ? 'text-white' : 'text-slate-900'}`}>
-            Pragati
-          </span>
-        </Link>
-        <div className="ml-auto flex items-center gap-1">
-          <NotificationBell dark={dark} />
-          {/* Close on mobile */}
-          <button className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
-            onClick={() => setOpen(false)}>
-            <X size={15} />
-          </button>
-        </div>
+        {showCollapsed ? (
+          <Link href="/" className="flex items-center justify-center"><PragatiMark size={28} flat /></Link>
+        ) : (
+          <>
+            <Link href="/" className="flex items-center gap-2.5 flex-1 min-w-0">
+              <PragatiMark size={30} flat />
+              <span className={`font-black text-[20px] tracking-tight leading-none ${dark ? 'text-white' : 'text-slate-900'}`}>
+                Pragati
+              </span>
+            </Link>
+            <div className="ml-auto flex items-center gap-1">
+              <NotificationBell dark={dark} />
+              {/* Desktop collapse toggle */}
+              <button className={`hidden lg:inline-flex p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
+                onClick={toggleCollapsed} title="Collapse sidebar" aria-label="Collapse sidebar">
+                <PanelLeftClose size={15} />
+              </button>
+              {/* Close on mobile */}
+              <button className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
+                onClick={() => setOpen(false)}>
+                <X size={15} />
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Nav items */}
       <nav className="flex-1 px-3 py-4 overflow-auto space-y-0.5">
+        {/* When collapsed, the expand toggle + the relocated notification and
+            sign-out controls sit at the top of the rail — above the nav icons
+            (and therefore above My Day). */}
+        {showCollapsed && (
+          <div className="flex flex-col items-center gap-1 pb-2 mb-1 border-b"
+            style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}>
+            <button onClick={toggleCollapsed} title="Expand sidebar" aria-label="Expand sidebar"
+              className={`p-2 rounded-lg transition-colors ${dark ? 'text-white/45 hover:text-white/80 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}>
+              <PanelLeftOpen size={16} />
+            </button>
+            <NotificationBell dark={dark} openUp />
+            <button type="button" onClick={logout} title="Sign out"
+              className={`p-2 rounded-lg transition-colors ${dark ? 'text-red-400/55 hover:text-red-400 hover:bg-white/5' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
         {nav.map(n => {
           const Icon   = n.icon;
           const active = isActive(n.href);
           return (
-            <Link key={n.href} href={n.href} prefetch
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+            <Link key={n.href} href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+              className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                 active
                   ? 'text-brand-700 dark:text-[#faf9f5]'
                   : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
               }`}
-              style={active ? {
+              style={active ? (showCollapsed ? {
+                background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+              } : {
                 background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
                 borderLeft: `3px solid ${n.iconColor}`,
                 paddingLeft: '9px',
-              } : {}}
+              }) : {}}
             >
               <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
                 style={{
@@ -144,14 +218,28 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
                 }}>
                 <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
               </div>
-              <span className="flex-1 truncate">{n.label}</span>
+              {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* User footer — avatar toggles theme · name opens profile · bell ·
-          sign-out drop-up. No catch-all menu. */}
+      {/* Collapsed footer — just the avatar (theme toggle). */}
+      {showCollapsed ? (
+        <div className="px-2 py-3 border-t shrink-0 flex justify-center"
+          style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
+          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="relative shrink-0 rounded-full focus:outline-none">
+            <Avatar name={user.name} size={32} />
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border"
+              style={{ background: dark ? '#30302e' : '#ffffff', borderColor: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }}>
+              {dark ? <Sun size={9} className="text-amber-400" /> : <Moon size={9} className="text-slate-500" />}
+            </span>
+          </button>
+        </div>
+      ) : (
+      /* User footer — avatar toggles theme · name opens profile · bell ·
+          sign-out drop-up. No catch-all menu. */
       <div className="px-3 py-3 border-t shrink-0 relative"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
 
@@ -231,6 +319,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
           </button>
         </div>
       </div>
+      )}
     </>
   );
 
@@ -250,13 +339,14 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside
         className={`
-          w-[220px] shrink-0 flex flex-col
+          shrink-0 flex flex-col
           fixed inset-y-0 left-0 z-50
           lg:sticky lg:top-0 lg:h-screen
-          transition-transform duration-300 ease-in-out
+          transition-[transform,width] duration-300 ease-in-out
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{
+          width: showCollapsed ? 68 : 220,
           background: dark ? '#262624' : '#ffffff',
           borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4',
         }}

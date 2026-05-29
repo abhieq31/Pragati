@@ -11,6 +11,7 @@ import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
+  Maximize2, X,
 } from 'lucide-react';
 
 // Lazy-loaded — only ships when the user actually sees the tour.
@@ -101,6 +102,17 @@ export default function DashboardClient({
   // first thing a brand-new admin sees, so it should point the way.
   const isFirstRun = isLead && dash.projects.length === 0;
 
+  // Individual contributors get a strictly personal view: their dashboard is
+  // "My Tasks", so every task panel below is scoped to the tasks assigned to
+  // them. Leads/admins keep the full team view. This is what keeps one IC from
+  // seeing another team member's workload or progress (see also: the
+  // Contributors panel, which is hidden for ICs entirely).
+  const myId = dash.user.id;
+  const visibleTasks = useMemo(
+    () => (isLead ? dash.teamTasks : dash.teamTasks.filter(t => t.assigneeId === myId)),
+    [dash, isLead, myId],
+  );
+
   const ongoingProjects = useMemo(() =>
     dash.projects.filter(p =>
       p.status === 'in_progress' || p.status === 'planning' || p.status === 'on_hold',
@@ -109,28 +121,28 @@ export default function DashboardClient({
 
   const tasksByProject = useMemo(() => {
     const m = new Map<string, TeamTask[]>();
-    for (const t of dash.teamTasks) {
+    for (const t of visibleTasks) {
       if (!m.has(t.projectId)) m.set(t.projectId, []);
       m.get(t.projectId)!.push(t);
     }
     return m;
-  }, [dash]);
+  }, [visibleTasks]);
 
   const tasksByAssignee = useMemo(() => {
     const m = new Map<string, TeamTask[]>();
-    for (const t of dash.teamTasks) {
+    for (const t of visibleTasks) {
       if (t.status === 'done' || !t.assigneeId) continue;
       if (!m.has(t.assigneeId)) m.set(t.assigneeId, []);
       m.get(t.assigneeId)!.push(t);
     }
     return m;
-  }, [dash]);
+  }, [visibleTasks]);
 
   const firstName  = (dash.user.name || '').split(' ')[0] || 'there';
   const today      = new Date();
   const dateLabel  = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-  const totalOpen     = dash.teamTasks.filter(t => t.status !== 'done').length;
-  const totalOverdue  = dash.teamTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < today).length;
+  const totalOpen     = visibleTasks.filter(t => t.status !== 'done').length;
+  const totalOverdue  = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < today).length;
 
   return (
     <div className="pb-12 max-w-[1440px]">
@@ -195,10 +207,12 @@ export default function DashboardClient({
             tasksByProject={tasksByProject}
           />
 
-          {/* Right column — Actions + Contributors */}
+          {/* Right column — Actions + Contributors. The Contributors panel
+              (other people's progress) is for leads/admins only; an IC never
+              sees their teammates' workload. */}
           <div className="space-y-4 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-5rem)] xl:overflow-y-auto pr-1">
-            <ActionsPanel tasks={dash.teamTasks} />
-            <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />
+            <ActionsPanel tasks={visibleTasks} />
+            {isLead && <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />}
           </div>
         </div>
       )}
@@ -206,6 +220,40 @@ export default function DashboardClient({
       {/* First-time tour for new leads */}
       <FirstTimeTour alreadySeen={hasSeenTour} />
     </div>
+  );
+}
+
+/* ── Full-screen overlay ──────────────────────────────────────────────────
+   Lets the Actions and Contributors panels expand to a distraction-free,
+   full-page view (#12). Click the backdrop or the ✕ to close. */
+function FullScreenOverlay({
+  title, icon, onClose, children,
+}: { title: string; icon?: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-3 sm:p-8 overflow-auto"
+      onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-4xl my-2 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
+          {icon}
+          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} title="Close"
+            className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-2 sm:p-3">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/* A small maximize affordance for panel headers. */
+function ExpandButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button onClick={onClick} title="Open full screen"
+      className="p-1 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+      <Maximize2 size={12} />
+    </button>
   );
 }
 
@@ -542,6 +590,7 @@ function TaskTableRow({ t }: { t: TeamTask }) {
 function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
   const [filter, setFilter] = useState<ActionFilter>('week');
   const [untilDate, setUntilDate] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const now = new Date();
   const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
@@ -590,13 +639,14 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
     { key: 'untilDate', label: 'Until…' },
   ];
 
-  return (
+  const inner = (
     <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div className="px-4 pt-3 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-2 mb-2.5">
           <TrendingUp size={13} className="text-slate-400" />
           <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Actions</h3>
+          {!expanded && <span className="ml-auto"><ExpandButton onClick={() => setExpanded(true)} /></span>}
         </div>
         <div className="flex gap-1 flex-wrap">
           {FILTERS.map(f => (
@@ -624,7 +674,7 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
         )}
       </div>
 
-      <div className="max-h-[60vh] overflow-y-auto">
+      <div className="overflow-y-auto" style={{ maxHeight: expanded ? 'calc(100vh - 220px)' : '60vh' }}>
         {/* Overdue group */}
         {overdue.length > 0 && (
           <ActionGroup
@@ -634,6 +684,7 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
             dotClass="bg-red-400"
             tasks={overdue}
             isOverdue
+            showAll={expanded}
           />
         )}
 
@@ -644,19 +695,26 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
           icon={<Clock size={11} className="text-blue-500" />}
           dotClass="bg-blue-400"
           tasks={due}
+          showAll={expanded}
           emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming actions.' : 'Nothing due — all clear.'}
         />
       </div>
     </section>
   );
+
+  return expanded
+    ? <FullScreenOverlay title="Actions" icon={<TrendingUp size={14} className="text-blue-500" />}
+        onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
+    : inner;
 }
 
 function ActionGroup({
-  title, count, icon, dotClass, tasks, isOverdue, emptyHint,
+  title, count, icon, dotClass, tasks, isOverdue, emptyHint, showAll,
 }: {
   title: string; count: number; icon: React.ReactNode; dotClass: string;
-  tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string;
+  tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showAll?: boolean;
 }) {
+  const limit = showAll ? tasks.length : 12;
   return (
     <div>
       <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 border-b border-slate-100">
@@ -673,7 +731,7 @@ function ActionGroup({
         </div>
       ) : (
         <ul className="divide-y divide-slate-50">
-          {tasks.slice(0, 12).map(t => {
+          {tasks.slice(0, limit).map(t => {
             const due = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
             return (
@@ -712,8 +770,8 @@ function ActionGroup({
               </li>
             );
           })}
-          {tasks.length > 12 && (
-            <li className="px-4 py-2 text-[10px] text-slate-400">+{tasks.length - 12} more</li>
+          {tasks.length > limit && (
+            <li className="px-4 py-2 text-[10px] text-slate-400">+{tasks.length - limit} more</li>
           )}
         </ul>
       )}
@@ -727,6 +785,7 @@ function ActionGroup({
 function ContributorsPanel({
   people, tasksByAssignee,
 }: { people: DashPerson[]; tasksByAssignee: Map<string, TeamTask[]> }) {
+  const [expanded, setExpanded] = useState(false);
   if (people.length === 0) {
     return (
       <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
@@ -743,7 +802,7 @@ function ContributorsPanel({
   // Sort: most loaded first
   const sorted = [...people].sort((a, b) => b.loadScore - a.loadScore);
 
-  return (
+  const inner = (
     <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
@@ -752,6 +811,7 @@ function ContributorsPanel({
           Individual Contributors
         </h3>
         <span className="ml-auto text-[10px] text-slate-300 font-semibold">{people.length}</span>
+        {!expanded && <ExpandButton onClick={() => setExpanded(true)} />}
       </div>
 
       <ul className="divide-y divide-slate-50">
@@ -761,6 +821,11 @@ function ContributorsPanel({
       </ul>
     </section>
   );
+
+  return expanded
+    ? <FullScreenOverlay title="Individual Contributors" icon={<UsersIcon size={14} className="text-blue-500" />}
+        onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
+    : inner;
 }
 
 function ContributorRow({ person, tasks }: { person: DashPerson; tasks: TeamTask[] }) {
