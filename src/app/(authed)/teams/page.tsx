@@ -129,7 +129,8 @@ export default function TeamsPage() {
               team={t}
               lead={t.leadId ? uMap.get(t.leadId) : undefined}
               members={(t.memberIds || []).map((id) => uMap.get(id)).filter(Boolean) as UserItem[]}
-              canManage={canManage}
+              // #8 — only the team owner or the admin may edit/delete a team.
+              canManage={me?.role === 'admin' || (!!t.leadId && t.leadId === me?.id)}
               onEdit={() => setEditing(t)}
               onDelete={() => setDeleting(t)}
             />

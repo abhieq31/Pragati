@@ -3,16 +3,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
+import { useCurrentUser } from '@/components/CurrentUserContext';
+import { Download, Trash2 } from 'lucide-react';
 import {
   Card,
   Avatar,
   ProgressBar,
   LifecycleTag,
   StatusTag,
-  PriorityTag,
   formatDate,
   TaskLink
 } from '@/components/ui';
+import { downloadTeamReport } from './report';
 
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +24,11 @@ export default function TeamDetailPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [adding, setAdding] = useState(false);
   const [newMember, setNewMember] = useState('');
-  const [view, setView] = useState<'progress' | 'microtasks' | 'projects'>('progress');
+  const me = useCurrentUser();
+  const isLead = me?.role === 'lead' || me?.role === 'pm' || me?.role === 'admin';
+  // An IC's team view is personal: they see their own micro-tasks only and
+  // none of their teammates' progress. Default them straight to micro-tasks.
+  const [view, setView] = useState<'progress' | 'microtasks' | 'projects'>(isLead ? 'progress' : 'microtasks');
 
   async function load() {
     const [t, b, p] = await Promise.all([
@@ -90,12 +96,31 @@ export default function TeamDetailPage() {
 
   const availableUsers = users.filter((u) => u.role !== 'admin' && !team.members.find((m: any) => m.id === u.id));
 
+  // Only the team's owner (its lead) or the workspace admin can edit the team
+  // — add/remove members, etc. (mirrors the API guard).
+  const isOwnerOrAdmin = me?.role === 'admin' || (!!team.leadId && team.leadId === me?.id);
+
+  // ICs only ever see their own micro-tasks; leads see the whole board.
+  const visibleBoard = isLead ? board : board.filter((t: any) => t.assigneeId === me?.id);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{team.name}</h1>
-        {team.description && <p className="text-slate-600 mt-1">{team.description}</p>}
-        <p className="text-sm text-slate-500 mt-1">Function: {team.function}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">{team.name}</h1>
+          {team.description && <p className="text-slate-600 mt-1">{team.description}</p>}
+          <p className="text-sm text-slate-500 mt-1">Function: {team.function}</p>
+        </div>
+        {/* #9 — team owner / admin can download a presentable team report. */}
+        {isOwnerOrAdmin && (
+          <button
+            onClick={() => downloadTeamReport(team, progress, board)}
+            className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            title="Download a printable report of this team's projects and progress"
+          >
+            <Download size={15} /> Download report
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -103,20 +128,24 @@ export default function TeamDetailPage() {
           <Card
             title={`Members (${team.members.length})`}
             action={
-              <button
-                className="text-xs font-bold text-brand-700 hover:text-brand-800 px-2 py-1 rounded-md hover:bg-blue-50 transition-colors"
-                onClick={() => setAdding((v) => !v)}
-              >
-                {adding ? 'Cancel' : '+ Add member'}
-              </button>
+              isOwnerOrAdmin ? (
+                <button
+                  className="text-xs font-bold text-brand-700 hover:text-brand-800 px-2 py-1 rounded-md hover:bg-blue-50 transition-colors"
+                  onClick={() => setAdding((v) => !v)}
+                >
+                  {adding ? 'Cancel' : '+ Add member'}
+                </button>
+              ) : undefined
             }
           >
             {/* Helper note — membership IS the access mechanism */}
-            <div className="mb-3 -mt-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2 leading-snug">
-              Add someone here to give them access to every project assigned to this team.
-              Membership is the tag — no separate permissions needed.
-            </div>
-            {adding && (
+            {isOwnerOrAdmin && (
+              <div className="mb-3 -mt-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2 leading-snug">
+                Add someone here to give them access to every project assigned to this team.
+                Membership is the tag — no separate permissions needed.
+              </div>
+            )}
+            {adding && isOwnerOrAdmin && (
               <div className="flex gap-2 mb-3">
                 <select
                   className="select"
@@ -141,29 +170,28 @@ export default function TeamDetailPage() {
                 return (
                   <div
                     key={m.id}
-                    className="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-b-0"
+                    className="group flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-b-0"
                   >
                     <Avatar name={m.name} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{m.name}</div>
                       <div className="text-xs text-slate-500 truncate">
                         {m.title || m.role}
-                        {p &&
+                        {/* Per-member progress is only shown to leads/admins —
+                            an IC never sees a teammate's done/overdue counts. */}
+                        {isLead && p &&
                           ` · ${p.done}/${p.assigned} done${p.overdue ? ` · ${p.overdue} overdue` : ''}`}
                       </div>
                     </div>
-                    <Link
-                      href={`/yearly/${m.id}`}
-                      className="text-xs text-brand-700 hover:underline"
-                    >
-                      Year
-                    </Link>
-                    <button
-                      onClick={() => removeMember(m.id)}
-                      className="text-xs text-slate-400 hover:text-red-600"
-                    >
-                      ✕
-                    </button>
+                    {isOwnerOrAdmin && (
+                      <button
+                        onClick={() => removeMember(m.id)}
+                        title="Remove from team"
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-600 transition-opacity"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -173,11 +201,11 @@ export default function TeamDetailPage() {
 
         <div className="lg:col-span-3 space-y-4">
           <div className="flex gap-2">
-            {[
-              ['progress', 'Team progress'],
-              ['microtasks', 'Micro-tasks'],
-              ['projects', 'Projects']
-            ].map(([k, l]) => (
+            {([
+              ...(isLead ? [['progress', 'Team progress']] : []),
+              ['microtasks', isLead ? 'Micro-tasks' : 'My tasks'],
+              ['projects', 'Projects'],
+            ] as [string, string][]).map(([k, l]) => (
               <button
                 key={k}
                 onClick={() => setView(k as any)}
@@ -190,7 +218,7 @@ export default function TeamDetailPage() {
             ))}
           </div>
 
-          {view === 'progress' && progress && (
+          {view === 'progress' && isLead && progress && (
             <>
               <Card title="Project progress">
                 <div className="space-y-2">
@@ -263,31 +291,38 @@ export default function TeamDetailPage() {
           )}
 
           {view === 'microtasks' && (
-            <Card title={`All micro-tasks across team projects`}>
+            <Card title={isLead ? 'All micro-tasks across team projects' : 'My tasks across team projects'}>
+              {/* Decluttered row: title + project · assignee (leads only) on the
+                  left; status and due date on the right. Lifecycle/priority/GxP
+                  chips moved off the main row to reduce visual noise. */}
               <div className="divide-y divide-slate-100">
-                {board.map((t: any) => (
-                  <div key={t.id} className="py-2 flex items-center gap-3 text-sm">
-                    <TaskLink task={t} />
-                    <Link
-                      href={`/projects/${t.projectId}`}
-                      className="text-xs text-slate-500 hover:underline"
-                    >
-                      {t.projectCode}
-                    </Link>
-                    <LifecycleTag lifecycle={t.lifecycle} />
-                    <div className="flex-1 text-xs text-slate-500">
-                      {t.assigneeName || 'Unassigned'}
+                {visibleBoard.map((t: any) => {
+                  const overdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
+                  return (
+                    <div key={t.id} className="py-2.5 flex items-center gap-3 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <TaskLink task={t} />
+                          {t.gxpCritical && <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>}
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          <Link href={`/projects/${t.projectId}`} className="hover:underline font-medium">
+                            {t.projectCode}
+                          </Link>
+                          {isLead && <> · {t.assigneeName || 'Unassigned'}</>}
+                        </div>
+                      </div>
+                      <StatusTag status={t.status} />
+                      <span className={`text-xs w-24 text-right shrink-0 ${overdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                        {t.dueDate ? formatDate(t.dueDate) : '—'}
+                      </span>
                     </div>
-                    {t.gxpCritical && <span className="tag bg-red-50 text-red-700">GxP</span>}
-                    <StatusTag status={t.status} />
-                    <PriorityTag priority={t.priority} />
-                    <span className="text-xs text-slate-500 w-24 text-right">
-                      {formatDate(t.dueDate)}
-                    </span>
+                  );
+                })}
+                {visibleBoard.length === 0 && (
+                  <div className="text-sm text-slate-500 py-4">
+                    {isLead ? 'No tasks yet.' : 'You have no tasks in this team yet.'}
                   </div>
-                ))}
-                {board.length === 0 && (
-                  <div className="text-sm text-slate-500 py-4">No tasks yet.</div>
                 )}
               </div>
             </Card>

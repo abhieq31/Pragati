@@ -5,6 +5,7 @@ import { User } from '@/models/User';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
 import { requireUser, requireRole } from '@/lib/auth';
+import { guardTeamOwner } from '@/lib/teamAuth';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS, u, project as projectS } from '@/lib/serialize';
 import { TeamUpdateSchema, DeleteTeamSchema } from '@/lib/validations';
@@ -55,9 +56,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { error } = await requireRole(req, 'pm', 'lead', 'admin');
+    const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
+
+    const denied = await guardTeamOwner(params.id, user.sub, user.role);
+    if (denied) return denied;
 
     const body = await readBody(req, TeamUpdateSchema);
     const current = await Team.findById(params.id).lean();
@@ -89,6 +93,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const { error, user } = await requireRole(req, 'pm', 'lead', 'admin');
     if (error) return error;
     await connectDB();
+
+    const denied = await guardTeamOwner(params.id, user.sub, user.role);
+    if (denied) return denied;
 
     const body = await readBody(req, DeleteTeamSchema);
     const pmUser = await User.findById(user.sub).select('passwordHash').lean();
