@@ -331,119 +331,116 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl pb-12 space-y-5">
 
-      {/* ── Hero profile card ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 px-7 py-6 flex items-center gap-5"
-        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.05), 0 1px 2px rgba(15,23,42,0.03)' }}>
-        <div className="shrink-0">
-          <Avatar name={user.name} size={64} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">{user.name}</h1>
-            <RoleBadge role={user.role} />
+      {/* ── Hero profile card — gradient banner with avatar overlap ────── */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
+        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)' }}>
+        <div className="h-24" style={{ background: 'linear-gradient(135deg, #1a56db 0%, #1e3a8a 55%, #312e81 100%)' }} />
+        <div className="px-7 pb-5 flex items-end gap-5" style={{ marginTop: -40 }}>
+          <div className="shrink-0">
+            <div className="p-1 bg-white rounded-2xl"
+              style={{ boxShadow: '0 0 0 3px rgba(255,255,255,0.85), 0 4px 14px rgba(15,23,42,0.18)' }}>
+              <Avatar name={user.name} size={72} />
+            </div>
           </div>
-          <div className="mt-1 text-xs text-slate-400 font-mono">@{user.username || user.email}</div>
+          <div className="flex-1 min-w-0 pb-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">{user.name}</h1>
+              <RoleBadge role={user.role} />
+            </div>
+            <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+              <span className="font-mono">@{user.username || user.email}</span>
+              {user.email && user.username && (
+                <><span className="text-slate-200">·</span><span>{user.email}</span></>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ── Top row: Personal details (left) + Activity (right) ─────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+      {/* ── Activity — full width, star feature ─────────────────────────── */}
+      <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati — logins, projects, and completed work.">
+        <ActivityGraph />
+      </Section>
 
-        {/* Left: Identity form */}
-        <div className="lg:col-span-2">
-          <Section icon={User} title="Personal details" subtitle="Your name as it appears across Pragati.">
-            <form onSubmit={saveIdentity} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
+      {/* ── Two-column grid ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+
+        {/* Left column: identity + notifications */}
+        <div className="space-y-5">
+
+          <div id="profile" className="scroll-mt-6">
+            <Section icon={User} title="Personal details" subtitle="Your name as it appears across Pragati.">
+              <form onSubmit={saveIdentity} className="space-y-4">
                 <Field label="Full name">
                   <input className="input" value={name} onChange={e => setName(e.target.value)} required />
                 </Field>
                 <ReadonlyField label="Username" value={`@${user.username || user.email}`} />
                 <ReadonlyField label="Employee ID" value={employeeId || '—'} />
                 <ReadonlyField label="Role" value={isPM ? 'Team Leader' : 'Individual Contributor'} />
-              </div>
+                <div className="flex items-center gap-3 pt-1">
+                  <button type="submit" className="btn-primary" disabled={identitySaving}>
+                    {identitySaving ? 'Saving…' : 'Save changes'}
+                  </button>
+                  {identityMsg && <span className="text-xs text-green-600 font-medium">✓ {identityMsg}</span>}
+                </div>
+              </form>
+            </Section>
+          </div>
 
-              <div className="flex items-center gap-3 pt-1">
-                <button type="submit" className="btn-primary" disabled={identitySaving}>
-                  {identitySaving ? 'Saving…' : 'Save changes'}
-                </button>
-                {identityMsg && <span className="text-xs text-green-600 font-medium">✓ {identityMsg}</span>}
-              </div>
-            </form>
-          </Section>
-        </div>
-
-        {/* Right: Activity — GitHub-style contribution graph + badges (#7) */}
-        <div className="lg:col-span-3">
-          <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati — logins, projects, and completed work.">
-            <ActivityGraph />
-          </Section>
-        </div>
-      </div>
-
-      {/* ── Second row: Notifications + Security ─────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-        {/* Notifications column */}
-        <div className="space-y-5">
-
-          {/* Notifications */}
           <div id="notifications" className="scroll-mt-6">
-          <Section icon={Bell} title="Notifications" subtitle="What shows up on your dashboard.">
-            <div className={notifSaving ? 'opacity-60 pointer-events-none transition-opacity' : 'transition-opacity'}>
-              <Toggle label="Task assigned to me"  description="When a PM assigns you a new task."
-                checked={notifTaskAssigned} onChange={v => { setNA(v); saveNotif('notifTaskAssigned', v); }} />
-              <Toggle label="Due in 24 hours"       description="Morning reminder before a deadline."
-                checked={notifTaskDueSoon}  onChange={v => { setNDS(v); saveNotif('notifTaskDueSoon', v); }} />
-              <Toggle label="Task overdue"          description="When a task passes its due date."
-                checked={notifTaskOverdue}  onChange={v => { setNO(v); saveNotif('notifTaskOverdue', v); }} />
-              <Toggle label="Project updates"       description="When a project you're on changes status."
-                checked={notifProjectUpdate} onChange={v => { setNPU(v); saveNotif('notifProjectUpdate', v); }} />
-            </div>
-            <p className="text-[11px] text-slate-400 mt-3 leading-snug">
-              These appear on your dashboard — Pragati never sends email.
-            </p>
-          </Section>
+            <Section icon={Bell} title="Notifications" subtitle="What shows up on your dashboard.">
+              <div className={notifSaving ? 'opacity-60 pointer-events-none transition-opacity' : 'transition-opacity'}>
+                <Toggle label="Task assigned to me"  description="When a PM assigns you a new task."
+                  checked={notifTaskAssigned} onChange={v => { setNA(v); saveNotif('notifTaskAssigned', v); }} />
+                <Toggle label="Due in 24 hours"       description="Morning reminder before a deadline."
+                  checked={notifTaskDueSoon}  onChange={v => { setNDS(v); saveNotif('notifTaskDueSoon', v); }} />
+                <Toggle label="Task overdue"          description="When a task passes its due date."
+                  checked={notifTaskOverdue}  onChange={v => { setNO(v); saveNotif('notifTaskOverdue', v); }} />
+                <Toggle label="Project updates"       description="When a project you're on changes status."
+                  checked={notifProjectUpdate} onChange={v => { setNPU(v); saveNotif('notifProjectUpdate', v); }} />
+              </div>
+              <p className="text-[11px] text-slate-400 mt-3 leading-snug">
+                These appear on your dashboard — Pragati never sends email.
+              </p>
+            </Section>
           </div>
+
         </div>
 
-        {/* Security column */}
+        {/* Right column: security + PIN + admin recovery key */}
         <div className="space-y-5">
 
-          {/* Security */}
           <div id="security" className="scroll-mt-6">
-          <Section icon={Lock} title="Security" subtitle="Change your login password.">
-            <form onSubmit={savePw} className="space-y-3.5">
-              <Field label="Current password">
-                <input type="password" className="input" autoComplete="current-password"
-                  value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" />
-              </Field>
-              <Field label="New password">
-                <input type="password" className="input" autoComplete="new-password"
-                  value={next} onChange={e => setNext(e.target.value)} placeholder="Min 8 characters" />
-                <StrengthMeter password={next} />
-              </Field>
-              <Field label="Confirm password">
-                <input type="password"
-                  className={`input ${confirm && !pwMatches ? 'border-red-300 focus:border-red-400' : ''}`}
-                  autoComplete="new-password"
-                  value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" />
-                {confirm && !pwMatches && <p className="text-[11px] text-red-500 mt-1">Passwords don't match.</p>}
-              </Field>
-              {pwErr && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pwErr}</div>}
-              {pwMsg && <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ {pwMsg}</div>}
-              <button type="submit" className="btn-primary w-full justify-center"
-                disabled={!current || !pwStrong || !pwMatches || pwSaving}>
-                {pwSaving ? 'Updating…' : 'Update password'}
-              </button>
-            </form>
-          </Section>
+            <Section icon={Lock} title="Security" subtitle="Change your login password.">
+              <form onSubmit={savePw} className="space-y-3.5">
+                <Field label="Current password">
+                  <input type="password" className="input" autoComplete="current-password"
+                    value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" />
+                </Field>
+                <Field label="New password">
+                  <input type="password" className="input" autoComplete="new-password"
+                    value={next} onChange={e => setNext(e.target.value)} placeholder="Min 8 characters" />
+                  <StrengthMeter password={next} />
+                </Field>
+                <Field label="Confirm password">
+                  <input type="password"
+                    className={`input ${confirm && !pwMatches ? 'border-red-300 focus:border-red-400' : ''}`}
+                    autoComplete="new-password"
+                    value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" />
+                  {confirm && !pwMatches && <p className="text-[11px] text-red-500 mt-1">Passwords don't match.</p>}
+                </Field>
+                {pwErr && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pwErr}</div>}
+                {pwMsg && <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ {pwMsg}</div>}
+                <button type="submit" className="btn-primary w-full justify-center"
+                  disabled={!current || !pwStrong || !pwMatches || pwSaving}>
+                  {pwSaving ? 'Updating…' : 'Update password'}
+                </button>
+              </form>
+            </Section>
           </div>
 
-          {/* Quick PIN — device unlock convenience */}
           <QuickPinSection />
 
-          {/* Admin recovery key — admins only */}
           {user.role === 'admin' && (
             <div id="recovery-key" className="scroll-mt-6">
               <Section icon={ShieldCheck} title="Recovery key"
@@ -476,6 +473,7 @@ export default function SettingsPage() {
               </Section>
             </div>
           )}
+
         </div>
       </div>
 
