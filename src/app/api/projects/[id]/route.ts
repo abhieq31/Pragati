@@ -10,6 +10,7 @@ import { project as projectS, task as taskS } from '@/lib/serialize';
 import { LIFECYCLES } from '@/lib/lifecycles';
 import { ProjectUpdateSchema, DeleteProjectSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { getProjectDetail } from '@/lib/projectDetail';
 import { logOperation } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 
@@ -19,40 +20,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
-    await connectDB();
-    const scope = await getLeadScope(user!.sub, user!.role);
-    const p = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).lean();
-    if (!p) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    const [team, owner, tasks] = await Promise.all([
-      p.teamId ? Team.findById(p.teamId).lean() : Promise.resolve(null),
-      p.ownerId ? User.findById(p.ownerId).lean() : Promise.resolve(null),
-      Task.find({ projectId: p._id }).sort({ position: 1, createdAt: 1 }).lean(),
-    ]);
-    const assignees = await User.find({
-      _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) }
-    }).lean();
-    const uMap = new Map(assignees.map((u) => [String(u._id), u.name]));
-    const lc = LIFECYCLES[(p.lifecycle || 'generic') as keyof typeof LIFECYCLES];
-    return NextResponse.json({
-      ...projectS(p, {
-        teamName: (team as any)?.name || null,
-        ownerName: (owner as any)?.name || null
-      }),
-      lifecycleMeta: lc
-        ? {
-            label: lc.label,
-            description: lc.description,
-            regulatoryRefs: lc.regulatoryRefs
-          }
-        : null,
-      tasks: tasks.map((t) =>
-        taskS(t, {
-          assigneeName: t.assigneeId ? uMap.get(String(t.assigneeId)) : null,
-          subtaskCount: ((t as any).subtasks || []).length,
-          subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length
-        })
-      )
-    });
+    // Single source of truth shared with the server-rendered page.
+    const detail = await getProjectDetail(params.id, user!.sub, user!.role);
+    if (!detail) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json(detail);
   } catch (e) {
     return handleError(e);
   }

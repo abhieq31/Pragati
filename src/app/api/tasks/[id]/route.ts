@@ -8,6 +8,7 @@ import { handleError, readBody } from '@/lib/http';
 import { task as taskS } from '@/lib/serialize';
 import { TaskUpdateSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { getTaskDetail } from '@/lib/taskDetail';
 import { notify } from '@/lib/notify';
 import { logOperation } from '@/lib/audit';
 
@@ -29,34 +30,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
-    await connectDB();
-    const { forbidden } = await assertTaskInScope(params.id, user!.sub, user!.role);
-    if (forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    const t = await Task.findById(params.id).lean();
-    if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    const [project, assignee, qa, commentUsers] = await Promise.all([
-      Project.findById(t.projectId).lean(),
-      t.assigneeId ? User.findById(t.assigneeId).lean() : Promise.resolve(null),
-      t.qaSignoffUserId ? User.findById(t.qaSignoffUserId).lean() : Promise.resolve(null),
-      User.find({ _id: { $in: (t.comments || []).map((c: any) => c.userId) } }).lean(),
-    ]);
-    const uMap = new Map(commentUsers.map((u) => [String(u._id), u.name]));
-    const comments = (t.comments || []).map((c: any) => ({
-      id: String(c._id),
-      userId: String(c.userId),
-      userName: uMap.get(String(c.userId)) || 'User',
-      body: c.body,
-      createdAt: c.createdAt
-    }));
-    return NextResponse.json({
-      ...taskS(t, {
-        assigneeName: (assignee as any)?.name || null,
-        qaSignoffName: (qa as any)?.name || null,
-        projectCode: (project as any)?.code,
-        projectName: (project as any)?.name
-      }),
-      comments
-    });
+    // Single source of truth shared with the server-rendered task page.
+    const detail = await getTaskDetail(params.id, user!.sub, user!.role);
+    if (!detail) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    return NextResponse.json(detail);
   } catch (e) {
     return handleError(e);
   }
