@@ -282,7 +282,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
             </div>
             <button onClick={onClose} className="text-slate-300 hover:text-slate-500"><X size={18} /></button>
           </div>
-          <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-sm text-slate-700 mb-4">{note.text}</div>
+          <div className="max-h-32 overflow-y-auto rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-sm text-slate-700 mb-4 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{note.text}</div>
 
           <label className="label">Project</label>
           <select className="select mb-3" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
