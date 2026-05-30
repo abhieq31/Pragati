@@ -24,6 +24,7 @@ const SetPinModal = dynamic(
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
+  Settings, UserCircle, Activity, Bell, ShieldCheck, KeyRound,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -63,7 +64,9 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   const [dark, toggleDark]            = useDarkMode(initialDark);
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
   const [needsPin, setNeedsPin] = useState(!user.hasPin);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const lastActivityRef = useRef(Date.now());
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   // Desktop "distraction-free" collapse: shrinks the sidebar to an icon rail
   // (icons + avatar only). Persisted in localStorage so it survives reloads.
@@ -77,11 +80,25 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     return next;
   });
 
-  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => { setOpen(false); setAccountMenuOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [open]);
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (accountMenuRef.current?.contains(e.target as Node)) return;
+      setAccountMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAccountMenuOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [accountMenuOpen]);
 
   // ── Idle auto-logout ────────────────────────────────────────────────
   // 21 CFR Part 11 §11.10(d): unattended sessions must not stay open.
@@ -149,6 +166,78 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     router.replace('/login');
     router.refresh();
   }
+
+  const roleText = user.role === 'admin'
+    ? 'Admin'
+    : user.role === 'lead' ? 'Team Lead' : 'Individual Contributor';
+
+  const accountItems = [
+    { href: '/settings#profile', label: 'Profile', icon: UserCircle },
+    { href: '/settings#activity', label: 'Activity', icon: Activity },
+    { href: '/settings#notifications', label: 'Notifications', icon: Bell },
+    { href: '/settings#security', label: 'Security', icon: ShieldCheck },
+    { href: '/settings#quick-pin', label: 'Quick PIN', icon: KeyRound },
+    ...(user.role === 'admin' ? [{ href: '/settings#recovery-key', label: 'Recovery key', icon: Settings }] : []),
+  ];
+
+  const AccountMenu = accountMenuOpen ? (
+    <div
+      ref={accountMenuRef}
+      className="absolute left-3 bottom-[72px] z-30 w-[270px] rounded-2xl border p-2 shadow-2xl"
+      style={{
+        background: dark ? '#2b2b29' : '#ffffff',
+        borderColor: dark ? 'rgba(255,255,255,0.10)' : '#dbe3ef',
+        boxShadow: dark ? '0 18px 44px rgba(0,0,0,0.45)' : '0 18px 44px rgba(15,23,42,0.16)',
+      }}
+    >
+      <div className="px-2.5 py-2.5 flex items-center gap-3 border-b mb-1.5"
+        style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}>
+        <Avatar name={user.name} size={38} />
+        <div className="min-w-0">
+          <div className={`text-sm font-black truncate ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
+          <div className={`text-[11px] truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>{roleText}</div>
+        </div>
+      </div>
+
+      {accountItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              dark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Icon size={16} className={dark ? 'text-white/40' : 'text-slate-400'} />
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+
+      <div className="my-1.5 border-t" style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }} />
+      <button
+        type="button"
+        onClick={() => { toggleDark(); setAccountMenuOpen(false); }}
+        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          dark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        {dark ? <Sun size={16} className="text-amber-300" /> : <Moon size={16} className="text-slate-400" />}
+        <span>{dark ? 'Light mode' : 'Dark mode'}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => { setAccountMenuOpen(false); setConfirmLogout(true); }}
+        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          dark ? 'text-red-300/75 hover:text-red-300 hover:bg-red-400/10' : 'text-red-600 hover:bg-red-50'
+        }`}
+      >
+        <LogOut size={16} />
+        <span>Sign out</span>
+      </button>
+    </div>
+  ) : null;
 
   // Icon-only rail on desktop when collapsed. On mobile the drawer is always
   // shown full-width (the collapse toggle is desktop-only), so we suppress the
@@ -251,58 +340,51 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
         </div>
       </nav>
 
-      {/* Collapsed footer — notification + theme + logout + profile avatar. */}
+      {/* Collapsed footer — notification + logout + account avatar. */}
       {showCollapsed ? (
-        <div className="px-2 py-3 border-t shrink-0 flex flex-col items-center gap-1.5"
+        <div className="px-2 py-3 border-t shrink-0 flex flex-col items-center gap-1.5 relative"
           style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
+          {AccountMenu}
           <NotificationBell dark={dark} openUp />
-          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className={`p-2 rounded-lg transition-colors ${dark ? 'text-amber-300/70 hover:text-amber-300 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}>
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
           <button type="button" onClick={() => setConfirmLogout(true)} title="Sign out"
             className={`p-2 rounded-lg transition-colors ${dark ? 'text-red-400/55 hover:text-red-400 hover:bg-white/5' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
             <LogOut size={16} />
           </button>
-          <Link href="/settings" title="Open profile" aria-label="Open profile"
+          <button type="button" title="Account menu" aria-label="Account menu"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
             <Avatar name={user.name} size={32} />
-          </Link>
+          </button>
         </div>
       ) : (
       /* User footer — avatar/name open profile · theme · bell ·
           sign-out drop-up. No catch-all menu. */
       <div className="px-3 py-3 border-t shrink-0 relative"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
+        {AccountMenu}
 
         <div className={`flex items-center gap-2 rounded-lg px-1.5 py-1.5 ${dark ? '' : ''}`}>
-          {/* Avatar + name → profile page */}
-          <Link href="/settings" title="Open profile" aria-label="Open profile"
+          {/* Avatar + name -> account menu */}
+          <button type="button" title="Account menu" aria-label="Account menu"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none">
             <Avatar name={user.name} size={30} />
-          </Link>
+          </button>
 
-          {/* Name + role → profile page */}
-          <Link href="/settings" className="flex-1 min-w-0 group">
+          <button type="button" onClick={() => setAccountMenuOpen((v) => !v)}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="flex-1 min-w-0 group text-left">
             <div className={`text-xs font-semibold truncate group-hover:underline ${dark ? 'text-white/80' : 'text-slate-700'}`}>{user.name}</div>
             <div style={{ fontSize: 10 }}
               className={`truncate ${
                 user.role === 'admin' ? 'text-amber-500'
                 : (user.role === 'lead') ? 'text-emerald-500'
                 : 'text-blue-400'
-              }`}>
-              {user.role === 'admin' ? 'Admin' : (user.role === 'lead') ? 'Team Lead' : 'Individual Contributor'}
-            </div>
-          </Link>
-
-          {/* Theme */}
-          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            className={`shrink-0 p-1.5 rounded-lg transition-colors ${
-              dark ? 'text-amber-300/70 hover:text-amber-300 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
             }`}>
-            {dark ? <Sun size={15} /> : <Moon size={15} />}
+              {roleText}
+            </div>
           </button>
 
           {/* Notifications — opens upward so it's never clipped at the bottom */}

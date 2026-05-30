@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Delete, Sparkles } from 'lucide-react';
 
 function getInitials(name: string) {
   if (!name) return '?';
@@ -120,10 +120,40 @@ export default function LoginPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (mode !== 'unlock') return;
+    const t = setTimeout(() => pinInputRef.current?.focus(), 50);
+    const onKey = (e: KeyboardEvent) => {
+      if (loading) return;
+      if (/^\d$/.test(e.key)) {
+        e.preventDefault();
+        appendPin(e.key);
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        setPin((p) => p.slice(0, -1));
+        setErr('');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [mode, loading, pin]);
+
   function usePasswordInstead() {
     setMode('login');
     setErr('');
     setPin('');
+  }
+
+  function appendPin(digit: string) {
+    setErr('');
+    setPin((current) => {
+      const next = (current + digit).replace(/\D/g, '').slice(0, 4);
+      if (next.length === 4) unlock(next);
+      return next;
+    });
   }
 
   async function unlock(pinValue: string) {
@@ -351,7 +381,7 @@ export default function LoginPage() {
                   </p>
                 </div>
 
-                {/* 4-box PIN input — clicking any box focuses the hidden input */}
+                {/* 4-box PIN input — keyboard plus touch keypad, so it works on every device */}
                 <div className="relative flex justify-center gap-3 mb-4 cursor-text"
                   onClick={() => pinInputRef.current?.focus()}>
                   {[0, 1, 2, 3].map(i => (
@@ -377,7 +407,7 @@ export default function LoginPage() {
                   <input
                     ref={pinInputRef}
                     autoFocus
-                    type="password"
+                    type="text"
                     inputMode="numeric"
                     pattern="\d*"
                     maxLength={4}
@@ -390,9 +420,49 @@ export default function LoginPage() {
                       if (v.length === 4) unlock(v);
                     }}
                     className="absolute inset-0 opacity-0 w-full h-full cursor-text"
-                    style={{ fontSize: 0 }}
+                    style={{ color: 'transparent', caretColor: 'transparent' }}
                     aria-label="Quick PIN"
                   />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2.5 mt-5 mb-2">
+                  {['1','2','3','4','5','6','7','8','9'].map((digit) => (
+                    <button
+                      key={digit}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => appendPin(digit)}
+                      className="h-12 rounded-2xl border border-slate-200 bg-white text-lg font-black text-slate-800 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {digit}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={usePasswordInstead}
+                    className="h-12 rounded-2xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center justify-center transition-all hover:bg-slate-100 disabled:opacity-50"
+                    aria-label="Use password instead"
+                  >
+                    <ArrowLeft size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => appendPin('0')}
+                    className="h-12 rounded-2xl border border-slate-200 bg-white text-lg font-black text-slate-800 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    0
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading || pin.length === 0}
+                    onClick={() => { setPin((p) => p.slice(0, -1)); setErr(''); }}
+                    className="h-12 rounded-2xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center justify-center transition-all hover:bg-slate-100 disabled:opacity-40"
+                    aria-label="Delete digit"
+                  >
+                    <Delete size={17} />
+                  </button>
                 </div>
 
                 {err && (

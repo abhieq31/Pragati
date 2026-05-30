@@ -138,6 +138,36 @@ function Toggle({ label, description, checked, onChange }: {
   );
 }
 
+function SectionNav({ isAdmin }: { isAdmin: boolean }) {
+  const items = [
+    { href: '#profile', label: 'Profile', icon: User },
+    { href: '#activity', label: 'Activity', icon: Activity },
+    { href: '#notifications', label: 'Notifications', icon: Bell },
+    { href: '#security', label: 'Security', icon: Lock },
+    { href: '#quick-pin', label: 'Quick PIN', icon: KeyRound },
+    ...(isAdmin ? [{ href: '#recovery-key', label: 'Recovery key', icon: ShieldCheck }] : []),
+  ];
+  return (
+    <nav className="sticky top-6 hidden xl:block">
+      <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-sm">
+        <div className="px-3 py-2">
+          <div className="text-[11px] font-black uppercase tracking-wider text-slate-400">Account</div>
+        </div>
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <a key={item.href} href={item.href}
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+              <Icon size={15} className="text-blue-500" />
+              <span>{item.label}</span>
+            </a>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 /* ── Password strength ────────────────────────────────────────────────────── */
 function StrengthMeter({ password }: { password: string }) {
   const checks = [
@@ -282,8 +312,6 @@ export default function SettingsPage() {
     }
   }
 
-  const isPM = (user?.role === 'lead' || user?.role === 'admin');
-
   async function saveIdentity(e?: React.FormEvent) {
     e?.preventDefault();
     setIdentityMsg(''); setIdentitySaving(true);
@@ -326,44 +354,75 @@ export default function SettingsPage() {
     </div>
   );
 
-  // Render name with employee ID in parentheses if both present.
+  const isLeadOrAdmin = (user.role === 'lead' || user.role === 'admin');
+  const roleText = user.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Individual Contributor';
 
   return (
-    <div className="max-w-4xl pb-12 space-y-5">
+    <div className="max-w-6xl mx-auto pb-12 space-y-6">
 
-      {/* ── Hero profile card — gradient banner with avatar overlap ────── */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
-        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)' }}>
-        <div className="h-28 sm:h-24" style={{ background: 'linear-gradient(135deg, #1a56db 0%, #1e3a8a 55%, #312e81 100%)' }} />
-        <div className="px-5 sm:px-7 pb-5 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5" style={{ marginTop: -38 }}>
-          <div className="shrink-0 self-start">
-            <div className="p-1 bg-white rounded-2xl"
-              style={{ boxShadow: '0 0 0 3px rgba(255,255,255,0.85), 0 4px 14px rgba(15,23,42,0.18)' }}>
-              <Avatar name={user.name} size={72} />
+      {/* ── Hero profile card ──────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
+        style={{ boxShadow: '0 16px 48px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05)' }}>
+        <div className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(135deg, #0f4fb8 0%, #1769c8 42%, #2b8c47 100%)',
+          }}
+        />
+        <div className="absolute inset-0 opacity-25"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.22) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+        <div className="relative px-5 py-6 sm:px-8 sm:py-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+              <div className="shrink-0 rounded-3xl bg-white p-1.5"
+                style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}>
+                <Avatar name={user.name} size={88} />
+              </div>
+              <div className="min-w-0 pb-1">
+                <div className="mb-3 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white backdrop-blur">
+                  Pragati profile
+                </div>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                  <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">{user.name}</h1>
+                  <RoleBadge role={user.role} className="w-fit border-white/50 bg-white text-slate-800" />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
+                  <span className="font-mono break-all">@{user.username || user.email}</span>
+                  {user.email && user.username && <span className="break-all">{user.email}</span>}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex-1 min-w-0 pt-0 sm:pt-9">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 min-w-0">
-              <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight min-w-0 break-words">{user.name}</h1>
-              <RoleBadge role={user.role} />
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 min-w-0">
-              <span className="font-mono min-w-0 break-all">@{user.username || user.email}</span>
-              {user.email && user.username && (
-                <><span className="text-slate-200 hidden sm:inline">·</span><span className="min-w-0 break-all">{user.email}</span></>
-              )}
+            <div className="grid w-full grid-cols-2 gap-2 lg:min-w-[260px] lg:w-auto">
+              <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
+                <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Role</div>
+                <div className="mt-1 text-sm font-black">{roleText}</div>
+              </div>
+              <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
+                <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Member ID</div>
+                <div className="mt-1 text-sm font-black">{employeeId || '-'}</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Activity — full width, star feature ─────────────────────────── */}
-      <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati — logins, projects, and completed work.">
-        <ActivityGraph />
-      </Section>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
+        <SectionNav isAdmin={user.role === 'admin'} />
+        <div className="space-y-5">
 
-      {/* ── Two-column grid ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {/* ── Activity — full width, star feature ─────────────────────────── */}
+          <div id="activity" className="scroll-mt-6">
+            <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati: logins, projects, and completed work.">
+              <ActivityGraph />
+            </Section>
+          </div>
+
+          {/* ── Two-column grid ──────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
         {/* Left column: identity + notifications */}
         <div className="space-y-5">
@@ -376,7 +435,7 @@ export default function SettingsPage() {
                 </Field>
                 <ReadonlyField label="Username" value={`@${user.username || user.email}`} />
                 <ReadonlyField label="Member ID" value={employeeId || '—'} />
-                <ReadonlyField label="Role" value={user.role === 'admin' ? 'Admin' : isPM ? 'Team Lead' : 'Individual Contributor'} />
+                <ReadonlyField label="Role" value={roleText} />
                 <div className="flex items-center gap-3 pt-1">
                   <button type="submit" className="btn-primary" disabled={identitySaving}>
                     {identitySaving ? 'Saving…' : 'Save changes'}
@@ -390,7 +449,7 @@ export default function SettingsPage() {
           <div id="notifications" className="scroll-mt-6">
             <Section icon={Bell} title="Notifications" subtitle="What shows up on your dashboard.">
               <div className={notifSaving ? 'opacity-60 pointer-events-none transition-opacity' : 'transition-opacity'}>
-                <Toggle label="Task assigned to me"  description="When a PM assigns you a new task."
+                <Toggle label="Task assigned to me"  description="When a team lead assigns you a new task."
                   checked={notifTaskAssigned} onChange={v => { setNA(v); saveNotif('notifTaskAssigned', v); }} />
                 <Toggle label="Due in 24 hours"       description="Morning reminder before a deadline."
                   checked={notifTaskDueSoon}  onChange={v => { setNDS(v); saveNotif('notifTaskDueSoon', v); }} />
@@ -474,6 +533,8 @@ export default function SettingsPage() {
             </div>
           )}
 
+        </div>
+          </div>
         </div>
       </div>
 
