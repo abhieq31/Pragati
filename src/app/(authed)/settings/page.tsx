@@ -334,23 +334,23 @@ export default function SettingsPage() {
       {/* ── Hero profile card — gradient banner with avatar overlap ────── */}
       <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
         style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)' }}>
-        <div className="h-24" style={{ background: 'linear-gradient(135deg, #1a56db 0%, #1e3a8a 55%, #312e81 100%)' }} />
-        <div className="px-7 pb-5 flex items-end gap-5" style={{ marginTop: -40 }}>
-          <div className="shrink-0">
+        <div className="h-28 sm:h-24" style={{ background: 'linear-gradient(135deg, #1a56db 0%, #1e3a8a 55%, #312e81 100%)' }} />
+        <div className="px-5 sm:px-7 pb-5 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-5" style={{ marginTop: -38 }}>
+          <div className="shrink-0 self-start">
             <div className="p-1 bg-white rounded-2xl"
               style={{ boxShadow: '0 0 0 3px rgba(255,255,255,0.85), 0 4px 14px rgba(15,23,42,0.18)' }}>
               <Avatar name={user.name} size={72} />
             </div>
           </div>
-          <div className="flex-1 min-w-0 pb-1">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl font-black text-slate-900 tracking-tight">{user.name}</h1>
+          <div className="flex-1 min-w-0 pt-0 sm:pt-9">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 min-w-0">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight min-w-0 break-words">{user.name}</h1>
               <RoleBadge role={user.role} />
             </div>
-            <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-              <span className="font-mono">@{user.username || user.email}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400 min-w-0">
+              <span className="font-mono min-w-0 break-all">@{user.username || user.email}</span>
               {user.email && user.username && (
-                <><span className="text-slate-200">·</span><span>{user.email}</span></>
+                <><span className="text-slate-200 hidden sm:inline">·</span><span className="min-w-0 break-all">{user.email}</span></>
               )}
             </div>
           </div>
@@ -375,7 +375,7 @@ export default function SettingsPage() {
                   <input className="input" value={name} onChange={e => setName(e.target.value)} required />
                 </Field>
                 <ReadonlyField label="Username" value={`@${user.username || user.email}`} />
-                <ReadonlyField label="Employee ID" value={employeeId || '—'} />
+                <ReadonlyField label="Member ID" value={employeeId || '—'} />
                 <ReadonlyField label="Role" value={user.role === 'admin' ? 'Admin' : isPM ? 'Team Lead' : 'Individual Contributor'} />
                 <div className="flex items-center gap-3 pt-1">
                   <button type="submit" className="btn-primary" disabled={identitySaving}>

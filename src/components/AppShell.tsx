@@ -251,40 +251,37 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
         </div>
       </nav>
 
-      {/* Collapsed footer — notification + logout + avatar (theme toggle). */}
+      {/* Collapsed footer — notification + theme + logout + profile avatar. */}
       {showCollapsed ? (
         <div className="px-2 py-3 border-t shrink-0 flex flex-col items-center gap-1.5"
           style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
           <NotificationBell dark={dark} openUp />
+          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className={`p-2 rounded-lg transition-colors ${dark ? 'text-amber-300/70 hover:text-amber-300 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}>
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <button type="button" onClick={() => setConfirmLogout(true)} title="Sign out"
             className={`p-2 rounded-lg transition-colors ${dark ? 'text-red-400/55 hover:text-red-400 hover:bg-white/5' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}>
             <LogOut size={16} />
           </button>
-          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          <Link href="/settings" title="Open profile" aria-label="Open profile"
             className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
             <Avatar name={user.name} size={32} />
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border"
-              style={{ background: dark ? '#30302e' : '#ffffff', borderColor: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }}>
-              {dark ? <Sun size={9} className="text-amber-400" /> : <Moon size={9} className="text-slate-500" />}
-            </span>
-          </button>
+          </Link>
         </div>
       ) : (
-      /* User footer — avatar toggles theme · name opens profile · bell ·
+      /* User footer — avatar/name open profile · theme · bell ·
           sign-out drop-up. No catch-all menu. */
       <div className="px-3 py-3 border-t shrink-0 relative"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
 
         <div className={`flex items-center gap-2 rounded-lg px-1.5 py-1.5 ${dark ? '' : ''}`}>
-          {/* Avatar = one-click theme toggle, with a sun/moon hint badge */}
-          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          {/* Avatar + name → profile page */}
+          <Link href="/settings" title="Open profile" aria-label="Open profile"
             className="relative shrink-0 rounded-full focus:outline-none">
             <Avatar name={user.name} size={30} />
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border"
-              style={{ background: dark ? '#30302e' : '#ffffff', borderColor: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }}>
-              {dark ? <Sun size={9} className="text-amber-400" /> : <Moon size={9} className="text-slate-500" />}
-            </span>
-          </button>
+          </Link>
 
           {/* Name + role → profile page */}
           <Link href="/settings" className="flex-1 min-w-0 group">
@@ -298,6 +295,15 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
               {user.role === 'admin' ? 'Admin' : (user.role === 'lead') ? 'Team Lead' : 'Individual Contributor'}
             </div>
           </Link>
+
+          {/* Theme */}
+          <button type="button" onClick={toggleDark} title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className={`shrink-0 p-1.5 rounded-lg transition-colors ${
+              dark ? 'text-amber-300/70 hover:text-amber-300 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+            }`}>
+            {dark ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
 
           {/* Notifications — opens upward so it's never clipped at the bottom */}
           <NotificationBell dark={dark} openUp />
