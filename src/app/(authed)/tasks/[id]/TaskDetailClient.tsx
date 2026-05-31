@@ -179,12 +179,16 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const canSignoff = task.requiresQaSignoff && !task.qaSignoffAt && (me?.role === 'lead' || me?.role === 'admin');
   const hasReferenceData = task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
 
-  // IC edit contract: contributors may add execution context only for their
-  // own task or a task that is still unassigned. Status and ownership fields
-  // stay read-only for ICs; leads/admins keep full controls.
+  // IC edit contract: a contributor may edit ONLY the description and due date,
+  // and ONLY on a task assigned to them. Everything else — status, assignee,
+  // priority, reference/compliance fields — is lead-owned. A task assigned to
+  // someone else (or unassigned) is fully read-only for an IC, and the inputs
+  // are disabled so no save is even attempted. Leads/admins keep full control.
   const isAssignee  = !!(me && task.assigneeId && String(task.assigneeId) === String(me.id));
-  const isUnassigned = !task.assigneeId;
-  const canEditDetails = isLead || isAssignee || isUnassigned;
+  // Description + due date: editable by leads or the assignee.
+  const canEditBasics = isLead || isAssignee;
+  // Reference/tracking fields, status, assignee, priority, etc.: leads only.
+  const canEditAll = isLead;
   const canComment = isLead || isAssignee;
   const canEditStatus = isLead;
 
@@ -237,15 +241,17 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
           <textarea
             className="textarea min-h-[90px] text-sm disabled:bg-slate-50 disabled:text-slate-500"
             value={task.description || ''}
-            disabled={!canEditDetails}
+            disabled={!canEditBasics}
             onChange={(e) => setTask({ ...task, description: e.target.value })}
-            onBlur={(e) => canEditDetails && update({ description: e.target.value })}
+            onBlur={(e) => canEditBasics && update({ description: e.target.value })}
             placeholder="Describe what's expected, references, evidence required…"
           />
         </Card>
-        {!canEditDetails && (
+        {!isLead && (
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
-            Read-only: contributors can edit only their own or unassigned tasks. Status changes are lead-owned.
+            {canEditBasics
+              ? 'You can edit the description and due date of this task. Status, assignee and other fields are lead-owned.'
+              : 'Read-only: only the assignee and team leads can edit this task.'}
           </div>
         )}
 
@@ -268,9 +274,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                   className="input text-sm font-mono disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="e.g. REF-2025-042"
                   value={task.ccNo || ''}
-                  disabled={!canEditDetails}
+                  disabled={!canEditAll}
                   onChange={(e) => setTask({ ...task, ccNo: e.target.value })}
-                  onBlur={(e) => canEditDetails && update({ ccNo: e.target.value })}
+                  onBlur={(e) => canEditAll && update({ ccNo: e.target.value })}
                 />
               </div>
               <div>
@@ -278,9 +284,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 <div>
                   <DatePicker
                     value={task.ccTcd ? task.ccTcd.slice(0, 10) : null}
-                    onChange={(v) => canEditDetails && update({ ccTcd: v }, { optimistic: { ccTcd: v } })}
+                    onChange={(v) => canEditAll && update({ ccTcd: v }, { optimistic: { ccTcd: v } })}
                     placeholder="Set date"
-                    disabled={!canEditDetails}
+                    disabled={!canEditAll}
                   />
                 </div>
               </div>
@@ -295,9 +301,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 className="input text-sm font-mono disabled:bg-slate-50 disabled:text-slate-500"
                 placeholder="SOP / Protocol / Doc ref"
                 value={task.documentNo || ''}
-                disabled={!canEditDetails}
+                disabled={!canEditAll}
                 onChange={(e) => setTask({ ...task, documentNo: e.target.value })}
-                onBlur={(e) => canEditDetails && update({ documentNo: e.target.value })}
+                onBlur={(e) => canEditAll && update({ documentNo: e.target.value })}
               />
             </div>
 
@@ -310,9 +316,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 className="textarea text-sm min-h-[60px] disabled:bg-slate-50 disabled:text-slate-500"
                 placeholder="Any additional notes, blockers, or context…"
                 value={task.remarks || ''}
-                disabled={!canEditDetails}
+                disabled={!canEditAll}
                 onChange={(e) => setTask({ ...task, remarks: e.target.value })}
-                onBlur={(e) => canEditDetails && update({ remarks: e.target.value })}
+                onBlur={(e) => canEditAll && update({ remarks: e.target.value })}
               />
             </div>
           </div>
@@ -459,9 +465,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 className="input text-sm"
                 placeholder="e.g. QA review · Sachin · IT Helpdesk"
                 value={task.pendingWith || ''}
-                disabled={!canEditDetails}
+                disabled={!canEditAll}
                 onChange={(e) => setTask({ ...task, pendingWith: e.target.value })}
-                onBlur={(e) => canEditDetails && update({ pendingWith: e.target.value })}
+                onBlur={(e) => canEditAll && update({ pendingWith: e.target.value })}
               />
               {task.pendingWith && (
                 <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
@@ -500,9 +506,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 <div>
                   <DatePicker
                     value={task.dueDate ? task.dueDate.slice(0, 10) : null}
-                    onChange={(v) => canEditDetails && update({ dueDate: v }, { optimistic: { dueDate: v } })}
+                    onChange={(v) => canEditBasics && update({ dueDate: v }, { optimistic: { dueDate: v } })}
                     placeholder="Set date"
-                    disabled={!canEditDetails}
+                    disabled={!canEditBasics}
                   />
                 </div>
               </div>
