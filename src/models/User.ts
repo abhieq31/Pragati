@@ -109,6 +109,20 @@ const UserSchema = new Schema(
     notifTaskDueSoon:   { type: Boolean, default: true  },  // 24h before due
     notifTaskOverdue:   { type: Boolean, default: true  },
     notifProjectUpdate: { type: Boolean, default: false },
+
+    // ── Monogram avatar ─────────────────────────────────────────────────
+    // A user-customised letter-on-a-coloured-circle avatar (Google-style),
+    // persisted server-side so it propagates everywhere the user's Avatar
+    // is rendered — sidebar, account menu, mention chips, comments, lead
+    // contributor list, etc. All fields are optional; the Avatar component
+    // falls back to the name-derived initials + hash colour when unset.
+    avatarLetter: { type: String, default: '' },          // 1–2 chars, uppercase
+    avatarBg:     { type: String, default: '' },          // CSS colour (hex)
+    avatarFont:   { type: Number, default: 0 },           // 0..AVATAR_FONTS.length-1
+
+    // Audible drop-cue preference. Defaults to true (ships with sound).
+    // Synthesised in-browser via Web Audio, so there's no asset to deliver.
+    soundDropEnabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

@@ -13,7 +13,8 @@ import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
 import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
-import { chimeIfEnabled } from '@/lib/sound';
+import { chimeIfEnabled, playDropTick } from '@/lib/sound';
+import { useCurrentUser } from '@/components/CurrentUserContext';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -36,6 +37,8 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
   onDelete: (taskId: string) => void;
 }) {
   const dark = useIsDark();
+  const currentUser = useCurrentUser();
+  const soundEnabled = currentUser?.soundDropEnabled !== false;
   const [localTasks, setLocalTasks] = useState<any[]>(tasks);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   // Where the dragged card would land: a column + the insertion index within it.
@@ -123,6 +126,9 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
       return i >= 0 ? { ...t, position: i } : t;
     }));
     setDraggingId(null); setDragOver(null);
+    // Audible cue confirming the move — only fires when the drop actually
+    // changed something (the no-op guard above already returned).
+    playDropTick(soundEnabled);
     onDropReorder(taskId, col, orderedIds);
   }
 

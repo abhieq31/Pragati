@@ -13,9 +13,18 @@ export type LifecycleKey =
   | 'software_change'
   | 'audit'
   | 'validation'
+  // Personal — generic, non-GxP templates suggested only when the
+  // "Personal project" toggle is on. Useful when someone wants to use
+  // Pragati for their own goals, study plan, or weekly routine without
+  // a regulatory framework attached.
+  | 'personal_goal'
+  | 'personal_study'
+  | 'personal_habit'
+  | 'personal_side_project'
+  | 'personal_event'
   ;
 
-export type LifecycleGroup = 'General' | 'Life Sciences';
+export type LifecycleGroup = 'General' | 'Life Sciences' | 'Personal';
 
 export interface LifecycleTaskTemplate {
   title: string;
@@ -500,6 +509,211 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
         { title: 'Confirm no new deviations or data integrity gaps', type: 'review', qa: true, gxp: true },
         { title: 'Close change control record', type: 'approval', qa: true, gxp: true },
       ] },
+    ]
+  },
+
+  /* ── Personal templates ────────────────────────────────────────────────
+     Ready-made workflows for someone using Pragati for their own goals,
+     not a regulated process. Surfaced only when the "Personal project"
+     toggle is on. They are intentionally light — no GxP fields, no
+     approvals — so the user can move fast. */
+  personal_goal: {
+    label: 'Personal Goal',
+    description: 'Break a personal ambition into a clear plan with milestones and reflection.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      {
+        name: 'Define',
+        tasks: [
+          { title: 'Write the goal in one sentence',     type: 'task' },
+          { title: 'Why it matters to me',               type: 'task' },
+          { title: 'Define what "done" looks like',      type: 'task' },
+        ]
+      },
+      {
+        name: 'Plan',
+        tasks: [
+          { title: 'Break the goal into milestones',     type: 'task' },
+          { title: 'Schedule weekly time blocks',        type: 'task' },
+          { title: 'Identify obstacles & how to handle', type: 'task' },
+        ]
+      },
+      {
+        name: 'Do',
+        tasks: [
+          { title: 'Execute milestone 1',                type: 'task' },
+          { title: 'Execute milestone 2',                type: 'task' },
+          { title: 'Weekly check-in with myself',        type: 'review' },
+        ]
+      },
+      {
+        name: 'Reflect',
+        tasks: [
+          { title: 'What worked',                        type: 'review' },
+          { title: 'What I would do differently',        type: 'review' },
+          { title: 'Next goal to chase',                 type: 'task' },
+        ]
+      },
+    ]
+  },
+
+  personal_study: {
+    label: 'Study Plan',
+    description: 'Learn a new subject, course or certification with a steady pace.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      {
+        name: 'Setup',
+        tasks: [
+          { title: 'Pick the syllabus / book / course',  type: 'task' },
+          { title: 'Set a target completion date',       type: 'task' },
+          { title: 'Gather study materials & tools',     type: 'task' },
+        ]
+      },
+      {
+        name: 'Learn',
+        tasks: [
+          { title: 'Week 1 — fundamentals',              type: 'task' },
+          { title: 'Week 2 — core concepts',             type: 'task' },
+          { title: 'Week 3 — advanced topics',           type: 'task' },
+          { title: 'Practice problems / exercises',      type: 'task' },
+        ]
+      },
+      {
+        name: 'Apply',
+        tasks: [
+          { title: 'Build a small project to apply it',  type: 'task' },
+          { title: 'Teach it to someone (Feynman test)', type: 'task' },
+        ]
+      },
+      {
+        name: 'Assess',
+        tasks: [
+          { title: 'Mock test / quiz',                   type: 'test' },
+          { title: 'Final exam or certification',        type: 'approval' },
+        ]
+      },
+    ]
+  },
+
+  personal_habit: {
+    label: 'Habit Tracker',
+    description: 'Build a daily habit and track consistency over a month.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      {
+        name: 'Commit',
+        tasks: [
+          { title: 'Name the habit clearly',             type: 'task' },
+          { title: 'Pick the cue and reward',            type: 'task' },
+          { title: 'Set the daily time / trigger',       type: 'task' },
+        ]
+      },
+      {
+        name: 'Week 1',
+        tasks: [
+          { title: 'Day 1–7 — show up no matter what',   type: 'task' },
+          { title: 'Reflect on what was hard',           type: 'review' },
+        ]
+      },
+      {
+        name: 'Week 2–3',
+        tasks: [
+          { title: 'Day 8–21 — keep the streak alive',   type: 'task' },
+          { title: 'Mid-point reflection',               type: 'review' },
+        ]
+      },
+      {
+        name: 'Week 4',
+        tasks: [
+          { title: 'Day 22–30 — lock it in',             type: 'task' },
+          { title: 'Decide what comes next',             type: 'task' },
+        ]
+      },
+    ]
+  },
+
+  personal_side_project: {
+    label: 'Side Project',
+    description: 'Take a personal build from idea to shipped, on your own time.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      {
+        name: 'Idea',
+        tasks: [
+          { title: 'Write the elevator pitch',           type: 'task' },
+          { title: 'Who is it for, what problem',        type: 'task' },
+          { title: 'List the must-have features',        type: 'task' },
+        ]
+      },
+      {
+        name: 'Build',
+        tasks: [
+          { title: 'Set up the project / repo',          type: 'task' },
+          { title: 'Build feature 1',                    type: 'task' },
+          { title: 'Build feature 2',                    type: 'task' },
+          { title: 'Polish & remove rough edges',        type: 'task' },
+        ]
+      },
+      {
+        name: 'Ship',
+        tasks: [
+          { title: 'Test on a real user (you count)',    type: 'test' },
+          { title: 'Publish / deploy',                   type: 'task' },
+          { title: 'Tell the world (post / share)',      type: 'task' },
+        ]
+      },
+      {
+        name: 'Iterate',
+        tasks: [
+          { title: 'Gather feedback',                    type: 'review' },
+          { title: 'Decide: keep building or move on',   type: 'task' },
+        ]
+      },
+    ]
+  },
+
+  personal_event: {
+    label: 'Event / Trip Planner',
+    description: 'Plan a personal event, trip or get-together without missing the details.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      {
+        name: 'Plan',
+        tasks: [
+          { title: 'Pick the date & destination',        type: 'task' },
+          { title: 'Set a budget',                       type: 'task' },
+          { title: 'List who is involved',               type: 'task' },
+        ]
+      },
+      {
+        name: 'Book',
+        tasks: [
+          { title: 'Bookings — travel / venue',          type: 'task' },
+          { title: 'Bookings — stay',                    type: 'task' },
+          { title: 'Confirm dates with everyone',        type: 'approval' },
+        ]
+      },
+      {
+        name: 'Prep',
+        tasks: [
+          { title: 'Pack the essentials',                type: 'task' },
+          { title: 'Itinerary / schedule',               type: 'task' },
+          { title: 'Last-minute confirmations',          type: 'task' },
+        ]
+      },
+      {
+        name: 'Wrap',
+        tasks: [
+          { title: 'Settle expenses',                    type: 'task' },
+          { title: 'Save photos & notes',                type: 'task' },
+        ]
+      },
     ]
   },
 

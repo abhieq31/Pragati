@@ -35,6 +35,12 @@ export interface CurrentUser {
   title?: string;
   mustChangePassword?: boolean;
   hasPin?: boolean;
+  /** Server-persisted monogram avatar (Google-style). */
+  avatarLetter?: string;
+  avatarBg?: string;
+  avatarFont?: number;
+  /** Drop-sound preference for kanban / dashboard reorders. */
+  soundDropEnabled?: boolean;
 }
 
 /* ── Dark-mode hook ─────────────────────────────────────────────────
@@ -191,7 +197,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     >
       <div className="px-2.5 py-2.5 flex items-center gap-3 border-b mb-1.5"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}>
-        <Avatar name={user.name} size={38} />
+        <Avatar name={user.name} size={38} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
         <div className="min-w-0">
           <div className={`text-sm font-black truncate ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
           <div className={`text-[11px] truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>{roleText}</div>
@@ -359,7 +365,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
-            <Avatar name={user.name} size={32} />
+            <Avatar name={user.name} size={32} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
           </button>
         </div>
       ) : (
@@ -375,7 +381,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none">
-            <Avatar name={user.name} size={30} />
+            <Avatar name={user.name} size={30} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
           </button>
 
           <button type="button" onClick={() => setAccountMenuOpen((v) => !v)}

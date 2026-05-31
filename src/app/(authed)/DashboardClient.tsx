@@ -8,7 +8,8 @@ import {
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { api } from '@/lib/client/api';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { playDropTick } from '@/lib/sound';
+import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
@@ -422,6 +423,8 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
   tasks: TeamTask[];
   canMove: boolean;
 }) {
+  const currentUser = useCurrentUser();
+  const soundEnabled = currentUser?.soundDropEnabled !== false;
   const [local, setLocal] = useState(tasks);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId,     setOverId]     = useState<string | null>(null);
@@ -452,6 +455,10 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
     next.splice(to, 0, moved);
     setLocal(next);
     setDraggingId(null);
+    // Audible cue confirming the drop landed — fires only on successful
+    // reorders (still suppressed by the user's soundDropEnabled preference
+    // inside playDropSound itself).
+    playDropTick(soundEnabled);
 
     try {
       await api(`/projects/${projectId}/reorder-tasks`, {

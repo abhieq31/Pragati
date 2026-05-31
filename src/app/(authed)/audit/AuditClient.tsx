@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { useIsAdmin } from '@/components/CurrentUserContext';
-import { ScrollText, RefreshCw } from 'lucide-react';
+import { ScrollText, RefreshCw, Sparkles } from 'lucide-react';
 
 interface LogRow {
   id: string;
@@ -92,10 +92,16 @@ export default function AuditClient({ initialRows }: { initialRows: LogRow[] }) 
             An immutable record of operational activity — who did what, and when.
           </p>
         </div>
-        <button onClick={load} disabled={busy}
-          className="btn-secondary flex items-center gap-1.5 text-xs">
-          <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Refresh
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/audit/changelog"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg transition-colors">
+            <Sparkles size={13} /> Changelog
+          </Link>
+          <button onClick={load} disabled={busy}
+            className="btn-secondary flex items-center gap-1.5 text-xs">
+            <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       {/* Category filter */}
