@@ -488,7 +488,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
               }}
             />
           )}
-          <div key={pathname} className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 page-enter relative">
+          <div key={pathname} className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 page-enter relative overflow-x-hidden">
             {children}
           </div>
         </main>

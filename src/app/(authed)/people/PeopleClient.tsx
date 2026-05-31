@@ -802,7 +802,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         ) : (
           <div className="divide-y divide-slate-50">
             {pms.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
+              <div key={u.id} className="flex items-center flex-wrap gap-x-3 gap-y-2 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => isLeadOrAdmin && setActivityUser(u)}
@@ -894,7 +894,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         ) : (
           <div className="divide-y divide-slate-50">
             {ics.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
+              <div key={u.id} className="flex items-center flex-wrap gap-x-3 gap-y-2 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => isLeadOrAdmin && setActivityUser(u)}
@@ -976,7 +976,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
           </div>
           <div className="divide-y divide-slate-50">
             {deactivated.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-5 py-4">
+              <div key={u.id} className="flex items-center flex-wrap gap-x-3 gap-y-2 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => isLeadOrAdmin && setActivityUser(u)}
