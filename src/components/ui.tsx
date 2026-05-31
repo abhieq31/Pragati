@@ -265,30 +265,94 @@ const AVATAR_GRADIENTS: Array<[string, string]> = [
   ['#546E7A', '#37474F'], // blue grey
 ];
 
-export function Avatar({ name, size = 28 }: { name?: string | null; size?: number }) {
+// User-pickable monogram backgrounds (solid colours, à la Google Contacts).
+// Exposed so the avatar editor and the Avatar component agree on the palette.
+export const AVATAR_MONOGRAM_BG: string[] = [
+  '#F8BBD9', // pink
+  '#FDBA74', // orange
+  '#FDE047', // yellow
+  '#86EFAC', // green
+  '#7DD3FC', // sky
+  '#C4B5FD', // violet
+  '#FCA5A5', // rose
+  '#A7F3D0', // mint
+  '#FBCFE8', // light pink
+  '#FED7AA', // peach
+];
+
+// Font choices for the monogram letter. Each is just a CSS font-family stack +
+// weight; pairs (key, family, weight) keep the editor renderable without
+// loading external fonts on the critical path.
+export const AVATAR_FONTS: Array<{ family: string; weight: number; sample: string }> = [
+  { family: 'system-ui, -apple-system, sans-serif',                          weight: 700, sample: 'Aa' },
+  { family: 'Georgia, "Times New Roman", serif',                             weight: 700, sample: 'Aa' },
+  { family: '"Courier New", ui-monospace, monospace',                        weight: 700, sample: 'Aa' },
+  { family: '"Brush Script MT", "Lucida Handwriting", cursive',              weight: 400, sample: 'Aa' },
+  { family: 'Impact, "Arial Black", sans-serif',                             weight: 900, sample: 'Aa' },
+];
+
+// Pick a sensible foreground for a given background — black for light pastels,
+// white for dark fills. Keeps the letter readable across the palette.
+export function avatarFg(bg: string): string {
+  const hex = bg.replace('#', '');
+  if (hex.length !== 6) return '#111';
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  // Perceived luminance, ITU-R BT.709
+  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return L > 170 ? '#1f2937' : '#ffffff';
+}
+
+interface AvatarProps {
+  name?: string | null;
+  size?: number;
+  /** Custom monogram letter — overrides the name-derived initials. */
+  letter?: string | null;
+  /** Solid background colour. When set, replaces the hash-derived gradient. */
+  bg?: string | null;
+  /** Index into AVATAR_FONTS. */
+  font?: number | null;
+}
+
+export function Avatar({ name, size = 28, letter, bg, font }: AvatarProps) {
   // Initials: first letter of first word + first letter of last word.
   // Single-word names render a single letter. Coloured deterministically by name.
   const trimmed = (name || '').trim();
   const parts   = trimmed ? trimmed.split(/\s+/).filter(Boolean) : [];
   const first   = (parts[0]?.[0] || '?').toUpperCase();
   const last    = parts.length > 1 ? (parts[parts.length - 1][0] || '').toUpperCase() : '';
-  const initials = (first + last) || '?';
+  const defaultInitials = (first + last) || '?';
+  const initials = (letter || defaultInitials).slice(0, 2).toUpperCase() || '?';
 
+  // Monogram override: solid colour + chosen font. Falls back to the
+  // legacy hash-coloured gradient + system font when no override is set,
+  // so every existing call site keeps working unchanged.
+  const useMonogram = !!bg;
   const hash    = trimmed.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const [lo, hi] = AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
+  const background = useMonogram
+    ? bg!
+    : `linear-gradient(135deg, ${lo} 0%, ${hi} 100%)`;
+  const color = useMonogram ? avatarFg(bg!) : '#ffffff';
+  const fontDef = AVATAR_FONTS[font ?? 0] || AVATAR_FONTS[0];
 
   return (
     <div
-      className="flex items-center justify-center text-white shrink-0 select-none"
+      className="flex items-center justify-center shrink-0 select-none"
       style={{
         width: size,
         height: size,
         fontSize: size * (initials.length === 1 ? 0.46 : 0.40),
-        fontWeight: 600,
+        fontWeight: fontDef.weight,
+        fontFamily: fontDef.family,
         letterSpacing: '0.02em',
-        background: `linear-gradient(135deg, ${lo} 0%, ${hi} 100%)`,
+        background,
+        color,
         borderRadius: '50%',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(15,23,42,0.12)',
+        boxShadow: useMonogram
+          ? '0 1px 2px rgba(15,23,42,0.12)'
+          : 'inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(15,23,42,0.12)',
         lineHeight: 1,
       }}
       title={trimmed || ''}

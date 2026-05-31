@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
 import { ActivityGraph } from '@/components/ActivityGraph';
@@ -9,97 +10,83 @@ import {
 } from 'lucide-react';
 
 
-const FUN_AVATAR_KEY = 'pragati.funAvatar';
+import { MonogramEditor } from '@/components/MonogramEditor';
 
-const EMOJI_CATEGORIES = [
-  {
-    label: 'Smileys',
-    emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😎','🤓','🧐','😏','😌','🥳'],
-  },
-  {
-    label: 'Animals',
-    emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐸','🐵','🦄','🐺','🦋','🐙','🦉','🦊'],
-  },
-  {
-    label: 'Nature',
-    emojis: ['🌸','🌺','🌻','🌹','🌿','🍀','🌱','🌲','🌳','🌴','🍄','🌊','🔥','⭐','🌙','☀️','⚡','🌈','❄️','🌀'],
-  },
-  {
-    label: 'Objects',
-    emojis: ['🚀','💡','🔬','🔭','💻','📱','🎯','🎨','🎸','🎹','🏆','🎖️','🔑','🗝️','📚','📊','🧩','🤖','🛸','⚙️'],
-  },
-  {
-    label: 'Symbols',
-    emojis: ['❤️','💙','💚','💛','💜','🖤','🤍','🔶','🔷','🔴','🟢','⚫','🌟','✨','💫','🎆','🎇','♾️','✅','🔥'],
-  },
-];
-
-function ProfileAvatar({ name, emoji, size = 88, onClick }: { name?: string | null; emoji?: string; size?: number; onClick?: () => void }) {
-  const inner = emoji ? (
-    <div
-      className="flex items-center justify-center shrink-0 select-none rounded-full bg-white"
-      style={{ width: size, height: size, fontSize: size * 0.48 }}
-    >
-      {emoji}
-    </div>
-  ) : (
-    <Avatar name={name} size={size} />
-  );
+/* ── Profile avatar wrapper ───────────────────────────────────────────────
+   Renders the user's monogram avatar with a hover-overlay "edit" hint.
+   The avatar is always the standard Avatar component — the editor below
+   passes letter/bg/font through, so the preview here matches every other
+   surface where this user is shown. */
+function ProfileAvatar({
+  name, letter, bg, font, size = 88, onClick,
+}: {
+  name?: string | null;
+  letter?: string; bg?: string; font?: number;
+  size?: number;
+  onClick?: () => void;
+}) {
+  const inner = <Avatar name={name} size={size} letter={letter} bg={bg} font={font} />;
 
   if (!onClick) return inner;
   return (
     <div className="relative group cursor-pointer" onClick={onClick} title="Change avatar">
       {inner}
-      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-        style={{ fontSize: size * 0.28 }}>
-        ✏️
+      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+        style={{ fontSize: size * 0.22, fontWeight: 600 }}>
+        Edit
       </div>
     </div>
   );
 }
 
-function EmojiPickerModal({ current, onSelect, onClose }: { current: string; onSelect: (e: string) => void; onClose: () => void }) {
-  const [activeTab, setActiveTab] = useState(0);
+/* (legacy emoji picker removed — see MonogramEditor) */
+
+/* ── Drop-sound toggle ───────────────────────────────────────────────────
+   The short "thunk" played when the user successfully drops a task in
+   kanban or reorders one on the dashboard. Stored server-side so the
+   preference follows the user across devices. Default ON. */
+function DropSoundToggle({ initial }: { initial: boolean }) {
+  const [enabled, setEnabled] = useState(initial);
+  const [saving, setSaving]   = useState(false);
+
+  async function toggle() {
+    const next = !enabled;
+    setEnabled(next); // optimistic
+    setSaving(true);
+    try {
+      await api('/users/me', { method: 'PATCH', body: { soundDropEnabled: next } });
+    } catch {
+      setEnabled(!next); // revert on failure
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
-      onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
-        onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <h3 className="text-sm font-bold text-slate-800">Choose your avatar</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <div className="rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-bold text-slate-800 dark:text-white/90">Drop sound</div>
+          <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5 leading-relaxed">
+            Plays a short cue when you drop a task in kanban or reorder one on the dashboard. Synthesised in your browser — no audio file ships.
+          </p>
         </div>
-        {/* Category tabs */}
-        <div className="flex gap-1 px-3 pb-2 overflow-x-auto">
-          {EMOJI_CATEGORIES.map((cat, i) => (
-            <button key={cat.label} type="button"
-              onClick={() => setActiveTab(i)}
-              className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${activeTab === i ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-100'}`}>
-              {cat.label}
-            </button>
-          ))}
-        </div>
-        {/* Emoji grid */}
-        <div className="grid grid-cols-7 gap-1 px-3 pb-3 max-h-52 overflow-y-auto">
-          {EMOJI_CATEGORIES[activeTab].emojis.map(emoji => (
-            <button key={emoji} type="button"
-              onClick={() => { onSelect(emoji); onClose(); }}
-              className={`h-10 w-full rounded-xl text-xl flex items-center justify-center transition-all hover:scale-110 ${current === emoji ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
-              aria-pressed={current === emoji}>
-              {emoji}
-            </button>
-          ))}
-        </div>
-        {current && (
-          <div className="px-3 pb-3 border-t pt-2.5">
-            <button type="button"
-              onClick={() => { onSelect(''); onClose(); }}
-              className="w-full text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1.5 py-1.5 rounded-lg hover:bg-slate-50">
-              <RefreshCw size={11} /> Use initials instead
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          disabled={saving}
+          onClick={toggle}
+          className={`mt-0.5 relative w-10 h-5.5 rounded-full shrink-0 transition-colors cursor-pointer ${
+            enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-white/15'
+          }`}
+          style={{ width: 36, height: 20 }}
+        >
+          <span
+            className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+            style={{ left: enabled ? 18 : 2 }}
+          />
+        </button>
       </div>
     </div>
   );
@@ -413,6 +400,7 @@ function RecoveryKeyModal({ keyValue, onClose }: { keyValue: string; onClose: ()
    MAIN PAGE
 ════════════════════════════════════════════════════════════════════════════ */
 export default function SettingsClient({ initialUser }: { initialUser: any }) {
+  const router = useRouter();
   const [user, setUser]   = useState<any>(initialUser);
 
   const [name, setName]           = useState(initialUser.name || '');
@@ -431,13 +419,18 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
   const [hasRecoveryKey, setHasRecoveryKey]   = useState<boolean | null>(null);
   const [recoveryKeyBusy, setRecoveryKeyBusy] = useState(false);
   const [generatedKey, setGeneratedKey]       = useState<string | null>(null);
-  const [funAvatar, setFunAvatar] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Monogram avatar — letter / bg / font are persisted server-side on the
+  // User model, and the editor below saves through PATCH /api/users/me.
+  // initialUser is the SSR-seeded user, so the avatar shows up immediately
+  // (no client-side fetch flicker).
+  const [avatarLetter, setAvatarLetter] = useState<string>((initialUser as any).avatarLetter || '');
+  const [avatarBg,     setAvatarBg]     = useState<string>((initialUser as any).avatarBg || '');
+  const [avatarFont,   setAvatarFont]   = useState<number>((initialUser as any).avatarFont ?? 0);
+  const [showAvatarEditor, setShowAvatarEditor] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
-    setFunAvatar(localStorage.getItem(FUN_AVATAR_KEY) || '');
     // User data already seeded from SSR; only fetch the recovery-key status
     // (a separate resource that can't come from the JWT).
     if (initialUser.role === 'admin') {
@@ -459,10 +452,21 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
     }
   }
 
-  function chooseFunAvatar(emoji: string) {
-    setFunAvatar(emoji);
-    if (emoji) localStorage.setItem(FUN_AVATAR_KEY, emoji);
-    else localStorage.removeItem(FUN_AVATAR_KEY);
+  async function saveMonogram(next: { letter: string; bg: string; font: number }) {
+    // Persist to the server so the avatar follows the user everywhere.
+    // Update local state optimistically so the hero card refreshes
+    // without waiting for a full router.refresh().
+    setAvatarLetter(next.letter);
+    setAvatarBg(next.bg);
+    setAvatarFont(next.font);
+    await api('/users/me', { method: 'PATCH', body: {
+      avatarLetter: next.letter,
+      avatarBg:     next.bg,
+      avatarFont:   next.font,
+    } });
+    // Re-fetch the SSR layout so the sidebar avatar (which reads from
+    // CurrentUserContext, seeded server-side) also picks up the change.
+    router.refresh();
   }
 
   async function saveIdentity(e?: React.FormEvent) {
@@ -513,7 +517,14 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="shrink-0 rounded-3xl bg-white p-1.5"
                 style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}>
-                <ProfileAvatar name={user.name} emoji={funAvatar} size={88} onClick={() => setShowEmojiPicker(true)} />
+                <ProfileAvatar
+                  name={user.name}
+                  letter={avatarLetter}
+                  bg={avatarBg}
+                  font={avatarFont}
+                  size={88}
+                  onClick={() => setShowAvatarEditor(true)}
+                />
               </div>
               <div className="min-w-0 pb-1">
                 <div className="mb-3 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white backdrop-blur">
@@ -550,12 +561,13 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         </button>
       </div>
 
-      {/* Emoji avatar picker modal */}
-      {showEmojiPicker && (
-        <EmojiPickerModal
-          current={funAvatar}
-          onSelect={chooseFunAvatar}
-          onClose={() => setShowEmojiPicker(false)}
+      {/* Monogram avatar editor — letter + colour + font, with Inspire-me. */}
+      {showAvatarEditor && (
+        <MonogramEditor
+          initial={{ letter: avatarLetter, bg: avatarBg, font: avatarFont }}
+          name={user.name}
+          onSave={saveMonogram}
+          onClose={() => setShowAvatarEditor(false)}
         />
       )}
 
@@ -640,6 +652,8 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             </div>
 
             <QuickPinSection />
+
+            <DropSoundToggle initial={initialUser.soundDropEnabled !== false} />
 
             {user.role === 'admin' && (
               <div id="recovery-key" className="scroll-mt-6">

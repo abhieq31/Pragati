@@ -54,6 +54,12 @@ export function u(user: any) {
     deactivatedBy: user.deactivatedBy || '',
     deactivationReason: user.deactivationReason || '',
     reactivatedAt: date(user.reactivatedAt),
+    // Monogram avatar — empty strings/0 mean "no override, use the
+    // legacy name-derived initials + hashed gradient".
+    avatarLetter: user.avatarLetter || '',
+    avatarBg:     user.avatarBg     || '',
+    avatarFont:   typeof user.avatarFont === 'number' ? user.avatarFont : 0,
+    soundDropEnabled: user.soundDropEnabled !== false,
   };
 }
 

@@ -60,3 +60,31 @@ export function setSoundEnabled(on: boolean) {
 export function chimeIfEnabled() {
   if (soundEnabled()) playSuccessChime();
 }
+
+/**
+ * Short "thunk" played after a successful drag-and-drop (kanban moves, dashboard
+ * task reorders). Different tone from the success chime so the two events stay
+ * distinguishable. Honours both the global localStorage mute and the server-side
+ * `soundDropEnabled` preference passed in by the caller.
+ */
+export function playDropTick(enabled = true) {
+  if (!enabled || !soundEnabled()) return;
+  const c = getCtx();
+  if (!c) return;
+  try {
+    if (c.state === 'suspended') c.resume();
+    const now = c.currentTime;
+    const osc  = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = 'sine';
+    // Quick descending sweep so it reads as "drop", not "ping".
+    osc.frequency.setValueAtTime(360, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.07);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.16, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+    osc.connect(gain).connect(c.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch { /* ignore */ }
+}

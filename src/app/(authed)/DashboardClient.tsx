@@ -3,12 +3,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
-  Avatar, formatDate, daysUntil, ProgressBar,
+  formatDate, daysUntil, ProgressBar,
   LIFECYCLE_LABELS, STATUS_COLORS,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { api } from '@/lib/client/api';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { playDropTick } from '@/lib/sound';
+import { UserAvatar } from '@/components/AvatarRegistry';
+import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
@@ -155,8 +157,8 @@ export default function DashboardClient({
     <div className="pb-12 max-w-[1440px]">
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
-      <div className="mb-6 pt-1">
-        <h1 className="text-3xl font-black tracking-tight leading-tight">
+      <div className="mb-5 sm:mb-6 pt-1">
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
         </h1>
       </div>
@@ -192,7 +194,10 @@ export default function DashboardClient({
           />
 
           {/* Right column — Actions + "My tasks" (for leads: also Contributors). */}
-          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto pr-1">
+          {/* `lg:pt-7` (≈ section header height + its mb-3) drops the first card
+              so its top edge lines up with the first project card on the left,
+              instead of floating above the "Your team's projects" heading. */}
+          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto pr-1 lg:pt-7">
             <ActionsPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Layout parity — the right column always carries three panels
@@ -362,15 +367,15 @@ function ProjectsColumn({
   const isLead  = useIsLead();
   return (
     <section>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <FolderKanban size={14} className="text-slate-400" />
-          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <FolderKanban size={14} className="text-slate-400 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
             Your team’s projects
           </h2>
-          <span className="text-[10px] text-slate-300 font-semibold">{projects.length}</span>
+          <span className="text-[10px] text-slate-300 font-semibold shrink-0">{projects.length}</span>
         </div>
-        <Link href="/projects" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
+        <Link href="/projects" className="text-xs font-semibold text-blue-600 hover:text-blue-700 shrink-0 whitespace-nowrap">
           All projects →
         </Link>
       </div>
@@ -419,6 +424,8 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
   tasks: TeamTask[];
   canMove: boolean;
 }) {
+  const currentUser = useCurrentUser();
+  const soundEnabled = currentUser?.soundDropEnabled !== false;
   const [local, setLocal] = useState(tasks);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overId,     setOverId]     = useState<string | null>(null);
@@ -449,6 +456,10 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
     next.splice(to, 0, moved);
     setLocal(next);
     setDraggingId(null);
+    // Audible cue confirming the drop landed — fires only on successful
+    // reorders (still suppressed by the user's soundDropEnabled preference
+    // inside playDropSound itself).
+    playDropTick(soundEnabled);
 
     try {
       await api(`/projects/${projectId}/reorder-tasks`, {
@@ -577,11 +588,14 @@ function ProjectRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+            {/* On mobile the title claims the full first line and wraps to two
+                lines rather than truncating to "BOT Automa…"; the code + badges
+                flow onto the next line. */}
             <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
-              className="text-sm font-bold text-slate-800 hover:text-blue-700 truncate">
+              className="text-sm font-bold text-slate-800 hover:text-blue-700 basis-full sm:basis-auto sm:min-w-0 line-clamp-2 sm:truncate">
               {project.name}
             </Link>
-            <span className="text-[10px] font-bold text-slate-300 tracking-wider">{project.code}</span>
+            <span className="text-[10px] font-bold text-slate-300 tracking-wider shrink-0">{project.code}</span>
             {cat && (
               <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
                 {cat}
@@ -609,7 +623,7 @@ function ProjectRow({
           </div>
         </div>
 
-        <div className="w-28 shrink-0">
+        <div className="w-14 sm:w-28 shrink-0">
           <ProgressBar value={pct} />
           <div className="text-[10px] text-slate-400 mt-1 text-right font-semibold">{pct}%</div>
         </div>
@@ -667,7 +681,7 @@ function TaskTableRow({ t }: { t: TeamTask }) {
       <td className="px-2 py-2.5">
         {t.assigneeName ? (
           <div className="flex items-center gap-1.5">
-            <Avatar name={t.assigneeName} size={18} />
+            <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={18} />
             <span className="text-[11px] text-slate-600 truncate max-w-[80px]">{t.assigneeName}</span>
           </div>
         ) : <span className="text-slate-300 text-xs">—</span>}
@@ -1127,7 +1141,7 @@ function ContributorRow({ person, tasks }: { person: DashPerson; tasks: TeamTask
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2">
-          <Avatar name={person.name} size={26} />
+          <UserAvatar userId={person.id} name={person.name} size={26} />
           <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold text-slate-800 truncate">{person.name}</div>
             <div className="text-[10px] text-slate-400 truncate">

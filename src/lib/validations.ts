@@ -38,6 +38,13 @@ export const ProjectLifecycleEnum = z.enum([
   'software_release',
   'product_launch',
   'research',
+  // Personal templates — surfaced only when the user toggles "Personal
+  // project". Keep these synced with src/lib/lifecycles.ts.
+  'personal_goal',
+  'personal_study',
+  'personal_habit',
+  'personal_side_project',
+  'personal_event',
 ]);
 
 export const GxpImpactEnum = z.enum(['none', 'low', 'medium', 'high']);

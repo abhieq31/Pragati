@@ -56,6 +56,19 @@ const LIFECYCLE_GROUPS = [
       { value: 'research',         label: 'Research',         hint: 'Scoping → analysis → reporting' },
     ]
   },
+  {
+    // Surfaced only when the "Personal project" toggle is on — purely
+    // personal templates, no QA/GxP framing, so the user can move fast.
+    label: 'Personal',
+    description: 'Ready-made for your own goals',
+    options: [
+      { value: 'personal_goal',         label: 'Personal Goal',       hint: 'Define → plan → do → reflect' },
+      { value: 'personal_study',        label: 'Study Plan',          hint: 'Course / certification roadmap' },
+      { value: 'personal_habit',        label: 'Habit Tracker',       hint: '30-day habit build' },
+      { value: 'personal_side_project', label: 'Side Project',        hint: 'Idea → build → ship → iterate' },
+      { value: 'personal_event',        label: 'Event / Trip Planner',hint: 'Plan a get-together end-to-end' },
+    ]
+  },
 ];
 
 function phasesFromTemplate(template: any): Phase[] {
@@ -472,12 +485,18 @@ export default function NewProjectPage() {
                 onClick={() => {
                   const next = !personal;
                   setPersonal(next);
-                  // When switching to personal, default to a general lifecycle if currently on a GxP-specific one
+                  // Switching to personal: drop any GxP / General lifecycle —
+                  // they aren't offered in the personal view, so default to a
+                  // blank workflow that the personal templates can replace.
+                  // Switching away: clear any personal_* lifecycle for the
+                  // same reason.
+                  const personalKeys = LIFECYCLE_GROUPS.find(g => g.label === 'Personal')?.options.map(o => o.value) ?? [];
                   if (next) {
-                    const gxpKeys = LIFECYCLE_GROUPS.flatMap(g =>
-                      g.label !== 'General' ? g.options.map(o => o.value) : []
-                    ).filter(v => v !== 'generic');
-                    if (gxpKeys.includes(form.lifecycle)) up('lifecycle', 'generic');
+                    if (!personalKeys.includes(form.lifecycle) && form.lifecycle !== 'generic') {
+                      up('lifecycle', 'generic');
+                    }
+                  } else if (personalKeys.includes(form.lifecycle)) {
+                    up('lifecycle', 'generic');
                   }
                 }}
                 className={`mt-0.5 relative w-9 h-5 rounded-full shrink-0 transition-colors cursor-pointer ${
@@ -527,9 +546,17 @@ export default function NewProjectPage() {
                 : 'Pick a template to get predefined stages and tasks — you can edit everything in the next step.'}
             </p>
             <div className="space-y-4">
+              {/* When the Personal toggle is on, only show the Personal group
+                  plus a single "Custom / Blank" starter — the QA / Life
+                  Sciences lifecycles don't fit a private to-do list. When
+                  it's off, show the full QI / Life Sciences / General set
+                  (without the Personal group). */}
               {(personal
-                ? [...LIFECYCLE_GROUPS].sort((a, b) => a.label === 'General' ? -1 : b.label === 'General' ? 1 : 0)
-                : LIFECYCLE_GROUPS
+                ? [
+                    { label: 'Start fresh', description: '', options: [{ value: 'generic', label: 'Custom / Blank', hint: 'Start from scratch' }] },
+                    LIFECYCLE_GROUPS.find(g => g.label === 'Personal')!,
+                  ]
+                : LIFECYCLE_GROUPS.filter(g => g.label !== 'Personal')
               ).map(group => (
                 <div key={group.label}>
                   <div className="flex items-baseline gap-2 mb-1.5">
@@ -542,17 +569,16 @@ export default function NewProjectPage() {
                       return (
                         <button key={opt.value} type="button"
                           onClick={() => selectBuiltInLifecycle(opt.value)}
-                          className="text-left px-3 py-2 rounded-lg text-xs transition-all border"
-                          style={{
-                            background:   active ? '#EFF6FF' : '#fff',
-                            borderColor:  active ? '#1565C0' : '#E2E8F0',
-                            color:        active ? '#1565C0' : '#334155',
-                          }}>
+                          className={`text-left px-3 py-2 rounded-lg text-xs transition-all border ${
+                            active
+                              ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
+                              : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20'
+                          }`}>
                           <div className="flex items-center gap-1.5">
                             {opt.value === 'generic' && <Sparkles size={11} className="opacity-60 shrink-0" />}
                             <span className={active ? 'font-bold' : 'font-semibold'}>{opt.label}</span>
                           </div>
-                          <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80' : 'text-slate-400'}`}>
+                          <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80 dark:text-blue-300/80' : 'text-slate-400 dark:text-slate-500'}`}>
                             {opt.hint}
                           </div>
                         </button>
@@ -578,16 +604,15 @@ export default function NewProjectPage() {
                           <button
                             type="button"
                             onClick={() => selectCustomTemplate(ct)}
-                            className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all border"
-                            style={{
-                              background:  active ? '#EFF6FF' : '#fff',
-                              borderColor: active ? '#1565C0' : '#E2E8F0',
-                              color:       active ? '#1565C0' : '#334155',
-                            }}>
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-all border ${
+                              active
+                                ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
+                                : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20'
+                            }`}>
                             <div className="flex items-center gap-1.5 pr-5">
                               <span className={active ? 'font-bold' : 'font-semibold'}>{ct.name}</span>
                             </div>
-                            <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80' : 'text-slate-400'}`}>
+                            <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80 dark:text-blue-300/80' : 'text-slate-400 dark:text-slate-500'}`}>
                               {ct.phases.length} stage{ct.phases.length === 1 ? '' : 's'} · by {ct.createdByName || 'Unknown'}
                             </div>
                           </button>

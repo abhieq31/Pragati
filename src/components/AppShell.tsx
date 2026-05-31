@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Avatar } from './ui';
 import { PragatiMark } from './PragatiMark';
 import { CurrentUserProvider } from './CurrentUserContext';
+import { AvatarRegistryProvider } from './AvatarRegistry';
 import { NotificationBell } from './NotificationBell';
 import { api } from '@/lib/client/api';
 
@@ -35,6 +36,12 @@ export interface CurrentUser {
   title?: string;
   mustChangePassword?: boolean;
   hasPin?: boolean;
+  /** Server-persisted monogram avatar (Google-style). */
+  avatarLetter?: string;
+  avatarBg?: string;
+  avatarFont?: number;
+  /** Drop-sound preference for kanban / dashboard reorders. */
+  soundDropEnabled?: boolean;
 }
 
 /* ── Dark-mode hook ─────────────────────────────────────────────────
@@ -54,7 +61,7 @@ function useDarkMode(initialDark: boolean): [boolean, () => void] {
 }
 
 /* ── Main shell ─────────────────────────────────────────────────────── */
-export default function AppShell({ user, initialDark, children }: { user: CurrentUser; initialDark: boolean; children: React.ReactNode }) {
+export default function AppShell({ user, initialDark, initialAvatars, children }: { user: CurrentUser; initialDark: boolean; initialAvatars?: Record<string, { letter: string; bg: string; font: number }>; children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -191,7 +198,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     >
       <div className="px-2.5 py-2.5 flex items-center gap-3 border-b mb-1.5"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}>
-        <Avatar name={user.name} size={38} />
+        <Avatar name={user.name} size={38} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
         <div className="min-w-0">
           <div className={`text-sm font-black truncate ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
           <div className={`text-[11px] truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>{roleText}</div>
@@ -359,7 +366,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
-            <Avatar name={user.name} size={32} />
+            <Avatar name={user.name} size={32} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
           </button>
         </div>
       ) : (
@@ -375,7 +382,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none">
-            <Avatar name={user.name} size={30} />
+            <Avatar name={user.name} size={30} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
           </button>
 
           <button type="button" onClick={() => setAccountMenuOpen((v) => !v)}
@@ -410,7 +417,14 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
 
   return (
     <CurrentUserProvider user={user}>
-    <div className="min-h-screen flex overflow-x-hidden" style={{ background: 'var(--bg-page)' }}>
+    <AvatarRegistryProvider
+      seed={{ id: user.id, letter: user.avatarLetter, bg: user.avatarBg, font: user.avatarFont }}
+      initial={initialAvatars}
+    >
+    {/* Fixed-height app shell: the shell itself never scrolls (overflow-hidden),
+        so the sidebar stays put — only <main> scrolls. This is what keeps the
+        sidebar pinned regardless of how far the page content scrolls. */}
+    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-page)' }}>
 
       {/* Mobile backdrop */}
       <div
@@ -460,7 +474,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
       </aside>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
 
         {/* Mobile-only slim top strip — soft shadow so it lifts off the page as
             content scrolls under it, instead of exposing a hard white edge. */}
@@ -487,7 +501,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto relative">
+        <main className="flex-1 min-h-0 overflow-y-auto relative">
           {pathname === '/' && (
             <div aria-hidden
               className="pointer-events-none absolute top-0 left-0 right-0 h-[200px]"
@@ -579,6 +593,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
         </div>
       )}
     </div>
+    </AvatarRegistryProvider>
     </CurrentUserProvider>
   );
 }
