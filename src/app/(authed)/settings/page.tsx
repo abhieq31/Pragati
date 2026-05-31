@@ -431,7 +431,7 @@ export default function SettingsPage() {
   const roleText = user.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Individual Contributor';
 
   return (
-    <div className="max-w-4xl mx-auto pb-12 space-y-6">
+    <div className="max-w-5xl mx-auto pb-12 space-y-6">
 
       {/* ── Hero profile card ──────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
@@ -532,7 +532,7 @@ export default function SettingsPage() {
 
       {/* ── Activity — the star feature, front and centre ────────────────── */}
       <div id="activity" className="scroll-mt-6">
-        <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati: logins, projects, and completed work.">
+        <Section icon={Activity} title="Activity" subtitle="Your delivered work on Pragati — completed tasks, weighted for on-time, GxP-critical, priority and review work. Logins don't count.">
           <ActivityGraph />
         </Section>
       </div>

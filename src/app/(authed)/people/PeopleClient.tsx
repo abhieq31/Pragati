@@ -11,7 +11,7 @@ import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, 
 function ActivityModal({ user, onClose }: { user: any; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[640px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-3 mb-5">
           <Avatar name={user.name} size={44} />
           <div className="flex-1 min-w-0">
