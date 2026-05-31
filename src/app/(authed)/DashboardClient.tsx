@@ -195,7 +195,14 @@ export default function DashboardClient({
           <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto pr-1">
             <ActionsPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
-            {isLead && <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />}
+            {/* Layout parity — the right column always carries three panels
+               regardless of role. Leads see workload across their ICs;
+               contributors see a per-project breakdown of their own work, so
+               the dashboard reads as a single product with role-appropriate
+               content, not two layouts. */}
+            {isLead
+              ? <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />
+              : <MyFocusPanel tasks={visibleTasks} projects={ongoingProjects} myId={myId} />}
           </div>
         </div>
       )}
@@ -374,13 +381,16 @@ function ProjectsColumn({
           <FolderKanban size={26} className="mx-auto text-slate-300 mb-3" />
           <div className="text-sm font-semibold text-slate-600 mb-1">No ongoing projects</div>
           <div className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-            When you start or join a team project, it will show up here with all its tasks.
+            {isLead
+              ? 'Spin up a project to start tracking work — it will show up here with all its tasks.'
+              : "Once a lead assigns you to a team and a project, it will show up here with the tasks you're on."}
           </div>
-          {isLead && (
-            <Link href="/projects/new" className="btn-primary text-xs mt-4 inline-flex">
-              + New project
-            </Link>
-          )}
+          <Link
+            href={isLead ? '/projects/new' : '/my-day'}
+            className="btn-primary text-xs mt-4 inline-flex"
+          >
+            {isLead ? '+ New project' : 'Open My Day'}
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -995,6 +1005,78 @@ function ContributorsPanel({
     ? <FullScreenOverlay title="Individual Contributors" icon={<UsersIcon size={14} className="text-blue-500" />}
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
+}
+
+/* ── My Focus (IC counterpart to ContributorsPanel) ────────────────────────
+   A per-project rollup of the contributor's own open tasks. Mirrors the
+   visual shape of ContributorsPanel so the right column reads the same for
+   both roles — three stacked panels, same header style, same collapse
+   affordance — even though the content is role-appropriate. */
+function MyFocusPanel({
+  tasks, projects, myId,
+}: { tasks: TeamTask[]; projects: any[]; myId: string }) {
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  const myOpen = tasks.filter((t) => t.assigneeId === myId && t.status !== 'done');
+  if (myOpen.length === 0) return null;
+
+  const projMap = new Map(projects.map((p: any) => [p.id, p]));
+  const byProject = new Map<string, TeamTask[]>();
+  for (const t of myOpen) {
+    if (!byProject.has(t.projectId)) byProject.set(t.projectId, []);
+    byProject.get(t.projectId)!.push(t);
+  }
+  const rows = [...byProject.entries()]
+    .map(([projectId, ts]) => ({
+      projectId,
+      project: projMap.get(projectId),
+      tasks: ts,
+      overdue: ts.filter((t) => {
+        const due = t.ccTcd || t.dueDate;
+        return due && new Date(due) < new Date();
+      }).length,
+    }))
+    .sort((a, b) => b.overdue - a.overdue || b.tasks.length - a.tasks.length);
+
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+      <div
+        className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 select-none transition-colors"
+        onClick={() => setPanelOpen((o) => !o)}
+      >
+        <FolderKanban size={13} className="text-slate-400" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Focus by project</h3>
+        <span className="ml-auto text-[10px] text-slate-300 font-semibold">{rows.length}</span>
+        <ChevronDown size={12} className="text-slate-400 transition-transform duration-200"
+          style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+      </div>
+
+      {panelOpen && (
+        <ul className="divide-y divide-slate-50 border-t border-slate-100">
+          {rows.map((r) => (
+            <li key={r.projectId}>
+              <Link href={`/projects/${r.projectId}`}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-slate-700 truncate">
+                    {r.project?.name || 'Project'}
+                  </div>
+                  {r.project?.code && (
+                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">{r.project.code}</div>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 shrink-0">{r.tasks.length} open</span>
+                {r.overdue > 0 && (
+                  <span className="text-[10px] font-bold text-red-500 shrink-0">{r.overdue} overdue</span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function ContributorRow({ person, tasks }: { person: DashPerson; tasks: TeamTask[] }) {
