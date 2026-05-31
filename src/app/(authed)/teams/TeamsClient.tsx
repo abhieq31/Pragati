@@ -333,10 +333,10 @@ function TeamFormModal({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 overlay-in" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl modal-in overflow-hidden"
+        className="rounded-2xl shadow-2xl w-full max-w-xl modal-in overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative px-5 py-5 text-white overflow-hidden rounded-t-2xl"
+        <div className="relative px-5 py-5 text-white overflow-hidden"
           style={{ background: 'linear-gradient(135deg, #0f4fb8 0%, #1769c8 45%, #2b8c47 100%)' }}>
           <div aria-hidden className="absolute inset-0 opacity-20"
             style={{
@@ -363,7 +363,7 @@ function TeamFormModal({
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="bg-white p-5 space-y-4">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Team name <span className="text-red-500">*</span>
