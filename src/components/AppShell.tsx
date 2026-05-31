@@ -24,7 +24,7 @@ const SetPinModal = dynamic(
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
-  Settings, UserCircle, Activity, Bell, ShieldCheck, KeyRound,
+  UserCircle,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -171,13 +171,11 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     ? 'Admin'
     : user.role === 'lead' ? 'Team Lead' : 'Individual Contributor';
 
+  // Decluttered: a single entry into the profile (which now holds Activity and,
+  // behind a disclosure, Security / Quick PIN / admin tools). Notifications and
+  // their preferences live in the bell. Dark mode + Sign out follow below.
   const accountItems = [
-    { href: '/settings#profile', label: 'Profile', icon: UserCircle },
-    { href: '/settings#activity', label: 'Activity', icon: Activity },
-    { href: '/settings#notifications', label: 'Notifications', icon: Bell },
-    { href: '/settings#security', label: 'Security', icon: ShieldCheck },
-    { href: '/settings#quick-pin', label: 'Quick PIN', icon: KeyRound },
-    ...(user.role === 'admin' ? [{ href: '/settings#recovery-key', label: 'Recovery key', icon: Settings }] : []),
+    { href: '/settings', label: 'Profile & activity', icon: UserCircle },
   ];
 
   const AccountMenu = accountMenuOpen ? (
@@ -251,12 +249,14 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
       <div className="flex items-center gap-2.5 px-4 h-14 shrink-0 border-b overflow-hidden"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
         <Link href="/" className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center w-full' : 'flex-1 min-w-0'}`}>
-          <PragatiMark size={showCollapsed ? 28 : 30} flat />
-          {!showCollapsed && (
-            <span className={`font-black text-[20px] tracking-tight leading-none whitespace-nowrap ${dark ? 'text-white' : 'text-slate-900'}`}>
-              Pragati
-            </span>
-          )}
+          {/* Constant size — the mark used to scale 28↔30 on every collapse,
+              causing a brief squeeze. The wordmark fades out instead. */}
+          <PragatiMark size={30} flat />
+          <span className={`font-black text-[20px] tracking-tight leading-none whitespace-nowrap transition-opacity duration-150 ${dark ? 'text-white' : 'text-slate-900'} ${
+            showCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+          }`}>
+            Pragati
+          </span>
         </Link>
         {!showCollapsed && (
           <div className="ml-auto flex items-center gap-1 shrink-0">
@@ -452,11 +452,15 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
 
-        {/* Mobile-only slim top strip */}
+        {/* Mobile-only slim top strip — soft shadow so it lifts off the page as
+            content scrolls under it, instead of exposing a hard white edge. */}
         <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-11"
           style={{
-            background: dark ? '#262624' : '#ffffff',
+            background: dark ? 'rgba(38,38,36,0.85)' : 'rgba(255,255,255,0.85)',
+            backdropFilter: 'saturate(180%) blur(8px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(8px)',
             borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
+            boxShadow: dark ? '0 2px 12px rgba(0,0,0,0.4)' : '0 2px 10px rgba(15,23,42,0.08)',
           }}>
           <button
             onClick={() => setOpen(o => !o)}

@@ -122,17 +122,17 @@ export default function MyDayPage() {
 
       <div className="space-y-1.5">
         {open.map((n) => (
-          <div key={n.id} className={`group flex gap-3 bg-white border border-slate-200/80 rounded-xl px-3.5 py-3 fluid-card ${editingId === n.id ? 'items-start' : 'items-center'}`}>
+          <div key={n.id} className="group flex items-start min-w-0 gap-3 bg-white border border-slate-200/80 rounded-xl px-3.5 py-3 fluid-card">
             <button
               onClick={() => toggle(n)}
               aria-label="Mark done"
-              className={`w-5 h-5 rounded-md border border-slate-300 hover:border-emerald-400 flex items-center justify-center shrink-0 transition-colors ${editingId === n.id ? 'mt-1' : ''}`}
+              className="w-5 h-5 rounded-md border border-slate-300 hover:border-emerald-400 flex items-center justify-center shrink-0 transition-colors mt-0.5"
             />
             {editingId === n.id ? (
               <textarea
                 autoFocus
                 rows={1}
-                className="input flex-1 text-sm py-1 resize-none leading-snug whitespace-pre-wrap break-words overflow-hidden"
+                className="input min-w-0 flex-1 text-sm py-1 resize-none leading-snug whitespace-pre-wrap break-words overflow-hidden"
                 value={editText}
                 maxLength={2000}
                 onFocus={(e) => {
@@ -156,7 +156,7 @@ export default function MyDayPage() {
               />
             ) : (
               <span
-                className="flex-1 text-sm text-slate-700 break-words cursor-text hover:text-slate-900"
+                className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-700 cursor-text hover:text-slate-900"
                 onClick={() => startEdit(n)}
                 title="Tap to edit"
               >
@@ -164,18 +164,18 @@ export default function MyDayPage() {
               </span>
             )}
             {n.promotedTaskId ? (
-              <a href={`/tasks/${n.promotedTaskId}`} className="text-[11px] font-semibold text-emerald-600 shrink-0">→ tracked</a>
+              <a href={`/tasks/${n.promotedTaskId}`} className="text-[11px] font-semibold text-emerald-600 shrink-0 mt-0.5">→ tracked</a>
             ) : isLead && editingId !== n.id ? (
               <button
                 onClick={() => setPromote(n)}
                 title="Add to a project as a tracked task"
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 Add to project <ArrowRight size={12} />
               </button>
             ) : null}
             <button onClick={() => remove(n)} aria-label="Delete"
-              className="text-slate-300 hover:text-red-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              className="text-slate-300 hover:text-red-500 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
               <Trash2 size={14} />
             </button>
           </div>
@@ -200,7 +200,7 @@ export default function MyDayPage() {
                   >
                     <Check size={12} className="text-white" />
                   </button>
-                  <span className="flex-1 text-sm text-slate-400 line-through break-words">{n.text}</span>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-400 line-through">{n.text}</span>
                   <button onClick={() => remove(n)} aria-label="Delete"
                     className="text-slate-300 hover:text-red-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash2 size={14} />
@@ -239,21 +239,23 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
     api<any[]>('/projects').then((p) => { setProjects(p); if (p[0]) setProjectId(p[0].id); }).catch(() => {});
   }, []);
 
-  // When the chosen project changes, pull its phases + assignable roster so the
-  // lead can allocate the task to a phase and a person in one go.
+  // When the chosen project changes, surface its phases + assignable roster so
+  // the lead can allocate the task to a phase and a person in one go.
+  // Phases already arrive with the projects list, so we read them straight from
+  // the cached list (instant) rather than refetching the full project — that
+  // call would load every task in the project just to hand back the phases.
+  // Only the roster genuinely needs a network round-trip.
   useEffect(() => {
     if (!projectId) { setPhases([]); setMembers([]); return; }
-    setLoadingMeta(true);
     setPhaseId(''); setAssignee('');
-    api<any>(`/projects/${projectId}`)
-      .then(async (p) => {
-        setPhases((p.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
-        const roster = await api<any[]>(`/users${p.teamId ? `?teamId=${p.teamId}` : ''}`).catch(() => []);
-        setMembers(roster);
-      })
-      .catch(() => { setPhases([]); setMembers([]); })
+    const proj = projects.find((p) => p.id === projectId);
+    setPhases((proj?.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
+    setLoadingMeta(true);
+    api<any[]>(`/users${proj?.teamId ? `?teamId=${proj.teamId}` : ''}`)
+      .then((roster) => setMembers(roster))
+      .catch(() => setMembers([]))
       .finally(() => setLoadingMeta(false));
-  }, [projectId]);
+  }, [projectId, projects]);
 
   async function go() {
     if (!projectId) { setErr('Pick a project.'); return; }
@@ -282,7 +284,12 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
             </div>
             <button onClick={onClose} className="text-slate-300 hover:text-slate-500"><X size={18} /></button>
           </div>
-          <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-sm text-slate-700 mb-4">{note.text}</div>
+          {/* The note being promoted — tinted + accented so it reads as the
+             "source" being filed, visually distinct from the form fields below. */}
+          <div className="rounded-lg border-l-4 border-blue-300 bg-blue-50/70 px-3 py-2.5 text-sm text-slate-700 mb-4">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 mb-0.5">Note</div>
+            {note.text}
+          </div>
 
           <label className="label">Project</label>
           <select className="select mb-3" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
@@ -319,7 +326,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
             </div>
             <div>
               <label className="label">Target completion</label>
-              <DatePicker value={due} onChange={(v) => setDue(v || '')} />
+              <DatePicker value={due} onChange={(v) => setDue(v || '')} block />
             </div>
           </div>
 

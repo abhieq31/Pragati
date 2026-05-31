@@ -54,11 +54,15 @@ export async function GET(req: NextRequest) {
       delete q.$or;
     }
     const projects = await Project.find(q).sort({ createdAt: -1 }).lean();
-    const teams = await Team.find({ _id: { $in: projects.map((p) => p.teamId).filter(Boolean) } }).lean();
-    const owners = await User.find({ _id: { $in: projects.map((p) => p.ownerId).filter(Boolean) } }).lean();
-    const taskAgg = await Task.aggregate([
-      { $match: { projectId: { $in: projects.map((p) => p._id) } } },
-      { $group: { _id: { projectId: '$projectId', status: '$status' }, c: { $sum: 1 } } }
+    // teams / owners / task counts all depend only on `projects`, so fetch them
+    // concurrently instead of in three sequential round-trips.
+    const [teams, owners, taskAgg] = await Promise.all([
+      Team.find({ _id: { $in: projects.map((p) => p.teamId).filter(Boolean) } }).lean(),
+      User.find({ _id: { $in: projects.map((p) => p.ownerId).filter(Boolean) } }).lean(),
+      Task.aggregate([
+        { $match: { projectId: { $in: projects.map((p) => p._id) } } },
+        { $group: { _id: { projectId: '$projectId', status: '$status' }, c: { $sum: 1 } } }
+      ]),
     ]);
     const tMap = new Map(teams.map((t) => [String(t._id), t.name]));
     const oMap = new Map(owners.map((o) => [String(o._id), o.name]));

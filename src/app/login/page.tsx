@@ -3,31 +3,56 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
-import { ArrowLeft, ArrowRight, Delete, Sparkles } from 'lucide-react';
+import { BirdsEyeLoader } from '@/components/BirdsEyeLoader';
+import { ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 
 function getInitials(name: string) {
   if (!name) return '?';
   return name.trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-/* Rotating wisdom from Elon Musk. Unattributed. */
+/* Rotating wisdom from Jensen Huang, CEO of NVIDIA. */
 const QUOTES = [
-  "If something is important enough, even if the odds are against you, you should still do it.",
-  "Persistence is very important. You should not give up unless you are forced to give up.",
-  "The first step is to establish that something is possible; then probability will occur.",
-  "When you innovate, you have to be prepared for everyone telling you that you are nuts.",
-  "Failure is an option here. If things are not failing, you are not innovating enough.",
-  "Some people do not like change, but you need to embrace change if the alternative is disaster.",
-  "I think it is possible for ordinary people to choose to be extraordinary.",
-  "Constantly think about how you could be doing things better.",
-  "Great companies are built on great products.",
-  "Brand is just a perception, and perception will match reality over time.",
-  "It is OK to have your eggs in one basket as long as you control what happens to that basket.",
-  "Work like hell. Put in eighty- to a-hundred-hour weeks every week.",
-  "When something is important enough, you do it even if the odds are not in your favor.",
-  "If you get up in the morning and think the future is going to be better, it is a bright day.",
-  "People should pursue what they are passionate about. That will make them happier than anything else.",
-  "The path to the CEO's office should not be through the CFO's office, and it should not be through the marketing department. It needs to be through engineering and design.",
+  "You have to be the very best at what you do, because the world is so competitive.",
+  "The more you suffer, the more it shows you really care about what you are doing.",
+  "I want you to be in a state of urgency. Not panic — urgency.",
+  "Run. Don't walk.",
+  "The greatest opportunity in human history is right now. The next industrial revolution has begun.",
+  "Speed is a strategy. Doing things fast is not just efficiency — it is competitive advantage.",
+  "If you are not embarrassed by version one, you shipped too late.",
+  "We have to be the best. Not incrementally better — we have to be the best.",
+  "The most important thing a leader can do is set a high bar for quality.",
+  "Our goal is not to be a technology company. Our goal is to solve problems that matter.",
+  "Expectations lead to disappointment. Determination leads to results.",
+  "Every day you have to earn your place. Every single day.",
+  "The company that moves fastest wins. Always.",
+  "Do not celebrate yesterday's wins too long. Tomorrow's competition does not rest.",
+  "You have to be willing to do what others won't. That is the only way to get where others haven't been.",
+  "If I had not gotten comfortable with failure, I would never have achieved anything.",
+  "The ability to learn is the most important quality a leader can have.",
+  "Talent is everywhere. Opportunity is not. Close that gap.",
+  "Being brilliant is not enough. You have to do something with it.",
+  "Great execution beats great strategy every time.",
+  "You can either fear change or embrace it. One path leads to extinction, the other to leadership.",
+  "We do not just build products. We build trust. One delivery at a time.",
+  "The work is the message. Ship it right.",
+  "Done is not enough. Done well is the standard.",
+  "Your team is your most important product. Build them like it.",
+  "A roadmap without urgency is a wish list.",
+  "Software without discipline is chaos. Discipline without software is just slow chaos.",
+  "Every feature you ship is a promise. Honor it.",
+  "Complexity is the enemy of execution. Simplify relentlessly.",
+  "The best teams do not just meet expectations — they redefine them.",
+  "Accountability is not a punishment. It is a sign that your work matters.",
+  "The difference between good and great is attention to the things others ignore.",
+  "Move fast. Learn faster. Ship. Repeat.",
+  "Quality is not a phase. It is the whole process.",
+  "If your team does not know the goal, they cannot reach it. Clarity is leadership.",
+  "The race is not always to the swift, but to the ones who never stop.",
+  "Precision and speed are not opposites. The most precise teams move fastest.",
+  "Build for impact, not for applause.",
+  "Vision without execution is delusion.",
+  "The best time to fix a problem is before it becomes one.",
 ];
 
 function RotatingQuote() {
@@ -97,6 +122,7 @@ export default function LoginPage() {
   const [title, setTitle] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   // Quick-PIN unlock: shown when this device previously completed a full
   // sign-in and the user has a PIN set.
@@ -366,17 +392,25 @@ export default function LoginPage() {
             {mode === 'unlock' && (
               <div className="form-swap" key="unlock">
 
-                {/* Avatar + name */}
+                {/* Avatar + name — a soft breathing halo behind the avatar
+                    makes the re-entry feel alive and welcoming. */}
                 <div className="flex flex-col items-center text-center mb-7">
-                  <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-white mb-4 select-none"
-                    style={{ background: 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)', boxShadow: '0 8px 24px rgba(21,101,192,0.32)' }}>
-                    {getInitials(deviceName)}
+                  <div className="relative mb-4">
+                    <div aria-hidden className="absolute -inset-3 rounded-full"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(21,101,192,0.28) 0%, transparent 70%)',
+                        animation: 'glow-pulse 3.4s ease-in-out infinite',
+                      }} />
+                    <div className="relative w-[72px] h-[72px] rounded-full flex items-center justify-center text-2xl font-black text-white select-none logo-float"
+                      style={{ background: 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)', boxShadow: '0 8px 24px rgba(21,101,192,0.32)' }}>
+                      {getInitials(deviceName)}
+                    </div>
                   </div>
-                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.18em] mb-1">Welcome back</p>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.18em] mb-1 fade-up-1">Welcome back</p>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight fade-up-1">
                     {deviceName || 'You'}
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1.5 leading-snug">
+                  <p className="text-sm text-slate-400 mt-1.5 leading-snug fade-up-2">
                     Enter your Quick PIN to continue
                   </p>
                 </div>
@@ -425,45 +459,9 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5 mt-5 mb-2">
-                  {['1','2','3','4','5','6','7','8','9'].map((digit) => (
-                    <button
-                      key={digit}
-                      type="button"
-                      disabled={loading}
-                      onClick={() => appendPin(digit)}
-                      className="h-12 rounded-2xl border border-slate-200 bg-white text-lg font-black text-slate-800 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50"
-                    >
-                      {digit}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={usePasswordInstead}
-                    className="h-12 rounded-2xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center justify-center transition-all hover:bg-slate-100 disabled:opacity-50"
-                    aria-label="Use password instead"
-                  >
-                    <ArrowLeft size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => appendPin('0')}
-                    className="h-12 rounded-2xl border border-slate-200 bg-white text-lg font-black text-slate-800 shadow-sm transition-all hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] disabled:opacity-50"
-                  >
-                    0
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading || pin.length === 0}
-                    onClick={() => { setPin((p) => p.slice(0, -1)); setErr(''); }}
-                    className="h-12 rounded-2xl border border-slate-200 bg-slate-50 text-slate-500 flex items-center justify-center transition-all hover:bg-slate-100 disabled:opacity-40"
-                    aria-label="Delete digit"
-                  >
-                    <Delete size={17} />
-                  </button>
-                </div>
+                {/* Keypad removed by design — just type the PIN. The 4-box
+                    indicator above lights up as digits are entered and the
+                    form auto-submits on the 4th character. */}
 
                 {err && (
                   <div role="alert" aria-live="assertive"
@@ -474,9 +472,8 @@ export default function LoginPage() {
                 )}
 
                 {loading && (
-                  <div className="mt-3 flex items-center justify-center gap-2 text-sm text-slate-400 fade-in-soft">
-                    <span className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
-                    Unlocking…
+                  <div className="mt-2 fade-in-soft">
+                    <BirdsEyeLoader size="sm" inline label="Unlocking your workspace…" sublabel="One moment — getting your bird's-eye view ready." />
                   </div>
                 )}
 
@@ -553,10 +550,21 @@ export default function LoginPage() {
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                   Password
                 </label>
-                <input className="input" type="password" required minLength={mode === 'setup' ? 8 : 1}
-                  placeholder={mode === 'setup' ? 'Min 8 characters' : '••••••••'}
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  value={password} onChange={e => setPassword(e.target.value)} />
+                <div className="relative">
+                  <input className="input pr-10" type={showPw ? 'text' : 'password'} required minLength={mode === 'setup' ? 8 : 1}
+                    placeholder={mode === 'setup' ? 'Min 8 characters' : '••••••••'}
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    value={password} onChange={e => setPassword(e.target.value)} />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPw ? 'Hide password' : 'Show password'}
+                  >
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
                 {mode === 'setup' && <StrengthMeter password={password} />}
               </div>
 

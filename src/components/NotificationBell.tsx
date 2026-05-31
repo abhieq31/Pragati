@@ -2,9 +2,29 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell } from 'lucide-react';
+import { Bell, SlidersHorizontal } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { chimeIfEnabled } from '@/lib/sound';
+
+/* Compact preference row used inside the bell popup. */
+function PrefRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-xs font-medium text-slate-600">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className="relative shrink-0 rounded-full transition-colors"
+        style={{ width: 34, height: 19, background: checked ? '#1565C0' : '#e2e8f0' }}
+      >
+        <span className="absolute top-0.5 h-[15px] w-[15px] rounded-full bg-white shadow-sm transition-all"
+          style={{ left: checked ? 17 : 2 }} />
+      </button>
+    </div>
+  );
+}
 
 interface Notif {
   id: string;
@@ -36,6 +56,27 @@ export function NotificationBell({ dark = false, openUp = false }: { dark?: bool
   const [open, setOpen]     = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const prevUnread = useRef<number | null>(null);
+
+  // Notification preferences now live here (moved off the profile page) so they
+  // sit right next to the notifications they govern.
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
+  async function loadPrefs() {
+    try {
+      const d: any = await api('/users/me');
+      const u = d.user || {};
+      setPrefs({
+        notifTaskAssigned:  u.notifTaskAssigned  ?? true,
+        notifTaskDueSoon:   u.notifTaskDueSoon   ?? true,
+        notifTaskOverdue:   u.notifTaskOverdue   ?? true,
+        notifProjectUpdate: u.notifProjectUpdate ?? false,
+      });
+    } catch { /* ignore */ }
+  }
+  function setPref(key: string, value: boolean) {
+    setPrefs((p) => ({ ...(p || {}), [key]: value }));
+    api('/users/me', { method: 'PATCH', body: { [key]: value } }).catch(() => {});
+  }
 
   async function load(chimeOnIncrease = false) {
     try {
@@ -105,14 +146,41 @@ export function NotificationBell({ dark = false, openUp = false }: { dark?: bool
                openUp ? 'bottom-full mb-2' : 'right-0 left-auto mt-2'
              }`}
              style={{ boxShadow: '0 8px 30px rgba(15,23,42,0.16)' }}>
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-100">
             <span className="text-sm font-bold text-slate-800">Notifications</span>
-            {unread > 0 && (
-              <button onClick={markAllRead} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
-                Mark all read
+            <div className="flex items-center gap-2">
+              {unread > 0 && (
+                <button onClick={markAllRead} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                  Mark all read
+                </button>
+              )}
+              <button
+                onClick={() => { setPrefsOpen((o) => !o); if (!prefs) loadPrefs(); }}
+                aria-label="Notification preferences"
+                title="Notification preferences"
+                className={`p-1 rounded-md transition-colors ${prefsOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
+              >
+                <SlidersHorizontal size={14} />
               </button>
-            )}
+            </div>
           </div>
+
+          {prefsOpen && (
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Preferences</div>
+              {!prefs ? (
+                <div className="text-xs text-slate-400 py-2">Loading…</div>
+              ) : (
+                <>
+                  <PrefRow label="Task assigned to me" checked={prefs.notifTaskAssigned}  onChange={(v) => setPref('notifTaskAssigned', v)} />
+                  <PrefRow label="Due in 24 hours"     checked={prefs.notifTaskDueSoon}   onChange={(v) => setPref('notifTaskDueSoon', v)} />
+                  <PrefRow label="Task overdue"        checked={prefs.notifTaskOverdue}   onChange={(v) => setPref('notifTaskOverdue', v)} />
+                  <PrefRow label="Project updates"     checked={prefs.notifProjectUpdate} onChange={(v) => setPref('notifProjectUpdate', v)} />
+                  <p className="text-[10px] text-slate-400 mt-2 leading-snug">These appear on your dashboard — Pragati never sends email.</p>
+                </>
+              )}
+            </div>
+          )}
           <div className="max-h-80 overflow-y-auto">
             {items.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-slate-400">You're all caught up.</div>

@@ -1,11 +1,36 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/client/api';
-import { Avatar, RoleBadge } from '@/components/ui';
+import { Avatar } from '@/components/ui';
 import { ActivityGraph } from '@/components/ActivityGraph';
+import { BirdsEyeLoader } from '@/components/BirdsEyeLoader';
 import {
-  User, Bell, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
+  User, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
+  AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil,
 } from 'lucide-react';
+
+
+const FUN_AVATARS = ['🦊','🐼','🐯','🦄','🐳','🦉','🐙','🚀','🌈','⚡','🍀','🎯'];
+const FUN_AVATAR_KEY = 'pragati.funAvatar';
+
+function FunAvatar({ name, emoji, size = 88 }: { name?: string | null; emoji?: string; size?: number }) {
+  if (!emoji) return <Avatar name={name} size={size} />;
+  return (
+    <div
+      className="flex items-center justify-center shrink-0 select-none rounded-full bg-white"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.48,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 20px rgba(15,23,42,0.14)',
+      }}
+      title={name || 'Your avatar'}
+      aria-label={name || 'Your avatar'}
+    >
+      {emoji}
+    </div>
+  );
+}
 
 /* ── Quick PIN management ─────────────────────────────────────────────────── */
 function QuickPinSection() {
@@ -74,13 +99,121 @@ function QuickPinSection() {
   );
 }
 
+/* ── Admin: production error monitor ──────────────────────────────────────── */
+function AdminErrorMonitor() {
+  const [errors, setErrors] = useState<any[]>([]);
+  const [unack, setUnack]   = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy]     = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const d: any = await api('/errors');
+      setErrors(d.errors || []);
+      setUnack(d.unacknowledged || 0);
+    } catch { /* admin-only; ignore for non-admins */ }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function ack(id?: string) {
+    setBusy(true);
+    try {
+      await api('/errors', { method: 'PATCH', body: id ? { id } : { all: true } });
+      await load();
+    } finally { setBusy(false); }
+  }
+
+  function fmt(iso: string | null) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  }
+
+  return (
+    <div id="monitor" className="scroll-mt-6">
+      <Section
+        icon={ServerCog}
+        title="System monitor"
+        subtitle="Recent production errors captured across the app (auto-expire after 30 days)."
+      >
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              {unack > 0 ? (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-red-700">
+                  <AlertTriangle size={14} /> {unack} unacknowledged
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-green-700">
+                  <Check size={14} /> All clear
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => load()} className="btn-secondary text-xs" disabled={loading || busy}>
+                <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+              </button>
+              {unack > 0 && (
+                <button onClick={() => ack()} className="btn-secondary text-xs" disabled={busy}>
+                  Dismiss all
+                </button>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-xs text-slate-400 py-4 text-center">Loading…</div>
+          ) : errors.length === 0 ? (
+            <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-6 text-center text-xs text-slate-400">
+              No errors recorded. 🎉
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {errors.map((e) => (
+                <li key={e.id}
+                  className={`rounded-lg border px-3 py-2.5 text-xs ${e.acknowledged ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-red-100 bg-red-50/60'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${e.source === 'client' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {e.source}
+                        </span>
+                        {e.count > 1 && (
+                          <span className="text-[10px] font-bold text-red-600">×{e.count}</span>
+                        )}
+                        {e.path && <span className="font-mono text-slate-500 truncate">{e.path}</span>}
+                      </div>
+                      <div className="mt-1 font-medium text-slate-800 break-words">{e.message}</div>
+                      <div className="mt-1 text-[11px] text-slate-400">
+                        {fmt(e.lastSeenAt)}{e.userName ? ` · ${e.userName}` : ''}{e.digest ? ` · ref ${e.digest}` : ''}
+                      </div>
+                    </div>
+                    {!e.acknowledged && (
+                      <button onClick={() => ack(e.id)} disabled={busy}
+                        className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors" title="Dismiss">
+                        <Check size={15} />
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
 /* ── Section wrapper ──────────────────────────────────────────────────────── */
 function Section({ icon: Icon, title, subtitle, children }: {
   icon?: any; title: string; subtitle?: string; children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: 'rgba(210,218,228,0.8)', boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03)' }}>
-      <div className="px-5 py-3.5 border-b flex items-center gap-2.5" style={{ borderColor: '#f0f3f8', background: 'linear-gradient(to right, #fafbfd, #f7f9fc)' }}>
+    <div className="card rounded-xl border overflow-hidden">
+      <div className="section-head px-5 py-3.5 border-b flex items-center gap-2.5">
         {Icon && <Icon size={15} className="text-blue-500 shrink-0" />}
         <div>
           <h3 className="text-sm font-bold text-slate-800">{title}</h3>
@@ -115,58 +248,6 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* ── Toggle switch ────────────────────────────────────────────────────────── */
-function Toggle({ label, description, checked, onChange }: {
-  label: string; description: string; checked: boolean; onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b last:border-0" style={{ borderColor: '#f1f5f9' }}>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-slate-700 leading-tight">{label}</div>
-        <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{description}</div>
-      </div>
-      <button
-        onClick={() => onChange(!checked)}
-        className="relative w-10 h-5.5 rounded-full transition-all duration-200 shrink-0 mt-0.5 focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:ring-offset-1"
-        style={{ width: 40, height: 22, background: checked ? '#1565C0' : '#e2e8f0' }}
-        aria-checked={checked} role="switch"
-      >
-        <span className="absolute top-0.5 w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-all duration-200"
-          style={{ left: checked ? 20 : 2, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-      </button>
-    </div>
-  );
-}
-
-function SectionNav({ isAdmin }: { isAdmin: boolean }) {
-  const items = [
-    { href: '#profile', label: 'Profile', icon: User },
-    { href: '#activity', label: 'Activity', icon: Activity },
-    { href: '#notifications', label: 'Notifications', icon: Bell },
-    { href: '#security', label: 'Security', icon: Lock },
-    { href: '#quick-pin', label: 'Quick PIN', icon: KeyRound },
-    ...(isAdmin ? [{ href: '#recovery-key', label: 'Recovery key', icon: ShieldCheck }] : []),
-  ];
-  return (
-    <nav className="sticky top-6 hidden xl:block">
-      <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-2 shadow-sm">
-        <div className="px-3 py-2">
-          <div className="text-[11px] font-black uppercase tracking-wider text-slate-400">Account</div>
-        </div>
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <a key={item.href} href={item.href}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
-              <Icon size={15} className="text-blue-500" />
-              <span>{item.label}</span>
-            </a>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
 
 /* ── Password strength ────────────────────────────────────────────────────── */
 function StrengthMeter({ password }: { password: string }) {
@@ -266,11 +347,6 @@ export default function SettingsPage() {
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityMsg, setIdentityMsg] = useState('');
 
-  const [notifTaskAssigned, setNA]   = useState(true);
-  const [notifTaskDueSoon, setNDS]   = useState(true);
-  const [notifTaskOverdue, setNO]    = useState(true);
-  const [notifProjectUpdate, setNPU] = useState(false);
-  const [notifSaving, setNotifSaving] = useState(false);
 
   const [current, setCurrent] = useState('');
   const [next, setNext]       = useState('');
@@ -282,17 +358,20 @@ export default function SettingsPage() {
   const [hasRecoveryKey, setHasRecoveryKey]   = useState<boolean | null>(null);
   const [recoveryKeyBusy, setRecoveryKeyBusy] = useState(false);
   const [generatedKey, setGeneratedKey]       = useState<string | null>(null);
+  const [funAvatar, setFunAvatar] = useState('');
+  // Inline profile edit (name + avatar) lives in the hero now — no separate
+  // "Personal details" card. Security/PIN/admin tools are tucked behind a
+  // "more" disclosure so the day-to-day view is just Profile + Activity.
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
+    setFunAvatar(localStorage.getItem(FUN_AVATAR_KEY) || '');
     api('/users/me').then((d: any) => {
       const u = d.user;
       setUser(u);
       setName(u.name || '');
       setEmpId(u.employeeId || '');
-      setNA(u.notifTaskAssigned  ?? true);
-      setNDS(u.notifTaskDueSoon  ?? true);
-      setNO(u.notifTaskOverdue   ?? true);
-      setNPU(u.notifProjectUpdate ?? false);
       if (u.role === 'admin') {
         api('/auth/security-key').then((r: any) => setHasRecoveryKey(r.hasKey)).catch(() => {});
       }
@@ -312,6 +391,13 @@ export default function SettingsPage() {
     }
   }
 
+  function chooseFunAvatar(emoji: string) {
+    const next = funAvatar === emoji ? '' : emoji;
+    setFunAvatar(next);
+    if (next) localStorage.setItem(FUN_AVATAR_KEY, next);
+    else localStorage.removeItem(FUN_AVATAR_KEY);
+  }
+
   async function saveIdentity(e?: React.FormEvent) {
     e?.preventDefault();
     setIdentityMsg(''); setIdentitySaving(true);
@@ -321,12 +407,6 @@ export default function SettingsPage() {
       setTimeout(() => setIdentityMsg(''), 2500);
     } catch (err: any) { setIdentityMsg(err.message || 'Save failed.'); }
     finally { setIdentitySaving(false); }
-  }
-
-  async function saveNotif(key: string, value: boolean) {
-    setNotifSaving(true);
-    try { await api('/users/me', { method: 'PATCH', body: { [key]: value } }); }
-    finally { setNotifSaving(false); }
   }
 
   const pwStrong  = next.length >= 8 && /[A-Z]/.test(next) && /[a-z]/.test(next) && /[0-9]/.test(next) && /[^A-Za-z0-9]/.test(next);
@@ -345,20 +425,13 @@ export default function SettingsPage() {
     finally { setPwSaving(false); }
   }
 
-  if (!user) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
-        <span className="text-sm text-slate-400">Loading profile…</span>
-      </div>
-    </div>
-  );
+  if (!user) return <BirdsEyeLoader label="Loading your profile…" sublabel="Bringing your workspace into view." />;
 
   const isLeadOrAdmin = (user.role === 'lead' || user.role === 'admin');
   const roleText = user.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Individual Contributor';
 
   return (
-    <div className="max-w-6xl mx-auto pb-12 space-y-6">
+    <div className="max-w-4xl mx-auto pb-12 space-y-6">
 
       {/* ── Hero profile card ──────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
@@ -380,7 +453,7 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="shrink-0 rounded-3xl bg-white p-1.5"
                 style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}>
-                <Avatar name={user.name} size={88} />
+                <FunAvatar name={user.name} emoji={funAvatar} size={88} />
               </div>
               <div className="min-w-0 pb-1">
                 <div className="mb-3 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white backdrop-blur">
@@ -388,18 +461,16 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                   <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl">{user.name}</h1>
-                  <RoleBadge role={user.role} className="w-fit border-white/50 bg-white text-slate-800" />
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
-                  <span className="font-mono break-all">@{user.username || user.email}</span>
-                  {user.email && user.username && <span className="break-all">{user.email}</span>}
+                  {user.username && <span className="font-mono break-all">@{user.username}</span>}
                 </div>
               </div>
             </div>
             <div className="grid w-full grid-cols-2 gap-2 lg:min-w-[260px] lg:w-auto">
               <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
-                <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Role</div>
-                <div className="mt-1 text-sm font-black">{roleText}</div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Access</div>
+                <div className="mt-1 text-sm font-black">{user.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Workspace member'}</div>
               </div>
               <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
                 <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Member ID</div>
@@ -408,134 +479,154 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Edit affordance — inline, so there's no separate Personal Details card. */}
+        <button
+          type="button"
+          onClick={() => setEditingProfile((v) => !v)}
+          className="absolute top-4 right-4 inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur transition hover:bg-white/25"
+        >
+          <Pencil size={12} /> {editingProfile ? 'Close' : 'Edit'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[220px_minmax(0,1fr)]">
-        <SectionNav isAdmin={user.role === 'admin'} />
-        <div className="space-y-5">
-
-          {/* ── Activity — full width, star feature ─────────────────────────── */}
-          <div id="activity" className="scroll-mt-6">
-            <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati: logins, projects, and completed work.">
-              <ActivityGraph />
-            </Section>
-          </div>
-
-          {/* ── Two-column grid ──────────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-
-        {/* Left column: identity + notifications */}
-        <div className="space-y-5">
-
-          <div id="profile" className="scroll-mt-6">
-            <Section icon={User} title="Personal details" subtitle="Your name as it appears across Pragati.">
-              <form onSubmit={saveIdentity} className="space-y-4">
-                <Field label="Full name">
-                  <input className="input" value={name} onChange={e => setName(e.target.value)} required />
-                </Field>
-                <ReadonlyField label="Username" value={`@${user.username || user.email}`} />
-                <ReadonlyField label="Member ID" value={employeeId || '—'} />
-                <ReadonlyField label="Role" value={roleText} />
-                <div className="flex items-center gap-3 pt-1">
-                  <button type="submit" className="btn-primary" disabled={identitySaving}>
-                    {identitySaving ? 'Saving…' : 'Save changes'}
+      {/* Inline profile editor (name + fun avatar) — replaces the old card. */}
+      {editingProfile && (
+        <Section icon={User} title="Edit profile" subtitle="Your name and avatar as they appear across Pragati.">
+          <form onSubmit={(e) => { saveIdentity(e); }} className="space-y-4">
+            <Field label="Full name">
+              <input className="input" value={name} onChange={e => setName(e.target.value)} required />
+            </Field>
+            <Field label="Fun avatar" hint="Stored on this device only, so only you see it.">
+              <div className="flex flex-wrap gap-2">
+                {FUN_AVATARS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => chooseFunAvatar(emoji)}
+                    className={`h-10 w-10 rounded-xl border text-xl transition-all ${funAvatar === emoji ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'}`}
+                    aria-pressed={funAvatar === emoji}
+                  >
+                    {emoji}
                   </button>
-                  {identityMsg && <span className="text-xs text-green-600 font-medium">✓ {identityMsg}</span>}
-                </div>
-              </form>
-            </Section>
-          </div>
-
-          <div id="notifications" className="scroll-mt-6">
-            <Section icon={Bell} title="Notifications" subtitle="What shows up on your dashboard.">
-              <div className={notifSaving ? 'opacity-60 pointer-events-none transition-opacity' : 'transition-opacity'}>
-                <Toggle label="Task assigned to me"  description="When a team lead assigns you a new task."
-                  checked={notifTaskAssigned} onChange={v => { setNA(v); saveNotif('notifTaskAssigned', v); }} />
-                <Toggle label="Due in 24 hours"       description="Morning reminder before a deadline."
-                  checked={notifTaskDueSoon}  onChange={v => { setNDS(v); saveNotif('notifTaskDueSoon', v); }} />
-                <Toggle label="Task overdue"          description="When a task passes its due date."
-                  checked={notifTaskOverdue}  onChange={v => { setNO(v); saveNotif('notifTaskOverdue', v); }} />
-                <Toggle label="Project updates"       description="When a project you're on changes status."
-                  checked={notifProjectUpdate} onChange={v => { setNPU(v); saveNotif('notifProjectUpdate', v); }} />
-              </div>
-              <p className="text-[11px] text-slate-400 mt-3 leading-snug">
-                These appear on your dashboard — Pragati never sends email.
-              </p>
-            </Section>
-          </div>
-
-        </div>
-
-        {/* Right column: security + PIN + admin recovery key */}
-        <div className="space-y-5">
-
-          <div id="security" className="scroll-mt-6">
-            <Section icon={Lock} title="Security" subtitle="Change your login password.">
-              <form onSubmit={savePw} className="space-y-3.5">
-                <Field label="Current password">
-                  <input type="password" className="input" autoComplete="current-password"
-                    value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" />
-                </Field>
-                <Field label="New password">
-                  <input type="password" className="input" autoComplete="new-password"
-                    value={next} onChange={e => setNext(e.target.value)} placeholder="Min 8 characters" />
-                  <StrengthMeter password={next} />
-                </Field>
-                <Field label="Confirm password">
-                  <input type="password"
-                    className={`input ${confirm && !pwMatches ? 'border-red-300 focus:border-red-400' : ''}`}
-                    autoComplete="new-password"
-                    value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" />
-                  {confirm && !pwMatches && <p className="text-[11px] text-red-500 mt-1">Passwords don't match.</p>}
-                </Field>
-                {pwErr && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pwErr}</div>}
-                {pwMsg && <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ {pwMsg}</div>}
-                <button type="submit" className="btn-primary w-full justify-center"
-                  disabled={!current || !pwStrong || !pwMatches || pwSaving}>
-                  {pwSaving ? 'Updating…' : 'Update password'}
+                ))}
+                <button type="button" onClick={() => chooseFunAvatar('')} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 text-xs font-bold text-slate-500 hover:bg-slate-50">
+                  <RefreshCw size={12} /> Initials
                 </button>
-              </form>
-            </Section>
+              </div>
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <ReadonlyField label="Username" value={user.username ? `@${user.username}` : '—'} />
+              <ReadonlyField label="Member ID" value={employeeId || '—'} />
+              <ReadonlyField label="Role" value={roleText} />
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <button type="submit" className="btn-primary" disabled={identitySaving}>
+                {identitySaving ? 'Saving…' : 'Save changes'}
+              </button>
+              {identityMsg && <span className="text-xs text-green-600 font-medium">✓ {identityMsg}</span>}
+            </div>
+          </form>
+        </Section>
+      )}
+
+      {/* ── Activity — the star feature, front and centre ────────────────── */}
+      <div id="activity" className="scroll-mt-6">
+        <Section icon={Activity} title="Activity" subtitle="Everything you do on Pragati: logins, projects, and completed work.">
+          <ActivityGraph />
+        </Section>
+      </div>
+
+      {/* ── Account & security — tucked behind a disclosure so the day-to-day
+          view stays focused on Profile + Activity. ───────────────────────── */}
+      <div className="card rounded-xl border overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setMoreOpen((o) => !o)}
+          className="section-head w-full px-5 py-3.5 border-b flex items-center gap-2.5 text-left"
+          aria-expanded={moreOpen}
+        >
+          <MoreHorizontal size={16} className="text-blue-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-slate-800">Account &amp; security</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Password, Quick PIN{user.role === 'admin' ? ', recovery key & system monitor' : ''} — hidden until you need them.
+            </p>
           </div>
+          <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+        </button>
 
-          <QuickPinSection />
+        {moreOpen && (
+          <div className="p-5 space-y-5 fade-in-soft">
 
-          {user.role === 'admin' && (
-            <div id="recovery-key" className="scroll-mt-6">
-              <Section icon={ShieldCheck} title="Recovery key"
-                subtitle="Sign in with this if you ever forget your password.">
-                <div className="space-y-3.5">
-                  <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-slate-500 leading-snug">
-                    {hasRecoveryKey === null
-                      ? 'Checking…'
-                      : hasRecoveryKey
-                        ? <><span className="text-green-700 font-semibold">✓ Key is set.</span> Regenerate it only if you think it has been exposed — the old key stops working.</>
-                        : <><span className="text-amber-700 font-semibold">No key yet.</span> Generate one and keep it safe so you&rsquo;re never locked out.</>}
-                  </div>
-                  <button type="button" onClick={generateRecoveryKey}
-                    disabled={recoveryKeyBusy || hasRecoveryKey === null}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
-                    style={{
-                      background: hasRecoveryKey ? '#f8fafc' : '#1565C0',
-                      color: hasRecoveryKey ? '#475569' : '#ffffff',
-                      border: hasRecoveryKey ? '1px solid #e2e8f0' : 'none',
-                      opacity: recoveryKeyBusy || hasRecoveryKey === null ? 0.6 : 1,
-                    }}>
-                    <RefreshCw size={14} className={recoveryKeyBusy ? 'animate-spin' : ''} />
-                    {recoveryKeyBusy ? 'Generating…' : hasRecoveryKey ? 'Regenerate recovery key' : 'Generate recovery key'}
+            <div id="security" className="scroll-mt-6">
+              <Section icon={Lock} title="Security" subtitle="Change your login password.">
+                <form onSubmit={savePw} className="space-y-3.5">
+                  <Field label="Current password">
+                    <input type="password" className="input" autoComplete="current-password"
+                      value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" />
+                  </Field>
+                  <Field label="New password">
+                    <input type="password" className="input" autoComplete="new-password"
+                      value={next} onChange={e => setNext(e.target.value)} placeholder="Min 8 characters" />
+                    <StrengthMeter password={next} />
+                  </Field>
+                  <Field label="Confirm password">
+                    <input type="password"
+                      className={`input ${confirm && !pwMatches ? 'border-red-300 focus:border-red-400' : ''}`}
+                      autoComplete="new-password"
+                      value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" />
+                    {confirm && !pwMatches && <p className="text-[11px] text-red-500 mt-1">Passwords don't match.</p>}
+                  </Field>
+                  {pwErr && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pwErr}</div>}
+                  {pwMsg && <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ {pwMsg}</div>}
+                  <button type="submit" className="btn-primary w-full justify-center"
+                    disabled={!current || !pwStrong || !pwMatches || pwSaving}>
+                    {pwSaving ? 'Updating…' : 'Update password'}
                   </button>
-                  <p className="text-[11px] text-slate-400 leading-snug">
-                    To use it: on the login screen, enter your email and type this key in the
-                    password box. You&rsquo;ll be signed in and can set a new password here.
-                  </p>
-                </div>
+                </form>
               </Section>
             </div>
-          )}
 
-        </div>
+            <QuickPinSection />
+
+            {user.role === 'admin' && (
+              <div id="recovery-key" className="scroll-mt-6">
+                <Section icon={ShieldCheck} title="Recovery key"
+                  subtitle="Sign in with this if you ever forget your password.">
+                  <div className="space-y-3.5">
+                    <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-slate-500 leading-snug">
+                      {hasRecoveryKey === null
+                        ? 'Checking…'
+                        : hasRecoveryKey
+                          ? <><span className="text-green-700 font-semibold">✓ Key is set.</span> Regenerate it only if you think it has been exposed — the old key stops working.</>
+                          : <><span className="text-amber-700 font-semibold">No key yet.</span> Generate one and keep it safe so you&rsquo;re never locked out.</>}
+                    </div>
+                    <button type="button" onClick={generateRecoveryKey}
+                      disabled={recoveryKeyBusy || hasRecoveryKey === null}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
+                      style={{
+                        background: hasRecoveryKey ? '#f8fafc' : '#1565C0',
+                        color: hasRecoveryKey ? '#475569' : '#ffffff',
+                        border: hasRecoveryKey ? '1px solid #e2e8f0' : 'none',
+                        opacity: recoveryKeyBusy || hasRecoveryKey === null ? 0.6 : 1,
+                      }}>
+                      <RefreshCw size={14} className={recoveryKeyBusy ? 'animate-spin' : ''} />
+                      {recoveryKeyBusy ? 'Generating…' : hasRecoveryKey ? 'Regenerate recovery key' : 'Generate recovery key'}
+                    </button>
+                    <p className="text-[11px] text-slate-400 leading-snug">
+                      To use it: on the login screen, enter your email and type this key in the
+                      password box. You&rsquo;ll be signed in and can set a new password here.
+                    </p>
+                  </div>
+                </Section>
+              </div>
+            )}
+
+            {user.role === 'admin' && <AdminErrorMonitor />}
+
           </div>
-        </div>
+        )}
       </div>
 
       {generatedKey && (

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -7,11 +7,12 @@ import {
   LIFECYCLE_LABELS, STATUS_COLORS,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
+import { api } from '@/lib/client/api';
 import { useIsLead } from '@/components/CurrentUserContext';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X,
+  Maximize2, X, GripVertical,
 } from 'lucide-react';
 
 // Lazy-loaded — only ships when the user actually sees the tour.
@@ -77,9 +78,19 @@ function greeting(now = new Date()) {
   return 'Good evening';
 }
 
+const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
+
 const STATUS_LABEL: Record<string, string> = {
   todo: 'To do', in_progress: 'In progress', review: 'Review',
   blocked: 'Blocked', done: 'Done',
+};
+
+const FLOW_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  todo: { label: 'To do', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
+  in_progress: { label: 'In progress', color: '#1565C0', bg: '#eff6ff', border: '#bfdbfe' },
+  review: { label: 'Review', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  blocked: { label: 'Blocked', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  done: { label: 'Done', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
 };
 
 const HEALTH_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -184,7 +195,14 @@ export default function DashboardClient({
           <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto pr-1">
             <ActionsPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
-            {isLead && <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />}
+            {/* Layout parity — the right column always carries three panels
+               regardless of role. Leads see workload across their ICs;
+               contributors see a per-project breakdown of their own work, so
+               the dashboard reads as a single product with role-appropriate
+               content, not two layouts. */}
+            {isLead
+              ? <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />
+              : <MyFocusPanel tasks={visibleTasks} projects={ongoingProjects} myId={myId} />}
           </div>
         </div>
       )}
@@ -363,13 +381,16 @@ function ProjectsColumn({
           <FolderKanban size={26} className="mx-auto text-slate-300 mb-3" />
           <div className="text-sm font-semibold text-slate-600 mb-1">No ongoing projects</div>
           <div className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
-            When you start or join a team project, it will show up here with all its tasks.
+            {isLead
+              ? 'Spin up a project to start tracking work — it will show up here with all its tasks.'
+              : "Once a lead assigns you to a team and a project, it will show up here with the tasks you're on."}
           </div>
-          {isLead && (
-            <Link href="/projects/new" className="btn-primary text-xs mt-4 inline-flex">
-              + New project
-            </Link>
-          )}
+          <Link
+            href={isLead ? '/projects/new' : '/my-day'}
+            className="btn-primary text-xs mt-4 inline-flex"
+          >
+            {isLead ? '+ New project' : 'Open My Day'}
+          </Link>
         </div>
       ) : (
         <div className="space-y-3">
@@ -387,10 +408,129 @@ function ProjectsColumn({
   );
 }
 
+
+/* Inline vertical task list inside an expanded project row. Leads can drag
+   the GripVertical handle to reorder rows; the new order is persisted via
+   /api/projects/[id]/reorder-tasks. The dashboard is intentionally NOT a
+   Kanban — it's a quick reorderable list so a lead can re-prioritise from
+   the bird's-eye view without bouncing into the project. */
+function DashboardTaskFlow({ projectId, tasks, canMove }: {
+  projectId: string;
+  tasks: TeamTask[];
+  canMove: boolean;
+}) {
+  const [local, setLocal] = useState(tasks);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [overId,     setOverId]     = useState<string | null>(null);
+  useEffect(() => setLocal(tasks), [tasks]);
+
+  function onDragStart(e: React.DragEvent, id: string) {
+    if (!canMove) return;
+    setDraggingId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+  }
+  function onDragOverRow(e: React.DragEvent, overTaskId: string) {
+    if (!canMove || !draggingId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (overId !== overTaskId) setOverId(overTaskId);
+  }
+  async function onDropRow(e: React.DragEvent, targetId: string) {
+    e.preventDefault();
+    setOverId(null);
+    if (!canMove || !draggingId || draggingId === targetId) { setDraggingId(null); return; }
+
+    const next = local.slice();
+    const from = next.findIndex((t) => t.id === draggingId);
+    const to   = next.findIndex((t) => t.id === targetId);
+    if (from < 0 || to < 0) { setDraggingId(null); return; }
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setLocal(next);
+    setDraggingId(null);
+
+    try {
+      await api(`/projects/${projectId}/reorder-tasks`, {
+        method: 'POST',
+        body: { orderedIds: next.map((t) => t.id) },
+      });
+    } catch {
+      setLocal(tasks); // server rejected → snap back
+    }
+  }
+
+  const visible = local.slice(0, 20);
+
+  return (
+    <ul className="divide-y divide-slate-100">
+      {visible.map((t) => {
+        const meta = FLOW_META[t.status] || FLOW_META.todo;
+        const dragging = draggingId === t.id;
+        const over     = overId === t.id;
+        return (
+          <li
+            key={t.id}
+            onDragOver={(e) => onDragOverRow(e, t.id)}
+            onDrop={(e) => onDropRow(e, t.id)}
+            className={`relative flex items-center gap-3 px-3 py-2 transition-colors ${
+              dragging ? 'opacity-50' : ''
+            } ${over ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}
+          >
+            {/* Drop indicator: a thin blue line above the row being hovered. */}
+            {over && !dragging && (
+              <span aria-hidden className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-500" />
+            )}
+
+            {/* Drag handle — only leads (and personal-project owners on the
+                server) can reorder, so it shows up only for them. */}
+            {canMove ? (
+              <span
+                draggable
+                onDragStart={(e) => onDragStart(e, t.id)}
+                onDragEnd={() => { setDraggingId(null); setOverId(null); }}
+                className="shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500"
+                title="Drag to reorder"
+                aria-label="Reorder task"
+              >
+                <GripVertical size={14} />
+              </span>
+            ) : (
+              <span className="shrink-0 w-3.5" />
+            )}
+
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} aria-hidden />
+
+            <Link
+              href={`/tasks/${t.id}`}
+              className="flex-1 min-w-0 text-xs leading-snug text-slate-800 hover:text-blue-700"
+              onClick={(e) => draggingId && e.preventDefault()}
+            >
+              <span className="line-clamp-1 font-semibold">{t.title}</span>
+              <span className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400">
+                <span className="font-medium" style={{ color: meta.color }}>{meta.label}</span>
+                <span>·</span>
+                <span className="truncate">{t.assigneeName || 'Unassigned'}</span>
+                {(t.ccTcd || t.dueDate) && <span>· {formatDate(t.ccTcd || t.dueDate)}</span>}
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+      {local.length > 20 && (
+        <li className="px-3 py-2 text-[10px] text-slate-400">
+          Showing 20 of {local.length} tasks — open the project for the full board.
+        </li>
+      )}
+    </ul>
+  );
+}
+
 function ProjectRow({
   project, tasks, defaultOpen,
 }: { project: DashProject; tasks: TeamTask[]; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  const isLead = useIsLead();
   const health = HEALTH_META[project.health];
   const total  = project.taskCount ?? 0;
   const done   = project.tasksDone ?? 0;
@@ -469,28 +609,7 @@ function ProjectRow({
               <div className="text-xs text-slate-400">No tasks yet for this project.</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50/60 border-b border-slate-100">
-                    <th className="text-left text-[9px] font-bold uppercase tracking-wider text-slate-400 px-4 py-2">Task</th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2">Subtasks</th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2">TCD</th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2">Assigned</th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2">Status</th>
-                    <th className="text-left text-[9px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2">Completed</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {sortedTasks.slice(0, 20).map(t => <TaskTableRow key={t.id} t={t} />)}
-                </tbody>
-              </table>
-              {sortedTasks.length > 20 && (
-                <div className="px-4 py-2 text-[10px] text-slate-400 border-t border-slate-50">
-                  Showing 20 of {sortedTasks.length} tasks — <Link href={`/projects/${project.id}`} className="text-blue-600 font-semibold">view all in project →</Link>
-                </div>
-              )}
-            </div>
+            <DashboardTaskFlow projectId={project.id} tasks={sortedTasks} canMove={isLead} />
           )}
         </div>
       )}
@@ -886,6 +1005,78 @@ function ContributorsPanel({
     ? <FullScreenOverlay title="Individual Contributors" icon={<UsersIcon size={14} className="text-blue-500" />}
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
+}
+
+/* ── My Focus (IC counterpart to ContributorsPanel) ────────────────────────
+   A per-project rollup of the contributor's own open tasks. Mirrors the
+   visual shape of ContributorsPanel so the right column reads the same for
+   both roles — three stacked panels, same header style, same collapse
+   affordance — even though the content is role-appropriate. */
+function MyFocusPanel({
+  tasks, projects, myId,
+}: { tasks: TeamTask[]; projects: any[]; myId: string }) {
+  const [panelOpen, setPanelOpen] = useState(true);
+
+  const myOpen = tasks.filter((t) => t.assigneeId === myId && t.status !== 'done');
+  if (myOpen.length === 0) return null;
+
+  const projMap = new Map(projects.map((p: any) => [p.id, p]));
+  const byProject = new Map<string, TeamTask[]>();
+  for (const t of myOpen) {
+    if (!byProject.has(t.projectId)) byProject.set(t.projectId, []);
+    byProject.get(t.projectId)!.push(t);
+  }
+  const rows = [...byProject.entries()]
+    .map(([projectId, ts]) => ({
+      projectId,
+      project: projMap.get(projectId),
+      tasks: ts,
+      overdue: ts.filter((t) => {
+        const due = t.ccTcd || t.dueDate;
+        return due && new Date(due) < new Date();
+      }).length,
+    }))
+    .sort((a, b) => b.overdue - a.overdue || b.tasks.length - a.tasks.length);
+
+  return (
+    <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+      <div
+        className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 select-none transition-colors"
+        onClick={() => setPanelOpen((o) => !o)}
+      >
+        <FolderKanban size={13} className="text-slate-400" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Focus by project</h3>
+        <span className="ml-auto text-[10px] text-slate-300 font-semibold">{rows.length}</span>
+        <ChevronDown size={12} className="text-slate-400 transition-transform duration-200"
+          style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+      </div>
+
+      {panelOpen && (
+        <ul className="divide-y divide-slate-50 border-t border-slate-100">
+          {rows.map((r) => (
+            <li key={r.projectId}>
+              <Link href={`/projects/${r.projectId}`}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-semibold text-slate-700 truncate">
+                    {r.project?.name || 'Project'}
+                  </div>
+                  {r.project?.code && (
+                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">{r.project.code}</div>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 shrink-0">{r.tasks.length} open</span>
+                {r.overdue > 0 && (
+                  <span className="text-[10px] font-bold text-red-500 shrink-0">{r.overdue} overdue</span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function ContributorRow({ person, tasks }: { person: DashPerson; tasks: TeamTask[] }) {

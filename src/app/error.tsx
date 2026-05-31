@@ -23,6 +23,23 @@ export default function ErrorBoundary({
   useEffect(() => {
     // eslint-disable-next-line no-console
     console.error('[Pragati] route error:', error);
+    // Report to the admin monitoring view (best-effort — never block the
+    // fallback UI, and swallow any failure so we don't recurse on errors).
+    try {
+      fetch('/api/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: error?.message || 'Unknown render error',
+          stack: error?.stack,
+          digest: error?.digest,
+          path: typeof window !== 'undefined' ? window.location.pathname : '',
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
   }, [error]);
 
   return (
