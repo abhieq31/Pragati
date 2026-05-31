@@ -13,8 +13,7 @@ export type LifecycleKey =
   | 'software_change'
   | 'audit'
   | 'validation'
-  | 'data_integrity'
-  | 'pharmacovigilance';
+  ;
 
 export type LifecycleGroup = 'General' | 'Life Sciences';
 
@@ -404,34 +403,6 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
     ]
   },
 
-  data_integrity: {
-    label: 'Data Integrity Assessment (ALCOA+)',
-    description:
-      'Assess ALCOA+ data integrity controls (Attributable, Legible, Contemporaneous, Original, Accurate + Complete, Consistent, Enduring, Available) for a GxP system.',
-    regulatoryRefs: 'MHRA DI Guidance 2018, WHO TRS 1033, FDA DI & Compliance Guide',
-    group: 'Life Sciences',
-    phases: [
-      { name: 'Scope & Inventory', tasks: [
-        { title: 'Identify GxP data flows and records', type: 'task', qa: true, gxp: true },
-        { title: 'Criticality ranking by DI risk', type: 'review', qa: true, gxp: true }
-      ] },
-      { name: 'Control Assessment', tasks: [
-        { title: 'Review audit trail configuration', type: 'data_review', qa: true, gxp: true },
-        { title: 'Review user access & segregation of duties', type: 'data_review', qa: true, gxp: true },
-        { title: 'Review backup & archival', type: 'data_review', qa: true, gxp: true },
-        { title: 'Review time source & clock controls', type: 'data_review', qa: true, gxp: true }
-      ] },
-      { name: 'Gap Remediation', tasks: [
-        { title: 'Log gaps as deviations / CAPAs', type: 'deviation', qa: true, gxp: true },
-        { title: 'Execute remediation actions', type: 'task', qa: true, gxp: true }
-      ] },
-      { name: 'Closure', tasks: [
-        { title: 'Data Integrity Assessment Report', type: 'task', qa: true, gxp: true },
-        { title: 'QA sign-off', type: 'approval', qa: true, gxp: true }
-      ] }
-    ]
-  },
-
   deviation: {
     label: 'Deviation',
     description: 'Manage deviations from approved procedures, specifications, or plans — from detection through QA closure.',
@@ -529,35 +500,6 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
         { title: 'Confirm no new deviations or data integrity gaps', type: 'review', qa: true, gxp: true },
         { title: 'Close change control record', type: 'approval', qa: true, gxp: true },
       ] },
-    ]
-  },
-
-  pharmacovigilance: {
-    label: 'Pharmacovigilance Case Processing',
-    description:
-      'ICSR (Individual Case Safety Report) intake, triage, narrative writing, coding, QA review and regulatory reporting.',
-    regulatoryRefs: 'GVP Module VI, 21 CFR 314.80, ICH E2B(R3)',
-    group: 'Life Sciences',
-    phases: [
-      { name: 'Intake', tasks: [
-        { title: 'Receive & log case', type: 'task', gxp: true },
-        { title: 'Duplicate check', type: 'data_review', gxp: true }
-      ] },
-      { name: 'Triage', tasks: [
-        { title: 'Seriousness & expectedness assessment', type: 'review', qa: true, gxp: true },
-        { title: 'Regulatory clock start', type: 'task', qa: true, gxp: true }
-      ] },
-      { name: 'Coding & Narrative', tasks: [
-        { title: 'MedDRA coding', type: 'task', gxp: true },
-        { title: 'Narrative drafting', type: 'task', gxp: true }
-      ] },
-      { name: 'QC & Medical Review', tasks: [
-        { title: 'QC review', type: 'review', qa: true, gxp: true },
-        { title: 'Medical review', type: 'review', qa: true, gxp: true }
-      ] },
-      { name: 'Submission', tasks: [
-        { title: 'E2B submission to authorities', type: 'approval', qa: true, gxp: true }
-      ] }
     ]
   },
 

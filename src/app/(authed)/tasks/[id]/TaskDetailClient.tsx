@@ -464,7 +464,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               </label>
               <input
                 className="input text-sm"
-                placeholder="e.g. QA review · Sachin · IT Helpdesk"
+                placeholder="e.g. QA/HOD · Specific department · Person's name"
                 value={task.pendingWith || ''}
                 disabled={!canEditAll}
                 onChange={(e) => setTask({ ...task, pendingWith: e.target.value })}

@@ -71,6 +71,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   // Desktop "distraction-free" collapse: shrinks the sidebar to an icon rail
   // (icons + avatar only). Persisted in localStorage so it survives reloads.
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
   useEffect(() => {
     setCollapsed(localStorage.getItem('pragati_sidebar_collapsed') === '1');
   }, []);
@@ -141,7 +142,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   const leadNav: NavItem[] = [
     { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
     { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
-    { href: '/teams',    label: 'Team',      icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
+    { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
   const adminExtra: NavItem[] = [
     { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
@@ -151,7 +152,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   const contributorNav: NavItem[] = [
     { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
     { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
-    { href: '/teams',    label: 'Team',      icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
+    { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
 
   const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#D97706', iconBg: '#FEF3C7' };
@@ -240,7 +241,10 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
   // Icon-only rail on desktop when collapsed. On mobile the drawer is always
   // shown full-width (the collapse toggle is desktop-only), so we suppress the
   // collapsed look whenever the mobile drawer is open.
-  const showCollapsed = collapsed && !open;
+  // When hovered while collapsed, we show the full sidebar as a fly-out overlay
+  // (not locked — collapses back when mouse leaves). Clicking anywhere on the
+  // sidebar while in hover-expand mode permanently expands it (toggleCollapsed).
+  const showCollapsed = collapsed && !open && !sidebarHovered;
 
   /* ── Sidebar inner content ─────────────────────────────────────────── */
   const SidebarInner = (
@@ -406,7 +410,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
 
   return (
     <CurrentUserProvider user={user}>
-    <div className="min-h-screen flex" style={{ background: 'var(--bg-page)' }}>
+    <div className="min-h-screen flex overflow-x-hidden" style={{ background: 'var(--bg-page)' }}>
 
       {/* Mobile backdrop */}
       <div
@@ -425,12 +429,17 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
           lg:sticky lg:top-0 lg:h-screen
           transition-[transform,width] duration-300 ease-in-out
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${collapsed && !open && sidebarHovered ? 'lg:fixed lg:z-50' : ''}
         `}
         style={{
           width: showCollapsed ? 68 : 220,
           background: dark ? '#262624' : '#ffffff',
           borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4',
+          boxShadow: collapsed && !open && sidebarHovered ? (dark ? '4px 0 24px rgba(0,0,0,0.5)' : '4px 0 24px rgba(15,23,42,0.18)') : undefined,
         }}
+        onMouseEnter={() => { if (collapsed && !open) setSidebarHovered(true); }}
+        onMouseLeave={() => setSidebarHovered(false)}
+        onClick={() => { if (collapsed && !open && sidebarHovered) { toggleCollapsed(); setSidebarHovered(false); } }}
       >
         {SidebarInner}
         {/* Collapse/expand ribbon — desktop only, on the right edge of sidebar */}
@@ -442,7 +451,7 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
             boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
             color: dark ? 'rgba(255,255,255,0.35)' : '#94a3b8',
           }}
-          onClick={toggleCollapsed}
+          onClick={(e) => { e.stopPropagation(); toggleCollapsed(); setSidebarHovered(false); }}
           title={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >

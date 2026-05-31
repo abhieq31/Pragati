@@ -168,7 +168,7 @@ async function main() {
   await createProjectFromTemplate({
     name: 'Chromatography Data System - Data Integrity Assessment',
     code: 'DI-2026-004',
-    lifecycle: 'data_integrity',
+    lifecycle: 'validation',
     teamName: 'Data Integrity & Audit',
     ownerEmail: 'ananya@pragati.local',
     start: -25,
@@ -206,7 +206,7 @@ async function main() {
   await createProjectFromTemplate({
     name: 'ICSR Intake Automation - Safety System',
     code: 'PV-2026-001',
-    lifecycle: 'pharmacovigilance',
+    lifecycle: 'change_control',
     teamName: 'Pharmacovigilance Informatics',
     ownerEmail: 'dhruv@pragati.local',
     start: -12,

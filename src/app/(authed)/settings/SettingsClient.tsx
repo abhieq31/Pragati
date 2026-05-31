@@ -9,24 +9,98 @@ import {
 } from 'lucide-react';
 
 
-const FUN_AVATARS = ['🦊','🐼','🐯','🦄','🐳','🦉','🐙','🚀','🌈','⚡','🍀','🎯'];
 const FUN_AVATAR_KEY = 'pragati.funAvatar';
 
-function FunAvatar({ name, emoji, size = 88 }: { name?: string | null; emoji?: string; size?: number }) {
-  if (!emoji) return <Avatar name={name} size={size} />;
-  return (
+const EMOJI_CATEGORIES = [
+  {
+    label: 'Smileys',
+    emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😎','🤓','🧐','😏','😌','🥳'],
+  },
+  {
+    label: 'Animals',
+    emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐸','🐵','🦄','🐺','🦋','🐙','🦉','🦊'],
+  },
+  {
+    label: 'Nature',
+    emojis: ['🌸','🌺','🌻','🌹','🌿','🍀','🌱','🌲','🌳','🌴','🍄','🌊','🔥','⭐','🌙','☀️','⚡','🌈','❄️','🌀'],
+  },
+  {
+    label: 'Objects',
+    emojis: ['🚀','💡','🔬','🔭','💻','📱','🎯','🎨','🎸','🎹','🏆','🎖️','🔑','🗝️','📚','📊','🧩','🤖','🛸','⚙️'],
+  },
+  {
+    label: 'Symbols',
+    emojis: ['❤️','💙','💚','💛','💜','🖤','🤍','🔶','🔷','🔴','🟢','⚫','🌟','✨','💫','🎆','🎇','♾️','✅','🔥'],
+  },
+];
+
+function ProfileAvatar({ name, emoji, size = 88, onClick }: { name?: string | null; emoji?: string; size?: number; onClick?: () => void }) {
+  const inner = emoji ? (
     <div
       className="flex items-center justify-center shrink-0 select-none rounded-full bg-white"
-      style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.48,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 8px 20px rgba(15,23,42,0.14)',
-      }}
-      title={name || 'Your avatar'}
-      aria-label={name || 'Your avatar'}
+      style={{ width: size, height: size, fontSize: size * 0.48 }}
     >
       {emoji}
+    </div>
+  ) : (
+    <Avatar name={name} size={size} />
+  );
+
+  if (!onClick) return inner;
+  return (
+    <div className="relative group cursor-pointer" onClick={onClick} title="Change avatar">
+      {inner}
+      <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+        style={{ fontSize: size * 0.28 }}>
+        ✏️
+      </div>
+    </div>
+  );
+}
+
+function EmojiPickerModal({ current, onSelect, onClose }: { current: string; onSelect: (e: string) => void; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState(0);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 pt-4 pb-2">
+          <h3 className="text-sm font-bold text-slate-800">Choose your avatar</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+        </div>
+        {/* Category tabs */}
+        <div className="flex gap-1 px-3 pb-2 overflow-x-auto">
+          {EMOJI_CATEGORIES.map((cat, i) => (
+            <button key={cat.label} type="button"
+              onClick={() => setActiveTab(i)}
+              className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${activeTab === i ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-100'}`}>
+              {cat.label}
+            </button>
+          ))}
+        </div>
+        {/* Emoji grid */}
+        <div className="grid grid-cols-7 gap-1 px-3 pb-3 max-h-52 overflow-y-auto">
+          {EMOJI_CATEGORIES[activeTab].emojis.map(emoji => (
+            <button key={emoji} type="button"
+              onClick={() => { onSelect(emoji); onClose(); }}
+              className={`h-10 w-full rounded-xl text-xl flex items-center justify-center transition-all hover:scale-110 ${current === emoji ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-slate-100'}`}
+              aria-pressed={current === emoji}>
+              {emoji}
+            </button>
+          ))}
+        </div>
+        {current && (
+          <div className="px-3 pb-3 border-t pt-2.5">
+            <button type="button"
+              onClick={() => { onSelect(''); onClose(); }}
+              className="w-full text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center justify-center gap-1.5 py-1.5 rounded-lg hover:bg-slate-50">
+              <RefreshCw size={11} /> Use initials instead
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -358,6 +432,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
   const [recoveryKeyBusy, setRecoveryKeyBusy] = useState(false);
   const [generatedKey, setGeneratedKey]       = useState<string | null>(null);
   const [funAvatar, setFunAvatar] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -385,9 +460,8 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
   }
 
   function chooseFunAvatar(emoji: string) {
-    const next = funAvatar === emoji ? '' : emoji;
-    setFunAvatar(next);
-    if (next) localStorage.setItem(FUN_AVATAR_KEY, next);
+    setFunAvatar(emoji);
+    if (emoji) localStorage.setItem(FUN_AVATAR_KEY, emoji);
     else localStorage.removeItem(FUN_AVATAR_KEY);
   }
 
@@ -427,12 +501,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
       {/* ── Hero profile card ──────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
         style={{ boxShadow: '0 16px 48px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05)' }}>
-        <div className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(135deg, #0f4fb8 0%, #1769c8 42%, #2b8c47 100%)',
-          }}
-        />
+        <div className="absolute inset-0 profile-hero-shimmer" />
         <div className="absolute inset-0 opacity-25"
           style={{
             backgroundImage: 'linear-gradient(rgba(255,255,255,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.22) 1px, transparent 1px)',
@@ -444,7 +513,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
               <div className="shrink-0 rounded-3xl bg-white p-1.5"
                 style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}>
-                <FunAvatar name={user.name} emoji={funAvatar} size={88} />
+                <ProfileAvatar name={user.name} emoji={funAvatar} size={88} onClick={() => setShowEmojiPicker(true)} />
               </div>
               <div className="min-w-0 pb-1">
                 <div className="mb-3 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white backdrop-blur">
@@ -461,7 +530,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             <div className="grid w-full grid-cols-2 gap-2 lg:min-w-[260px] lg:w-auto">
               <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
                 <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Access</div>
-                <div className="mt-1 text-sm font-black">{user.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Workspace member'}</div>
+                <div className="mt-1 text-sm font-black">{roleText}</div>
               </div>
               <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
                 <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Member ID</div>
@@ -481,30 +550,21 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         </button>
       </div>
 
-      {/* Inline profile editor (name + fun avatar) — replaces the old card. */}
+      {/* Emoji avatar picker modal */}
+      {showEmojiPicker && (
+        <EmojiPickerModal
+          current={funAvatar}
+          onSelect={chooseFunAvatar}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+      )}
+
+      {/* Inline profile editor — name + read-only fields */}
       {editingProfile && (
         <Section icon={User} title="Edit profile" subtitle="Your name and avatar as they appear across Pragati.">
           <form onSubmit={(e) => { saveIdentity(e); }} className="space-y-4">
             <Field label="Full name">
               <input className="input" value={name} onChange={e => setName(e.target.value)} required />
-            </Field>
-            <Field label="Fun avatar" hint="Stored on this device only, so only you see it.">
-              <div className="flex flex-wrap gap-2">
-                {FUN_AVATARS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => chooseFunAvatar(emoji)}
-                    className={`h-10 w-10 rounded-xl border text-xl transition-all ${funAvatar === emoji ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'}`}
-                    aria-pressed={funAvatar === emoji}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-                <button type="button" onClick={() => chooseFunAvatar('')} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 text-xs font-bold text-slate-500 hover:bg-slate-50">
-                  <RefreshCw size={12} /> Initials
-                </button>
-              </div>
             </Field>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <ReadonlyField label="Username" value={user.username ? `@${user.username}` : '—'} />
