@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { api } from '@/lib/client/api';
 import { Avatar, RoleBadge } from '@/components/ui';
 import { ActivityGraph } from '@/components/ActivityGraph';
-import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, BarChart3 } from 'lucide-react';
+import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, BarChart3, Search, Lock } from 'lucide-react';
 
 /* ── Activity peek modal — team leaders click a teammate to see how they're
    tracking: contribution graph, streak and badges (read-only, no private
@@ -568,9 +568,24 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
     setTimeout(() => setJustAdded(null), 4000);
   }
 
-  const pms = users.filter((u) => u.role === 'lead' || u.role === 'admin');
-  const ics = users.filter((u) => u.role === 'contributor');
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const matches = (u: any) =>
+    !q ||
+    (u.name || '').toLowerCase().includes(q) ||
+    (u.username || '').toLowerCase().includes(q) ||
+    (u.email || '').toLowerCase().includes(q) ||
+    (u.employeeId || '').toLowerCase().includes(q);
+
+  const pms = users.filter((u) => (u.role === 'lead' || u.role === 'admin') && matches(u));
+  const ics = users.filter((u) => u.role === 'contributor' && matches(u));
   const isLeadOrAdmin = (me?.role === 'lead' || me?.role === 'admin');
+
+  // Workspace-wide totals (unfiltered) for the summary strip.
+  const totalPeople  = users.length;
+  const leadCount    = users.filter((u) => u.role === 'lead' || u.role === 'admin').length;
+  const icCount      = users.filter((u) => u.role === 'contributor').length;
+  const lockedCount  = users.filter((u) => u.lockedAt).length;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -639,6 +654,37 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         </div>
       </div>
 
+      {/* Summary strip — at-a-glance workspace headcount + lock health. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'People',       value: totalPeople, icon: User,   color: 'text-slate-600' },
+          { label: 'Leads & admin', value: leadCount,  icon: Shield, color: 'text-blue-600' },
+          { label: 'Contributors', value: icCount,     icon: User,   color: 'text-slate-600' },
+          { label: 'Locked',       value: lockedCount, icon: Lock,   color: lockedCount ? 'text-rose-600' : 'text-slate-400' },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="rounded-xl border border-slate-200/80 bg-white px-4 py-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <Icon size={12} className={s.color} /> {s.label}
+              </div>
+              <div className={`mt-1 text-2xl font-black ${s.color}`}>{s.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
+        <input
+          className="input pl-9"
+          placeholder="Search by name, username or member ID…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
       {roleErr && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{roleErr}</div>
       )}
@@ -651,7 +697,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
           <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">{pms.length}</span>
         </div>
         {pms.length === 0 ? (
-          <div className="px-5 py-5 text-sm text-slate-400">No leads yet.</div>
+          <div className="px-5 py-5 text-sm text-slate-400">{q ? 'No leads match your search.' : 'No leads yet.'}</div>
         ) : (
           <div className="divide-y divide-slate-50">
             {pms.map((u) => (
@@ -728,8 +774,12 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
         </div>
         {ics.length === 0 ? (
           <div className="px-5 py-5 text-sm text-slate-400">
-            No contributors yet.{' '}
-            <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button>
+            {q ? 'No contributors match your search.' : (
+              <>
+                No contributors yet.{' '}
+                <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button>
+              </>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
