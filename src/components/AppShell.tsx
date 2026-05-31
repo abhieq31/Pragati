@@ -24,7 +24,7 @@ const SetPinModal = dynamic(
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
-  Settings, UserCircle, Activity, Bell, ShieldCheck, KeyRound,
+  UserCircle,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -171,13 +171,11 @@ export default function AppShell({ user, initialDark, children }: { user: Curren
     ? 'Admin'
     : user.role === 'lead' ? 'Team Lead' : 'Individual Contributor';
 
+  // Decluttered: a single entry into the profile (which now holds Activity and,
+  // behind a disclosure, Security / Quick PIN / admin tools). Notifications and
+  // their preferences live in the bell. Dark mode + Sign out follow below.
   const accountItems = [
-    { href: '/settings#profile', label: 'Profile', icon: UserCircle },
-    { href: '/settings#activity', label: 'Activity', icon: Activity },
-    { href: '/settings#notifications', label: 'Notifications', icon: Bell },
-    { href: '/settings#security', label: 'Security', icon: ShieldCheck },
-    { href: '/settings#quick-pin', label: 'Quick PIN', icon: KeyRound },
-    ...(user.role === 'admin' ? [{ href: '/settings#recovery-key', label: 'Recovery key', icon: Settings }] : []),
+    { href: '/settings', label: 'Profile & activity', icon: UserCircle },
   ];
 
   const AccountMenu = accountMenuOpen ? (
