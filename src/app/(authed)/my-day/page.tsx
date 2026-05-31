@@ -239,21 +239,23 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
     api<any[]>('/projects').then((p) => { setProjects(p); if (p[0]) setProjectId(p[0].id); }).catch(() => {});
   }, []);
 
-  // When the chosen project changes, pull its phases + assignable roster so the
-  // lead can allocate the task to a phase and a person in one go.
+  // When the chosen project changes, surface its phases + assignable roster so
+  // the lead can allocate the task to a phase and a person in one go.
+  // Phases already arrive with the projects list, so we read them straight from
+  // the cached list (instant) rather than refetching the full project — that
+  // call would load every task in the project just to hand back the phases.
+  // Only the roster genuinely needs a network round-trip.
   useEffect(() => {
     if (!projectId) { setPhases([]); setMembers([]); return; }
-    setLoadingMeta(true);
     setPhaseId(''); setAssignee('');
-    api<any>(`/projects/${projectId}`)
-      .then(async (p) => {
-        setPhases((p.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
-        const roster = await api<any[]>(`/users${p.teamId ? `?teamId=${p.teamId}` : ''}`).catch(() => []);
-        setMembers(roster);
-      })
-      .catch(() => { setPhases([]); setMembers([]); })
+    const proj = projects.find((p) => p.id === projectId);
+    setPhases((proj?.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
+    setLoadingMeta(true);
+    api<any[]>(`/users${proj?.teamId ? `?teamId=${proj.teamId}` : ''}`)
+      .then((roster) => setMembers(roster))
+      .catch(() => setMembers([]))
       .finally(() => setLoadingMeta(false));
-  }, [projectId]);
+  }, [projectId, projects]);
 
   async function go() {
     if (!projectId) { setErr('Pick a project.'); return; }
