@@ -439,6 +439,17 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   background-color: var(--bg-subtle) !important;
 }
 
+/* Section header bar — class-based so it can theme in dark mode (inline
+   background styles can't be overridden by .dark rules). */
+.section-head {
+  background: linear-gradient(to right, #fafbfd, #f7f9fc);
+  border-color: #f0f3f8;
+}
+.dark .section-head {
+  background: #262624 !important;
+  border-color: rgba(255,255,255,0.07) !important;
+}
+
 /* Warm off-white text scale */
 .dark .text-slate-900 { color: #faf9f5 !important; }
 .dark .text-slate-800 { color: #f0eee5 !important; }
