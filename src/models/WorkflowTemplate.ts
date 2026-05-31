@@ -13,6 +13,8 @@ const WorkflowTemplateSchema = new Schema({
   phases: [WfPhaseSchema],
 }, { timestamps: true });
 
+WorkflowTemplateSchema.index({ createdBy: 1, createdAt: -1 });
+
 export type WorkflowTemplateDoc = InferSchemaType<typeof WorkflowTemplateSchema> & { _id: mongoose.Types.ObjectId };
 export const WorkflowTemplate: Model<WorkflowTemplateDoc> =
   (mongoose.models.WorkflowTemplate as Model<WorkflowTemplateDoc>) ||

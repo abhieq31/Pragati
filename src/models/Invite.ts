@@ -21,6 +21,10 @@ const InviteSchema = new Schema(
   { timestamps: true }
 );
 
+// TTL index: MongoDB automatically deletes expired invites at the DB level,
+// keeping the collection lean without application-level cleanup jobs.
+InviteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
 export type InviteDoc = InferSchemaType<typeof InviteSchema> & { _id: mongoose.Types.ObjectId };
 
 export const Invite: Model<InviteDoc> =

@@ -35,8 +35,10 @@ export async function connectDB(): Promise<typeof mongoose> {
   if (!cached.promise) {
     cached.promise = resolveUri().then((uri) =>
       mongoose.connect(uri, {
-        maxPoolSize: 10,
-        minPoolSize: 1,
+        // 200 concurrent users across a small number of serverless instances:
+        // 25 connections gives headroom without hitting Atlas M0/M10 limits.
+        maxPoolSize: 25,
+        minPoolSize: 2,
         serverSelectionTimeoutMS: 5000,  // fail fast, not 15s
         connectTimeoutMS: 8000,
         socketTimeoutMS: 30000,

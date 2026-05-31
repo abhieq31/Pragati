@@ -18,6 +18,9 @@ const TeamSchema = new Schema(
   { timestamps: true }
 );
 
+TeamSchema.index({ leadId: 1 });
+TeamSchema.index({ memberIds: 1 });
+
 export type TeamDoc = InferSchemaType<typeof TeamSchema> & { _id: mongoose.Types.ObjectId };
 
 export const Team: Model<TeamDoc> =
