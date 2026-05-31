@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
-import { Pencil, Plus, Users as UsersIcon, X, Check, Search, Trash2, AlertTriangle } from 'lucide-react';
+import { Pencil, Plus, Users as UsersIcon, X, Check, Search, Trash2, AlertTriangle, ArrowRight } from 'lucide-react';
 
 interface TeamItem {
   id: string;
@@ -267,14 +267,19 @@ function TeamCard({
         )}
       </div>
 
-      {/* Footer counts + view link */}
-      <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-500">
+      {/* Footer counts + view CTA */}
+      <div className="mt-auto pt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
         <div className="flex gap-3">
           <span><strong className="text-slate-700">{team.memberCount}</strong> members</span>
           <span><strong className="text-slate-700">{team.projectCount}</strong> projects</span>
         </div>
-        <Link href={`/teams/${team.id}`} className="text-brand-600 hover:text-brand-700 font-semibold">
-          View →
+        <Link
+          href={`/teams/${team.id}`}
+          className="group/cta inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-all"
+          style={{ background: 'linear-gradient(135deg, #1565C0 0%, #2b8c47 100%)', boxShadow: '0 2px 8px rgba(21,101,192,0.28)' }}
+        >
+          Open team
+          <ArrowRight size={13} className="transition-transform group-hover/cta:translate-x-0.5" />
         </Link>
       </div>
     </div>
@@ -356,21 +361,36 @@ function TeamFormModal({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 overlay-in" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl modal-in"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xl modal-in overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-black text-slate-900">
-              {mode === 'create' ? 'Create team' : 'Edit team'}
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {mode === 'create' ? 'Set the basics — you can add members below.' : 'Update team details and membership.'}
-            </p>
+        {/* Branded gradient header — gives the create flow a premium, on-brand
+            feel instead of a plain white bar. */}
+        <div className="relative px-5 py-5 text-white overflow-hidden"
+          style={{ background: 'linear-gradient(135deg, #0f4fb8 0%, #1769c8 45%, #2b8c47 100%)' }}>
+          <div aria-hidden className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+            }} />
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                <UsersIcon size={18} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black leading-tight">
+                  {mode === 'create' ? 'Create a team' : 'Edit team'}
+                </h2>
+                <p className="text-xs text-white/70 mt-0.5">
+                  {mode === 'create' ? 'Name it, pick a function, add your people.' : 'Update team details and membership.'}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
+              <X size={18} />
+            </button>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1">
-            <X size={16} />
-          </button>
         </div>
 
         <div className="p-5 space-y-4">
