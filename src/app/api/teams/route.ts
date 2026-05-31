@@ -26,11 +26,10 @@ export async function GET(req: NextRequest) {
     if (error) return error;
     await connectDB();
 
-    // Admin sees all teams. Everyone else sees only teams they lead or belong to.
-    const isAdmin = user.role === 'admin';
-    const filter = isAdmin
-      ? {}
-      : { $or: [{ leadId: user.sub }, { memberIds: user.sub }] };
+    // Every role — admin included — sees only the teams they lead or belong to.
+    // Team membership is the access boundary: an admin who needs to see a team
+    // is added to it, rather than getting blanket visibility into every group.
+    const filter = { $or: [{ leadId: user.sub }, { memberIds: user.sub }] };
 
     const [teams, adminUsers, counts] = await Promise.all([
       Team.find(filter).sort({ name: 1 }).lean(),

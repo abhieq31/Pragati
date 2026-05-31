@@ -4,7 +4,7 @@ import { Team } from '@/models/Team';
 import { User } from '@/models/User';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
-import { requireUser, requireRole, isAdmin } from '@/lib/auth';
+import { requireUser, requireRole } from '@/lib/auth';
 import { guardTeamOwner } from '@/lib/teamAuth';
 import { logOperation } from '@/lib/audit';
 import { handleError, readBody } from '@/lib/http';
@@ -22,8 +22,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const t = await Team.findById(params.id).lean();
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Non-admins may only view a team they own (leadId) or belong to.
-    if (!isAdmin(user!.role)) {
+    // Membership is the access boundary for every role, admin included: you may
+    // only view a team you lead or belong to.
+    {
       const me = String(user!.sub);
       const isMember =
         String((t as any).leadId || '') === me ||
