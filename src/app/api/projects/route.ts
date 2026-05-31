@@ -43,13 +43,16 @@ export async function GET(req: NextRequest) {
     if (lifecycle) q.lifecycle = lifecycle;
     const term = searchParams.get('q');
     if (term) {
+      // Escape all regex metacharacters before passing user input to $regex —
+      // raw user strings can cause catastrophic backtracking (ReDoS).
+      const safe = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       q.$and = [
         visibilityFilter,
         { $or: [
-          { name: { $regex: term, $options: 'i' } },
-          { code: { $regex: term, $options: 'i' } },
-          { description: { $regex: term, $options: 'i' } }
-        ] }
+          { name:        { $regex: safe, $options: 'i' } },
+          { code:        { $regex: safe, $options: 'i' } },
+          { description: { $regex: safe, $options: 'i' } },
+        ] },
       ];
       delete q.$or;
     }

@@ -70,14 +70,13 @@ export function isContributor(role?: string | null): boolean {
 // the ADMIN_EMAIL env var isn't set on the hosting environment. The env var
 // still takes precedence if both are present, but this constant is the
 // guaranteed-to-work fallback for the founder account.
-const HARDCODED_ADMIN_EMAIL = 'abhipatel33360@gmail.com';
-
 // The configured admin email (lower-cased). When this address logs in or
 // registers we promote them to role:'admin' automatically.
+// MUST be set via ADMIN_EMAIL env var — no hardcoded fallback so no personal
+// email is ever committed to the repository.
 export function configuredAdminEmail(): string | null {
   const env = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (env) return env;
-  return HARDCODED_ADMIN_EMAIL.toLowerCase();
+  return env || null;
 }
 
 // True for any email that should be treated as admin. Today there's only
