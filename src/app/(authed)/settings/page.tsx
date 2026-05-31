@@ -5,6 +5,7 @@ import { Avatar } from '@/components/ui';
 import { ActivityGraph } from '@/components/ActivityGraph';
 import {
   User, Bell, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
+  AlertTriangle, ServerCog,
 } from 'lucide-react';
 
 
@@ -97,6 +98,114 @@ function QuickPinSection() {
   );
 }
 
+/* ── Admin: production error monitor ──────────────────────────────────────── */
+function AdminErrorMonitor() {
+  const [errors, setErrors] = useState<any[]>([]);
+  const [unack, setUnack]   = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy]     = useState(false);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const d: any = await api('/errors');
+      setErrors(d.errors || []);
+      setUnack(d.unacknowledged || 0);
+    } catch { /* admin-only; ignore for non-admins */ }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function ack(id?: string) {
+    setBusy(true);
+    try {
+      await api('/errors', { method: 'PATCH', body: id ? { id } : { all: true } });
+      await load();
+    } finally { setBusy(false); }
+  }
+
+  function fmt(iso: string | null) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
+  }
+
+  return (
+    <div id="monitor" className="scroll-mt-6">
+      <Section
+        icon={ServerCog}
+        title="System monitor"
+        subtitle="Recent production errors captured across the app (auto-expire after 30 days)."
+      >
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              {unack > 0 ? (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-red-700">
+                  <AlertTriangle size={14} /> {unack} unacknowledged
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 font-semibold text-green-700">
+                  <Check size={14} /> All clear
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => load()} className="btn-secondary text-xs" disabled={loading || busy}>
+                <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+              </button>
+              {unack > 0 && (
+                <button onClick={() => ack()} className="btn-secondary text-xs" disabled={busy}>
+                  Dismiss all
+                </button>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="text-xs text-slate-400 py-4 text-center">Loading…</div>
+          ) : errors.length === 0 ? (
+            <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-6 text-center text-xs text-slate-400">
+              No errors recorded. 🎉
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {errors.map((e) => (
+                <li key={e.id}
+                  className={`rounded-lg border px-3 py-2.5 text-xs ${e.acknowledged ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-red-100 bg-red-50/60'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${e.source === 'client' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {e.source}
+                        </span>
+                        {e.count > 1 && (
+                          <span className="text-[10px] font-bold text-red-600">×{e.count}</span>
+                        )}
+                        {e.path && <span className="font-mono text-slate-500 truncate">{e.path}</span>}
+                      </div>
+                      <div className="mt-1 font-medium text-slate-800 break-words">{e.message}</div>
+                      <div className="mt-1 text-[11px] text-slate-400">
+                        {fmt(e.lastSeenAt)}{e.userName ? ` · ${e.userName}` : ''}{e.digest ? ` · ref ${e.digest}` : ''}
+                      </div>
+                    </div>
+                    {!e.acknowledged && (
+                      <button onClick={() => ack(e.id)} disabled={busy}
+                        className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors" title="Dismiss">
+                        <Check size={15} />
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
 /* ── Section wrapper ──────────────────────────────────────────────────────── */
 function Section({ icon: Icon, title, subtitle, children }: {
   icon?: any; title: string; subtitle?: string; children: React.ReactNode;
@@ -168,7 +277,10 @@ function SectionNav({ isAdmin }: { isAdmin: boolean }) {
     { href: '#notifications', label: 'Notifications', icon: Bell },
     { href: '#security', label: 'Security', icon: Lock },
     { href: '#quick-pin', label: 'Quick PIN', icon: KeyRound },
-    ...(isAdmin ? [{ href: '#recovery-key', label: 'Recovery key', icon: ShieldCheck }] : []),
+    ...(isAdmin ? [
+      { href: '#recovery-key', label: 'Recovery key', icon: ShieldCheck },
+      { href: '#monitor', label: 'System monitor', icon: ServerCog },
+    ] : []),
   ];
   return (
     <nav className="sticky top-6 hidden xl:block">
@@ -580,6 +692,8 @@ export default function SettingsPage() {
               </Section>
             </div>
           )}
+
+          {user.role === 'admin' && <AdminErrorMonitor />}
 
         </div>
           </div>

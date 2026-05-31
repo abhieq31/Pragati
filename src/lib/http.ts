@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError, ZodSchema } from 'zod';
+import { captureError } from '@/lib/errorMonitor';
 
 export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json(data, init);
@@ -37,6 +38,14 @@ export function handleError(e: unknown) {
   }
   console.error('[handleError]', e);
   const raw = e instanceof Error ? e.message : 'Internal error';
+
+  // Capture for admin monitoring (best-effort, non-blocking, never throws).
+  void captureError({
+    source: 'server',
+    message: raw,
+    stack: e instanceof Error ? e.stack : undefined,
+    statusCode: 500,
+  });
 
   const userMsg = isInfraError(raw)
     ? 'The service is temporarily unavailable. Please try again in a moment or contact your administrator.'
