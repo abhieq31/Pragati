@@ -362,17 +362,28 @@ export default function LoginPage() {
         </div>
 
         {/* ════ RIGHT — Form panel ═══════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col justify-center items-center bg-white px-6 py-12 relative">
+        <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 relative
+          bg-white lg:bg-white">
+          {/* Mobile shimmer background — only visible on small screens where the
+              left brand panel is hidden */}
+          <div className="absolute inset-0 lg:hidden profile-hero-shimmer opacity-90" />
           <div className="absolute top-0 left-0 right-0 h-[3px]"
             style={{ background: 'linear-gradient(90deg, #1565C0 0%, #1769C8 50%, #2B8C29 100%)' }} />
 
-          <div className="w-full max-w-[340px] fade-up">
+          <div className="w-full max-w-[340px] fade-up relative">
 
-            {/* Mobile branding — same Pragati mark, no image */}
+            {/* Mobile branding — floating card over the shimmer */}
             <div className="flex flex-col items-center mb-8 lg:hidden">
-              <PragatiMark size={56} />
-              <div className="text-2xl font-black text-slate-900 mt-3 tracking-tight">Pragati</div>
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-1"
+                style={{ boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}>
+                <PragatiMark size={44} />
+              </div>
+              <div className="text-3xl font-black text-white mt-3 tracking-tight drop-shadow">Pragati</div>
+              <div className="text-sm text-white/70 mt-1">Quality Informatics Platform</div>
             </div>
+
+            {/* White card on mobile to contrast the shimmer; transparent on desktop */}
+            <div className="rounded-2xl bg-white p-6 shadow-2xl lg:p-0 lg:rounded-none lg:bg-transparent lg:shadow-none">
 
             {/* First-run banner */}
             {isFirstRun && mode === 'login' && (
@@ -613,6 +624,8 @@ export default function LoginPage() {
               )}
             </p>
             )}
+
+            </div>{/* end white card */}
           </div>
         </div>
 

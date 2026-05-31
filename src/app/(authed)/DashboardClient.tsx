@@ -784,7 +784,8 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
   } else if (filter === 'nextWeek') {
     windowEnd = new Date(startOfToday); windowEnd.setDate(windowEnd.getDate() + 14);
   } else if (filter === 'month') {
-    windowEnd = new Date(startOfToday); windowEnd.setDate(windowEnd.getDate() + 30);
+    // End of the current calendar month, not a rolling 30-day window
+    windowEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
   } else if (filter === 'untilDate' && untilDate) {
     windowEnd = new Date(untilDate + 'T23:59:59');
   }

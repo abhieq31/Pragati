@@ -2,10 +2,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus } from 'lucide-react';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
 interface Phase { id: string; name: string; tasks: string[] }
+
+interface CustomTemplate {
+  id: string;
+  name: string;
+  description: string;
+  createdBy: string;
+  createdByName: string;
+  phases: Array<{ name: string; tasks: Array<{ title: string; type?: string }> }>;
+  createdAt: string;
+}
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -34,8 +44,6 @@ const LIFECYCLE_GROUPS = [
       { value: 'sop',               label: 'SOP Development',       hint: 'Author → review → train → release' },
       { value: 'audit',             label: 'Audit',                 hint: 'Internal or external GxP audit' },
       { value: 'validation',        label: 'Validation',            hint: 'Process / method validation' },
-      { value: 'data_integrity',    label: 'Data Integrity',        hint: 'ALCOA+ assessment' },
-      { value: 'pharmacovigilance', label: 'Safety Reporting (PV)', hint: 'ICSR / safety case' },
     ]
   },
   {
@@ -55,8 +63,96 @@ function phasesFromTemplate(template: any): Phase[] {
   return template.phases.map((ph: any) => ({
     id: uid(),
     name: ph.name,
-    tasks: ph.tasks.map((t: any) => t.title),
+    tasks: ph.tasks.map((t: any) => (typeof t === 'string' ? t : t.title)),
   }));
+}
+
+function phasesFromCustomTemplate(template: CustomTemplate): Phase[] {
+  return template.phases.map(ph => ({
+    id: uid(),
+    name: ph.name,
+    tasks: ph.tasks.map(t => t.title),
+  }));
+}
+
+/* ── Save-as-template dialog ──────────────────────────────────────────────── */
+function SaveTemplateDialog({
+  phases,
+  onClose,
+  onSaved,
+}: {
+  phases: Phase[];
+  onClose: () => void;
+  onSaved: (t: CustomTemplate) => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function save() {
+    if (!name.trim()) { setErr('Template name is required.'); return; }
+    setSaving(true);
+    setErr('');
+    try {
+      const payload = {
+        name: name.trim(),
+        description: description.trim() || undefined,
+        phases: phases.map(ph => ({
+          name: ph.name,
+          tasks: ph.tasks.map(t => ({ title: t })),
+        })),
+      };
+      const saved = await api<CustomTemplate>('/workflow-templates', { method: 'POST', body: payload });
+      onSaved(saved);
+    } catch (e: any) {
+      setErr(e.message || 'Failed to save template.');
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-800">Save as template</h2>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <p className="text-xs text-slate-500">
+          Save the current {phases.length} stage{phases.length === 1 ? '' : 's'} as a reusable workspace template. Everyone on the team can use it.
+        </p>
+        <div>
+          <label className="label">Template name *</label>
+          <input
+            className="input"
+            placeholder="e.g. Standard CSV Validation"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="label">Description <span className="normal-case font-normal text-slate-300">(optional)</span></label>
+          <textarea
+            className="textarea"
+            rows={2}
+            placeholder="What is this template for?"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+          />
+        </div>
+        {err && <p className="text-xs text-red-600">{err}</p>}
+        <div className="flex items-center gap-3 pt-1">
+          <button onClick={save} disabled={saving} className="btn-primary">
+            {saving ? 'Saving…' : 'Save template'}
+          </button>
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ── Phase editor row ─────────────────────────────────────────────────────── */
@@ -173,12 +269,23 @@ export default function NewProjectPage() {
   const [err, setErr]           = useState('');
   const [step, setStep]         = useState<1 | 2>(1);
 
+  // Custom templates state
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
+  const [customTemplateId, setCustomTemplateId] = useState<string | null>(null);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  // Current user id (populated from /auth/me once)
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+
   useEffect(() => {
     api<any[]>('/teams').then(setTeams);
+    api<any>('/auth/me').then(me => { if (me?.user?.id) setCurrentUserId(me.user.id); }).catch(() => {});
+    api<CustomTemplate[]>('/workflow-templates').then(setCustomTemplates).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!form.lifecycle) return;
+    // When a built-in lifecycle is picked, clear any selected custom template
+    setCustomTemplateId(null);
     api<any>(`/lifecycles?key=${form.lifecycle}`).then(t => {
       setTemplateInfo(t);
       setPhases(phasesFromTemplate(t));
@@ -187,6 +294,27 @@ export default function NewProjectPage() {
 
   function up<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm(f => ({ ...f, [k]: v }));
+  }
+
+  function selectCustomTemplate(t: CustomTemplate) {
+    setCustomTemplateId(t.id);
+    // Clear the built-in lifecycle selection (use generic as the stored value)
+    setForm(f => ({ ...f, lifecycle: 'generic' }));
+    setTemplateInfo(null);
+    setPhases(phasesFromCustomTemplate(t));
+  }
+
+  async function deleteCustomTemplate(id: string) {
+    try {
+      await api(`/workflow-templates/${id}`, { method: 'DELETE' });
+      setCustomTemplates(ts => ts.filter(t => t.id !== id));
+      if (customTemplateId === id) {
+        setCustomTemplateId(null);
+        setPhases([]);
+      }
+    } catch (e: any) {
+      alert(e.message || 'Failed to delete template.');
+    }
   }
 
   function addPhase() {
@@ -238,10 +366,31 @@ export default function NewProjectPage() {
     }
   }
 
-  const lifecycleLabel = LIFECYCLE_GROUPS.flatMap(g => g.options).find(o => o.value === form.lifecycle)?.label ?? form.lifecycle;
+  // The label shown in step 2 header
+  const selectedCustomTemplate = customTemplateId
+    ? customTemplates.find(t => t.id === customTemplateId)
+    : null;
+  const lifecycleLabel = selectedCustomTemplate
+    ? selectedCustomTemplate.name
+    : (LIFECYCLE_GROUPS.flatMap(g => g.options).find(o => o.value === form.lifecycle)?.label ?? form.lifecycle);
+
+  // Whether the current lifecycle selection is a non-generic built-in
+  const hasBuiltInLifecycle = form.lifecycle !== 'generic' && !customTemplateId;
 
   return (
     <div className="max-w-3xl pb-20">
+      {/* Save-as-template dialog */}
+      {showSaveDialog && (
+        <SaveTemplateDialog
+          phases={phases}
+          onClose={() => setShowSaveDialog(false)}
+          onSaved={saved => {
+            setCustomTemplates(ts => [saved, ...ts]);
+            setShowSaveDialog(false);
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 pt-1">
         <div>
@@ -346,8 +495,21 @@ export default function NewProjectPage() {
 
           {/* Lifecycle template picker */}
           <div className="card p-5">
-            <label className="label">Workflow template</label>
-            <p className="text-xs text-slate-400 mb-3 -mt-1">
+            <div className="flex items-center justify-between mb-1">
+              <label className="label mb-0">Workflow template</label>
+              {/* Save-as-template button — shown when a non-generic lifecycle is selected */}
+              {(hasBuiltInLifecycle || customTemplateId) && phases.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSaveDialog(true)}
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <BookmarkPlus size={13} />
+                  Save as template
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mb-3 mt-0.5">
               {personal
                 ? 'Pick a ready-made template to jump-start your personal project — or start blank.'
                 : 'Pick a template to get predefined stages and tasks — you can edit everything in the next step.'}
@@ -364,7 +526,7 @@ export default function NewProjectPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
                     {group.options.map(opt => {
-                      const active = form.lifecycle === opt.value;
+                      const active = !customTemplateId && form.lifecycle === opt.value;
                       return (
                         <button key={opt.value} type="button"
                           onClick={() => up('lifecycle', opt.value)}
@@ -387,10 +549,55 @@ export default function NewProjectPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Custom templates group */}
+              {customTemplates.length > 0 && (
+                <div>
+                  <div className="flex items-baseline gap-2 mb-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Custom</div>
+                    <div className="text-[10px] text-slate-300">Saved by your workspace</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                    {customTemplates.map(ct => {
+                      const active = customTemplateId === ct.id;
+                      const isOwner = currentUserId && ct.createdBy === currentUserId;
+                      return (
+                        <div key={ct.id} className="relative group">
+                          <button
+                            type="button"
+                            onClick={() => selectCustomTemplate(ct)}
+                            className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all border"
+                            style={{
+                              background:  active ? '#EFF6FF' : '#fff',
+                              borderColor: active ? '#1565C0' : '#E2E8F0',
+                              color:       active ? '#1565C0' : '#334155',
+                            }}>
+                            <div className="flex items-center gap-1.5 pr-5">
+                              <span className={active ? 'font-bold' : 'font-semibold'}>{ct.name}</span>
+                            </div>
+                            <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80' : 'text-slate-400'}`}>
+                              {ct.phases.length} stage{ct.phases.length === 1 ? '' : 's'} · by {ct.createdByName || 'Unknown'}
+                            </div>
+                          </button>
+                          {isOwner && (
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); deleteCustomTemplate(ct.id); }}
+                              className="absolute top-1.5 right-1.5 p-0.5 rounded text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Delete template">
+                              <Trash2 size={11} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Preview of what the picked template ships with */}
-            {templateInfo && templateInfo.phases?.length > 0 && (
+            {/* Preview of what the picked built-in template ships with */}
+            {!customTemplateId && templateInfo && templateInfo.phases?.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <div className="flex items-baseline justify-between mb-2">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -416,6 +623,34 @@ export default function NewProjectPage() {
                     Regulatory refs: <span className="font-semibold text-slate-500">{templateInfo.regulatoryRefs}</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Preview for selected custom template */}
+            {customTemplateId && selectedCustomTemplate && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-baseline justify-between mb-2">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    What you get
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {selectedCustomTemplate.phases.length} stage{selectedCustomTemplate.phases.length === 1 ? '' : 's'} · {' '}
+                    {selectedCustomTemplate.phases.reduce((n, ph) => n + ph.tasks.length, 0)} tasks
+                  </div>
+                </div>
+                {selectedCustomTemplate.description && (
+                  <p className="text-[11px] text-slate-500 mb-2">{selectedCustomTemplate.description}</p>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedCustomTemplate.phases.map((ph, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-50 border border-slate-100 text-slate-600">
+                      <span className="text-slate-400 font-bold">{i + 1}</span>
+                      {ph.name}
+                      <span className="text-slate-300">·</span>
+                      <span className="text-slate-400">{ph.tasks.length}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -445,15 +680,36 @@ export default function NewProjectPage() {
                   Rename, reorder, add or remove stages and tasks freely.
                 </p>
               </div>
-              <button onClick={() => { setPhases(phasesFromTemplate(templateInfo)); }}
-                className="text-xs text-blue-600 font-semibold hover:underline shrink-0">
-                Reset to template
-              </button>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveDialog(true)}
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <BookmarkPlus size={13} />
+                  Save as template
+                </button>
+                <button onClick={() => {
+                  if (selectedCustomTemplate) {
+                    setPhases(phasesFromCustomTemplate(selectedCustomTemplate));
+                  } else {
+                    setPhases(phasesFromTemplate(templateInfo));
+                  }
+                }}
+                  className="text-xs text-blue-600 font-semibold hover:underline">
+                  Reset to template
+                </button>
+              </div>
             </div>
 
-            {templateInfo?.description && (
+            {!customTemplateId && templateInfo?.description && (
               <div className="mt-3 mb-4 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
                 {templateInfo.description}
+              </div>
+            )}
+            {customTemplateId && selectedCustomTemplate?.description && (
+              <div className="mt-3 mb-4 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
+                {selectedCustomTemplate.description}
               </div>
             )}
 

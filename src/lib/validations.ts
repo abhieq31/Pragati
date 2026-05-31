@@ -33,8 +33,6 @@ export const ProjectLifecycleEnum = z.enum([
   'software_change',
   'audit',
   'validation',
-  'data_integrity',
-  'pharmacovigilance',
   'generic',
   'agile_sprint',
   'software_release',
