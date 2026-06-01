@@ -4,6 +4,8 @@
  * blocks audio (e.g. user hasn't interacted yet).
  */
 
+import { hapticTap, hapticSuccess, hapticCelebrate } from './haptics';
+
 let ctx: AudioContext | null = null;
 
 function getCtx(): AudioContext | null {
@@ -59,6 +61,43 @@ export function setSoundEnabled(on: boolean) {
 /** Plays the chime only when the user hasn't muted sounds. */
 export function chimeIfEnabled() {
   if (soundEnabled()) playSuccessChime();
+  // Pair a subtle haptic with the success cue — coupled here so every existing
+  // chime call site gets tactile feedback for free.
+  hapticSuccess();
+}
+
+/**
+ * Milestone fanfare — a brief ascending major arpeggio (C–E–G–C) for the big
+ * moments: a completed phase or a finished project. Distinct from the everyday
+ * two-tone chime so a milestone *feels* like one. Pairs with a richer haptic.
+ */
+export function playFanfare() {
+  hapticCelebrate();
+  if (!soundEnabled()) return;
+  const c = getCtx();
+  if (!c) return;
+  try {
+    if (c.state === 'suspended') c.resume();
+    const now = c.currentTime;
+    const notes = [
+      { freq: 523.25, start: 0.00, dur: 0.16 }, // C5
+      { freq: 659.25, start: 0.10, dur: 0.16 }, // E5
+      { freq: 783.99, start: 0.20, dur: 0.18 }, // G5
+      { freq: 1046.5, start: 0.32, dur: 0.34 }, // C6
+    ];
+    for (const n of notes) {
+      const osc  = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = n.freq;
+      gain.gain.setValueAtTime(0, now + n.start);
+      gain.gain.linearRampToValueAtTime(0.09, now + n.start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + n.start + n.dur);
+      osc.connect(gain).connect(c.destination);
+      osc.start(now + n.start);
+      osc.stop(now + n.start + n.dur + 0.02);
+    }
+  } catch { /* ignore */ }
 }
 
 /**
@@ -68,7 +107,9 @@ export function chimeIfEnabled() {
  * `soundDropEnabled` preference passed in by the caller.
  */
 export function playDropTick(enabled = true) {
-  if (!enabled || !soundEnabled()) return;
+  if (!enabled) return;
+  hapticTap();
+  if (!soundEnabled()) return;
   const c = getCtx();
   if (!c) return;
   try {
