@@ -20,6 +20,9 @@ const Body = z.object({
   title:      z.string().max(120).optional(),
   name:       z.string().max(120).optional(),
   department: z.string().max(120).optional(),
+  // Soft organisational grouping (business unit, plant, sub-company). Used by
+  // people-pickers to group/filter at scale; not a tenant boundary.
+  organisation: z.string().max(120).optional(),
   phone:      z.string().max(40).optional(),
   location:   z.string().max(120).optional(),
   // Admin operations lock — true suspends the account (blocks sign-in),

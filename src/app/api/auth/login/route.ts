@@ -166,6 +166,10 @@ export async function POST(req: NextRequest) {
     // out — one active session per user (concurrent-login restriction).
     const sid = newSessionId();
     user.activeSessionId = sid;
+    // Bump the login counter — used to defer the Quick-PIN prompt until
+    // the second login so first-time users aren't overwhelmed (password
+    // change + tour are enough on day one).
+    user.loginCount = ((user as any).loginCount || 0) + 1;
     await user.save();
 
     // Every provisioned account can sign in: leads + admin get full

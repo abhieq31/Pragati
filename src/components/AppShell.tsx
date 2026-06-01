@@ -22,6 +22,12 @@ const SetPinModal = dynamic(
   () => import('./SetPinModal').then(m => m.SetPinModal),
   { ssr: false, loading: () => null },
 );
+// Spotlight onboarding tour — mounted at the shell level so contributors,
+// leads, and admins all get it on whichever page they land on.
+const FirstTimeTour = dynamic(
+  () => import('./FirstTimeTour').then(m => m.FirstTimeTour),
+  { ssr: false, loading: () => null },
+);
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
@@ -36,6 +42,14 @@ export interface CurrentUser {
   title?: string;
   mustChangePassword?: boolean;
   hasPin?: boolean;
+  /** Number of successful full logins. Used to defer the Quick-PIN modal
+   *  until the second visit so first-time users aren't piled on. */
+  loginCount?: number;
+  /** ISO date when the user dismissed the Quick-PIN prompt; suppresses
+   *  the modal until they re-engage from Settings. */
+  pinPromptDismissedAt?: string | null;
+  /** Whether the user has already completed the onboarding tour. */
+  hasSeenTour?: boolean;
   /** Server-persisted monogram avatar (Google-style). */
   avatarLetter?: string;
   avatarBg?: string;
@@ -70,7 +84,16 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
   const [idleWarning, setIdleWarning] = useState(false);
   const [dark, toggleDark]            = useDarkMode(initialDark);
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
-  const [needsPin, setNeedsPin] = useState(!user.hasPin);
+  // Show the PIN modal only when ALL of these hold:
+  //  • the user doesn't already have a PIN
+  //  • they've completed at least 2 full logins (first visit is busy with
+  //    password change + onboarding tour)
+  //  • they haven't dismissed the prompt this session with "Maybe later"
+  const shouldOfferPin =
+    !user.hasPin &&
+    (user.loginCount ?? 0) >= 2 &&
+    !user.pinPromptDismissedAt;
+  const [needsPin, setNeedsPin] = useState(shouldOfferPin);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const lastActivityRef = useRef(Date.now());
   const accountMenuRef = useRef<HTMLDivElement>(null);
@@ -291,6 +314,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
             const active = isActive(n.href);
             return (
               <Link key={n.href} href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+                data-tour={`nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`}
                 className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                   active
                     ? 'text-brand-700 dark:text-[#faf9f5]'
@@ -326,6 +350,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
             const active = isActive(n.href);
             return (
               <Link href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+                data-tour="nav-my-day"
                 className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                   active
                     ? 'text-brand-700 dark:text-[#faf9f5]'
@@ -365,6 +390,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
           {/* No standalone sign-out here when collapsed — it lives inside the
               account menu (tap the avatar), keeping the rail uncluttered. */}
           <button type="button" title="Account menu" aria-label="Account menu"
+            data-tour="account-menu"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
@@ -381,6 +407,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
         <div className={`flex items-center gap-2 rounded-lg px-1.5 py-1.5 ${dark ? '' : ''}`}>
           {/* Avatar + name -> account menu */}
           <button type="button" title="Account menu" aria-label="Account menu"
+            data-tour="account-menu"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
             className="relative shrink-0 rounded-full focus:outline-none">
@@ -525,10 +552,27 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
         <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
       )}
 
-      {/* Mandatory Quick-PIN setup — only once the password step (if any) is
-          cleared, so the two blocking modals never stack. */}
+      {/* Spotlight onboarding tour — runs once per user (server-tracked via
+          hasSeenTour). Mounted here so every role sees it regardless of
+          which page they land on after login, and so it doesn't clash with
+          the password / PIN gates above (it's lazy and exits cleanly when
+          alreadySeen). */}
+      {!mustChangePw && !needsPin && (
+        <FirstTimeTour alreadySeen={user.hasSeenTour !== false} />
+      )}
+
+      {/* Quick-PIN prompt — only after the password step (if any) is cleared,
+          and from the user's second login onward (see shouldOfferPin above).
+          Dismissable: "Maybe later" records pinPromptDismissedAt so we stop
+          blocking and re-offer gently next session. */}
       {!mustChangePw && needsPin && (
-        <SetPinModal onDone={() => { setNeedsPin(false); router.refresh(); }} />
+        <SetPinModal
+          onDone={() => { setNeedsPin(false); router.refresh(); }}
+          onDismiss={async () => {
+            setNeedsPin(false);
+            try { await api('/me/pin-prompt-dismissed', { method: 'POST' }); } catch { /* best-effort */ }
+          }}
+        />
       )}
 
       {/* Sign-out confirmation — fixed centered modal, works in both expanded and collapsed sidebar */}

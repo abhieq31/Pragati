@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   formatDate, daysUntil, ProgressBar,
@@ -16,12 +15,6 @@ import {
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
   Maximize2, X, GripVertical,
 } from 'lucide-react';
-
-// Lazy-loaded — only ships when the user actually sees the tour.
-const FirstTimeTour = dynamic(
-  () => import('@/components/FirstTimeTour').then(m => m.FirstTimeTour),
-  { ssr: false, loading: () => null },
-);
 
 /* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
 interface TeamTask {
@@ -117,8 +110,8 @@ type ActionFilter = 'week' | 'nextWeek' | 'month' | 'untilDate';
 
 /* ── Main page ────────────────────────────────────────────────────────────── */
 export default function DashboardClient({
-  initialData, hasSeenTour,
-}: { initialData: DashResp; hasSeenTour: boolean }) {
+  initialData,
+}: { initialData: DashResp }) {
   const dash = initialData;
   const isLead = useIsLead();
 
@@ -236,8 +229,8 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* First-time tour for new leads */}
-      <FirstTimeTour alreadySeen={hasSeenTour} />
+      {/* Onboarding tour is mounted centrally in AppShell so every role
+          sees it on whichever page they land on. */}
     </div>
   );
 }

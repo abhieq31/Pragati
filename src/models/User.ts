@@ -24,6 +24,13 @@ const UserSchema = new Schema(
     phone:        { type: String, default: '' },
     location:     { type: String, default: '' },   // office / site
     managerName:  { type: String, default: '' },   // display name of manager from AD
+    // Soft organisational grouping — used by directory pickers to group and
+    // filter people (e.g. by business unit, plant, or company within the
+    // group). Free-text so admins can drop people into any grouping they
+    // already use in HRIS / AD without us prescribing a taxonomy. NOT a
+    // tenant boundary — every user remains visible across the workspace;
+    // this is purely a presentation/filter dimension for scaling pickers.
+    organisation: { type: String, default: '' },
 
     // ── LDAP sync metadata ──────────────────────────────────────────────
     // Populated by the future LDAP sync job.
@@ -103,6 +110,18 @@ const UserSchema = new Schema(
     // login after this change. The register + invite paths explicitly
     // set this to false so a fresh lead sees the tour exactly once.
     hasSeenTour: { type: Boolean, default: true },
+
+    // ── Login history (for deferring blocking onboarding prompts) ───────
+    // loginCount lets us defer the Quick-PIN setup modal until the user's
+    // SECOND login — first time around they get the password-change flow
+    // and the tour; PIN is offered the next time they sign in, when the
+    // workflow is already familiar. Counts successful full logins only
+    // (PIN unlocks don't increment, by design).
+    loginCount:  { type: Number, default: 0 },
+    // pinPromptDismissedAt: the user dismissed the Set-PIN prompt and we
+    // should not block them with it again for some time. We re-offer it
+    // gently from a settings nudge instead.
+    pinPromptDismissedAt: { type: Date, default: null },
 
     // ── Notification preferences ────────────────────────────────────────
     notifTaskAssigned:  { type: Boolean, default: true  },

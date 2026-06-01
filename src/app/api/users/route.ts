@@ -18,15 +18,17 @@ export async function GET(req: NextRequest) {
     if (error) return error;
     await connectDB();
 
+    const sp = req.nextUrl.searchParams;
+
     // Optional ?teamId=... narrows the listing to members + lead of that
     // single team. Used by the project task-assignee dropdown so leads
     // only see people who actually belong to the project's team.
-    const teamId = req.nextUrl.searchParams.get('teamId');
+    const teamId = sp.get('teamId');
     // Deactivated accounts are excluded everywhere by default — they must
     // not appear in assignee pickers or team rosters. Only an admin can ask
     // for them (the People page does, to show the deactivated record).
     const includeInactive =
-      req.nextUrl.searchParams.get('includeInactive') === '1' &&
+      sp.get('includeInactive') === '1' &&
       String(user.role) === 'admin';
     let filter: any = includeInactive ? {} : { active: { $ne: false } };
     if (teamId) {
@@ -39,8 +41,85 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const list = await User.find(filter).sort({ name: 1 }).lean();
-    return NextResponse.json(list.map(u));
+    // ── Directory features (additive — keep the legacy unparam'd shape) ───
+    // Free-text typeahead across the fields a picker actually shows. Anchored
+    // with ^ on `username` so a 1-char "a" doesn't hit every user containing
+    // an 'a'; for `name` / employeeId we allow substring matches (Mongoose
+    // escapes the regex via the explicit RegExp constructor).
+    const q = (sp.get('q') || sp.get('search') || '').trim();
+    if (q) {
+      const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(safe, 'i');
+      filter = { ...filter, $or: [
+        { name:         rx },
+        { username:     rx },
+        { email:        rx },
+        { employeeId:   rx },
+        { title:        rx },
+        { department:   rx },
+        { organisation: rx },
+        { location:     rx },
+      ] };
+    }
+    // Hard facet filters — let a picker say "show me only people in
+    // Operations / Pune / role=lead", etc. Empty value = no filter.
+    const role = sp.get('role');
+    if (role) filter = { ...filter, role };
+    const department   = sp.get('department');
+    if (department)   filter = { ...filter, department };
+    const organisation = sp.get('organisation');
+    if (organisation) filter = { ...filter, organisation };
+    const location     = sp.get('location');
+    if (location)     filter = { ...filter, location };
+
+    // Pagination — opt-in via ?limit. Without it we return the full list to
+    // keep every existing caller (server-rendered teams page, etc.) working
+    // unchanged. With ?limit, the response wraps results in a `{ items,
+    // total, limit, offset, facets? }` envelope.
+    const limitRaw  = sp.get('limit');
+    const wantsPage = limitRaw !== null;
+    const limit  = wantsPage ? Math.max(1, Math.min(200, parseInt(limitRaw!, 10) || 50)) : 0;
+    const offset = wantsPage ? Math.max(0, parseInt(sp.get('offset') || '0', 10) || 0) : 0;
+    const wantsFacets = sp.get('facets') === '1';
+
+    if (!wantsPage) {
+      const list = await User.find(filter).sort({ name: 1 }).lean();
+      return NextResponse.json(list.map(u));
+    }
+
+    const [items, total, facets] = await Promise.all([
+      User.find(filter).sort({ name: 1 }).skip(offset).limit(limit).lean(),
+      User.countDocuments(filter),
+      // Distinct values for the picker's group-by/filter rail. Scoped to the
+      // current filter (minus the field itself) so counts adapt as the user
+      // refines. Cheap on small workspaces; if it ever becomes a hot path we
+      // can replace with an aggregation $facet pipeline.
+      wantsFacets ? (async () => {
+        const base = { ...filter };
+        delete base.organisation;
+        delete base.department;
+        delete base.location;
+        delete base.role;
+        const [orgs, depts, locs, roles] = await Promise.all([
+          User.distinct('organisation', base),
+          User.distinct('department',   base),
+          User.distinct('location',     base),
+          User.distinct('role',         base),
+        ]);
+        return {
+          organisation: orgs.filter(Boolean).sort(),
+          department:   depts.filter(Boolean).sort(),
+          location:     locs.filter(Boolean).sort(),
+          role:         roles.filter(Boolean).sort(),
+        };
+      })() : null,
+    ]);
+
+    return NextResponse.json({
+      items: items.map(u),
+      total, limit, offset,
+      ...(facets ? { facets } : {}),
+    });
   } catch (e) {
     return handleError(e);
   }

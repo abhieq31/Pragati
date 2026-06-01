@@ -41,6 +41,13 @@ export function u(user: any) {
     name: user.name,
     role: user.role === 'pm' ? 'lead' : user.role === 'employee' ? 'contributor' : user.role,
     employeeId: user.employeeId || '',
+    // Directory facets — surfaced so people-pickers can group/filter by them
+    // as the workspace grows. Empty strings mean "ungrouped" and the picker
+    // bundles them under a fall-back heading.
+    title:        user.title        || '',
+    department:   user.department   || '',
+    organisation: user.organisation || '',
+    location:     user.location     || '',
     // Lock state — surfaced on the People page so admin/lead can see
     // who can't sign in and click Unlock. Not credential data.
     lockedAt: date(user.lockedAt),

@@ -3,10 +3,13 @@ import { useState } from 'react';
 import { api } from '@/lib/client/api';
 import { KeyRound, ShieldCheck } from 'lucide-react';
 
-// Blocking, first-login Quick-PIN setup. Mandatory: it has no dismiss control,
-// so a user cannot reach the app without choosing a PIN. The PIN never replaces
-// the password — it only re-unlocks an idle session on this trusted device.
-export function SetPinModal({ onDone }: { onDone: () => void }) {
+// Quick-PIN setup prompt. Shown from the user's SECOND login onward so the
+// first session can focus on the password change + tour without piling on a
+// third blocking modal. The user can dismiss with "Maybe later" — they'll be
+// re-offered the next time they sign in, and can always set it up from
+// Settings. The PIN never replaces the password — it only re-unlocks an idle
+// session on this trusted device.
+export function SetPinModal({ onDone, onDismiss }: { onDone: () => void; onDismiss?: () => void }) {
   const [pin, setPin] = useState('');
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
@@ -68,6 +71,13 @@ export function SetPinModal({ onDone }: { onDone: () => void }) {
             className="btn-primary w-full justify-center py-2.5">
             {saving ? 'Saving…' : 'Set PIN & continue'}
           </button>
+
+          {onDismiss && (
+            <button onClick={onDismiss} disabled={saving}
+              className="w-full text-xs font-semibold text-slate-500 hover:text-slate-700 transition py-1.5">
+              Maybe later — I’ll set this up from Settings
+            </button>
+          )}
 
           <p className="text-[11px] text-slate-400 leading-snug flex items-start gap-1.5 pt-1">
             <ShieldCheck size={13} className="text-slate-300 shrink-0 mt-0.5" />

@@ -29,6 +29,13 @@ export interface JwtPayload {
   // Populated by validateSession from the DB so the UI can enforce the
   // mandatory-PIN-setup gate without a second round-trip.
   hasPin?: boolean;
+  // Runtime-only: how many full logins this account has completed. Used to
+  // defer the Quick-PIN modal until the second login — the first time around
+  // the user is busy with the password-change + onboarding tour.
+  loginCount?: number;
+  // Runtime-only: ISO of when the user dismissed the Quick-PIN prompt, if
+  // they chose to set it up later. When present, suppress the modal.
+  pinPromptDismissedAt?: string | null;
 }
 
 /** A fresh, unguessable session identifier for one login. */
@@ -210,7 +217,7 @@ export async function validateSession(payload: JwtPayload): Promise<JwtPayload |
   await connectDB();
   const user = await User.findById(
     payload.sub,
-    'role mustChangePassword sessionVersion activeSessionId name title email pinHash active',
+    'role mustChangePassword sessionVersion activeSessionId name title email pinHash active loginCount pinPromptDismissedAt',
   ).lean();
   if (!user) return null;
 
@@ -230,6 +237,8 @@ export async function validateSession(payload: JwtPayload): Promise<JwtPayload |
     email: u.email ?? payload.email,
     mustChangePassword: !!u.mustChangePassword,
     hasPin: !!u.pinHash,
+    loginCount: typeof u.loginCount === 'number' ? u.loginCount : 0,
+    pinPromptDismissedAt: u.pinPromptDismissedAt ? new Date(u.pinPromptDismissedAt).toISOString() : null,
   };
 }
 

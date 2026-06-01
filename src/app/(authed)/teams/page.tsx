@@ -38,7 +38,10 @@ export default async function TeamsPage() {
     id: String(u._id),
     name: u.name,
     role: u.role === 'pm' ? 'lead' : u.role === 'employee' ? 'contributor' : u.role,
-    title: u.title || undefined,
+    title:        u.title        || undefined,
+    department:   u.department   || '',
+    organisation: u.organisation || '',
+    location:     u.location     || '',
   }));
 
   return (

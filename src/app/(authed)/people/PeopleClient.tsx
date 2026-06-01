@@ -391,7 +391,11 @@ function EditUserModal({ user, onClose, onSaved }: {
   user: any; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name: user.name || '',
+    name:         user.name         || '',
+    title:        user.title        || '',
+    department:   user.department   || '',
+    organisation: user.organisation || '',
+    location:     user.location     || '',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
@@ -424,6 +428,35 @@ function EditUserModal({ user, onClose, onSaved }: {
             <input className="input" required value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })} />
           </div>
+          <div>
+            <label className="label">Job title</label>
+            <input className="input" placeholder="e.g. QA Validation Engineer"
+              value={form.title}
+              onChange={e => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label">Organisation</label>
+              <input className="input" placeholder="e.g. Pharma Division"
+                value={form.organisation}
+                onChange={e => setForm({ ...form, organisation: e.target.value })} />
+            </div>
+            <div>
+              <label className="label">Department</label>
+              <input className="input" placeholder="e.g. Quality Assurance"
+                value={form.department}
+                onChange={e => setForm({ ...form, department: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="label">Location / site</label>
+            <input className="input" placeholder="e.g. Pune Plant 2"
+              value={form.location}
+              onChange={e => setForm({ ...form, location: e.target.value })} />
+          </div>
+          <p className="text-[11px] text-slate-400 leading-snug -mt-1">
+            Organisation, department, and site are used to group and filter people across pickers. Helpful as your workspace grows.
+          </p>
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">{err}</div>}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>

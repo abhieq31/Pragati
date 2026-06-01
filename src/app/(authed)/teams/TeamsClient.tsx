@@ -22,6 +22,11 @@ interface UserItem {
   name: string;
   role: string;
   title?: string;
+  // Directory facets — used to group + filter the member picker so the team
+  // lead can find people inside a large workspace without endless scrolling.
+  department?:   string;
+  organisation?: string;
+  location?:     string;
 }
 
 const FUNCTION_LABEL: Record<string, string> = {
@@ -279,15 +284,57 @@ function TeamFormModal({
   const [leadId, setLeadId]           = useState(team?.leadId || '');
   const [memberIds, setMemberIds]     = useState<string[]>(team?.memberIds || []);
   const [memberQuery, setMemberQuery] = useState('');
+  // Optional org/department filter chips so a lead can narrow a large
+  // workspace before scrolling. '' means "all".
+  const [groupFilter, setGroupFilter] = useState<string>('');
+  // Which dimension we group by — organisation if any user has one, else
+  // department, else flat. Auto-detected once on mount; admins can flip.
+  const groupBy: 'organisation' | 'department' | null = useMemo(() => {
+    if (users.some(u => u.organisation)) return 'organisation';
+    if (users.some(u => u.department))   return 'department';
+    return null;
+  }, [users]);
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
 
-  const filteredUsers = users.filter((u) => {
+  const candidateUsers = users.filter((u) => {
     if (u.role === 'admin') return false;
+    if (groupFilter && groupBy && ((u as any)[groupBy] || '') !== groupFilter) return false;
     if (!memberQuery.trim()) return true;
     const q = memberQuery.toLowerCase();
-    return u.name.toLowerCase().includes(q);
+    return (
+      u.name.toLowerCase().includes(q) ||
+      (u.title || '').toLowerCase().includes(q) ||
+      (u.department || '').toLowerCase().includes(q) ||
+      (u.organisation || '').toLowerCase().includes(q)
+    );
   });
+
+  // Group available people by the chosen dimension for scannable headers.
+  // Falls back to a single "All people" bucket if nothing's set yet.
+  const groups: Array<{ label: string; users: UserItem[] }> = useMemo(() => {
+    if (!groupBy) return [{ label: 'All people', users: candidateUsers }];
+    const map = new Map<string, UserItem[]>();
+    for (const u of candidateUsers) {
+      const key = ((u as any)[groupBy] || '').trim() || 'Unassigned';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(u);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b))
+      .map(([label, us]) => ({ label, users: us }));
+  }, [candidateUsers, groupBy]);
+
+  // Top-level filter chips (one per distinct organisation/department).
+  const facets: string[] = useMemo(() => {
+    if (!groupBy) return [];
+    return Array.from(new Set(
+      users
+        .filter(u => u.role !== 'admin')
+        .map(u => ((u as any)[groupBy] || '').trim())
+        .filter(Boolean)
+    )).sort();
+  }, [users, groupBy]);
 
   function toggleMember(id: string) {
     setMemberIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -437,42 +484,95 @@ function TeamFormModal({
               <Search size={13} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
               <input
                 className="input pl-9 text-sm"
-                placeholder="Search people…"
+                placeholder={`Search by name, title${groupBy ? `, ${groupBy}` : ''}…`}
                 value={memberQuery}
                 onChange={(e) => setMemberQuery(e.target.value)}
               />
             </div>
-            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
-              {filteredUsers.length === 0 ? (
+            {/* Filter chips for the chosen group dimension — scales the picker
+                gracefully as the workspace grows. Hidden when there's nothing
+                to slice (single-org or no facets set). */}
+            {facets.length > 1 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setGroupFilter('')}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                    groupFilter === ''
+                      ? 'bg-brand-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  All {groupBy === 'organisation' ? 'orgs' : 'departments'}
+                </button>
+                {facets.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setGroupFilter(f === groupFilter ? '' : f)}
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                      groupFilter === f
+                        ? 'bg-brand-600 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg">
+              {candidateUsers.length === 0 ? (
                 <div className="py-6 text-center text-xs text-slate-400">No people match.</div>
               ) : (
-                filteredUsers.map((u) => {
-                  if (u.id === leadId) return null;
-                  const selected = memberIds.includes(u.id);
+                groups.map((g) => {
+                  const visible = g.users.filter(u => u.id !== leadId);
+                  if (visible.length === 0) return null;
                   return (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => toggleMember(u.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                        selected ? 'bg-brand-50/60 hover:bg-brand-50' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <UserAvatar userId={u.id} name={u.name} size={26} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-800 truncate">
-                          {u.name}
+                    <div key={g.label}>
+                      {/* Group header — only render when grouping is active and
+                          there's more than one bucket worth showing. */}
+                      {groupBy && groups.length > 1 && (
+                        <div className="sticky top-0 z-[1] bg-slate-50 border-b border-slate-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                          <span className="truncate">{g.label}</span>
+                          <span className="text-slate-400 font-medium">{visible.length}</span>
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate">
-                          {u.role === 'lead' ? 'Team Lead' : u.role === 'admin' ? 'Admin' : 'Individual Contributor'}
-                        </div>
+                      )}
+                      <div className="divide-y divide-slate-100">
+                        {visible.map((u) => {
+                          const selected = memberIds.includes(u.id);
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => toggleMember(u.id)}
+                              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                                selected ? 'bg-brand-50/60 hover:bg-brand-50' : 'hover:bg-slate-50'
+                              }`}
+                            >
+                              <UserAvatar userId={u.id} name={u.name} size={26} />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-800 truncate">
+                                  {u.name}
+                                </div>
+                                <div className="text-[11px] text-slate-400 truncate">
+                                  {[
+                                    u.role === 'lead' ? 'Team Lead' : u.role === 'admin' ? 'Admin' : 'Individual Contributor',
+                                    u.title,
+                                    u.department,
+                                  ].filter(Boolean).join(' · ')}
+                                </div>
+                              </div>
+                              <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                                selected ? 'bg-brand-600 text-white' : 'border border-slate-300'
+                              }`}>
+                                {selected && <Check size={12} />}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
-                        selected ? 'bg-brand-600 text-white' : 'border border-slate-300'
-                      }`}>
-                        {selected && <Check size={12} />}
-                      </div>
-                    </button>
+                    </div>
                   );
                 })
               )}
