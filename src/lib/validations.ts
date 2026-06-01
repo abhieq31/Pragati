@@ -45,6 +45,16 @@ export const ProjectLifecycleEnum = z.enum([
   'personal_habit',
   'personal_side_project',
   'personal_event',
+  'personal_career',
+  'personal_job_search',
+  'personal_fitness',
+  'personal_finance',
+  'personal_reading',
+  'personal_home_move',
+  'personal_creative',
+  'personal_wellness',
+  'personal_declutter',
+  'personal_network',
 ]);
 
 export const GxpImpactEnum = z.enum(['none', 'low', 'medium', 'high']);
@@ -152,6 +162,12 @@ export const ProjectUpdateSchema = z.object({
   startDate: dateString.nullable().optional(),
   dueDate: dateString.nullable().optional(),
   gxpImpact: GxpImpactEnum.optional(),
+  // E-signature fields for controlled status changes on shared projects
+  // (21 CFR Part 11 §11.10/§11.50). The route re-verifies `password` and
+  // records `remarks` (the reason) verbatim in the audit trail. Optional here
+  // because non-status edits and personal projects don't require them.
+  password: z.string().min(1).optional(),
+  remarks: z.string().max(1000).optional(),
 });
 export type ProjectUpdateInput = z.infer<typeof ProjectUpdateSchema>;
 

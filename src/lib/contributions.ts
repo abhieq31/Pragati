@@ -50,7 +50,10 @@ export interface ContribData {
   total: number;                     // sum of `days`
   streak: number;                    // consecutive active days up to today
   totalTasksDone: number;            // all-time completed count (drives badges)
+  onTimeTasks: number;               // all-time count of tasks finished on/before due
   onTimeRate: number;                // 0..100, all-time, for the quality badge
+  projectsCompleted: number;         // all-time projects this person helped finish
+  projectsOnTime: number;            // of those, how many landed on/before due
   badges: string[];
   recent: ContribItem[];             // newest-first feed of delivered work
 }
@@ -181,7 +184,22 @@ export async function buildContributions(userId: string, year: number): Promise<
   }
 
   const otRow = (onTimeAgg as any[])[0];
-  const onTimeRate = otRow && otRow.total ? Math.round((otRow.onTime / otRow.total) * 100) : 0;
+  const onTimeTasks = otRow ? (otRow.onTime || 0) : 0;
+  const onTimeRate = otRow && otRow.total ? Math.round((onTimeTasks / otRow.total) * 100) : 0;
+
+  // ── Project delivery (all-time) ─────────────────────────────────────────
+  // A "completed project" the person helped finish: either they own it, or
+  // they closed at least one task inside it. On-time = the project closed on
+  // or before its due date.
+  const doneProjectIds = await Task.distinct('projectId', { assigneeId: userOid, status: 'done' });
+  const completedProjects = await Project.find({
+    status: 'completed',
+    $or: [{ ownerId: userOid }, { _id: { $in: doneProjectIds } }],
+  }).select('completedAt dueDate').lean();
+  const projectsCompleted = completedProjects.length;
+  const projectsOnTime = (completedProjects as any[]).filter(
+    (p) => p.completedAt && p.dueDate && new Date(p.completedAt) <= new Date(p.dueDate),
+  ).length;
 
   const earliestYear = (earliest as any[])[0]?.completedAt
     ? new Date((earliest as any[])[0].completedAt).getFullYear()
@@ -204,7 +222,8 @@ export async function buildContributions(userId: string, year: number): Promise<
 
   return {
     year, firstYear, days, total, streak,
-    totalTasksDone: totalDone, onTimeRate, badges,
+    totalTasksDone: totalDone, onTimeTasks, onTimeRate,
+    projectsCompleted, projectsOnTime, badges,
     recent: items.slice(0, 40),
   };
 }

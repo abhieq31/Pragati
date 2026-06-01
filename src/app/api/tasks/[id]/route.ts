@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import { Task } from '@/models/Task';
 import { Project } from '@/models/Project';
 import { User } from '@/models/User';
+import { Notification } from '@/models/Notification';
 import { requireUser, canMutate } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { task as taskS } from '@/lib/serialize';
@@ -141,6 +142,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
     const doomed = await Task.findById(params.id).select('title projectId').lean();
     await Task.deleteOne({ _id: params.id });
+
+    // Cascade: remove every connected record so a deleted task leaves nothing
+    // dangling across the app. Notifications that deep-link to this task (e.g.
+    // an assignment alert already sitting in someone's bell) would otherwise
+    // 404 when clicked — so they're cleared here. Subtasks, comments and the
+    // effort log are embedded in the Task document and go with it automatically.
+    await Notification.deleteMany({ taskId: params.id });
 
     const doomedProj = await Project.findById((doomed as any)?.projectId).select('isPersonal code').lean();
     if (!((doomedProj as any)?.isPersonal || String((doomedProj as any)?.code || '').startsWith('PRSN-'))) {

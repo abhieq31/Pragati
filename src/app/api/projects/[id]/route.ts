@@ -39,11 +39,31 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await connectDB();
     const scope = await getLeadScope(user!.sub, user!.role);
     const body = await readBody(req, ProjectUpdateSchema);
-    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status').lean();
+    const { password, remarks, ...updates } = body;
+    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status isPersonal code').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+    const isShared = !((current as any).isPersonal || String((current as any).code || '').startsWith('PRSN-'));
+    const statusChanging = !!updates.status && updates.status !== (current as any).status;
+
+    // A status change on a shared (GxP) project is a controlled action: it
+    // requires a re-authenticated e-signature with a reason, recorded in the
+    // immutable audit trail (21 CFR Part 11 §11.10/§11.50).
+    if (statusChanging && isShared) {
+      if (!password) {
+        return NextResponse.json({ error: 'Your password is required to sign this status change.' }, { status: 400 });
+      }
+      if (!remarks || !remarks.trim()) {
+        return NextResponse.json({ error: 'A reason is required to sign this status change.' }, { status: 400 });
+      }
+      const signer = await User.findById(user!.sub).select('passwordHash').lean();
+      if (!signer || !bcrypt.compareSync(password, (signer as any).passwordHash)) {
+        return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
+      }
+    }
+
     // Block marking completed when open tasks remain
-    if (body.status === 'completed') {
+    if (updates.status === 'completed') {
       const openCount = await Task.countDocuments({ projectId: params.id, status: { $ne: 'done' } });
       if (openCount > 0) {
         return NextResponse.json(
@@ -54,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const patch: any = {};
-    for (const [k, v] of Object.entries(body)) {
+    for (const [k, v] of Object.entries(updates)) {
       if (v === undefined) continue;
       if (['startDate', 'dueDate'].includes(k)) {
         patch[k] = v ? new Date(v as string) : null;
@@ -62,20 +82,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         patch[k] = v;
       }
     }
-    if (body.status === 'completed' && current.status !== 'completed') {
+    if (updates.status === 'completed' && (current as any).status !== 'completed') {
       patch.completedAt = new Date();
-    } else if (body.status && body.status !== 'completed') {
+    } else if (updates.status && updates.status !== 'completed') {
       patch.completedAt = null;
     }
     await Project.updateOne({ _id: params.id }, { $set: patch });
     const fresh = await Project.findById(params.id).lean();
 
-    const statusChanged = !!body.status && body.status !== current.status;
-    if (!((fresh as any)?.isPersonal || String((fresh as any)?.code || '').startsWith('PRSN-'))) {
+    if (isShared) {
       await logOperation({
-        action: statusChanged ? 'project.status' : 'project.update', category: 'project', actor: user,
+        action: statusChanging ? 'project.status' : 'project.update', category: 'project', actor: user,
         targetType: 'project', targetId: params.id, targetLabel: (fresh as any)?.name || '',
-        summary: statusChanged ? `Project status → ${body.status}` : 'Updated project details',
+        // The signed reason rides along on status changes so the audit entry is
+        // self-contained (who, what, when, and — critically — why).
+        summary: statusChanging
+          ? `Project status → ${updates.status}${remarks ? ` — ${remarks.trim()}` : ''}`
+          : 'Updated project details',
       });
     }
 

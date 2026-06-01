@@ -22,6 +22,16 @@ export type LifecycleKey =
   | 'personal_habit'
   | 'personal_side_project'
   | 'personal_event'
+  | 'personal_career'
+  | 'personal_job_search'
+  | 'personal_fitness'
+  | 'personal_finance'
+  | 'personal_reading'
+  | 'personal_home_move'
+  | 'personal_creative'
+  | 'personal_wellness'
+  | 'personal_declutter'
+  | 'personal_network'
   ;
 
 export type LifecycleGroup = 'General' | 'Life Sciences' | 'Personal';
@@ -714,6 +724,279 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
           { title: 'Save photos & notes',                type: 'task' },
         ]
       },
+    ]
+  },
+
+  personal_career: {
+    label: 'Career Growth',
+    description: 'A deliberate plan to grow in your role — skills, visibility, and the next step up.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Reflect', tasks: [
+        { title: 'Where am I now — strengths & gaps',   type: 'review' },
+        { title: 'Define the role/level I want next',   type: 'task' },
+        { title: 'Ask for honest feedback from 3 people',type: 'task' },
+      ]},
+      { name: 'Plan', tasks: [
+        { title: 'Pick 3 skills to build this year',    type: 'task' },
+        { title: 'Find a mentor or sponsor',            type: 'task' },
+        { title: 'Set measurable milestones per quarter',type: 'task' },
+      ]},
+      { name: 'Grow', tasks: [
+        { title: 'Take on a stretch project',           type: 'task' },
+        { title: 'Build skill 1',                       type: 'task' },
+        { title: 'Build skill 2',                       type: 'task' },
+        { title: 'Share my work publicly',              type: 'task' },
+      ]},
+      { name: 'Advance', tasks: [
+        { title: 'Update CV / profile with wins',       type: 'task' },
+        { title: 'Have the growth conversation',        type: 'approval' },
+        { title: 'Set the next goal',                   type: 'review' },
+      ]},
+    ]
+  },
+
+  personal_job_search: {
+    label: 'Job Search',
+    description: 'Run your job hunt like a pipeline — from target list to signed offer.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Prepare', tasks: [
+        { title: 'Clarify what I want (role, comp, location)', type: 'task' },
+        { title: 'Refresh CV & cover letter',          type: 'task' },
+        { title: 'Update LinkedIn / portfolio',        type: 'task' },
+        { title: 'Build a target company list',        type: 'task' },
+      ]},
+      { name: 'Apply', tasks: [
+        { title: 'Tailor & send applications',         type: 'task' },
+        { title: 'Reach out to referrals',             type: 'task' },
+        { title: 'Track every application',            type: 'task' },
+      ]},
+      { name: 'Interview', tasks: [
+        { title: 'Prep common questions & stories',    type: 'task' },
+        { title: 'Practice mock interviews',           type: 'review' },
+        { title: 'Research each company before calls', type: 'task' },
+      ]},
+      { name: 'Decide', tasks: [
+        { title: 'Compare offers',                     type: 'review' },
+        { title: 'Negotiate',                          type: 'task' },
+        { title: 'Accept & resign gracefully',         type: 'approval' },
+      ]},
+    ]
+  },
+
+  personal_fitness: {
+    label: 'Fitness Plan',
+    description: 'Get fitter with a structured, sustainable plan instead of a crash effort.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Baseline', tasks: [
+        { title: 'Set a specific, measurable goal',    type: 'task' },
+        { title: 'Record current stats / photos',      type: 'task' },
+        { title: 'Book a check-up if needed',          type: 'task' },
+      ]},
+      { name: 'Build', tasks: [
+        { title: 'Pick a workout routine',             type: 'task' },
+        { title: 'Plan weekly meals',                  type: 'task' },
+        { title: 'Set a sleep schedule',               type: 'task' },
+      ]},
+      { name: 'Sustain', tasks: [
+        { title: 'Week 1–4 — consistency',             type: 'task' },
+        { title: 'Week 5–8 — progressive overload',    type: 'task' },
+        { title: 'Weekly progress check-in',           type: 'review' },
+      ]},
+      { name: 'Review', tasks: [
+        { title: 'Measure against the goal',           type: 'review' },
+        { title: 'Set the next phase',                 type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_finance: {
+    label: 'Financial Goal',
+    description: 'Plan a savings, debt-payoff or investment goal and stay on track.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Assess', tasks: [
+        { title: 'List income, expenses & debts',      type: 'task' },
+        { title: 'Define the goal & target amount',    type: 'task' },
+        { title: 'Set the deadline',                   type: 'task' },
+      ]},
+      { name: 'Plan', tasks: [
+        { title: 'Build a monthly budget',             type: 'task' },
+        { title: 'Automate savings / payments',        type: 'task' },
+        { title: 'Cut one recurring cost',             type: 'task' },
+      ]},
+      { name: 'Execute', tasks: [
+        { title: 'Month 1 — track every rupee',        type: 'task' },
+        { title: 'Month 2 — adjust the budget',        type: 'task' },
+        { title: 'Monthly net-worth check-in',         type: 'review' },
+      ]},
+      { name: 'Review', tasks: [
+        { title: 'Hit the target',                     type: 'approval' },
+        { title: 'Set the next financial goal',        type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_reading: {
+    label: 'Reading Challenge',
+    description: 'Read more with a simple list-build, read, and reflect loop.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Curate', tasks: [
+        { title: 'Set a target (e.g. 12 books / year)', type: 'task' },
+        { title: 'Build the reading list',             type: 'task' },
+        { title: 'Schedule daily reading time',        type: 'task' },
+      ]},
+      { name: 'Read', tasks: [
+        { title: 'Book 1',                             type: 'task' },
+        { title: 'Book 2',                             type: 'task' },
+        { title: 'Book 3',                             type: 'task' },
+      ]},
+      { name: 'Reflect', tasks: [
+        { title: 'Note key takeaways per book',        type: 'review' },
+        { title: 'Share recommendations',              type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_home_move: {
+    label: 'Home Move',
+    description: 'Move house without the chaos — pack, switch, and settle in order.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Plan', tasks: [
+        { title: 'Set the moving date & budget',       type: 'task' },
+        { title: 'Get quotes from movers',             type: 'task' },
+        { title: 'Declutter before packing',           type: 'task' },
+      ]},
+      { name: 'Pack', tasks: [
+        { title: 'Pack room by room',                  type: 'task' },
+        { title: 'Label every box',                    type: 'task' },
+        { title: 'Keep an essentials bag',             type: 'task' },
+      ]},
+      { name: 'Switch', tasks: [
+        { title: 'Transfer utilities & internet',      type: 'task' },
+        { title: 'Update address everywhere',          type: 'task' },
+        { title: 'Redirect mail',                      type: 'task' },
+      ]},
+      { name: 'Settle', tasks: [
+        { title: 'Unpack the essentials first',        type: 'task' },
+        { title: 'Deep clean & set up',                type: 'task' },
+        { title: 'Meet the neighbours',                type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_creative: {
+    label: 'Creative Project',
+    description: 'Finish that book, blog, album or art series — idea to published.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Ideate', tasks: [
+        { title: 'Capture the core idea',              type: 'task' },
+        { title: 'Define the audience & format',       type: 'task' },
+        { title: 'Outline the whole thing',            type: 'task' },
+      ]},
+      { name: 'Create', tasks: [
+        { title: 'Draft part 1',                       type: 'task' },
+        { title: 'Draft part 2',                       type: 'task' },
+        { title: 'Draft part 3',                       type: 'task' },
+      ]},
+      { name: 'Refine', tasks: [
+        { title: 'Self-edit & revise',                 type: 'review' },
+        { title: 'Get feedback from a trusted few',    type: 'review' },
+        { title: 'Final polish',                       type: 'task' },
+      ]},
+      { name: 'Ship', tasks: [
+        { title: 'Publish / release',                  type: 'approval' },
+        { title: 'Share & promote',                    type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_wellness: {
+    label: 'Wellness & Mindfulness',
+    description: 'Build a calmer, healthier routine — sleep, mindfulness and balance.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Notice', tasks: [
+        { title: 'Identify my main stressors',         type: 'review' },
+        { title: 'Set one wellbeing intention',        type: 'task' },
+      ]},
+      { name: 'Build', tasks: [
+        { title: 'Start a 10-min daily mindfulness habit', type: 'task' },
+        { title: 'Set a wind-down & sleep routine',    type: 'task' },
+        { title: 'Plan screen-free time',              type: 'task' },
+      ]},
+      { name: 'Practice', tasks: [
+        { title: 'Week 1–2 — show up daily',           type: 'task' },
+        { title: 'Week 3–4 — deepen the practice',     type: 'task' },
+        { title: 'Weekly mood check-in',               type: 'review' },
+      ]},
+      { name: 'Reflect', tasks: [
+        { title: 'What changed for me',                type: 'review' },
+        { title: 'Keep what works',                    type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_declutter: {
+    label: 'Declutter & Organise',
+    description: 'Clear the clutter, room by room, and build systems that keep it tidy.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Plan', tasks: [
+        { title: 'List every space to tackle',         type: 'task' },
+        { title: 'Set keep / donate / bin rules',      type: 'task' },
+      ]},
+      { name: 'Clear', tasks: [
+        { title: 'Declutter — bedroom',                type: 'task' },
+        { title: 'Declutter — kitchen',                type: 'task' },
+        { title: 'Declutter — wardrobe',               type: 'task' },
+        { title: 'Declutter — digital files',          type: 'task' },
+      ]},
+      { name: 'Organise', tasks: [
+        { title: 'Set a home for everything',          type: 'task' },
+        { title: 'Donate / sell / recycle',            type: 'task' },
+      ]},
+      { name: 'Maintain', tasks: [
+        { title: 'Adopt a one-in-one-out rule',        type: 'task' },
+        { title: 'Schedule a monthly reset',           type: 'task' },
+      ]},
+    ]
+  },
+
+  personal_network: {
+    label: 'Build Relationships',
+    description: 'Grow your network and nurture relationships with intent, not chance.',
+    regulatoryRefs: '',
+    group: 'Personal',
+    phases: [
+      { name: 'Map', tasks: [
+        { title: 'List people I want to stay close to', type: 'task' },
+        { title: 'Identify new connections to make',    type: 'task' },
+      ]},
+      { name: 'Reach out', tasks: [
+        { title: 'Reconnect with 5 old contacts',       type: 'task' },
+        { title: 'Attend an event / community',         type: 'task' },
+        { title: 'Offer help before asking',            type: 'task' },
+      ]},
+      { name: 'Nurture', tasks: [
+        { title: 'Schedule regular check-ins',          type: 'task' },
+        { title: 'Remember the important dates',        type: 'task' },
+        { title: 'Follow up on conversations',          type: 'review' },
+      ]},
     ]
   },
 

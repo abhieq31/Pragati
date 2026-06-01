@@ -6,7 +6,7 @@ import { Avatar } from '@/components/ui';
 import { ActivityGraph } from '@/components/ActivityGraph';
 import {
   User, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
-  AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil, Trophy,
+  AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil,
 } from 'lucide-react';
 
 
@@ -27,20 +27,10 @@ function ProfileAvatar({
 }) {
   const inner = <Avatar name={name} size={size} letter={letter} bg={bg} font={font} />;
 
-  if (!onClick) return inner;
-  // Hovering the avatar reveals a peek at achievements (and scrolls to the full
-  // Activity rail on click). Editing the avatar now lives behind the profile
-  // "Edit" button, so the avatar itself is a window into the user's work.
-  return (
-    <div className="relative group cursor-pointer" onClick={onClick} title="View achievements">
-      {inner}
-      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-0.5 text-white"
-        style={{ borderRadius: Math.max(4, Math.round(size * 0.28)) }}>
-        <Trophy size={Math.round(size * 0.26)} />
-        <span style={{ fontSize: size * 0.13, fontWeight: 700, letterSpacing: '0.03em' }}>ACHIEVEMENTS</span>
-      </div>
-    </div>
-  );
+  // The profile picture is now purely a portrait — no hover overlay. (It used
+  // to flash an "ACHIEVEMENTS" trophy on hover, which read as clutter on the
+  // hero card.) Achievements live in the Activity section below.
+  return inner;
 }
 
 /* (legacy emoji picker removed — see MonogramEditor) */
@@ -72,7 +62,7 @@ function DropSoundToggle({ initial }: { initial: boolean }) {
         <div className="min-w-0">
           <div className="text-sm font-bold text-slate-800 dark:text-white/90">Drop sound</div>
           <p className="text-xs text-slate-400 dark:text-white/40 mt-0.5 leading-relaxed">
-            Plays a short cue when you drop a task in kanban or reorder one on the dashboard. Synthesised in your browser — no audio file ships.
+            Plays a short cue when you drop a task in kanban or reorder one on the dashboard.
           </p>
         </div>
         <button
@@ -604,7 +594,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
       {/* ── Activity — the star feature, front and centre ────────────────── */}
       <div id="activity" className="scroll-mt-6">
-        <Section icon={Activity} title="Activity" subtitle="Your delivered work on Pragati — completed tasks, weighted for on-time, GxP-critical, priority and review work. Logins don't count.">
+        <Section icon={Activity} title="Activity" subtitle="Your delivered work on Pragati — completed tasks, weighted for on-time and priority.">
           <ActivityGraph />
         </Section>
       </div>
@@ -631,6 +621,9 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         {moreOpen && (
           <div className="p-5 space-y-5 fade-in-soft">
 
+            {/* Password + Quick PIN sit side by side on wider screens — they're
+                both "how you get in", so pairing them reads as one unit. */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
             <div id="security" className="scroll-mt-6">
               <Section icon={Lock} title="Security" subtitle="Change your login password.">
                 <form onSubmit={savePw} className="space-y-3.5">
@@ -661,6 +654,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             </div>
 
             <QuickPinSection />
+            </div>
 
             <DropSoundToggle initial={initialUser.soundDropEnabled !== false} />
 

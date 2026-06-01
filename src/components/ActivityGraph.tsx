@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/client/api';
-import { Flame, Trophy, Clock3 } from 'lucide-react';
+import { Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck } from 'lucide-react';
 
 /**
  * GitHub-style contribution graph.
@@ -51,24 +51,6 @@ function cellColor(n: number, dark: boolean): string {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/* ── Achievement catalogue (GitHub-style medallions) ─────────────────────── */
-type BadgeDef = { emoji: string; label: string; blurb: string; from: string; to: string };
-// Quality-informatics themed — the milestones read in the language of a GxP
-// quality team (induction, records, right-first-time, in-control, audit-ready)
-// rather than generic sales-style "kudos". The underlying earn-criteria are
-// unchanged, so the keys stay identical to the server scoring.
-const BADGES: Record<string, BadgeDef> = {
-  first_step:     { emoji: '🪪', label: 'Inducted',      blurb: 'Welcome aboard — your Pragati induction is complete.',          from: '#34d399', to: '#059669' },
-  task_rookie:    { emoji: '✅', label: 'First Closure',  blurb: 'Closed your first task. A clean, traceable record.',            from: '#38bdf8', to: '#0284c7' },
-  task_achiever:  { emoji: '📋', label: 'Record Keeper',  blurb: '10 tasks closed — a steady, dependable hand.',                  from: '#fbbf24', to: '#d97706' },
-  task_performer: { emoji: '🛡️', label: 'Quality Guardian', blurb: '50 tasks delivered. Quality is in safe hands.',             from: '#a78bfa', to: '#7c3aed' },
-  task_champion:  { emoji: '🏛️', label: 'Compliance Champion', blurb: '100 tasks closed. A pillar of the quality system.',       from: '#fde047', to: '#ca8a04' },
-  on_time:        { emoji: '🎯', label: 'Right First Time', blurb: '85%+ of your work delivered on or before its due date.',     from: '#f472b6', to: '#db2777' },
-  streak_3:       { emoji: '📈', label: 'In Control',     blurb: 'Three days running — your process stays in control.',          from: '#fb923c', to: '#ea580c' },
-  streak_7:       { emoji: '🔬', label: 'Audit-Ready',    blurb: 'A full week of delivered work — always inspection-ready.',     from: '#e879f9', to: '#c026d3' },
-};
-const BADGE_ORDER = ['first_step', 'task_rookie', 'task_achiever', 'task_performer', 'task_champion', 'on_time', 'streak_3', 'streak_7'];
-
 type ContribItem = {
   id: string; title: string; projectName: string; projectCode: string;
   completedAt: string | null; points: number; gxpCritical: boolean; priority: string;
@@ -82,7 +64,10 @@ type ActivityData = {
   total: number;
   streak: number;
   totalTasksDone: number;
+  onTimeTasks: number;
   onTimeRate: number;
+  projectsCompleted: number;
+  projectsOnTime: number;
   badges: string[];
   recent: ContribItem[];
 };
@@ -97,42 +82,23 @@ function timeAgo(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-/* ── Circular achievement medallion ──────────────────────────────────────── */
-function Medallion({ def, earned, count }: { def: BadgeDef; earned: boolean; count?: number }) {
-  // GitHub-style "xN" repeat-count pill — shown only on earned, tiered badges
-  // where a count ≥ 2 is meaningful (e.g. total tasks done, streak days).
-  const showCount = earned && typeof count === 'number' && count >= 2;
+/* ── Minimal milestone tile ───────────────────────────────────────────────
+   A clean count + label (e.g. "12 Tasks completed") rather than the old
+   gamified medallions. Reads at a glance and stays factual — every number is
+   a real, traceable count from the contribution data. */
+function StatTile({ icon: Icon, value, label, sub, tint }: {
+  icon: any; value: number; label: string; sub?: string; tint: string;
+}) {
   return (
-    <div className="flex flex-col items-center gap-1 text-center w-[58px]" title={earned ? def.blurb : `Locked — ${def.blurb}`}>
-      <div className="relative">
-        <div
-          className="w-12 h-12 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-105"
-          style={{
-            // Glossy GitHub-like finish: a soft radial highlight over the
-            // brand gradient. Locked badges fall back to a flat grey.
-            background: earned
-              ? `radial-gradient(circle at 32% 26%, rgba(255,255,255,0.55), rgba(255,255,255,0) 42%), linear-gradient(135deg, ${def.from}, ${def.to})`
-              : '#f1f5f9',
-            boxShadow: earned ? `0 3px 10px ${def.to}45, inset 0 1px 1px rgba(255,255,255,0.4)` : 'none',
-            filter: earned ? 'none' : 'grayscale(1)',
-            opacity: earned ? 1 : 0.4,
-            border: earned ? '2px solid rgba(255,255,255,0.8)' : '2px solid #e2e8f0',
-          }}
-        >
-          <span style={{ filter: earned ? 'drop-shadow(0 1px 1px rgba(0,0,0,0.18))' : 'none' }}>{def.emoji}</span>
-        </div>
-        {showCount && (
-          <span
-            className="absolute -bottom-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-black flex items-center justify-center text-white shadow"
-            style={{ background: 'linear-gradient(135deg, #fb923c, #ea580c)', border: '1.5px solid #fff' }}
-          >
-            x{count}
-          </span>
-        )}
+    <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-white/[0.02] px-3 py-2.5">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${tint}1a` }}>
+        <Icon size={15} style={{ color: tint }} />
       </div>
-      <span className="text-[9px] font-bold leading-tight" style={{ color: earned ? '#475569' : '#94a3b8' }}>
-        {def.label}
-      </span>
+      <div className="min-w-0">
+        <div className="text-lg font-black leading-none text-slate-800 dark:text-slate-100 tabular-nums">{value}</div>
+        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mt-1 leading-tight">{label}</div>
+        {sub && <div className="text-[10px] text-slate-400 leading-tight">{sub}</div>}
+      </div>
     </div>
   );
 }
@@ -153,7 +119,7 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
     setLoading(true);
     api<ActivityData>(`/${who}?year=${year}`)
       .then(setData)
-      .catch(() => setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeRate: 0, badges: [], recent: [] }))
+      .catch(() => setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [] }))
       .finally(() => setLoading(false));
   }, [who, year]);
 
@@ -221,27 +187,10 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
     return groups;
   }, [data?.recent]);
 
-  const earned = data?.badges || [];
-  const firstName = name ? name.split(' ')[0] : 'You';
-
-  // GitHub-style "xN" counts — attach a meaningful number to the *highest*
-  // earned tier of each progressive achievement family, so a medallion can
-  // read "Champion ×137" (total tasks) or "7-Day Streak ×9" (streak days)
-  // the way GitHub shows "Pull Shark ×2".
-  const badgeCounts = useMemo<Record<string, number>>(() => {
-    const out: Record<string, number> = {};
-    const tasksDone = data?.totalTasksDone ?? 0;
-    const streak    = data?.streak ?? 0;
-    const taskTiers   = ['task_rookie', 'task_achiever', 'task_performer', 'task_champion'];
-    const streakTiers = ['streak_3', 'streak_7'];
-    const highestEarned = (tiers: string[]) =>
-      [...tiers].reverse().find((k) => earned.includes(k));
-    const topTask   = highestEarned(taskTiers);
-    const topStreak = highestEarned(streakTiers);
-    if (topTask)   out[topTask]   = tasksDone;
-    if (topStreak) out[topStreak] = streak;
-    return out;
-  }, [data?.totalTasksDone, data?.streak, earned]);
+  const tasksDone     = data?.totalTasksDone ?? 0;
+  const onTimeTasks   = data?.onTimeTasks ?? 0;
+  const projectsDone  = data?.projectsCompleted ?? 0;
+  const projectsOnTime = data?.projectsOnTime ?? 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[150px_1fr] gap-5">
@@ -262,25 +211,26 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
           <div className="mx-auto w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-slate-900" />
         </div>
       )}
-      {/* ── Achievements rail (left) ─────────────────────────────────────── */}
+      {/* ── Milestones rail (left) — minimal counts, not gamified badges ──── */}
       <aside className="lg:border-r lg:border-slate-100 dark:lg:border-slate-800 lg:pr-4">
         <div className="flex items-center gap-1.5 mb-3">
-          <Trophy size={13} className="text-amber-500" />
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Achievements</h4>
-          <span className="ml-auto text-[10px] font-bold text-slate-400">{earned.length}/{BADGE_ORDER.length}</span>
+          <CheckCircle2 size={13} className="text-emerald-500" />
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Milestones</h4>
         </div>
-        <div className="grid grid-cols-3 lg:grid-cols-2 gap-x-1 gap-y-3">
-          {BADGE_ORDER.map((key) => (
-            <Medallion key={key} def={BADGES[key]} earned={earned.includes(key)} count={badgeCounts[key]} />
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+          <StatTile icon={CheckCircle2} value={tasksDone}   label="Tasks completed"  tint="#0284c7" />
+          <StatTile icon={Target}       value={onTimeTasks} label="On-time tasks"
+            sub={tasksDone ? `of ${tasksDone}` : undefined} tint="#db2777" />
+          {/* Project stats only surface once the person has finished one — keeps
+              the rail honest for pure individual contributors. */}
+          {projectsDone > 0 && (
+            <>
+              <StatTile icon={FolderCheck}   value={projectsDone}   label="Projects completed" tint="#7c3aed" />
+              <StatTile icon={CalendarCheck} value={projectsOnTime} label="On-time projects"
+                sub={`of ${projectsDone}`} tint="#ea580c" />
+            </>
+          )}
         </div>
-        {!loading && (
-          <p className="hidden lg:block text-[10px] text-slate-400 mt-4 leading-snug">
-            {earned.length >= BADGE_ORDER.length
-              ? `🎉 Every achievement unlocked — ${name ? firstName + ' is' : 'you are'} a Pragati legend!`
-              : 'Deliver work to unlock the next one.'}
-          </p>
-        )}
       </aside>
 
       {/* ── Graph + year rail + timeline (right) ─────────────────────────── */}

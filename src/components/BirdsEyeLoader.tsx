@@ -23,19 +23,20 @@ export function BirdsEyeLoader({
   const ring = size === 'sm' ? 'w-14 h-14' : 'w-20 h-20';
   return (
     <div className={`flex flex-col items-center justify-center gap-5 ${inline ? 'py-10' : 'min-h-[60vh]'}`}>
-      <div className={`relative ${ring}`}>
+      {/* The mark sits perfectly still and crisp; only a thin ring rotates
+          around it. (The old loader spun a blurred conic-gradient *behind* the
+          icon, which read as the logo squeezing/warping on every app open.) */}
+      <div className={`relative ${ring} flex items-center justify-center`}>
         <div
-          className="absolute inset-0 rounded-3xl"
+          className="absolute inset-0 rounded-full"
           style={{
-            background: 'conic-gradient(from 0deg, #1565C0 0%, #2E7D32 50%, #1565C0 100%)',
-            animation: 'pragati-spin 1.4s linear infinite',
-            filter: 'blur(2px)',
-            opacity: 0.55,
+            border: '2.5px solid #e8edf4',
+            borderTopColor: '#1565C0',
+            borderRightColor: '#2E7D32',
+            animation: 'pragati-spin 0.9s linear infinite',
           }}
         />
-        <div className="absolute inset-1.5 flex items-center justify-center rounded-2xl bg-white">
-          <PragatiMark size={mark} flat />
-        </div>
+        <PragatiMark size={mark} flat />
       </div>
 
       {(label || sublabel) && (

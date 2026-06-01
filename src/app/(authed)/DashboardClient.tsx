@@ -10,10 +10,11 @@ import { api } from '@/lib/client/api';
 import { playDropTick } from '@/lib/sound';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
+import { ActivityGraph } from '@/components/ActivityGraph';
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, GripVertical,
+  Maximize2, X, GripVertical, BarChart3,
 } from 'lucide-react';
 
 /* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
@@ -65,24 +66,77 @@ interface DashResp {
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
-// "Pragati" means progress — the greeting leans into that rather than a generic
-// "Good morning". Time-of-day sets the tone; the sub-line (computed from the
-// user's real workload below) gives it actual meaning.
-function greeting(now = new Date()) {
-  const h = now.getHours();
-  if (h < 5)  return 'Burning the midnight oil';
-  if (h < 12) return 'Fresh start';
-  if (h < 17) return 'Keep it moving';
-  if (h < 21) return 'Strong finish';
-  return 'Winding down';
+// Festivals worth a warm one-off greeting. Fixed-date national/global days are
+// keyed by MM-DD; movable feasts (Diwali, Holi — lunar) are keyed by full
+// YYYY-MM-DD for the years the app is in active use, since their Gregorian
+// date shifts each year. Pragati is built for an Indian pharma context, so the
+// list leans that way while still covering the universal New Year / Christmas.
+type Festival = { title: string; emoji: string; note: string };
+const FIXED_FESTIVALS: Record<string, Festival> = {
+  '01-01': { title: 'Happy New Year',          emoji: '🎆', note: 'A fresh year, a clean slate — let’s make it count.' },
+  '01-26': { title: 'Happy Republic Day',      emoji: '🇮🇳', note: 'Compliance and care — values worth celebrating today.' },
+  '08-15': { title: 'Happy Independence Day',  emoji: '🇮🇳', note: 'Freedom and discipline, hand in hand. Have a proud day.' },
+  '10-02': { title: 'Gandhi Jayanti',          emoji: '🕊️', note: 'Quality is doing it right when no one is watching.' },
+  '12-25': { title: 'Merry Christmas',         emoji: '🎄', note: 'Wishing you a warm, restful holiday.' },
+  '12-31': { title: 'Happy New Year’s Eve',    emoji: '🥂', note: 'One last push, then a well-earned celebration.' },
+};
+const MOVABLE_FESTIVALS: Record<string, Festival> = {
+  // Diwali
+  '2025-10-21': { title: 'Happy Diwali', emoji: '🪔', note: 'May your year ahead be bright and prosperous.' },
+  '2026-11-08': { title: 'Happy Diwali', emoji: '🪔', note: 'May your year ahead be bright and prosperous.' },
+  '2027-10-29': { title: 'Happy Diwali', emoji: '🪔', note: 'May your year ahead be bright and prosperous.' },
+  // Holi
+  '2025-03-14': { title: 'Happy Holi', emoji: '🎨', note: 'A splash of colour to your day!' },
+  '2026-03-03': { title: 'Happy Holi', emoji: '🎨', note: 'A splash of colour to your day!' },
+  '2027-03-22': { title: 'Happy Holi', emoji: '🎨', note: 'A splash of colour to your day!' },
+};
+function festivalFor(now = new Date()): Festival | null {
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const ymd = `${now.getFullYear()}-${mm}-${dd}`;
+  return MOVABLE_FESTIVALS[ymd] || FIXED_FESTIVALS[`${mm}-${dd}`] || null;
 }
 
-// A meaningful one-liner driven by the user's actual state — not filler.
-function greetingSubline({ open, overdue, dueToday }: { open: number; overdue: number; dueToday: number }) {
+// A warm, genuine salutation. Festivals take priority; otherwise it's a proper
+// time-of-day greeting (clear and human — not the old "Keep it moving" filler),
+// with light day-of-week flavour so Monday and Friday don't read the same.
+function greeting(now = new Date()): string {
+  const fest = festivalFor(now);
+  if (fest) return `${fest.title}`;
+  const h = now.getHours();
+  if (h < 5)  return 'Still up';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Good evening';
+}
+// The tiny emoji that trails the greeting line (festival icon, or a subtle
+// time-of-day cue) so the header feels crafted, not generic.
+function greetingEmoji(now = new Date()): string {
+  const fest = festivalFor(now);
+  if (fest) return fest.emoji;
+  const h = now.getHours();
+  if (h < 5)  return '🌙';
+  if (h < 12) return '☀️';
+  if (h < 17) return '👋';
+  if (h < 21) return '🌆';
+  return '🌙';
+}
+
+// A meaningful one-liner driven by the user's actual state — not filler. On a
+// festival day we lead with the festive note before nudging toward the work.
+function greetingSubline({ open, overdue, dueToday, now = new Date() }: { open: number; overdue: number; dueToday: number; now?: Date }) {
+  const fest = festivalFor(now);
+  if (fest && open === 0) return fest.note;
   if (overdue > 0)   return `${overdue} task${overdue === 1 ? '' : 's'} slipped past due — let's bring ${overdue === 1 ? 'it' : 'them'} back in control.`;
   if (dueToday > 0)  return `${dueToday} due today. Clear ${dueToday === 1 ? 'it' : 'them'} and stay audit-ready.`;
   if (open === 0)    return 'Nothing open — every record is closed and in control. 🎯';
-  return `${open} task${open === 1 ? '' : 's'} moving through the pipeline. Steady progress.`;
+  const day = now.getDay();
+  const dayFlavour = day === 1 ? 'A fresh week — '
+    : day === 5 ? 'Bring it home for the week — '
+    : (day === 0 || day === 6) ? 'Weekend focus — '
+    : '';
+  return `${dayFlavour}${open} task${open === 1 ? '' : 's'} moving through the pipeline. Steady progress.`;
 }
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -165,6 +219,7 @@ export default function DashboardClient({
       <div className="mb-5 sm:mb-6 pt-1">
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
+          <span className="ml-2 align-middle" suppressHydrationWarning>{greetingEmoji()}</span>
         </h1>
         {!isFirstRun && (() => {
           const open = visibleTasks.filter(t => t.status !== 'done').length;
@@ -174,7 +229,7 @@ export default function DashboardClient({
           const dueToday = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && isSameDay(new Date(t.dueDate))).length;
           return (
             <p className="mt-1 text-sm text-slate-500 dark:text-white/45" suppressHydrationWarning>
-              {greetingSubline({ open, overdue, dueToday })}
+              {greetingSubline({ open, overdue, dueToday, now })}
             </p>
           );
         })()}
@@ -214,7 +269,11 @@ export default function DashboardClient({
           {/* `lg:pt-7` (≈ section header height + its mb-3) drops the first card
               so its top edge lines up with the first project card on the left,
               instead of floating above the "Your team's projects" heading. */}
-          <div className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto pr-1 lg:pt-7">
+          {/* Flows with the page (no sticky/own-scroll): the previous
+              sticky+max-height+overflow combo clipped the Individual
+              Contributors list and made it feel like it "broke" mid-scroll
+              when the column was taller than the viewport. */}
+          <div className="space-y-4 pr-1 lg:pt-7">
             <ActionsPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Layout parity — the right column always carries three panels
@@ -994,10 +1053,12 @@ function ActionGroup({
 function ContributorsPanel({
   people, tasksByAssignee,
 }: { people: DashPerson[]; tasksByAssignee: Map<string, TeamTask[]> }) {
-  const [expanded, setExpanded] = useState(false);
   // Open by default — the member list + their task counts come from props, so
   // there's nothing to lazy-load; collapsing it just made the card look empty.
   const [panelOpen, setPanelOpen] = useState(true);
+  // The contributor whose activity graph is being viewed (lead-only deep-dive,
+  // same gesture as the team & people pages).
+  const [activityPerson, setActivityPerson] = useState<DashPerson | null>(null);
 
   if (people.length === 0) {
     return (
@@ -1014,7 +1075,7 @@ function ContributorsPanel({
   // Sort: most loaded first
   const sorted = [...people].sort((a, b) => b.loadScore - a.loadScore);
 
-  const inner = (
+  return (
     <section className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
@@ -1026,11 +1087,6 @@ function ContributorsPanel({
           Individual Contributors
         </h3>
         <span className="ml-auto text-[10px] text-slate-300 font-semibold">{people.length}</span>
-        {!expanded && (
-          <span onClick={e => e.stopPropagation()}>
-            <ExpandButton onClick={() => setExpanded(true)} />
-          </span>
-        )}
         <ChevronDown size={12} className="text-slate-400 transition-transform duration-200"
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
       </div>
@@ -1038,17 +1094,31 @@ function ContributorsPanel({
       {panelOpen && (
         <ul className="divide-y divide-slate-50 border-t border-slate-100">
           {sorted.map(p => (
-            <ContributorRow key={p.id} person={p} tasks={tasksByAssignee.get(p.id) || []} />
+            <ContributorRow key={p.id} person={p} tasks={tasksByAssignee.get(p.id) || []}
+              onViewActivity={() => setActivityPerson(p)} />
           ))}
         </ul>
       )}
+
+      {activityPerson && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+          onClick={() => setActivityPerson(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-5">
+              <UserAvatar userId={activityPerson.id} name={activityPerson.name} size={44} />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-slate-900 truncate">{activityPerson.name}</h3>
+                <div className="text-xs text-slate-400 mt-0.5">Performance overview</div>
+              </div>
+              <button onClick={() => setActivityPerson(null)} className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"><X size={18} /></button>
+            </div>
+            <ActivityGraph userId={activityPerson.id} name={activityPerson.name} />
+          </div>
+        </div>
+      )}
     </section>
   );
-
-  return expanded
-    ? <FullScreenOverlay title="Individual Contributors" icon={<UsersIcon size={14} className="text-blue-500" />}
-        onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
-    : inner;
 }
 
 /* ── My Focus (IC counterpart to ContributorsPanel) ────────────────────────
@@ -1123,7 +1193,7 @@ function MyFocusPanel({
   );
 }
 
-function ContributorRow({ person, tasks }: { person: DashPerson; tasks: TeamTask[] }) {
+function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson; tasks: TeamTask[]; onViewActivity?: () => void }) {
   const [open, setOpen] = useState(false);
 
   // Sort tasks: in_progress first, then by due date
@@ -1147,13 +1217,25 @@ function ContributorRow({ person, tasks }: { person: DashPerson; tasks: TeamTask
   return (
     <li>
       <div
-        className="px-4 py-2.5 cursor-pointer hover:bg-slate-50/60 transition-colors"
+        className="group px-4 py-2.5 cursor-pointer hover:bg-slate-50/60 transition-colors"
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-2">
           <UserAvatar userId={person.id} name={person.name} size={26} />
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-slate-800 truncate">{person.name}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-800 truncate">{person.name}</span>
+              {/* Activity deep-dive — same gesture as the team & people pages.
+                  Reveals on row hover so the row stays clean at rest. */}
+              {onViewActivity && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onViewActivity(); }}
+                  title={`View ${person.name}'s activity`}
+                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-600 transition-all shrink-0">
+                  <BarChart3 size={13} />
+                </button>
+              )}
+            </div>
             <div className="text-[10px] text-slate-400 truncate">
               {person.openTasks} open
               {person.overdueCount > 0 && <span className="text-red-600 font-semibold ml-1.5">· {person.overdueCount} overdue</span>}

@@ -56,6 +56,9 @@ export function NotificationBell({ dark = false, openUp = false, initialUnread =
   // appearing only after the first /notifications poll resolves.
   const [unread, setUnread] = useState(initialUnread);
   const [open, setOpen]     = useState(false);
+  // Bumped each time a new notification lands live, to retrigger the badge
+  // "pop" animation (a key change forces the element to remount/replay).
+  const [pop, setPop]       = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const prevUnread = useRef<number | null>(initialUnread);
 
@@ -87,6 +90,10 @@ export function NotificationBell({ dark = false, openUp = false, initialUnread =
       setUnread(res.unread);
       if (chimeOnIncrease && prevUnread.current !== null && res.unread > prevUnread.current) {
         chimeIfEnabled();
+        // A genuinely new notification arrived while the user is here — pop the
+        // badge and open the panel so the update is seen, not just heard.
+        setPop((p) => p + 1);
+        setOpen(true);
       }
       prevUnread.current = res.unread;
     } catch { /* ignore polling errors */ }
@@ -135,9 +142,10 @@ export function NotificationBell({ dark = false, openUp = false, initialUnread =
           dark ? 'text-white/55 hover:text-white/90 hover:bg-white/5' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
         }`}
       >
-        <Bell size={16} />
+        <Bell size={16} className={pop > 0 ? 'notif-bell-ring' : ''} key={`bell-${pop}`} />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center">
+          <span key={`badge-${pop}`}
+            className="notif-badge-pop absolute -top-0.5 -right-0.5 min-w-[15px] h-[15px] px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

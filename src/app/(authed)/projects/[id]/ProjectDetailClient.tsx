@@ -12,7 +12,7 @@ import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
 import { useCurrentUser } from '@/components/CurrentUserContext';
@@ -406,6 +406,91 @@ function BlockCompleteModal({ openCount, onClose }: { openCount: number; onClose
   );
 }
 
+/* ── Project status sign-off (e-signature) modal ──────────────────────────────
+   Changing a shared project's status is a controlled action: it demands the
+   user re-enter their password (proves the signer is who they claim) and a
+   reason, which is written verbatim to the audit trail. This is the
+   21 CFR Part 11 §11.10/§11.50 e-signature pattern, reusing the same password
+   re-auth shape as DeleteProjectModal. */
+function prettyStatus(s?: string) {
+  return String(s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function StatusSignoffModal({
+  projectName, fromStatus, toStatus, onClose, onConfirm,
+}: {
+  projectName: string;
+  fromStatus: string;
+  toStatus: string;
+  onClose: () => void;
+  onConfirm: (password: string, remarks: string) => Promise<void>;
+}) {
+  const [password, setPassword] = useState('');
+  const [remarks, setRemarks]   = useState('');
+  const [err, setErr]           = useState('');
+  const [loading, setLoading]   = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  async function confirm() {
+    if (!password.trim()) { setErr('Password is required to sign this change.'); return; }
+    if (!remarks.trim())  { setErr('A reason is required for the audit trail.'); return; }
+    setLoading(true); setErr('');
+    try {
+      await onConfirm(password, remarks.trim());
+    } catch (e: any) {
+      setErr(e?.message || 'Could not apply the change. Check your password and try again.');
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
+      <div role="dialog" aria-modal className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[440px] modal-in"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+            <ShieldCheck size={18} className="text-blue-600" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-bold text-slate-800">Sign off status change</h2>
+            <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+              <span className="font-semibold text-slate-700">{projectName}</span>:
+              {' '}{prettyStatus(fromStatus)} → <span className="font-semibold text-slate-700">{prettyStatus(toStatus)}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 mb-4">
+          <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-amber-800 leading-snug">
+            This is a controlled change. Your e-signature (password + reason) will be recorded
+            in the audit trail with your name and the time — it cannot be edited or removed afterwards.
+          </p>
+        </div>
+
+        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Reason for change</label>
+        <textarea className="input w-full mb-3 resize-none" rows={2}
+          placeholder="e.g. All deliverables verified — moving to In progress"
+          value={remarks} onChange={e => { setRemarks(e.target.value); setErr(''); }} />
+
+        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Confirm with your password</label>
+        <input ref={inputRef} type="password" className="input w-full mb-1" placeholder="Your password"
+          value={password} onChange={e => { setPassword(e.target.value); setErr(''); }}
+          onKeyDown={e => e.key === 'Enter' && confirm()} autoComplete="current-password" />
+        {err && <p className="text-xs text-red-600 mt-2">{err}</p>}
+
+        <div className="flex gap-2 justify-end mt-4">
+          <button className="btn-ghost text-sm" onClick={onClose} disabled={loading}>Cancel</button>
+          <button className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            onClick={confirm} disabled={loading || !password.trim() || !remarks.trim()}>
+            {loading ? 'Signing…' : 'Sign & apply'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Delete project modal ─────────────────────────────────────────────────── */
 function DeleteProjectModal({ projectName, projectId, onClose, onDeleted }: {
   projectName: string; projectId: string; onClose: () => void; onDeleted: () => void;
@@ -495,6 +580,12 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [deleteOpen, setDeleteOpen]           = useState(false);
   const [blockCompleteOpen, setBlockComplete] = useState(false);
   const [savingStatus, setSavingStatus]       = useState(false);
+  // The status the user picked that's awaiting an e-signature (password +
+  // reason). Null when no sign-off is in flight.
+  const [pendingStatus, setPendingStatus]     = useState<string | null>(null);
+  // Toggles the inline due-date editor in the header (leads only).
+  const [editingDue, setEditingDue]           = useState(false);
+  const [savingDue, setSavingDue]             = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
   // Milestone celebration — set when finishing a task closes out its phase or
@@ -570,7 +661,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // Priority-weighted progress — a critical task done moves the bar more
   // than a low one. See src/lib/progress.ts.
   const pct = weightedProgress(tasks);
-  const pendingQa = tasks.filter((t: any) => t.requiresQaSignoff && !t.qaSignoffAt && t.status === 'done').length;
   const waitingCount = tasks.filter((t: any) => t.pendingWith && t.status !== 'done').length;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const overdue = tasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < today && t.status !== 'done').length;
@@ -581,15 +671,60 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       setBlockComplete(true);
       return;
     }
+    // A project's status is a controlled GxP record. Changing it on a shared
+    // project requires a re-authenticated e-signature with a reason (21 CFR
+    // Part 11 §11.10 / §11.50) — so we route through a sign-off modal instead
+    // of patching straight away. Personal projects skip this (no audit trail).
+    if (!project.isPersonal) {
+      setPendingStatus(newStatus);
+      return;
+    }
     setSavingStatus(true);
     try {
       await api(`/projects/${id}`, { method: 'PATCH', body: { status: newStatus } });
-      showToast('Project status updated');
+      if (newStatus === 'completed') {
+        setCelebration({ title: 'Project complete! 🎉', subtitle: `${project.name} is closed out and in control.`, emoji: '🏆' });
+      } else {
+        showToast('Project status updated');
+      }
       load();
     } catch (e: any) {
       showToast(e.message || 'Failed to update status', 'err');
     } finally {
       setSavingStatus(false);
+    }
+  }
+
+  // Commits a status change once the user has re-entered their password and a
+  // reason in the sign-off modal. The server re-verifies the password and writes
+  // the reason into the immutable audit trail.
+  async function confirmStatusChange(password: string, remarks: string) {
+    if (!pendingStatus) return;
+    const becameComplete = pendingStatus === 'completed';
+    await api(`/projects/${id}`, { method: 'PATCH', body: { status: pendingStatus, password, remarks } });
+    setPendingStatus(null);
+    if (becameComplete) {
+      setCelebration({ title: 'Project complete! 🎉', subtitle: `${project.name} is closed out and in control.`, emoji: '🏆' });
+    } else {
+      showToast('Project status updated');
+    }
+    load();
+  }
+
+  // Leads can re-schedule the whole project from the header. A null value
+  // clears the due date. Optimistic toast + refetch keeps the stat cards in
+  // sync (Overdue recomputes off the new date).
+  async function saveDueDate(value: string | null) {
+    setSavingDue(true);
+    try {
+      await api(`/projects/${id}`, { method: 'PATCH', body: { dueDate: value } });
+      setEditingDue(false);
+      showToast('Due date updated');
+      load();
+    } catch (e: any) {
+      showToast(e.message || 'Failed to update due date', 'err');
+    } finally {
+      setSavingDue(false);
     }
   }
 
@@ -795,7 +930,34 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             <div>Team: {project.teamId
               ? <Link href={`/teams/${project.teamId}`} className="text-blue-600 hover:underline">{project.teamName || '—'}</Link>
               : '—'}</div>
-            <div>Due: {formatDate(project.dueDate)}</div>
+            {/* Due date — leads can re-schedule inline; everyone else sees it
+                read-only. */}
+            {isLead ? (
+              editingDue ? (
+                <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                  <span>Due:</span>
+                  <DatePicker
+                    value={project.dueDate ? String(project.dueDate).slice(0, 10) : ''}
+                    onChange={(v) => saveDueDate(v || null)}
+                    placeholder="Set due date"
+                    size="sm"
+                  />
+                  <button onClick={() => setEditingDue(false)}
+                    className="text-slate-400 hover:text-slate-600" title="Cancel">
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setEditingDue(true)} disabled={savingDue}
+                  className="inline-flex items-center gap-1 hover:text-blue-600 transition-colors group"
+                  title="Change due date">
+                  Due: <span className="font-medium text-slate-700 group-hover:text-blue-600">{formatDate(project.dueDate)}</span>
+                  <Pencil size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              )
+            ) : (
+              <div>Due: {formatDate(project.dueDate)}</div>
+            )}
           </div>
 
           {/* Actions — Export for everyone; Archive + Delete admin-only. */}
@@ -834,11 +996,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Progress', value: `${pct}%`, sub: `${tasks.filter((t: any) => t.status === 'done').length}/${tasks.length} tasks · weighted`, bar: pct },
           { label: 'Phases', value: phases.length, sub: 'lifecycle stages' },
-          { label: 'QA sign-off', value: pendingQa, sub: pendingQa > 0 ? 'awaiting review' : 'all approved', warn: pendingQa > 0 },
           { label: 'Waiting on', value: waitingCount, sub: waitingCount > 0 ? 'pending on someone' : 'nothing stuck', warn: waitingCount > 0 },
           { label: 'Overdue', value: overdue, sub: overdue > 0 ? 'past deadline' : 'none — on track', danger: overdue > 0 },
         ].map(stat => (
@@ -1005,6 +1166,15 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       {view === 'board' && <KanbanBoard tasks={tasks} onDropReorder={dropReorder} isLead={canManage} onDelete={deleteTask} />}
 
       {/* Modals */}
+      {pendingStatus && (
+        <StatusSignoffModal
+          projectName={project.name}
+          fromStatus={project.status}
+          toStatus={pendingStatus}
+          onClose={() => setPendingStatus(null)}
+          onConfirm={confirmStatusChange}
+        />
+      )}
       {blockCompleteOpen && (
         <BlockCompleteModal openCount={openTaskCount} onClose={() => setBlockComplete(false)} />
       )}
