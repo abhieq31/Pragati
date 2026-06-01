@@ -499,10 +499,15 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <div className="mt-6 flex flex-col items-center gap-1.5">
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2 w-full">
+                    <span className="h-px flex-1 bg-slate-200" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">or</span>
+                    <span className="h-px flex-1 bg-slate-200" />
+                  </div>
                   <button onClick={usePasswordInstead} type="button"
-                    className="text-sm text-slate-400 hover:text-blue-600 font-medium transition-colors">
-                    Sign in with password instead
+                    className="w-full py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:text-blue-700 hover:border-blue-300 hover:bg-blue-50/50 transition-colors">
+                    Use password / switch account
                   </button>
                 </div>
               </div>

@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
-import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus } from 'lucide-react';
+import { useIsLead } from '@/components/CurrentUserContext';
+import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus, Lock } from 'lucide-react';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
 interface Phase { id: string; name: string; tasks: string[] }
@@ -274,11 +275,17 @@ function PhaseRow({
 ════════════════════════════════════════════════════════════════════════════ */
 export default function NewProjectPage() {
   const router = useRouter();
+  // Contributors can only ever create *personal* projects (shared projects are
+  // a lead/admin action). Rather than let them fill in the whole form and hit a
+  // 403 on submit, we force the Personal toggle on and lock it for ICs.
+  const isLead = useIsLead();
 
   // Every user can create a project; the Personal toggle decides whether it
   // is a shared team project or a private to-do list. There is no separate
   // entry point — one form, one toggle.
-  const [personal, setPersonal] = useState(false);
+  // ICs start (and stay) in personal mode; leads/admins default to a shared
+  // project and may flip the toggle.
+  const [personal, setPersonal] = useState(!isLead);
 
   const [form, setForm] = useState({
     name: '', description: '', lifecycle: 'generic',
@@ -492,7 +499,9 @@ export default function NewProjectPage() {
                 type="button"
                 role="switch"
                 aria-checked={personal}
+                disabled={!isLead}
                 onClick={() => {
+                  if (!isLead) return; // ICs are locked to personal projects
                   const next = !personal;
                   setPersonal(next);
                   // Switching to personal: drop any GxP / General lifecycle —
@@ -509,16 +518,21 @@ export default function NewProjectPage() {
                     up('lifecycle', 'generic');
                   }
                 }}
-                className={`mt-0.5 relative w-9 h-5 rounded-full shrink-0 transition-colors cursor-pointer ${
+                className={`mt-0.5 relative w-9 h-5 rounded-full shrink-0 transition-colors ${
                   personal ? 'bg-blue-600' : 'bg-slate-300'
-                }`}
+                } ${isLead ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
               >
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${personal ? 'left-4' : 'left-0.5'}`} />
               </button>
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-700">Personal project</div>
+                <div className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                  Personal project
+                  {!isLead && <Lock size={11} className="text-slate-400" />}
+                </div>
                 <div className="text-xs text-slate-400 mt-0.5">
-                  Only visible to you — no team, hidden from everyone else (including admins).
+                  {isLead
+                    ? 'Only visible to you — no team, hidden from everyone else (including admins).'
+                    : 'Contributors create personal projects — private to you, no team attached. Ask a team lead to set up shared projects.'}
                 </div>
               </div>
             </div>

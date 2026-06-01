@@ -10,7 +10,13 @@ import { api } from '@/lib/client/api';
 import { playDropTick } from '@/lib/sound';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
-import { ActivityGraph } from '@/components/ActivityGraph';
+import dynamic from 'next/dynamic';
+// Lazy — only the lead's contributor-activity modal needs it, so it stays out
+// of the main dashboard bundle (helps FCP/LCP).
+const ActivityGraph = dynamic(
+  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
+  { ssr: false, loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" /> },
+);
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,

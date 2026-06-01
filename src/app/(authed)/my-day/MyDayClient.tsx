@@ -27,7 +27,13 @@ export default function MyDayClient({ initialData }: {
   const [promote, setPromote] = useState<Note | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText]   = useState('');
+  // Timestamp of the last successful write — drives a subtle "Saved" indicator
+  // so the user is assured their notes persisted (they save on blur, which is
+  // otherwise invisible).
+  const [savedAt, setSavedAt]     = useState<Date | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function markSaved() { setSavedAt(new Date()); }
 
   function startEdit(n: Note) { setEditingId(n.id); setEditText(n.text); }
   function cancelEdit() { setEditingId(null); setEditText(''); }
@@ -36,7 +42,7 @@ export default function MyDayClient({ initialData }: {
     if (!t || t === n.text) { cancelEdit(); return; }
     setOpen((o) => o.map((x) => (x.id === n.id ? { ...x, text: t } : x)));
     cancelEdit();
-    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { text: t } }); } finally { load(); }
+    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { text: t } }); markSaved(); } finally { load(); }
   }
 
   async function load() {
@@ -53,7 +59,7 @@ export default function MyDayClient({ initialData }: {
     setText('');
     const temp: Note = { id: `tmp-${Date.now()}`, text: t, done: false, promotedTaskId: null, createdAt: new Date().toISOString() };
     setOpen((o) => [temp, ...o]);
-    try { await api('/scratch', { method: 'POST', body: { text: t } }); } finally { load(); }
+    try { await api('/scratch', { method: 'POST', body: { text: t } }); markSaved(); } finally { load(); }
     inputRef.current?.focus();
   }
 
@@ -65,13 +71,13 @@ export default function MyDayClient({ initialData }: {
       setOpen((o) => o.filter((x) => x.id !== n.id));
       setDone((d) => [{ ...n, done: true }, ...d]);
     }
-    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { done: !n.done } }); } finally { load(); }
+    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { done: !n.done } }); markSaved(); } finally { load(); }
   }
 
   async function remove(n: Note) {
     setOpen((o) => o.filter((x) => x.id !== n.id));
     setDone((d) => d.filter((x) => x.id !== n.id));
-    try { await api(`/scratch/${n.id}`, { method: 'DELETE' }); } finally { load(); }
+    try { await api(`/scratch/${n.id}`, { method: 'DELETE' }); markSaved(); } finally { load(); }
   }
 
   return (
@@ -81,6 +87,13 @@ export default function MyDayClient({ initialData }: {
         <div className="flex items-center gap-1.5 mb-1">
           <Sparkles size={12} className="text-blue-400" />
           <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">My Day</span>
+          {savedAt && (
+            <span key={savedAt.getTime()}
+              className="ml-2 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 fade-in-soft"
+              title={`Last saved at ${savedAt.toLocaleTimeString()}`}>
+              <Check size={11} /> Saved {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
         </div>
         <h1 className="text-2xl font-black tracking-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}.</span>

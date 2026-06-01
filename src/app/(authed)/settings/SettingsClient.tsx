@@ -1,9 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
-import { ActivityGraph } from '@/components/ActivityGraph';
+// The contribution heatmap is a sizeable, below-the-fold client component —
+// lazy-load it so it never blocks first paint of the profile page.
+const ActivityGraph = dynamic(
+  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
+  { ssr: false, loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" /> },
+);
 import {
   User, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
   AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil,

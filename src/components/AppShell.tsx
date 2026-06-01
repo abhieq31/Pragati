@@ -433,13 +433,11 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
               paint instead of popping in after the first poll. */}
           <NotificationBell dark={dark} openUp initialUnread={initialUnread} />
 
-          {/* Sign out */}
-          <button type="button" onClick={() => setConfirmLogout(true)} title="Sign out"
-            className={`shrink-0 p-1.5 rounded-lg transition-colors ${
-              dark ? 'text-red-400/55 hover:text-red-400 hover:bg-white/5' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-            }`}>
-            <LogOut size={15} />
-          </button>
+          {/* No standalone sign-out here — it lived behind a LogOut "arrow"
+              that users mistook for a menu-expander and clicked by accident.
+              Sign out now lives only inside the account menu (tap avatar/name),
+              matching the collapsed rail and removing the accidental-logout
+              footgun. */}
         </div>
       </div>
       )}

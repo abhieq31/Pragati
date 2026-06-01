@@ -1,0 +1,37 @@
+name: CI
+
+# Gate every push / PR on the same checks we run locally: TypeScript types,
+# ESLint, and a full production build. Keeps the default branch releasable.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+        env:
+          # The build only needs these to exist; they are not real secrets here.
+          # Mongoose connects lazily at request time, never during `next build`.
+          JWT_SECRET: build-time-placeholder-not-used-at-runtime
+          MONGODB_URI: mongodb://localhost:27017/build-placeholder
