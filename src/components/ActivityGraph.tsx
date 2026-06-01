@@ -53,15 +53,19 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /* ── Achievement catalogue (GitHub-style medallions) ─────────────────────── */
 type BadgeDef = { emoji: string; label: string; blurb: string; from: string; to: string };
+// Quality-informatics themed — the milestones read in the language of a GxP
+// quality team (induction, records, right-first-time, in-control, audit-ready)
+// rather than generic sales-style "kudos". The underlying earn-criteria are
+// unchanged, so the keys stay identical to the server scoring.
 const BADGES: Record<string, BadgeDef> = {
-  first_step:     { emoji: '🌱', label: 'First Step',  blurb: 'Welcome aboard — your journey on Pragati has begun.',   from: '#34d399', to: '#059669' },
-  task_rookie:    { emoji: '✅', label: 'Rookie',       blurb: 'Closed your very first task. Onwards!',                 from: '#38bdf8', to: '#0284c7' },
-  task_achiever:  { emoji: '⭐', label: 'Achiever',     blurb: '10 tasks completed — momentum is building.',           from: '#fbbf24', to: '#d97706' },
-  task_performer: { emoji: '🏅', label: 'Performer',    blurb: '50 tasks done. A dependable force on the team.',       from: '#a78bfa', to: '#7c3aed' },
-  task_champion:  { emoji: '🏆', label: 'Champion',     blurb: '100 tasks delivered. Truly elite execution.',          from: '#fde047', to: '#ca8a04' },
-  on_time:        { emoji: '🎯', label: 'On Target',    blurb: '85%+ of your work delivered on or before its date.',   from: '#f472b6', to: '#db2777' },
-  streak_3:       { emoji: '🔥', label: '3-Day Streak', blurb: 'Active three days running. Consistency pays off.',     from: '#fb923c', to: '#ea580c' },
-  streak_7:       { emoji: '⚡', label: '7-Day Streak', blurb: 'A full week of delivered work — unstoppable.',         from: '#e879f9', to: '#c026d3' },
+  first_step:     { emoji: '🪪', label: 'Inducted',      blurb: 'Welcome aboard — your Pragati induction is complete.',          from: '#34d399', to: '#059669' },
+  task_rookie:    { emoji: '✅', label: 'First Closure',  blurb: 'Closed your first task. A clean, traceable record.',            from: '#38bdf8', to: '#0284c7' },
+  task_achiever:  { emoji: '📋', label: 'Record Keeper',  blurb: '10 tasks closed — a steady, dependable hand.',                  from: '#fbbf24', to: '#d97706' },
+  task_performer: { emoji: '🛡️', label: 'Quality Guardian', blurb: '50 tasks delivered. Quality is in safe hands.',             from: '#a78bfa', to: '#7c3aed' },
+  task_champion:  { emoji: '🏛️', label: 'Compliance Champion', blurb: '100 tasks closed. A pillar of the quality system.',       from: '#fde047', to: '#ca8a04' },
+  on_time:        { emoji: '🎯', label: 'Right First Time', blurb: '85%+ of your work delivered on or before its due date.',     from: '#f472b6', to: '#db2777' },
+  streak_3:       { emoji: '📈', label: 'In Control',     blurb: 'Three days running — your process stays in control.',          from: '#fb923c', to: '#ea580c' },
+  streak_7:       { emoji: '🔬', label: 'Audit-Ready',    blurb: 'A full week of delivered work — always inspection-ready.',     from: '#e879f9', to: '#c026d3' },
 };
 const BADGE_ORDER = ['first_step', 'task_rookie', 'task_achiever', 'task_performer', 'task_champion', 'on_time', 'streak_3', 'streak_7'];
 
@@ -139,6 +143,9 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
   const [data, setData] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const dark = useIsDark();
+  // Custom heatmap tooltip — replaces the native `title=""` so the hover reads
+  // cleanly (formatted date + point count) instead of the OS' slow tooltip.
+  const [tip, setTip] = useState<{ x: number; y: number; count: number; date: string } | null>(null);
 
   const who = userId ? `users/${userId}/activity` : 'users/me/activity';
 
@@ -238,6 +245,23 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[150px_1fr] gap-5">
+      {/* Floating heatmap tooltip — fixed-positioned, follows the hovered cell. */}
+      {tip && (
+        <div
+          className="fixed z-[60] pointer-events-none -translate-x-1/2 -translate-y-full"
+          style={{ left: tip.x, top: tip.y - 8 }}
+        >
+          <div className="rounded-lg bg-slate-900 text-white px-2.5 py-1.5 shadow-xl text-center whitespace-nowrap">
+            <div className="text-[11px] font-bold leading-tight">
+              {tip.count} contribution point{tip.count === 1 ? '' : 's'}
+            </div>
+            <div className="text-[10px] text-white/60 leading-tight">
+              {new Date(tip.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+          <div className="mx-auto w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-slate-900" />
+        </div>
+      )}
       {/* ── Achievements rail (left) ─────────────────────────────────────── */}
       <aside className="lg:border-r lg:border-slate-100 dark:lg:border-slate-800 lg:pr-4">
         <div className="flex items-center gap-1.5 mb-3">
@@ -297,8 +321,17 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
                       return (
                         <div
                           key={cell.key}
-                          title={`${count} point${count === 1 ? '' : 's'} · ${cell.key}`}
-                          style={{ width: 11, height: 11, borderRadius: 2, background: cellColor(count, dark) }}
+                          onMouseEnter={(e) => {
+                            const r = (e.target as HTMLElement).getBoundingClientRect();
+                            setTip({ x: r.left + r.width / 2, y: r.top, count, date: cell.key });
+                          }}
+                          onMouseLeave={() => setTip(null)}
+                          className="cursor-default transition-transform hover:scale-[1.6] hover:z-10"
+                          style={{
+                            width: 11, height: 11, borderRadius: 2,
+                            background: cellColor(count, dark),
+                            outline: count ? '1px solid rgba(0,0,0,0.04)' : 'none',
+                          }}
                         />
                       );
                     })}

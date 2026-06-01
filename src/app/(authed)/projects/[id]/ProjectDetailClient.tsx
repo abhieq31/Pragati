@@ -14,6 +14,7 @@ import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
 import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
+import { Celebration } from '@/components/Celebration';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -496,6 +497,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [savingStatus, setSavingStatus]       = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
+  // Milestone celebration — set when finishing a task closes out its phase or
+  // the whole project. The Celebration overlay fires a fanfare + confetti.
+  const [celebration, setCelebration] = useState<{ title: string; subtitle?: string; emoji?: string } | null>(null);
 
   async function load() {
     try {
@@ -589,6 +593,40 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     }
   }
 
+  // After a task is completed, decide whether that finished a phase or the whole
+  // project — the genuine milestones worth a celebration. Projects the just-done
+  // task onto the current list so the check is correct even before `load()`.
+  // Returns true when a milestone celebration was triggered (so the caller can
+  // skip the routine completion chime and let the fanfare carry the moment).
+  function celebrateIfMilestone(taskId: string): boolean {
+    const projected = tasks.map((t: any) => (t.id === taskId ? { ...t, status: 'done' } : t));
+    const done = (t: any) => t.status === 'done';
+    if (projected.length > 0 && projected.every(done)) {
+      setCelebration({
+        title: 'Project complete!',
+        subtitle: `Every task in ${project?.name || 'this project'} is closed and in control. Beautifully done.`,
+        emoji: '🏆',
+      });
+      return true;
+    }
+    const task = projected.find((t: any) => t.id === taskId);
+    const pid = task?.phaseId || null;
+    if (!pid) return false;
+    const phaseTasks = projected.filter((t: any) => (t.phaseId || null) === pid);
+    if (phaseTasks.length > 0 && phaseTasks.every(done)) {
+      const phaseName = phases.find((p: any) => p.id === pid)?.name;
+      setCelebration({
+        title: 'Phase complete!',
+        subtitle: phaseName
+          ? `“${phaseName}” is fully closed out — a real milestone. Onwards.`
+          : 'A phase milestone reached — onwards to the next.',
+        emoji: '✅',
+      });
+      return true;
+    }
+    return false;
+  }
+
   // Kanban drop: persist a status change (if any) and the new column order.
   async function dropReorder(taskId: string, toStatus: string, orderedIds: string[]) {
     const cur = tasks.find((t: any) => t.id === taskId);
@@ -606,7 +644,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       }
       if (toStatus === 'done' && wasNotDone) {
         showToast('Task completed ✓');
-        chimeIfEnabled();
+        // A milestone fanfare supersedes the routine chime so we don't stack sounds.
+        if (!celebrateIfMilestone(taskId)) chimeIfEnabled();
       }
       // Optimistic state is already applied by KanbanBoard; reconcile silently.
       load();
@@ -630,7 +669,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       await api(`/tasks/${taskId}`, { method: 'PATCH', body: { status } });
       if (status === 'done' && wasNotDone) {
         showToast('Task completed ✓');
-        chimeIfEnabled();
+        if (!celebrateIfMilestone(taskId)) chimeIfEnabled();
       }
     } catch (e: any) {
       showToast(e.message || 'Failed to update task', 'err');
@@ -697,6 +736,14 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   return (
     <div className="space-y-5 page-enter">
       {ToastEl}
+      {celebration && (
+        <Celebration
+          title={celebration.title}
+          subtitle={celebration.subtitle}
+          emoji={celebration.emoji}
+          onDone={() => setCelebration(null)}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-6 flex-wrap">

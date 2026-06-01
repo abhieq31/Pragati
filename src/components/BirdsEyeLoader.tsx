@@ -53,3 +53,31 @@ export function BirdsEyeLoader({
     </div>
   );
 }
+
+/**
+ * Bird-landing loader — the Pragati mark drops in from above and settles onto a
+ * title-row placeholder, echoing the feeling of swooping from the dashboard's
+ * bird's-eye view down into a single record. Used at the top of the project,
+ * task and team detail loading screens, above their skeletons.
+ */
+export function BirdLandingLoader({ label = 'Coming in to land…' }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-3 mb-5">
+      <div className="relative">
+        <div className="bird-land">
+          <PragatiMark size={34} flat />
+        </div>
+        {/* Soft contact shadow that spreads as the mark settles. */}
+        <div
+          aria-hidden
+          className="bird-shadow absolute left-1/2 -translate-x-1/2 -bottom-1 h-1 w-8 rounded-full"
+          style={{ background: 'rgba(15,23,42,0.18)', filter: 'blur(1.5px)' }}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <div className="skeleton h-3.5 w-40 rounded" />
+        <div className="text-[11px] font-semibold text-slate-400">{label}</div>
+      </div>
+    </div>
+  );
+}

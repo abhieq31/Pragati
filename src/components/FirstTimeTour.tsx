@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, Kanban, Sun, ArrowRight, X } from 'lucide-react';
+import { Sparkles, ListChecks, Trophy, Sun, ArrowRight, X } from 'lucide-react';
 
 // Authoritative state lives on the User record server-side (User.hasSeenTour),
 // so once dismissed the tour never reappears even on a new browser / device.
 // localStorage is used only as a fast-path to avoid a brief flash on the next
-// render after dismissal.
-const STORAGE_KEY = 'pragati-tour-v1';
+// render after dismissal. Bumped to v2 with the refreshed, feature-current copy.
+const STORAGE_KEY = 'pragati-tour-v2';
 
 interface Step {
   title: string;
@@ -15,32 +15,68 @@ interface Step {
   icon: any;
   iconBg: string;
   iconColor: string;
+  doodle: string;       // a scribbled aside, hand-drawn-arrow style
 }
 
-// Kept deliberately short — three precise steps, no fluff.
+// Refreshed for the current app: the pipeline dashboard, board milestones,
+// achievements, and My Day. Four quick, friendly steps.
 const STEPS: Step[] = [
   {
     title: 'Welcome to Pragati',
-    body:  'Your quality work in one place — projects, the team, and what needs attention, all on a single dashboard.',
+    body:  'Your quality work — projects, the team, and what needs attention — in one bird’s-eye view. Pragati means progress, and that’s the whole idea.',
     icon: Sparkles,
     iconBg: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
     iconColor: '#1565C0',
+    doodle: 'everything starts on the dashboard ↗',
   },
   {
-    title: 'Open a project, work the board',
-    body:  'Each project opens to a Kanban board. Drag a card between columns to change its status, or grab the handle to reorder within a phase — it saves instantly.',
-    icon: Kanban,
-    iconBg: 'linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%)',
-    iconColor: '#0369A1',
+    title: 'Watch progress flow',
+    body:  'Expand a project on your dashboard to see its tasks in working order — completed steps check off in place, so momentum is visible at a glance.',
+    icon: ListChecks,
+    iconBg: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)',
+    iconColor: '#15803D',
+    doodle: 'green badge = all caught up ↓',
   },
   {
-    title: 'My Day is yours alone',
-    body:  'A private scratchpad to empty your head, then turn the lines that matter into tracked tasks. Only you can see it.',
+    title: 'Finish strong — boards & milestones',
+    body:  'Open a project for its Kanban board. Drag a card to change its status; close out a phase or a whole project and a little celebration pops to mark the moment.',
+    icon: Trophy,
+    iconBg: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+    iconColor: '#B45309',
+    doodle: 'milestones earn a fanfare ✨',
+  },
+  {
+    title: 'Make it yours',
+    body:  'My Day is a private scratchpad only you can see. On your profile, pick an avatar and rack up quality achievements — Right First Time, In Control, Audit-Ready.',
     icon: Sun,
     iconBg: 'linear-gradient(135deg, #FEF9C3 0%, #FDE68A 100%)',
     iconColor: '#A16207',
+    doodle: 'hover your avatar to peek at them ↖',
   },
 ];
+
+/* A loose, hand-drawn underline that sits under the step title. */
+function ScribbleUnderline() {
+  return (
+    <svg width="148" height="9" viewBox="0 0 148 9" fill="none" className="mt-1 text-blue-400">
+      <path
+        d="M2 5.5C26 2.5 52 2 74 4c22 2 48 2.5 72-1.5"
+        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+        style={{ strokeDasharray: 1 }}
+      />
+    </svg>
+  );
+}
+
+/* A scribbled curvy arrow doodle that points down-right toward the CTA. */
+function ScribbleArrow() {
+  return (
+    <svg width="56" height="34" viewBox="0 0 56 34" fill="none" className="text-slate-300">
+      <path d="M3 4C14 16 30 22 49 22" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeDasharray="0.1 6" />
+      <path d="M40 14c5 4 8 6 9 8-3 1-7 1-11 1" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+}
 
 export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }) {
   const [mounted, setMounted] = useState(false);
@@ -81,34 +117,50 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-md w-full overflow-hidden modal-in"
+        className="relative bg-white max-w-md w-full overflow-visible modal-in"
+        style={{
+          // Sketchy, hand-drawn frame: a dashed outline + a slight offset
+          // "double line" shadow so it reads like a doodled box, not a chrome modal.
+          borderRadius: '22px',
+          border: '2.5px dashed #cbd5e1',
+          boxShadow: '6px 7px 0 rgba(15,23,42,0.06), 0 18px 50px rgba(15,23,42,0.18)',
+          transform: 'rotate(-0.5deg)',
+        }}
       >
-        {/* Top hero */}
-        <div className="relative px-7 pt-7 pb-5"
-          style={{ background: 'linear-gradient(160deg, #F8FAFC 0%, #FFFFFF 100%)' }}>
-          <button
-            onClick={close}
-            className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-            aria-label="Close tour"
-          >
-            <X size={14} />
-          </button>
+        <button
+          onClick={close}
+          className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          aria-label="Close tour"
+        >
+          <X size={14} />
+        </button>
 
-          {/* Big rounded icon */}
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+        {/* Top hero */}
+        <div className="px-7 pt-7 pb-3">
+          {/* Big rounded icon with a sketchy ring */}
+          <div className="w-14 h-14 flex items-center justify-center mb-4"
             style={{
               background: s.iconBg,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 12px rgba(15,23,42,0.06)',
+              borderRadius: '18px',
+              border: '2px solid rgba(15,23,42,0.08)',
+              boxShadow: '3px 3px 0 rgba(15,23,42,0.05)',
             }}>
             <Icn size={26} style={{ color: s.iconColor }} />
           </div>
 
           <h2 className="text-xl font-black text-slate-900 tracking-tight">{s.title}</h2>
+          <ScribbleUnderline />
           <p className="text-sm text-slate-500 mt-2 leading-relaxed">{s.body}</p>
+
+          {/* Scribbled aside, like a margin note */}
+          <p className="mt-3 text-[12px] font-semibold text-slate-400 -rotate-1"
+            style={{ fontStyle: 'italic' }}>
+            {s.doodle}
+          </p>
         </div>
 
         {/* Bottom */}
-        <div className="px-7 pb-6 pt-2 flex items-center justify-between">
+        <div className="px-7 pb-6 pt-1 flex items-center justify-between">
           {/* Step dots */}
           <div className="flex items-center gap-1.5">
             {STEPS.map((_, i) => (
@@ -120,7 +172,8 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {!last && <span className="hidden sm:block -mb-3"><ScribbleArrow /></span>}
             {step > 0 && (
               <button
                 onClick={() => setStep(s => s - 1)}
@@ -131,13 +184,14 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
             )}
             <button
               onClick={() => last ? close() : setStep(s => s + 1)}
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-white rounded-xl px-4 py-2.5 transition-all"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-white px-4 py-2.5 transition-all"
               style={{
                 background: 'linear-gradient(135deg, #1565C0 0%, #1E88E5 100%)',
-                boxShadow: '0 4px 12px rgba(21,101,192,0.32)',
+                borderRadius: '14px',
+                boxShadow: '3px 3px 0 rgba(21,101,192,0.22)',
               }}
             >
-              {last ? "Let's go" : 'Next'}
+              {last ? "Let’s go" : 'Next'}
               <ArrowRight size={13} />
             </button>
           </div>

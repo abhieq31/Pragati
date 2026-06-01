@@ -6,7 +6,7 @@ import { Avatar } from '@/components/ui';
 import { ActivityGraph } from '@/components/ActivityGraph';
 import {
   User, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
-  AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil,
+  AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil, Trophy,
 } from 'lucide-react';
 
 
@@ -28,12 +28,16 @@ function ProfileAvatar({
   const inner = <Avatar name={name} size={size} letter={letter} bg={bg} font={font} />;
 
   if (!onClick) return inner;
+  // Hovering the avatar reveals a peek at achievements (and scrolls to the full
+  // Activity rail on click). Editing the avatar now lives behind the profile
+  // "Edit" button, so the avatar itself is a window into the user's work.
   return (
-    <div className="relative group cursor-pointer" onClick={onClick} title="Change avatar">
+    <div className="relative group cursor-pointer" onClick={onClick} title="View achievements">
       {inner}
-      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
-        style={{ fontSize: size * 0.22, fontWeight: 600, borderRadius: Math.max(4, Math.round(size * 0.28)) }}>
-        Edit
+      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-0.5 text-white"
+        style={{ borderRadius: Math.max(4, Math.round(size * 0.28)) }}>
+        <Trophy size={Math.round(size * 0.26)} />
+        <span style={{ fontSize: size * 0.13, fontWeight: 700, letterSpacing: '0.03em' }}>ACHIEVEMENTS</span>
       </div>
     </div>
   );
@@ -506,11 +510,9 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
         style={{ boxShadow: '0 16px 48px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05)' }}>
         <div className="absolute inset-0 profile-hero-shimmer" />
-        <div className="absolute inset-0 opacity-25"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.22) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
+        {/* Soft radial sheen instead of the old grid — keeps the shimmer clean. */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(120% 140% at 12% 0%, rgba(255,255,255,0.20) 0%, transparent 45%)' }}
         />
         <div className="relative px-5 py-6 sm:px-8 sm:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -523,7 +525,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
                   bg={avatarBg}
                   font={avatarFont}
                   size={88}
-                  onClick={() => setShowAvatarEditor(true)}
+                  onClick={() => document.getElementById('activity')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
                 />
               </div>
               <div className="min-w-0 pb-1">
@@ -575,6 +577,13 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
       {editingProfile && (
         <Section icon={User} title="Edit profile" subtitle="Your name and avatar as they appear across Pragati.">
           <form onSubmit={(e) => { saveIdentity(e); }} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Avatar name={user.name} size={52} letter={avatarLetter} bg={avatarBg} font={avatarFont} />
+              <button type="button" onClick={() => setShowAvatarEditor(true)}
+                className="btn-secondary inline-flex items-center gap-1.5 text-xs">
+                <Pencil size={12} /> Change avatar
+              </button>
+            </div>
             <Field label="Full name">
               <input className="input" value={name} onChange={e => setName(e.target.value)} required />
             </Field>

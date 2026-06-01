@@ -182,11 +182,16 @@ export function LifecycleTag({ lifecycle }: { lifecycle?: string | null }) {
 export function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className={`w-full bg-slate-100 rounded-full h-1 ${className}`}>
+    <div className={`relative w-full bg-slate-100 dark:bg-white/10 rounded-full h-1 overflow-hidden ${className}`}>
       <div
-        className="progress-bar-fill h-1 rounded-full transition-all duration-500"
-        style={{ width: `${pct}%` }}
-      />
+        className="progress-bar-fill h-1 rounded-full"
+        // Spring-like easing so the fill glides into place rather than a flat
+        // linear crawl — reads as "progress made", not a loading bar.
+        style={{ width: `${pct}%`, transition: 'width 900ms cubic-bezier(0.22, 1, 0.36, 1)' }}
+      >
+        {/* Travelling sheen — only while there's something to show. */}
+        {pct > 0 && pct < 100 && <span aria-hidden className="progress-bar-sheen" />}
+      </div>
     </div>
   );
 }
@@ -343,7 +348,7 @@ export function Avatar({ name, size = 28, letter, bg, font }: AvatarProps) {
       style={{
         width: size,
         height: size,
-        fontSize: size * (initials.length === 1 ? 0.46 : 0.40),
+        fontSize: size * (initials.length === 1 ? 0.52 : 0.46),
         fontWeight: fontDef.weight,
         fontFamily: fontDef.family,
         letterSpacing: '0.02em',

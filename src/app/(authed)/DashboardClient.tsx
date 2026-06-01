@@ -72,12 +72,24 @@ interface DashResp {
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
+// "Pragati" means progress — the greeting leans into that rather than a generic
+// "Good morning". Time-of-day sets the tone; the sub-line (computed from the
+// user's real workload below) gives it actual meaning.
 function greeting(now = new Date()) {
   const h = now.getHours();
-  if (h < 5)  return 'Working late';
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 5)  return 'Burning the midnight oil';
+  if (h < 12) return 'Fresh start';
+  if (h < 17) return 'Keep it moving';
+  if (h < 21) return 'Strong finish';
+  return 'Winding down';
+}
+
+// A meaningful one-liner driven by the user's actual state — not filler.
+function greetingSubline({ open, overdue, dueToday }: { open: number; overdue: number; dueToday: number }) {
+  if (overdue > 0)   return `${overdue} task${overdue === 1 ? '' : 's'} slipped past due — let's bring ${overdue === 1 ? 'it' : 'them'} back in control.`;
+  if (dueToday > 0)  return `${dueToday} due today. Clear ${dueToday === 1 ? 'it' : 'them'} and stay audit-ready.`;
+  if (open === 0)    return 'Nothing open — every record is closed and in control. 🎯';
+  return `${open} task${open === 1 ? '' : 's'} moving through the pipeline. Steady progress.`;
 }
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -161,6 +173,18 @@ export default function DashboardClient({
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
         </h1>
+        {!isFirstRun && (() => {
+          const open = visibleTasks.filter(t => t.status !== 'done').length;
+          const now = new Date();
+          const isSameDay = (d: Date) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+          const overdue = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now && !isSameDay(new Date(t.dueDate))).length;
+          const dueToday = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && isSameDay(new Date(t.dueDate))).length;
+          return (
+            <p className="mt-1 text-sm text-slate-500 dark:text-white/45" suppressHydrationWarning>
+              {greetingSubline({ open, overdue, dueToday })}
+            </p>
+          );
+        })()}
       </div>
 
       {isFirstRun ? (
@@ -472,77 +496,73 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
   }
 
   const visible = local.slice(0, 20);
-
-  // Group consecutive tasks by status for phase dividers
-  const groups: { status: string; items: typeof visible }[] = [];
-  for (const t of visible) {
-    const last = groups[groups.length - 1];
-    if (last && last.status === t.status) last.items.push(t);
-    else groups.push({ status: t.status, items: [t] });
-  }
+  const doneCount = local.filter((t) => t.status === 'done').length;
 
   return (
-    <ul className="divide-y divide-slate-100">
-      {groups.map((group) => (
-        <React.Fragment key={group.status}>
-          {/* Subtle phase label between status groups */}
-          <li aria-hidden className="px-3 pt-2 pb-0.5 flex items-center gap-2">
-            <span className="text-[9px] font-bold uppercase tracking-widest"
-              style={{ color: (FLOW_META[group.status] || FLOW_META.todo).color, opacity: 0.7 }}>
-              {(FLOW_META[group.status] || FLOW_META.todo).label}
-            </span>
-            <span className="flex-1 h-px bg-slate-100" />
-          </li>
-          {group.items.map((t) => {
-            const meta = FLOW_META[t.status] || FLOW_META.todo;
-            const dragging = draggingId === t.id;
-            const over     = overId === t.id;
-            return (
-              <li
-                key={t.id}
-                onDragOver={(e) => onDragOverRow(e, t.id)}
-                onDrop={(e) => onDropRow(e, t.id)}
-                className={`relative flex items-center gap-3 px-3 py-2 transition-colors ${
-                  dragging ? 'opacity-50' : ''
-                } ${over ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}
+    <ul className="divide-y divide-slate-100 dark:divide-white/5">
+      {/* Pipeline header — tasks render in working order so the path from the
+          first step to the last (and how far along it is) reads at a glance. */}
+      <li aria-hidden className="px-3 pt-2 pb-1 flex items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+          In order · {doneCount}/{local.length} done
+        </span>
+        <span className="flex-1 h-px bg-slate-100 dark:bg-white/5" />
+      </li>
+      {visible.map((t) => {
+        const meta     = FLOW_META[t.status] || FLOW_META.todo;
+        const isDone   = t.status === 'done';
+        const dragging = draggingId === t.id;
+        const over     = overId === t.id;
+        return (
+          <li
+            key={t.id}
+            onDragOver={(e) => onDragOverRow(e, t.id)}
+            onDrop={(e) => onDropRow(e, t.id)}
+            className={`relative flex items-center gap-3 px-3 py-2 transition-colors ${
+              dragging ? 'opacity-50' : ''
+            } ${over ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}
+          >
+            {over && !dragging && (
+              <span aria-hidden className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-500" />
+            )}
+
+            {canMove ? (
+              <span
+                draggable
+                onDragStart={(e) => onDragStart(e, t.id)}
+                onDragEnd={() => { setDraggingId(null); setOverId(null); }}
+                className="shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500"
+                title="Drag to reorder"
+                aria-label="Reorder task"
               >
-                {over && !dragging && (
-                  <span aria-hidden className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-500" />
-                )}
+                <GripVertical size={14} />
+              </span>
+            ) : (
+              <span className="shrink-0 w-3.5" />
+            )}
 
-                {canMove ? (
-                  <span
-                    draggable
-                    onDragStart={(e) => onDragStart(e, t.id)}
-                    onDragEnd={() => { setDraggingId(null); setOverId(null); }}
-                    className="shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500"
-                    title="Drag to reorder"
-                    aria-label="Reorder task"
-                  >
-                    <GripVertical size={14} />
-                  </span>
-                ) : (
-                  <span className="shrink-0 w-3.5" />
-                )}
+            {/* Completed steps get a green check in place of the status dot, so
+                progress down the pipeline is unmistakable. */}
+            {isDone ? (
+              <CheckCircle2 size={14} className="shrink-0 text-emerald-500" aria-hidden />
+            ) : (
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} aria-hidden />
+            )}
 
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} aria-hidden />
-
-                <Link
-                  href={`/tasks/${t.id}`}
-                  className="flex-1 min-w-0 text-xs leading-snug text-slate-800 hover:text-blue-700"
-                  onClick={(e) => draggingId && e.preventDefault()}
-                >
-                  <span className="line-clamp-1 font-semibold">{t.title}</span>
-                  <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
-                    <span className="truncate">{t.assigneeName || 'Unassigned'}</span>
-                    {(t.ccTcd || t.dueDate) && <span>· {formatDate(t.ccTcd || t.dueDate)}</span>}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </React.Fragment>
-      ))}
+            <Link
+              href={`/tasks/${t.id}`}
+              className={`flex-1 min-w-0 text-xs leading-snug ${isDone ? 'text-slate-400' : 'text-slate-800 hover:text-blue-700'}`}
+              onClick={(e) => draggingId && e.preventDefault()}
+            >
+              <span className={`line-clamp-1 font-semibold ${isDone ? 'line-through decoration-slate-300' : ''}`}>{t.title}</span>
+              <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
+                <span className="truncate">{t.assigneeName || 'Unassigned'}</span>
+                {(t.ccTcd || t.dueDate) && <span>· {formatDate(t.ccTcd || t.dueDate)}</span>}
+              </span>
+            </Link>
+          </li>
+        );
+      })}
       {local.length > 20 && (
         <li className="px-3 py-2 text-[10px] text-slate-400">
           Showing 20 of {local.length} tasks — open the project for the full board.
@@ -564,15 +584,10 @@ function ProjectRow({
   const dueIn  = daysUntil(project.dueDate);
   const cat    = project.lifecycle && project.lifecycle !== 'generic' ? (LIFECYCLE_LABELS[project.lifecycle] || project.lifecycle) : null;
 
-  // Sort tasks: active first, done last
-  const STATUS_ORDER: Record<string, number> = { in_progress: 0, review: 1, blocked: 2, todo: 3, done: 4 };
-  const sortedTasks = [...tasks].sort((a, b) => {
-    const s = (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
-    if (s !== 0) return s;
-    const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-    const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-    return da - db;
-  });
+  // Show tasks in their working order (the saved board sequence) rather than
+  // re-bucketing by status. Seeing the pipeline top-to-bottom — completed steps
+  // in place — makes progress legible and motivating.
+  const sortedTasks = tasks;
 
   return (
     <article className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden transition-all"
