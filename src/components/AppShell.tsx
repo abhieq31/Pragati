@@ -289,7 +289,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
           {/* Constant size — the mark used to scale 28↔30 on every collapse,
               causing a brief squeeze. The wordmark fades out instead. */}
           <PragatiMark size={30} flat />
-          <span className={`font-black text-[20px] tracking-tight leading-none whitespace-nowrap transition-opacity duration-150 ${dark ? 'text-white' : 'text-slate-900'} ${
+          <span className={`brand-wordmark text-[21px] leading-none whitespace-nowrap transition-opacity duration-150 ${dark ? 'text-white' : 'brand-wordmark-gradient'} ${
             showCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
           }`}>
             Pragati
@@ -525,7 +525,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
           </button>
           <Link href="/" className="flex items-center gap-2">
             <PragatiMark size={22} flat />
-            <span className={`font-black text-sm tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>Pragati</span>
+            <span className={`brand-wordmark text-[15px] ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}>Pragati</span>
           </Link>
         </div>
 

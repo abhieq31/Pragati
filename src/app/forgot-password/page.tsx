@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
           <PragatiMark size={48} />
-          <div className="font-display text-2xl font-bold text-slate-900 mt-3">Pragati</div>
+          <div className="brand-wordmark brand-wordmark-gradient text-2xl mt-3">Pragati</div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

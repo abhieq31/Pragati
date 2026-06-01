@@ -11,6 +11,36 @@
   font-feature-settings: 'ss01';
 }
 
+/* ── Pragati brand wordmark ────────────────────────────────────────────────
+   The single, canonical treatment for the literal word "Pragati" everywhere
+   it appears as the logotype (sidebar, login, signup, forgot-password). It
+   uses the General Sans display face at its heaviest weight with tightened,
+   optically-balanced tracking and the 'ss01' stylistic set + discretionary
+   ligatures, so the wordmark reads as a crafted logotype rather than just bold
+   body text. Colour is left to the call site (white on the login hero,
+   ink/white in the sidebar) so this stays purely typographic. */
+.brand-wordmark {
+  font-family: 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  font-feature-settings: 'ss01', 'dlig';
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Gradient-filled variant for light surfaces (sidebar in light mode, auth
+   cards). Paints the brand blue→forest gradient straight into the glyphs —
+   the same hues as the logo mark — for a richer, more memorable logotype.
+   Only use where the background is light; on dark/coloured surfaces use the
+   plain .brand-wordmark with an explicit colour instead. */
+.brand-wordmark-gradient {
+  background: linear-gradient(115deg, #1565C0 0%, #1976D2 42%, #2E7D32 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}
+
 :root {
   color-scheme: light;
   --brand:           #1565C0;

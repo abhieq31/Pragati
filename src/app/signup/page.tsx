@@ -122,7 +122,7 @@ function SignupForm() {
         <div className="w-14 h-14 mx-auto rounded-full bg-green-50 flex items-center justify-center mb-4 animate-[pop_0.5s_cubic-bezier(0.34,1.56,0.64,1)]">
           <CheckCircle2 size={32} className="text-green-500" />
         </div>
-        <h2 className="text-xl font-black text-slate-800">Welcome to Pragati</h2>
+        <h2 className="text-xl font-black text-slate-800">Welcome to <span className="brand-wordmark brand-wordmark-gradient">Pragati</span></h2>
         <p className="text-sm text-slate-500 mt-2">Taking you to your dashboard…</p>
         <style jsx>{`@keyframes pop { from { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } to { transform: scale(1); } }`}</style>
       </div>
@@ -202,7 +202,7 @@ export default function SignupPage() {
         {/* Pragati mark + wordmark */}
         <div className="flex flex-col items-center mb-6">
           <PragatiMark size={56} className="mb-3" />
-          <div className="font-display text-xl font-bold tracking-tight text-slate-900">Pragati</div>
+          <div className="brand-wordmark brand-wordmark-gradient text-2xl">Pragati</div>
           <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 mt-0.5">Project Intelligence</div>
         </div>
 

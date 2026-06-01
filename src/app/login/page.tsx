@@ -339,8 +339,8 @@ export default function LoginPage() {
 
               {/* Wordmark */}
               <h1
-                className="fade-up-1 text-center font-black text-white leading-none"
-                style={{ fontSize: 'clamp(62px, 6.2vw, 88px)', letterSpacing: '-0.035em' }}
+                className="fade-up-1 brand-wordmark text-center text-white leading-none"
+                style={{ fontSize: 'clamp(62px, 6.2vw, 88px)' }}
               >
                 Pragati
               </h1>
@@ -383,7 +383,7 @@ export default function LoginPage() {
                 style={{ boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}>
                 <PragatiMark size={44} />
               </div>
-              <div className="text-3xl font-black text-white mt-3 tracking-tight drop-shadow">Pragati</div>
+              <div className="brand-wordmark text-[2rem] text-white mt-3 drop-shadow">Pragati</div>
               <div className="text-sm text-white/70 mt-1">Quality Informatics Platform</div>
             </div>
 
@@ -395,7 +395,7 @@ export default function LoginPage() {
               <div className="mb-6 rounded-xl border border-forest-200 bg-forest-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
                 <Sparkles size={15} className="text-forest-600 shrink-0 mt-0.5" />
                 <div className="text-xs leading-snug">
-                  <div className="font-semibold text-forest-800">Welcome to Pragati</div>
+                  <div className="font-semibold text-forest-800">Welcome to <span className="brand-wordmark">Pragati</span></div>
                   <button onClick={() => { setMode('setup'); setErr(''); }}
                     className="text-forest-700 font-bold underline hover:no-underline mt-0.5">
                     Set up your workspace →

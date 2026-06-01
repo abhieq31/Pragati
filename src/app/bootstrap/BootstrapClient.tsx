@@ -62,7 +62,7 @@ export function BootstrapClient() {
         <div className="flex items-center gap-3 mb-6">
           <PragatiMark size={48} flat />
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Pragati — First-run setup</h1>
+            <h1 className="text-xl font-semibold text-slate-900"><span className="brand-wordmark">Pragati</span> — First-run setup</h1>
             <p className="text-xs text-slate-500">Provision the admin account and clean up seed data.</p>
           </div>
         </div>
