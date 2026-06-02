@@ -7,6 +7,7 @@ import { Card, PriorityTag, StatusTag, formatDate, useToast } from '@/components
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
+import { UserPicker } from '@/components/UserPicker';
 import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
@@ -43,7 +44,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   // Seed from the server-rendered payload so real content paints on first
   // byte; the mount-time refetch below keeps it fresh.
   const [task, setTask] = useState<any>(initialTask);
-  const [users, setUsers] = useState<any[]>([]);
+  // Project team scope for the assignee picker. The picker fetches its own
+  // (paginated) roster from /api/users?teamId=… — we only need the id here.
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [me, setMe] = useState<any>(initialMe);
   const [comment, setComment] = useState('');
   const [newSub, setNewSub] = useState('');
@@ -76,9 +79,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
         const m = me ? { user: me } : await api<any>('/auth/me');
         setMe(m.user);
         const proj = t.projectId ? await api<any>(`/projects/${t.projectId}`).catch(() => null) : null;
-        const teamId = proj?.teamId;
-        const u = await api<any[]>(`/users${teamId ? `?teamId=${teamId}` : ''}`);
-        setUsers(u.filter((x) => x.role !== 'admin'));   // admin is never assignable
+        setTeamId(proj?.teamId || null);
       } catch (e: any) {
         setLoadErr(e?.message || 'Could not load this task.');
       }
@@ -520,15 +521,14 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             </div>
             <div>
               <label className="label">Assignee</label>
-              <Select
+              <UserPicker
                 value={task.assigneeId || ''}
+                valueLabel={task.assigneeName}
                 disabled={!isLead}
                 ariaLabel="Assignee"
+                teamId={teamId}
+                excludeAdmin
                 onChange={(v) => isLead && update({ assigneeId: v || null })}
-                options={[
-                  { value: '', label: 'Unassigned' },
-                  ...users.map((u: any) => ({ value: u.id, label: u.name })),
-                ]}
               />
             </div>
             {/* Waiting on — who the task is stuck/pending with (QA, a person,

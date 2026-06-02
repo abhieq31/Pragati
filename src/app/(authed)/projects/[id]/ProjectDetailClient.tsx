@@ -9,6 +9,7 @@ import {
   TaskLink, formatDate, useToast,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
+import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
@@ -464,8 +465,8 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
 }
 
 /* ── Quick-add task ───────────────────────────────────────────────────────── */
-function QuickAddTask({ projectId, phaseId, users, onAdded }: {
-  projectId: string; phaseId?: string; users: any[]; onAdded: () => void;
+function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
+  projectId: string; phaseId?: string; teamId?: string | null; onAdded: () => void;
 }) {
   const [open, setOpen]       = useState(false);
   const [title, setTitle]     = useState('');
@@ -512,11 +513,16 @@ function QuickAddTask({ projectId, phaseId, users, onAdded }: {
         onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setTitle(''); } }}
       />
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 bg-white/60">
-        <select className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 focus:outline-none focus:border-blue-300"
-          value={assignee} onChange={e => setAssignee(e.target.value)}>
-          <option value="">Unassigned</option>
-          {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
+        <UserPicker
+          className="flex-1"
+          value={assignee}
+          onChange={setAssignee}
+          teamId={teamId}
+          excludeAdmin
+          size="sm"
+          placeholder="Search to assign…"
+          ariaLabel="Assignee"
+        />
         <DatePicker value={due} onChange={v => setDue(v || '')} placeholder="Due date" size="sm" />
         <button type="submit" disabled={!title.trim() || saving}
           className="px-3 py-1 text-xs font-bold rounded-lg bg-blue-600 text-white disabled:opacity-50 hover:bg-blue-700 transition-colors shrink-0">
@@ -723,7 +729,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // byte. The client still refetches on mount to stay live; SSR is the fast
   // first paint, the client fetch is the freshness pass.
   const [project, setProject] = useState<any>(initialProject);
-  const [users, setUsers]     = useState<any[]>([]);
   const [me, setMe]           = useState<any>(initialMe);
   const [view, setView]       = useState<'phases' | 'board'>('phases');
   // The owner of a personal project may fully manage it even as an IC — that
@@ -752,14 +757,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
 
   async function load() {
     try {
-      // Fetch the project first so we know its team — then pull only that
-      // team's roster for the assignee dropdown. Falls back to all users
-      // when a project hasn't been assigned to a team yet.
+      // The assignee picker (UserPicker) fetches its own paginated roster
+      // scoped to the project's team, so we only need the project here.
       const p = await api<any>(`/projects/${id}`);
-      const u = await api<any[]>(`/users${p.teamId ? `?teamId=${p.teamId}` : ''}`);
-      // The admin is the workspace owner, never a task assignee — keep them
-      // out of every picker.
-      setProject(p); setUsers(u.filter((x) => x.role !== 'admin')); setLoadErr(null);
+      setProject(p); setLoadErr(null);
     } catch (e: any) { setLoadErr(e?.message || 'Could not load this project.'); }
   }
 
@@ -1270,7 +1271,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                   })}
                 </div>
                 {canManage && (
-                  <QuickAddTask projectId={project.id} phaseId={ph.id} users={users} onAdded={load} />
+                  <QuickAddTask projectId={project.id} phaseId={ph.id} teamId={project.teamId} onAdded={load} />
                 )}
               </Card>
             );
@@ -1328,7 +1329,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               )}
             </div>
             {canManage && (
-              <QuickAddTask projectId={project.id} users={users} onAdded={load} />
+              <QuickAddTask projectId={project.id} teamId={project.teamId} onAdded={load} />
             )}
           </Card>
         </div>
