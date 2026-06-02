@@ -1117,6 +1117,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               admin-only. */}
           <div className="flex flex-wrap items-center md:justify-end gap-2">
             <ExportMenu
+              onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
               onPdf={() => printProjectReport(project, phases)}
               onHtml={() => downloadProjectReport(project, phases)}
               onCsv={() => downloadProjectCsv(project, phases)}
