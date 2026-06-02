@@ -11,6 +11,7 @@ import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
+import { AlcoaBadge } from '@/components/AlcoaBadge';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -263,6 +264,30 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 {TASK_TYPE_LABELS[task.taskType] ?? task.taskType.replace(/_/g, ' ')}
               </span>
             )}
+            <AlcoaBadge task={{
+              title:            task.title,
+              description:      task.description,
+              status:           task.status,
+              taskType:         task.taskType,
+              priority:         task.priority,
+              assigneeId:       task.assigneeId,
+              requiresQaSignoff: task.requiresQaSignoff,
+              qaSignoffUserId:  task.qaSignoffUserId,
+              qaSignoffAt:      task.qaSignoffAt,
+              gxpCritical:      task.gxpCritical,
+              ccNo:             task.ccNo,
+              documentNo:       task.documentNo,
+              applicableSite:   task.applicableSite,
+              deployStage:      task.deployStage,
+              createdAt:        task.createdAt,
+              startDate:        task.startDate,
+              dueDate:          task.dueDate,
+              completedAt:      task.completedAt,
+              remarks:          task.remarks,
+              pendingWith:      task.pendingWith,
+              aiTriage:         task.aiTriage,
+              projectIsPersonal: task.projectIsPersonal ?? task.isPersonal,
+            }} />
           </div>
         </div>
 
