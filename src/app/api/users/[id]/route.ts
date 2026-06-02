@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
@@ -19,6 +20,13 @@ const Body = z.object({
   role:       z.enum(['contributor', 'lead']).optional(),
   title:      z.string().max(120).optional(),
   name:       z.string().max(120).optional(),
+  // Identity fields — only the admin can change these, and only with a
+  // password sign-off + justification (21 CFR Part 11 §11.200). Username,
+  // email, and employee ID are the identifiers downstream systems use to
+  // reconcile an account, so changes leave a full before/after audit trail.
+  username:   z.string().min(3).max(80).regex(/^[a-z0-9._-]+$/, 'lowercase letters, digits, dot, dash, underscore').optional(),
+  email:      z.string().email().max(200).optional(),
+  employeeId: z.string().max(80).optional(),
   department: z.string().max(120).optional(),
   // Soft organisational grouping (business unit, plant, sub-company). Used by
   // people-pickers to group/filter at scale; not a tenant boundary.
@@ -35,6 +43,13 @@ const Body = z.object({
   deactivationReason: z.string().max(500).optional(),
   // Force the user to set a new password on their next sign-in.
   mustChangePassword: z.boolean().optional(),
+  // ── E-signature (21 CFR Part 11 §11.200) ────────────────────────────────
+  // Required for sensitive changes: role promote/demote, deactivation, and
+  // any identity-field edit (name/username/email/employeeId). The handler
+  // validates the admin's *own* password and the reason becomes part of the
+  // immutable audit row.
+  password:   z.string().min(1).optional(),
+  reason:     z.string().max(1000).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -47,7 +62,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await connectDB();
     const body = await readBody(req, Body);
 
-    const target = await User.findById(params.id, 'role name active').lean();
+    // Pull the full target document so the audit row can record before/after
+    // values for every changed field. A reviewer needs to be able to answer
+    // "what did the admin change, and why?" by pointing at one row.
+    const target = await User.findById(params.id).lean();
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     // The admin is the workspace owner. A non-admin lead must never be
@@ -58,6 +76,40 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         { error: 'Only the workspace admin can modify the admin account.' },
         { status: 403 },
       );
+    }
+
+    // ── E-signature gate for sensitive changes (21 CFR Part 11 §11.200) ───
+    // Identity (name/username/email/employeeId), role, and deactivation all
+    // require the admin to re-enter their own password + a justification.
+    const sensitiveTouched =
+      body.role !== undefined ||
+      (body.active !== undefined && body.active !== ((target as any).active !== false)) ||
+      body.username !== undefined ||
+      body.email !== undefined ||
+      body.employeeId !== undefined ||
+      (body.name !== undefined && body.name !== (target as any).name);
+    if (sensitiveTouched) {
+      if (!body.password || !body.reason || body.reason.trim().length < 4) {
+        return NextResponse.json(
+          { error: 'Password sign-off and a justification (4+ chars) are required for this change.' },
+          { status: 400 },
+        );
+      }
+      const signer = await User.findById(caller.sub, 'passwordHash').lean();
+      if (!signer || !bcrypt.compareSync(body.password, (signer as any).passwordHash)) {
+        return NextResponse.json({ error: 'Password sign-off failed.' }, { status: 401 });
+      }
+    }
+
+    // Uniqueness pre-checks for identity fields — surface a clean 409 instead
+    // of a Mongo duplicate-key error.
+    if (body.username !== undefined && body.username !== (target as any).username) {
+      const dupe = await User.findOne({ username: body.username, _id: { $ne: params.id } }, '_id').lean();
+      if (dupe) return NextResponse.json({ error: 'That username is already taken.' }, { status: 409 });
+    }
+    if (body.email !== undefined && body.email.toLowerCase() !== String((target as any).email || '').toLowerCase()) {
+      const dupe = await User.findOne({ email: body.email.toLowerCase(), _id: { $ne: params.id } }, '_id').lean();
+      if (dupe) return NextResponse.json({ error: 'That email is already in use.' }, { status: 409 });
     }
 
     if (body.role && caller.sub === params.id) {
@@ -88,11 +140,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    // Pull lifecycle fields out of the naive body spread — they drive extra
-    // bookkeeping fields (deactivatedAt/by/reason, reactivatedAt) and must
-    // not be written verbatim.
-    const { active, deactivationReason, ...plain } = body;
+    // Pull lifecycle + e-signature fields out of the naive body spread —
+    // they drive extra bookkeeping fields (deactivatedAt/by/reason,
+    // reactivatedAt) or are signature-only, and must not be written verbatim.
+    const { active, deactivationReason, password, reason, email, ...plain } = body;
     const set: Record<string, any> = { ...plain };
+    // Normalise email to lowercase to keep the unique index consistent.
+    if (typeof email === 'string') set.email = email.toLowerCase();
     const unset: Record<string, any> = {};
     const wasActive = (target as any).active !== false;
     let lifecycleAction: 'deactivate' | 'reactivate' | null = null;
@@ -137,20 +191,37 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       : lifecycleAction === 'reactivate' ? 'user.reactivate'
       : body.role ? 'user.role'
       : 'user.update';
+
+    // Build a before/after diff of just the fields the admin actually changed
+    // — the audit row's `meta` is what a reviewer scans to answer "what
+    // exactly did they change?" without trawling through the user document.
+    const AUDIT_FIELDS = ['name', 'username', 'email', 'employeeId', 'title',
+      'department', 'organisation', 'phone', 'location', 'role', 'active',
+      'locked', 'mustChangePassword'] as const;
+    const diff: Record<string, { before: any; after: any }> = {};
+    for (const k of AUDIT_FIELDS) {
+      if ((body as any)[k] === undefined) continue;
+      const before = (target as any)[k];
+      const after  = k === 'email' ? (set.email ?? (body as any).email) : (set as any)[k] ?? (body as any)[k];
+      if (String(before ?? '') !== String(after ?? '')) diff[k] = { before, after };
+    }
+    const changeWords = Object.keys(diff).join(', ');
     const summary =
       lifecycleAction === 'deactivate'
         ? `Deactivated account${set.deactivationReason ? ` — ${set.deactivationReason}` : ''}`
         : lifecycleAction === 'reactivate' ? 'Reactivated account (lock cleared)'
         : body.role ? `Changed role → ${body.role}`
-        : 'Updated user account';
+        : changeWords ? `Updated ${changeWords}` : 'Updated user account';
 
     await logOperation({
       action, category: 'user', actor: caller,
       targetType: 'user', targetId: params.id, targetLabel: (updated as any)?.name || '',
       summary,
-      meta: lifecycleAction === 'deactivate'
-        ? { reason: set.deactivationReason || null }
-        : undefined,
+      meta: {
+        ...(Object.keys(diff).length ? { changes: diff } : {}),
+        ...(reason ? { reason } : {}),
+        ...(lifecycleAction === 'deactivate' ? { deactivationReason: set.deactivationReason || null } : {}),
+      },
     });
 
     return NextResponse.json(u(updated));

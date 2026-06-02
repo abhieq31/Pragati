@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUserFromCookie, isAdmin } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
@@ -58,8 +59,15 @@ export default async function AuditPage() {
     targetId: r.targetId,
     targetLabel: r.targetLabel,
     summary: r.summary,
+    meta: r.meta || null,
     createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
   }));
 
-  return <AuditClient initialRows={initialRows} initialNextBefore={initialNextBefore} />;
+  // Suspense boundary required because AuditClient reads ?targetType/&targetId
+  // via useSearchParams — without it, the build fails the static-bailout check.
+  return (
+    <Suspense fallback={<div className="max-w-5xl pb-12"><div className="card p-8 text-center text-sm text-slate-400">Loading audit trail…</div></div>}>
+      <AuditClient initialRows={initialRows} initialNextBefore={initialNextBefore} />
+    </Suspense>
+  );
 }

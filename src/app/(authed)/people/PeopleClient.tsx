@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { RoleBadge } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { ActivityGraph } from '@/components/ActivityGraph';
-import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, BarChart3, Search, UserX, RotateCcw } from 'lucide-react';
+import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, BarChart3, Search, UserX, RotateCcw, ScrollText } from 'lucide-react';
 
 /* ── Activity peek modal — team leaders click a teammate to see how they're
    tracking: contribution graph, streak and badges (read-only, no private
@@ -352,32 +353,70 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
 
 /* ── Role-change confirmation dialog ──────────────────────────────────── */
 function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
-  user: any; targetRole: 'lead' | 'contributor'; onConfirm: () => void; onCancel: () => void; saving: boolean;
+  user: any; targetRole: 'lead' | 'contributor';
+  // The handler now needs the sign-off bundle — it can't fire a bare PATCH.
+  onConfirm: (signoff: { password: string; reason: string }) => void;
+  onCancel: () => void; saving: boolean;
 }) {
   const promote = targetRole === 'lead';
+  const [password, setPassword] = useState('');
+  const [reason, setReason] = useState('');
+  const [err, setErr] = useState('');
+
+  function submit() {
+    if (!password || reason.trim().length < 4) {
+      setErr('Password and a 4+ character reason are required.');
+      return;
+    }
+    setErr('');
+    onConfirm({ password, reason: reason.trim() });
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[380px] modal-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-col items-center text-center gap-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${promote ? 'bg-blue-50' : 'bg-amber-50'}`}>
-            {promote ? <Shield size={22} className="text-blue-600" /> : <AlertTriangle size={22} className="text-amber-500" />}
-          </div>
-          <div>
-            <div className="text-base font-black text-slate-900 tracking-tight">
-              {promote ? `Promote ${user.name} to Team Lead?` : `Make ${user.name} a Contributor?`}
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${promote ? 'bg-blue-50' : 'bg-amber-50'}`}>
+              {promote ? <Shield size={18} className="text-blue-600" /> : <AlertTriangle size={18} className="text-amber-500" />}
             </div>
-            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-              {promote
-                ? 'Team Leads can create and run teams, allocate projects, and assign tasks. Only promote trusted members.'
-                : 'They will go back to contributor access — read their team board and update their own tasks. Their work stays intact.'}
-            </p>
+            <div className="min-w-0">
+              <div className="text-base font-black text-slate-900 tracking-tight">
+                {promote ? `Promote ${user.name} to Team Lead?` : `Make ${user.name} a Contributor?`}
+              </div>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                {promote
+                  ? 'Team Leads can create and run teams, allocate projects, and assign tasks. Only promote trusted members.'
+                  : 'They will go back to contributor access — read their team board and update their own tasks. Their work stays intact.'}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2 w-full">
+
+          {/* Sign-off — 21 CFR Part 11 §11.200. The admin's password +
+              justification become part of the immutable audit row. */}
+          <div className="space-y-2.5">
+            <div>
+              <label className="label">Your password</label>
+              <input type="password" className="input" autoComplete="current-password"
+                value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="Confirm with your password" autoFocus />
+            </div>
+            <div>
+              <label className="label">Reason</label>
+              <textarea className="textarea" rows={2} value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder={promote ? 'e.g. Moving to lead role per HR plan' : 'e.g. Stepping down from lead duties'} />
+            </div>
+          </div>
+
+          {err && <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2">{err}</div>}
+
+          <div className="flex gap-2 w-full pt-1">
             <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button onClick={onConfirm} disabled={saving}
+            <button onClick={submit} disabled={saving}
               className={`flex-1 justify-center btn ${promote ? 'btn-primary' : ''}`}
               style={!promote ? { background: 'linear-gradient(135deg,#b45309,#d97706)', color: '#fff', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' } : {}}>
-              {saving ? '…' : promote ? 'Promote to Lead' : 'Make Contributor'}
+              {saving ? '…' : promote ? 'Sign & promote' : 'Sign & make contributor'}
             </button>
           </div>
         </div>
@@ -386,25 +425,53 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
   );
 }
 
-/* ── Edit user modal ──────────────────────────────────────────────────── */
+/* ── Edit user modal ──────────────────────────────────────────────────────
+   Two-section form: identity (name / username / email / employee ID) and
+   personal details. Identity changes require the admin to re-enter their own
+   password and supply a justification — those touch downstream-reconciled
+   fields and must leave a 21 CFR Part 11 §11.200 audit trail. */
 function EditUserModal({ user, onClose, onSaved }: {
   user: any; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState({
     name:         user.name         || '',
+    username:     user.username     || '',
+    email:        user.email        || '',
+    employeeId:   user.employeeId   || '',
     title:        user.title        || '',
     department:   user.department   || '',
     organisation: user.organisation || '',
     location:     user.location     || '',
   });
+  const [reason, setReason] = useState('');
+  const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
 
+  // Identity fields are the ones that trigger the e-signature requirement.
+  // We diff against the loaded user so a "save" with no identity edits skips
+  // the sign-off ask entirely.
+  const identityChanged = (
+    form.name       !== (user.name       || '') ||
+    form.username   !== (user.username   || '') ||
+    form.email      !== (user.email      || '') ||
+    form.employeeId !== (user.employeeId || '')
+  );
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (identityChanged && (!password || reason.trim().length < 4)) {
+      setErr('Identity changes require your password and a 4+ character reason.');
+      return;
+    }
     setSaving(true); setErr('');
     try {
-      await api(`/users/${user.id}`, { method: 'PATCH', body: form });
+      const body: Record<string, any> = { ...form };
+      if (identityChanged) {
+        body.password = password;
+        body.reason = reason.trim();
+      }
+      await api(`/users/${user.id}`, { method: 'PATCH', body });
       onSaved();
       onClose();
     } catch (e: any) {
@@ -414,7 +481,7 @@ function EditUserModal({ user, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Edit profile</div>
@@ -422,41 +489,93 @@ function EditUserModal({ user, onClose, onSaved }: {
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
         </div>
-        <form onSubmit={submit} className="space-y-3">
+        <form onSubmit={submit} className="space-y-4">
+          {/* ── Identity (audited) ─────────────────────────────────────── */}
           <div>
-            <label className="label">Full name</label>
-            <input className="input" required value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })} />
-          </div>
-          <div>
-            <label className="label">Job title</label>
-            <input className="input" placeholder="e.g. QA Validation Engineer"
-              value={form.title}
-              onChange={e => setForm({ ...form, title: e.target.value })} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="label">Organisation</label>
-              <input className="input" placeholder="e.g. Pharma Division"
-                value={form.organisation}
-                onChange={e => setForm({ ...form, organisation: e.target.value })} />
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Identity</div>
+            <div className="space-y-3">
+              <div>
+                <label className="label">Full name</label>
+                <input className="input" required value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Username</label>
+                  <input className="input font-mono text-sm" pattern="[a-z0-9._-]+" value={form.username}
+                    placeholder="e.g. priya.s"
+                    onChange={e => setForm({ ...form, username: e.target.value.toLowerCase() })} />
+                </div>
+                <div>
+                  <label className="label">Employee ID</label>
+                  <input className="input font-mono text-sm" value={form.employeeId}
+                    placeholder="e.g. EMP-1024"
+                    onChange={e => setForm({ ...form, employeeId: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="label">Email</label>
+                <input type="email" className="input" value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 leading-snug">
+                Identity changes (name, username, email, employee ID) are signed
+                and audited. The user will be signed out across devices on save.
+              </p>
             </div>
-            <div>
-              <label className="label">Department</label>
-              <input className="input" placeholder="e.g. Quality Assurance"
-                value={form.department}
-                onChange={e => setForm({ ...form, department: e.target.value })} />
+          </div>
+
+          {/* ── Personal details (not audited as identity) ─────────────── */}
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Personal details</div>
+            <div className="space-y-3">
+              <div>
+                <label className="label">Job title</label>
+                <input className="input" placeholder="e.g. QA Validation Engineer"
+                  value={form.title}
+                  onChange={e => setForm({ ...form, title: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Organisation</label>
+                  <input className="input" placeholder="e.g. Pharma Division"
+                    value={form.organisation}
+                    onChange={e => setForm({ ...form, organisation: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label">Department</label>
+                  <input className="input" placeholder="e.g. Quality Assurance"
+                    value={form.department}
+                    onChange={e => setForm({ ...form, department: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="label">Location / site</label>
+                <input className="input" placeholder="e.g. Pune Plant 2"
+                  value={form.location}
+                  onChange={e => setForm({ ...form, location: e.target.value })} />
+              </div>
             </div>
           </div>
-          <div>
-            <label className="label">Location / site</label>
-            <input className="input" placeholder="e.g. Pune Plant 2"
-              value={form.location}
-              onChange={e => setForm({ ...form, location: e.target.value })} />
-          </div>
-          <p className="text-[11px] text-slate-400 leading-snug -mt-1">
-            Organisation, department, and site are used to group and filter people across pickers. Helpful as your workspace grows.
-          </p>
+
+          {/* ── E-signature (only when identity changed) ──────────────── */}
+          {identityChanged && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 space-y-2.5">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Sign-off required</div>
+              <div>
+                <label className="label">Your password</label>
+                <input type="password" className="input" autoComplete="current-password"
+                  value={password} onChange={e => setPassword(e.target.value)} placeholder="Confirm with your password" />
+              </div>
+              <div>
+                <label className="label">Reason</label>
+                <textarea className="textarea" rows={2} value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  placeholder="e.g. Username corrected per HR ticket #4321" />
+              </div>
+            </div>
+          )}
+
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">{err}</div>}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>
@@ -508,41 +627,53 @@ function RemoveConfirmDialog({ user, onConfirm, onCancel, saving }: {
    is required so the audit trail records *why* — 21 CFR Part 11 §11.10(e).
    The account can be reactivated later, which also clears any lock. */
 function DeactivateDialog({ user, onConfirm, onCancel, saving }: {
-  user: any; onConfirm: (reason: string) => void; onCancel: () => void; saving: boolean;
+  user: any;
+  // Reason + admin password (e-signature). Server validates both.
+  onConfirm: (data: { reason: string; password: string }) => void;
+  onCancel: () => void; saving: boolean;
 }) {
   const [reason, setReason] = useState('');
+  const [password, setPassword] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] modal-in" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-col items-center text-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
-            <UserX size={22} className="text-amber-600" />
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+              <UserX size={18} className="text-amber-600" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-black text-slate-900 tracking-tight">Deactivate {user.name}?</div>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                They lose access immediately and disappear from assignee lists, but the
+                account and all their task history are preserved. You can reactivate it
+                later. This is the recommended alternative to permanent removal.
+              </p>
+            </div>
           </div>
           <div>
-            <div className="text-base font-black text-slate-900 tracking-tight">Deactivate {user.name}?</div>
-            <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-              They lose access immediately and disappear from assignee lists, but the
-              account and all their task history are preserved. You can reactivate it
-              later. This is the recommended alternative to permanent removal.
-            </p>
-          </div>
-          <div className="w-full text-left">
-            <label className="label">Reason <span className="text-slate-300 font-normal normal-case">(recorded in the audit trail)</span></label>
+            <label className="label">Reason <span className="text-slate-300 font-normal normal-case">(audit trail)</span></label>
             <textarea
-              className="textarea text-sm"
-              rows={2}
+              className="textarea text-sm" rows={2}
               placeholder="e.g. Left the organisation · role transfer · extended leave"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              autoFocus
+              value={reason} onChange={(e) => setReason(e.target.value)} autoFocus
             />
+          </div>
+          <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1.5">Sign-off</div>
+            <label className="label">Your password</label>
+            <input type="password" className="input" autoComplete="current-password"
+              value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="Confirm with your password" />
           </div>
           <div className="flex gap-2 w-full">
             <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button onClick={() => onConfirm(reason.trim())} disabled={saving || !reason.trim()}
+            <button
+              onClick={() => onConfirm({ reason: reason.trim(), password })}
+              disabled={saving || !reason.trim() || !password}
               className="flex-1 justify-center btn text-white"
               style={{ background: 'linear-gradient(135deg,#b45309,#d97706)', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' }}>
-              {saving ? 'Deactivating…' : 'Deactivate'}
+              {saving ? 'Deactivating…' : 'Sign & deactivate'}
             </button>
           </div>
         </div>
@@ -579,12 +710,15 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
   // /api/users hides them by default so they never leak into assignee lists.
   function load() { api<any[]>('/users?includeInactive=1').then(setUsers).catch(() => {}); }
 
-  async function confirmRoleChange() {
+  async function confirmRoleChange(signoff: { password: string; reason: string }) {
     if (!roleConfirm) return;
     setSaving(roleConfirm.user.id);
     setRoleErr('');
     try {
-      await api(`/users/${roleConfirm.user.id}`, { method: 'PATCH', body: { role: roleConfirm.targetRole } });
+      await api(`/users/${roleConfirm.user.id}`, {
+        method: 'PATCH',
+        body: { role: roleConfirm.targetRole, password: signoff.password, reason: signoff.reason },
+      });
       setRoleConfirm(null);
       load();
     } catch (e: any) {
@@ -647,16 +781,22 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
     }
   }
 
-  // Deactivate — professional removal that keeps the record. A reason is
-  // captured for the audit trail.
-  async function confirmDeactivate(reason: string) {
+  // Deactivate — professional removal that keeps the record. A reason +
+  // password sign-off are captured for the audit trail (21 CFR Part 11
+  // §11.200).
+  async function confirmDeactivate(data: { reason: string; password: string }) {
     if (!deactivateTarget) return;
     setDeactivating(true);
     setRoleErr('');
     try {
       await api(`/users/${deactivateTarget.id}`, {
         method: 'PATCH',
-        body: { active: false, deactivationReason: reason },
+        body: {
+          active: false,
+          deactivationReason: data.reason,
+          password: data.password,
+          reason: data.reason,
+        },
       });
       setDeactivateTarget(null);
       await load();
@@ -707,6 +847,7 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
   const ics = liveUsers.filter((u) => u.role === 'contributor' && matches(u));
   const deactivated = users.filter((u) => u.active === false && matches(u));
   const isLeadOrAdmin = (me?.role === 'lead' || me?.role === 'admin');
+  const isAdmin = me?.role === 'admin';
 
   // Workspace-wide totals (unfiltered) for the summary strip.
   const totalPeople  = liveUsers.length;
@@ -865,6 +1006,14 @@ export default function PeopleClient({ initialUsers, me }: PeopleClientProps) {
                     onClick={() => setEditUser(u)} title="Edit profile">
                     <Pencil size={13} />
                   </button>
+                )}
+                {isAdmin && (
+                  <Link
+                    href={`/audit?targetType=user&targetId=${u.id}`}
+                    title="Audit trail"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                    <ScrollText size={13} />
+                  </Link>
                 )}
                 {isLeadOrAdmin && u.lockedAt && (
                   <button

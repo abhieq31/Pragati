@@ -1179,12 +1179,13 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold text-slate-800 truncate">{person.name}</span>
               {/* Activity deep-dive — same gesture as the team & people pages.
-                  Reveals on row hover so the row stays clean at rest. */}
+                  Always visible (no hover-reveal) so a viewer doesn't need to
+                  discover that the row is clickable. */}
               {onViewActivity && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onViewActivity(); }}
                   title={`View ${person.name}'s activity`}
-                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-600 transition-all shrink-0">
+                  className="text-slate-400 hover:text-blue-600 transition-colors shrink-0">
                   <BarChart3 size={13} />
                 </button>
               )}

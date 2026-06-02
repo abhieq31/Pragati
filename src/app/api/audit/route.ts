@@ -17,12 +17,31 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
+    // Drill-down filters — used by the audit page's per-entity view and from
+    // a "view audit trail" link on a project/task/user page. Either or both
+    // can be set; both narrow the result.
+    const targetType = searchParams.get('targetType');
+    const targetId   = searchParams.get('targetId');
+    const q          = (searchParams.get('q') || '').trim();
     const limit = Math.min(Number(searchParams.get('limit')) || 100, 500);
     // Cursor pagination: fetch entries strictly older than this ISO timestamp.
     const before = searchParams.get('before');
 
     const filter: Record<string, any> = {};
     if (category && category !== 'all') filter.category = category;
+    if (targetType) filter.targetType = targetType;
+    if (targetId)   filter.targetId   = targetId;
+    if (q) {
+      // Case-insensitive partial match across the fields a reviewer searches.
+      const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rx = new RegExp(safe, 'i');
+      filter.$or = [
+        { summary: rx },
+        { actorName: rx },
+        { targetLabel: rx },
+        { action: rx },
+      ];
+    }
     if (before) {
       const d = new Date(before);
       if (!Number.isNaN(d.getTime())) filter.createdAt = { $lt: d };
@@ -78,6 +97,10 @@ export async function GET(req: NextRequest) {
         targetId: r.targetId || '',
         targetLabel: r.targetLabel || '',
         summary: r.summary || '',
+        // The full meta blob (including `changes` before/after diffs and the
+        // sign-off reason) is what makes a row defensible at audit. Keep
+        // small; large blobs are rare and bounded by the writer.
+        meta: r.meta || null,
         createdAt: r.createdAt,
       })),
       nextBefore,

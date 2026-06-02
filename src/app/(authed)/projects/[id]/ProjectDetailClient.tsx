@@ -12,9 +12,10 @@ import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck } from 'lucide-react';
+import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
+import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
@@ -744,6 +745,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // Milestone celebration — set when finishing a task closes out its phase or
   // the whole project. The Celebration overlay fires a fanfare + confetti.
   const [celebration, setCelebration] = useState<{ title: string; subtitle?: string; emoji?: string } | null>(null);
+  // Per-task mini-celebration toast (bottom-right). Distinct from `celebration`
+  // (which is the full-screen phase/project milestone) — this pops on every
+  // individual task close and reads its type so the line feels personalised.
+  const [taskPop, setTaskPop] = useState<any | null>(null);
 
   async function load() {
     try {
@@ -786,8 +791,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             {[20, 16, 24].map(w => <div key={w} className={`skeleton h-5 w-${w} rounded-full`} />)}
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="card p-4 space-y-2">
               <div className="skeleton h-3 w-20" /><div className="skeleton h-7 w-12" />
             </div>
@@ -931,9 +936,12 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
         await api(`/projects/${id}/reorder-tasks`, { method: 'POST', body: { orderedIds } });
       }
       if (toStatus === 'done' && wasNotDone) {
-        showToast('Task completed ✓');
-        // A milestone fanfare supersedes the routine chime so we don't stack sounds.
-        if (!celebrateIfMilestone(taskId)) chimeIfEnabled();
+        // The mini-pop replaces the dry toast for individual closes; the full
+        // milestone fanfare supersedes it when a phase/project closes out.
+        if (!celebrateIfMilestone(taskId)) {
+          chimeIfEnabled();
+          if (cur) setTaskPop(cur);
+        }
       }
       // Optimistic state is already applied by KanbanBoard; reconcile silently.
       load();
@@ -956,8 +964,11 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     try {
       await api(`/tasks/${taskId}`, { method: 'PATCH', body: { status } });
       if (status === 'done' && wasNotDone) {
-        showToast('Task completed ✓');
-        if (!celebrateIfMilestone(taskId)) chimeIfEnabled();
+        if (!celebrateIfMilestone(taskId)) {
+          chimeIfEnabled();
+          const cur = tasks.find((t: any) => t.id === taskId);
+          if (cur) setTaskPop(cur);
+        }
       }
     } catch (e: any) {
       showToast(e.message || 'Failed to update task', 'err');
@@ -1015,14 +1026,18 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           onDone={() => setCelebration(null)}
         />
       )}
+      <TaskCompletePop task={taskPop} onDone={() => setTaskPop(null)} />
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-6 flex-wrap">
+      {/* Header — stacks vertically on mobile (title block → meta → actions),
+          flows horizontally with the meta/actions pinned right on md+. The old
+          flex-wrap layout was forcing the project name to wrap one word per
+          line on a phone because the right column refused to wrap below it. */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
         {/* Left — identity, description, then status directly below it */}
-        <div className="min-w-0 flex-1">
-          <div className="text-xs text-slate-400 font-mono">{project.isPersonal ? 'Personal' : project.code}</div>
-          <h1 className="text-2xl font-bold mt-0.5">{project.name}</h1>
-          <div className="flex flex-wrap gap-2 mt-2">
+        <div className="min-w-0 md:flex-1">
+          <div className="text-[11px] text-slate-400 font-mono break-all">{project.isPersonal ? 'Personal' : project.code}</div>
+          <h1 className="text-xl sm:text-2xl font-bold mt-0.5 leading-tight break-words">{project.name}</h1>
+          <div className="flex flex-wrap gap-1.5 mt-2">
             {project.isPersonal && (
               <span className="tag border border-violet-200 bg-violet-50 text-violet-700 font-semibold inline-flex items-center gap-1.5">
                 <Lock size={11} /> Private
@@ -1040,7 +1055,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           {project.description && <p className="mt-2 text-sm text-slate-600 max-w-3xl">{project.description}</p>}
 
           {/* Status — directly under the description */}
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center flex-wrap gap-2 mt-3">
             {isLead ? (
               <StatusPillRow
                 value={project.status}
@@ -1059,9 +1074,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           </div>
         </div>
 
-        {/* Right — owner / team / due pinned top-right, actions beneath */}
-        <div className="flex flex-col items-end gap-3 shrink-0">
-          <div className="text-right text-xs text-slate-500 space-y-0.5">
+        {/* Right — owner / team / due, then actions. On mobile this becomes a
+            left-aligned strip below the title; on md+ it pins top-right. */}
+        <div className="flex flex-col md:items-end gap-3 shrink-0">
+          <div className="text-xs text-slate-500 md:text-right space-y-0.5">
             <div>Project owner: <span className="font-medium text-slate-700">{project.ownerName || '—'}</span></div>
             <div>Team: {project.teamId
               ? <Link href={`/teams/${project.teamId}`} className="text-blue-600 hover:underline">{project.teamName || '—'}</Link>
@@ -1070,7 +1086,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                 read-only. */}
             {isLead ? (
               editingDue ? (
-                <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center md:justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                   <span>Due:</span>
                   <DatePicker
                     value={project.dueDate ? String(project.dueDate).slice(0, 10) : ''}
@@ -1097,14 +1113,22 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           </div>
 
           {/* Actions — Export (PDF/CSV/HTML) for everyone; Archive + Delete
-              admin-only. The XLSX workbook is offered as an extra row inside
-              the menu for power users who want the full styled spreadsheet. */}
-          <div className="flex flex-wrap items-center justify-end gap-2">
+              admin-only. */}
+          <div className="flex flex-wrap items-center md:justify-end gap-2">
             <ExportMenu
               onPdf={() => printProjectReport(project, phases)}
               onHtml={() => downloadProjectReport(project, phases)}
-              onCsv={() => downloadProjectCsv(project)}
+              onCsv={() => downloadProjectCsv(project, phases)}
             />
+            {isAdmin && !project.isPersonal && (
+              <Link
+                href={`/audit?targetType=project&targetId=${project.id}`}
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors"
+                title="View this project's audit trail"
+              >
+                <ScrollText size={13} /> Audit
+              </Link>
+            )}
             {isAdmin && (
               <button
                 onClick={async () => {
@@ -1134,7 +1158,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — 2-up on mobile, 4-up on md+. The previous `md:grid-cols-5`
+          left an awkward fifth column unused after the QA sign-off card was
+          removed; matched the 4-card content count. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: 'Progress', value: `${pct}%`, sub: `${tasks.filter((t: any) => t.status === 'done').length}/${tasks.length} tasks · weighted`, bar: pct },
@@ -1194,27 +1220,31 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                   {ts.map((t: any, ti: number) => {
                     const canEdit = canManage || (me && t.assigneeId === me.id);
                     return (
-                    <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
-                      {canEdit ? (
-                        <StatusSelect
-                          value={t.status}
-                          onChange={v => moveTaskFromPhase(t.id, v)}
-                          size="sm"
-                          pending={pendingTaskIds.has(t.id)}
-                        />
-                      ) : (
-                        <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 capitalize">
-                          {String(t.status || '').replace(/_/g, ' ')}
-                        </span>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <TaskLink task={t} className="font-medium text-slate-800 hover:text-blue-700 transition-colors text-sm truncate" />
-                        <div className="text-xs text-slate-400 truncate">
-                          {t.assigneeName || 'Unassigned'}
-                          {t.subtaskCount > 0 && ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
+                    <div key={t.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 text-sm group">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        {canEdit ? (
+                          <StatusSelect
+                            value={t.status}
+                            onChange={v => moveTaskFromPhase(t.id, v)}
+                            size="sm"
+                            pending={pendingTaskIds.has(t.id)}
+                          />
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 capitalize shrink-0">
+                            {String(t.status || '').replace(/_/g, ' ')}
+                          </span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <TaskLink task={t} className="font-medium text-slate-800 hover:text-blue-700 transition-colors text-sm block truncate" />
+                          <div className="text-xs text-slate-400 truncate">
+                            {t.assigneeName || 'Unassigned'}
+                            {t.subtaskCount > 0 && ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Meta tags + actions — flow inline on desktop, wrap to
+                          their own row on mobile so the title doesn't shrink. */}
+                      <div className="flex items-center flex-wrap gap-1.5 sm:shrink-0 sm:justify-end pl-9 sm:pl-0">
                         {t.pendingWith && t.status !== 'done' && (
                           <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
                                 title={`Waiting on ${t.pendingWith}`}>
@@ -1227,10 +1257,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                           : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
                         )}
                         <PriorityTag priority={t.priority} />
-                        <span className="text-xs text-slate-400 w-16 text-right">{formatDate(t.dueDate)}</span>
+                        {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
                         {canManage && (
                           <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
-                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 rounded transition-all">
+                            className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                             <Trash2 size={13} />
                           </button>
                         )}
@@ -1252,22 +1282,24 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               {tasks.filter((t: any) => !t.phaseId).map((t: any) => {
                 const canEdit = canManage || (me && t.assigneeId === me.id);
                 return (
-                <div key={t.id} className="py-2.5 flex items-center gap-2.5 text-sm group">
-                  {canEdit ? (
-                    <StatusSelect value={t.status} onChange={v => moveTaskFromPhase(t.id, v)} size="sm" pending={pendingTaskIds.has(t.id)} />
-                  ) : (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 capitalize">
-                      {String(t.status || '').replace(/_/g, ' ')}
-                    </span>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <TaskLink task={t} className="font-medium text-slate-800 hover:text-blue-700 transition-colors text-sm truncate" />
-                    <div className="text-xs text-slate-400 truncate">
-                      {t.assigneeName || 'Unassigned'}
-                      {t.subtaskCount > 0 && ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
+                <div key={t.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 text-sm group">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    {canEdit ? (
+                      <StatusSelect value={t.status} onChange={v => moveTaskFromPhase(t.id, v)} size="sm" pending={pendingTaskIds.has(t.id)} />
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 capitalize shrink-0">
+                        {String(t.status || '').replace(/_/g, ' ')}
+                      </span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <TaskLink task={t} className="font-medium text-slate-800 hover:text-blue-700 transition-colors text-sm block truncate" />
+                      <div className="text-xs text-slate-400 truncate">
+                        {t.assigneeName || 'Unassigned'}
+                        {t.subtaskCount > 0 && ` · ${t.subtasksDone}/${t.subtaskCount} subtasks`}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center flex-wrap gap-1.5 sm:shrink-0 sm:justify-end pl-9 sm:pl-0">
                     {t.pendingWith && t.status !== 'done' && (
                       <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
                             title={`Waiting on ${t.pendingWith}`}>
@@ -1280,10 +1312,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                       : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
                     )}
                     <PriorityTag priority={t.priority} />
-                    <span className="text-xs text-slate-400 w-16 text-right">{formatDate(t.dueDate)}</span>
+                    {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
                     {canManage && (
                       <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 rounded transition-all">
+                        className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
                         <Trash2 size={13} />
                       </button>
                     )}

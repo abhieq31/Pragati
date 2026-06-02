@@ -7,9 +7,10 @@ import { Card, PriorityTag, StatusTag, formatDate, useToast } from '@/components
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { TaskCompletePop } from '@/components/TaskCompletePop';
+import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2 } from 'lucide-react';
+import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -37,6 +38,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const isLead = useIsLead();
+  const isAdmin = useIsAdmin();
   // Seed from the server-rendered payload so real content paints on first
   // byte; the mount-time refetch below keeps it fresh.
   const [task, setTask] = useState<any>(initialTask);
@@ -46,6 +48,10 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const [newSub, setNewSub] = useState('');
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  // Mini-celebration shown when the task moves to "done". A small bottom-right
+  // toast — not a confetti overlay — that recognises the *type* of task that
+  // was finished. Stays null until the user actually closes the task.
+  const [celebrate, setCelebrate] = useState<any | null>(null);
   const { showToast, ToastEl } = useToast();
 
   async function load() {
@@ -151,8 +157,13 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     try {
       await api(`/tasks/${id}`, { method: 'PATCH', body: { status: newStatus } });
       if (newStatus === 'done' && !wasDone) {
-        showToast('Task marked done ✓');
         chimeIfEnabled();
+        // The mini-pop replaces the dry "Task marked done ✓" toast — it reads
+        // the task's type and priority so the message feels personal.
+        setCelebrate({
+          id: task.id, title: task.title, taskType: task.taskType,
+          gxpCritical: task.gxpCritical, priority: task.priority,
+        });
       }
       load();
     } catch (e: any) {
@@ -204,6 +215,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl page-enter">
       {ToastEl}
+      <TaskCompletePop task={celebrate} onDone={() => setCelebrate(null)} />
 
       {/* ── Left: main content ─────────────────────────────────────────── */}
       <div className="lg:col-span-2 space-y-4">
@@ -216,6 +228,15 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             </Link>
             <ChevronRight size={12} />
             <span className="text-slate-300">Task</span>
+            {isAdmin && (
+              <Link
+                href={`/audit?targetType=task&targetId=${task.id}`}
+                className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-blue-600 transition-colors"
+                title="View this task's audit trail"
+              >
+                <ScrollText size={11} /> Audit
+              </Link>
+            )}
           </div>
           <h1 className="text-xl font-bold text-slate-900 leading-snug">{task.title}</h1>
           <div className="flex flex-wrap gap-2 mt-2.5">

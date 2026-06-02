@@ -215,35 +215,108 @@ function csvCell(v: any): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function buildProjectReportCsv(project: any): string {
+export function buildProjectReportCsv(project: any, phases: any[] = []): string {
   const now = new Date();
   const tasks: any[] = [...(Array.isArray(project?.tasks) ? project.tasks : [])].sort(byTcd);
   const ref = project?.isPersonal ? 'Personal' : (project?.code || '');
-  const header = [
-    'Project Ref', 'Task Ref No', 'Task', 'Assignee', 'Status', 'Priority',
-    'Target Date (TCD)', 'Due Date', 'Subtasks', 'Overdue', 'Days Overdue',
+  const total = tasks.length;
+  const done  = tasks.filter((t) => t.status === 'done').length;
+  const pct   = total ? Math.round((done / total) * 100) : 0;
+  const overdueAll = tasks.filter((t) => {
+    const d = t.ccTcd || t.dueDate;
+    return d && new Date(d) < now && t.status !== 'done';
+  }).length;
+  const blockedAll = tasks.filter((t) => t.status === 'blocked').length;
+  const phaseName = (id: any) => (phases || []).find((p: any) => String(p.id) === String(id))?.name || '';
+
+  // Tasks per status — a quick distribution row at the top so a reviewer
+  // doesn't have to pivot the sheet to see it.
+  const STATUS_KEYS = ['todo', 'in_progress', 'review', 'blocked', 'done'];
+  const dist = STATUS_KEYS.reduce<Record<string, number>>((m, k) => {
+    m[k] = tasks.filter((t) => t.status === k).length;
+    return m;
+  }, {});
+
+  // Section 1: project meta block — a self-contained header that opens cleanly
+  // in Excel/Sheets. Two columns: label, value. Audit-friendly: includes the
+  // generation timestamp and the project's identifying ref.
+  const meta: Array<[string, string]> = [
+    ['Pragati Project Report', ''],
+    ['Generated at', new Date().toLocaleString()],
+    ['Project Ref', ref],
+    ['Project Name', project?.name || ''],
+    ['Description', project?.description || ''],
+    ['Owner', project?.ownerName || '—'],
+    ['Team', project?.teamName || '—'],
+    ['Lifecycle', project?.lifecycle || '—'],
+    ['Priority', project?.priority || '—'],
+    ['Status', String(project?.status || '').replace(/_/g, ' ') || '—'],
+    ['Start Date', fmtDate(project?.startDate)],
+    ['Due Date', fmtDate(project?.dueDate)],
+    ['', ''],
+    ['Total tasks', String(total)],
+    ['Done', `${done} (${pct}%)`],
+    ['Overdue (open)', String(overdueAll)],
+    ['Blocked', String(blockedAll)],
+    ['Phases', String((phases || []).length)],
+    ['', ''],
+    ['Status distribution', ''],
+    ['  To do',       String(dist.todo)],
+    ['  In progress', String(dist.in_progress)],
+    ['  Review',      String(dist.review)],
+    ['  Blocked',     String(dist.blocked)],
+    ['  Done',        String(dist.done)],
+    ['', ''],
   ];
-  const rows = tasks.map((t) => {
+
+  // Section 2: tasks table.
+  const header = [
+    'Sr', 'Project Ref', 'Phase', 'Task Ref No', 'Task',
+    'Description', 'Assignee', 'Status', 'Priority', 'Type',
+    'GxP Critical', 'QA Sign-off Required', 'Waiting On',
+    'Target Date (TCD)', 'Due Date', 'Start Date', 'Completed At',
+    'Subtasks (done/total)', 'Overdue', 'Days Overdue',
+  ];
+  const rows = tasks.map((t, i) => {
     const target = t.ccTcd || t.dueDate;
     const overdue = target && new Date(target) < now && t.status !== 'done';
     const daysOver = overdue ? Math.round((now.getTime() - new Date(target).getTime()) / 86400000) : '';
     const subCount = t.subtaskCount ?? (t.subtasks?.length ?? 0);
     const subDone = t.subtasksDone ?? (t.subtasks?.filter((s: any) => s.status === 'done').length ?? 0);
     return [
+      String(i + 1),
       ref,
+      phaseName(t.phaseId),
       t.ccNo || '',
       t.title || '',
+      // Strip newlines so the cell stays one row in Excel.
+      (t.description || '').replace(/\s+/g, ' ').trim(),
       t.assigneeName || 'Unassigned',
       STATUS_LABEL[t.status] || t.status || '',
       t.priority || '',
+      (t.taskType || '').replace(/_/g, ' '),
+      t.gxpCritical ? 'Yes' : '',
+      t.requiresQaSignoff ? (t.qaSignoffAt ? 'Signed' : 'Pending') : '',
+      t.pendingWith || '',
       fmtDate(t.ccTcd),
       fmtDate(t.dueDate),
+      fmtDate(t.startDate),
+      fmtDate(t.completedAt),
       subCount > 0 ? `${subDone}/${subCount}` : '',
       overdue ? 'Yes' : 'No',
       daysOver === '' ? '' : String(daysOver),
     ].map(csvCell).join(',');
   });
-  return '﻿' + [header.map(csvCell).join(','), ...rows].join('\r\n');
+
+  const metaRows = meta.map(([k, v]) => [k, v].map(csvCell).join(','));
+  const tasksHeader = ['Tasks', ''].map(csvCell).join(',');
+  // BOM + CRLF so Excel/Sheets open UTF-8 + line breaks correctly.
+  return '﻿' + [
+    ...metaRows,
+    tasksHeader,
+    header.map(csvCell).join(','),
+    ...rows,
+  ].join('\r\n');
 }
 
 function triggerDownload(content: string, mime: string, filename: string) {
@@ -259,8 +332,8 @@ function safeName(project: any): string {
   return String(project?.code || project?.name || 'project').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
 }
 
-export function downloadProjectCsv(project: any) {
-  triggerDownload(buildProjectReportCsv(project), 'text/csv;charset=utf-8',
+export function downloadProjectCsv(project: any, phases: any[] = []) {
+  triggerDownload(buildProjectReportCsv(project, phases), 'text/csv;charset=utf-8',
     `${safeName(project)}-tasks-${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
@@ -269,12 +342,26 @@ export function downloadProjectReport(project: any, phases: any[]) {
     `${safeName(project)}-report-${new Date().toISOString().slice(0, 10)}.html`);
 }
 
+/**
+ * Open the rendered report in a new tab as a preview, with a small "Save as
+ * PDF / Print" button injected into the corner. Auto-firing the print dialog
+ * was disorienting — the user couldn't read or skim the report before being
+ * thrown into the browser's print sheet. Now they choose when to print, and
+ * the same window doubles as a shareable preview.
+ */
 export function printProjectReport(project: any, phases: any[]) {
   const html = buildProjectReportHtml(project, phases);
   const w = window.open('', '_blank');
   if (!w) { downloadProjectReport(project, phases); return; }
-  w.document.write(html);
+  // Inject a floating action bar with a "Save as PDF" trigger, hidden on print.
+  const withPrintBar = html.replace('</body>',
+    `<div id="pragati-print-bar" style="position:fixed;right:16px;bottom:16px;z-index:99999;display:flex;gap:8px;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
+       <button onclick="window.print()" style="background:linear-gradient(135deg,#1565C0,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,0.18)">Save as PDF / Print</button>
+       <button onclick="window.close()" style="background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+     </div>
+     <style>@media print { #pragati-print-bar { display:none !important; } }</style>
+     </body>`);
+  w.document.write(withPrintBar);
   w.document.close();
   w.focus();
-  setTimeout(() => w.print(), 400);
 }
