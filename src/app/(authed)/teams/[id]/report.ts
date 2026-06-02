@@ -372,14 +372,21 @@ export function downloadTeamReport(team: any, progress: any, board: any[]) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Open the report in a new tab and trigger the browser's print dialog so a lead
-// can save it as PDF or print it for a meeting in one click.
+// Open the report in a new tab as a preview, with a floating "Save as PDF /
+// Print" action so the user controls when the print dialog opens. Auto-firing
+// it on open was jarring — they couldn't skim the report first.
 export function printTeamReport(team: any, progress: any, board: any[]) {
   const html = buildTeamReportHtml(team, progress, board);
   const w = window.open('', '_blank');
   if (!w) { downloadTeamReport(team, progress, board); return; }
-  w.document.write(html);
+  const withPrintBar = html.replace('</body>',
+    `<div id="pragati-print-bar" style="position:fixed;right:16px;bottom:16px;z-index:99999;display:flex;gap:8px;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
+       <button onclick="window.print()" style="background:linear-gradient(135deg,#1565C0,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,0.18)">Save as PDF / Print</button>
+       <button onclick="window.close()" style="background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
+     </div>
+     <style>@media print { #pragati-print-bar { display:none !important; } }</style>
+     </body>`);
+  w.document.write(withPrintBar);
   w.document.close();
   w.focus();
-  setTimeout(() => w.print(), 400);
 }

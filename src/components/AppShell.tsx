@@ -427,16 +427,11 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
 
           <div className="flex-1 min-w-0">
             <div className={`text-[13px] font-bold truncate leading-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}>{user.name}</div>
-            {/* Role as a small, calm pill with a single accent dot — replaces
-                the loud full-width green text. The dot carries the colour; the
-                label stays a muted grey so it reads as metadata, not an alert. */}
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{
-                background: user.role === 'admin' ? '#f59e0b' : user.role === 'lead' ? '#10b981' : '#3b82f6',
-              }} />
-              <span className={`text-[10px] font-semibold uppercase tracking-wider truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>
-                {roleText}
-              </span>
+            {/* Role as plain muted metadata — no dot, no colour-coded chip. The
+                role is contextual info, not an alert, so it shouldn't compete
+                visually with the user's name above it. */}
+            <div className={`text-[10px] font-semibold uppercase tracking-wider truncate mt-0.5 ${dark ? 'text-white/45' : 'text-slate-400'}`}>
+              {roleText}
             </div>
           </div>
 

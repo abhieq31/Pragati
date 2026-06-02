@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '@/lib/client/api';
 import {
   Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck,
@@ -258,10 +259,14 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[210px_1fr] gap-5">
-      {/* Floating heatmap tooltip — fixed-positioned, follows the hovered cell. */}
-      {tip && (
+      {/* Floating heatmap tooltip — portalled to <body> so it isn't dragged by a
+          transformed ancestor. (When this graph lives inside a modal that uses
+          `transform: scale()` for its entrance animation, `position: fixed`
+          descendants are positioned relative to the modal, not the viewport,
+          which is what was throwing the tooltip "to the far right".) */}
+      {tip && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed z-[60] pointer-events-none -translate-x-1/2 -translate-y-full"
+          className="fixed z-[1000] pointer-events-none -translate-x-1/2 -translate-y-full"
           style={{ left: tip.x, top: tip.y - 8 }}
         >
           <div className="rounded-lg bg-slate-900 text-white px-2.5 py-1.5 shadow-xl text-center whitespace-nowrap">
@@ -273,7 +278,8 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
             </div>
           </div>
           <div className="mx-auto w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-slate-900" />
-        </div>
+        </div>,
+        document.body,
       )}
       {/* ── Milestones rail (left) — role-based achievements ───────────────
           Each tile is a discrete recognition tied to a traceable metric. The

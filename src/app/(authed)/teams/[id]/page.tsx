@@ -249,7 +249,7 @@ export default function TeamDetailPage() {
                       <button
                         onClick={() => setActivityMember(m)}
                         title={`View ${m.name}'s activity`}
-                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-600 transition-all"
+                        className="text-slate-400 hover:text-blue-600 transition-colors shrink-0"
                       >
                         <BarChart3 size={14} />
                       </button>

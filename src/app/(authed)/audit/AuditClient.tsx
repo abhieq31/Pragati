@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useIsAdmin } from '@/components/CurrentUserContext';
-import { ScrollText, RefreshCw, Sparkles } from 'lucide-react';
+import { ScrollText, RefreshCw, Sparkles, Search, ChevronRight, X } from 'lucide-react';
 
 interface LogRow {
   id: string;
@@ -14,6 +15,7 @@ interface LogRow {
   targetId: string;
   targetLabel: string;
   summary: string;
+  meta?: any;
   createdAt: string;
 }
 
@@ -52,17 +54,44 @@ interface AuditPage { rows: LogRow[]; nextBefore: string | null }
 
 export default function AuditClient({ initialRows, initialNextBefore = null }: { initialRows: LogRow[]; initialNextBefore?: string | null }) {
   const isAdmin = useIsAdmin();
+  const params = useSearchParams();
+  // Deep-link filter — a "View audit trail" link on a project/task/user opens
+  // this page pre-scoped to that entity. The chip near the search input lets
+  // the admin lift the filter without going back.
+  const initialTargetType = params.get('targetType') || '';
+  const initialTargetId   = params.get('targetId') || '';
+
   const [rows, setRows] = useState<LogRow[]>(initialRows);
   const [nextBefore, setNextBefore] = useState<string | null>(initialNextBefore);
   const [category, setCategory] = useState('all');
+  const [targetType, setTargetType] = useState(initialTargetType);
+  const [targetId,   setTargetId]   = useState(initialTargetId);
+  const [q, setQ]   = useState('');
+  const [qDeb, setQDeb] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  // Skip the first effect run per category — initial data already comes from SSR.
-  const skipNext = useRef(true);
+  // Skip the first effect run if we have SSR data AND no deep-link filter —
+  // otherwise we need to re-query to apply the targetType/targetId scope.
+  const skipNext = useRef(!initialTargetId && !initialTargetType);
+
+  // Debounce the search box so we don't hammer the API as the admin types.
+  useEffect(() => {
+    const t = setTimeout(() => setQDeb(q.trim()), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const query = useMemo(() => {
+    const parts = [`category=${encodeURIComponent(category)}`];
+    if (targetType) parts.push(`targetType=${encodeURIComponent(targetType)}`);
+    if (targetId)   parts.push(`targetId=${encodeURIComponent(targetId)}`);
+    if (qDeb)       parts.push(`q=${encodeURIComponent(qDeb)}`);
+    return parts.join('&');
+  }, [category, targetType, targetId, qDeb]);
 
   function load() {
     setBusy(true);
-    api<AuditPage>(`/audit?category=${category}`)
+    api<AuditPage>(`/audit?${query}`)
       .then((res) => { setRows(res.rows); setNextBefore(res.nextBefore); })
       .catch(() => { setRows([]); setNextBefore(null); })
       .finally(() => setBusy(false));
@@ -71,9 +100,8 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
   function loadMore() {
     if (!nextBefore || loadingMore) return;
     setLoadingMore(true);
-    api<AuditPage>(`/audit?category=${category}&before=${encodeURIComponent(nextBefore)}`)
+    api<AuditPage>(`/audit?${query}&before=${encodeURIComponent(nextBefore)}`)
       .then((res) => {
-        // De-dupe defensively in case a row sits exactly on the cursor boundary.
         setRows((prev) => {
           const seen = new Set(prev.map((r) => r.id));
           return [...prev, ...res.rows.filter((r) => !seen.has(r.id))];
@@ -89,7 +117,7 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
     if (skipNext.current) { skipNext.current = false; return; }
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, isAdmin]);
+  }, [query, isAdmin]);
 
   if (!isAdmin) {
     return (
@@ -124,16 +152,38 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
         </div>
       </div>
 
-      {/* Category filter */}
-      <div className="flex gap-1.5 flex-wrap">
-        {CATEGORIES.map((c) => (
-          <button key={c.key} onClick={() => setCategory(c.key)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
-              category === c.key ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-            }`}>
-            {c.label}
-          </button>
-        ))}
+      {/* Category filter + search */}
+      <div className="flex flex-col gap-2.5">
+        <div className="flex gap-1.5 flex-wrap">
+          {CATEGORIES.map((c) => (
+            <button key={c.key} onClick={() => setCategory(c.key)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                category === c.key ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={q} onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by activity, who, or target…"
+              className="input text-sm pl-9"
+            />
+          </div>
+          {(targetType || targetId) && (
+            <button
+              onClick={() => { setTargetType(''); setTargetId(''); }}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
+              title="Clear the entity-specific filter"
+            >
+              Filtered to {targetType || 'entity'}: <span className="font-mono">{(targetId || '').slice(-6)}</span>
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
@@ -154,23 +204,91 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
               <tbody className="divide-y divide-slate-50">
                 {rows.map((r) => {
                   const href = targetHref(r);
+                  const hasDetail = !!(r.meta && (r.meta.changes || r.meta.reason || r.meta.deactivationReason));
+                  const isOpen = expanded === r.id;
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">{fmt(r.createdAt)}</td>
-                      <td className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
-                      <td className="px-2 py-2.5">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[r.category] || CATEGORY_TONE.general}`}>
-                          {r.category}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2.5 text-xs text-slate-700">
-                        {r.summary}
-                        {r.targetLabel && href && (
-                          <> · <Link href={href} className="text-blue-600 hover:underline font-medium">{r.targetLabel}</Link></>
-                        )}
-                        {r.targetLabel && !href && <span className="text-slate-400"> · {r.targetLabel}</span>}
-                      </td>
-                    </tr>
+                    <Fragment key={r.id}>
+                      <tr
+                        onClick={() => hasDetail && setExpanded(isOpen ? null : r.id)}
+                        className={`hover:bg-slate-50/70 transition-colors ${hasDetail ? 'cursor-pointer' : ''}`}
+                      >
+                        <td className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            {hasDetail && (
+                              <ChevronRight size={11}
+                                className={`text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                            )}
+                            {!hasDetail && <span className="w-[11px]" />}
+                            {fmt(r.createdAt)}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
+                        <td className="px-2 py-2.5">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[r.category] || CATEGORY_TONE.general}`}>
+                            {r.category}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2.5 text-xs text-slate-700">
+                          {r.summary}
+                          {r.targetLabel && href && (
+                            <> · <Link onClick={(e) => e.stopPropagation()} href={href} className="text-blue-600 hover:underline font-medium">{r.targetLabel}</Link></>
+                          )}
+                          {r.targetLabel && !href && <span className="text-slate-400"> · {r.targetLabel}</span>}
+                          {r.targetType && r.targetId && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setTargetType(r.targetType); setTargetId(r.targetId); }}
+                              className="ml-2 text-[10px] font-semibold text-slate-400 hover:text-blue-600 transition-colors"
+                              title="Scope to this entity's full trail"
+                            >
+                              Trail →
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      {isOpen && hasDetail && (
+                        <tr className="bg-slate-50/60">
+                          <td colSpan={4} className="px-4 py-3 text-xs">
+                            {r.meta?.reason && (
+                              <div className="mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reason</span>
+                                <div className="text-slate-700 mt-0.5">{r.meta.reason}</div>
+                              </div>
+                            )}
+                            {r.meta?.deactivationReason && !r.meta?.reason && (
+                              <div className="mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Deactivation reason</span>
+                                <div className="text-slate-700 mt-0.5">{r.meta.deactivationReason}</div>
+                              </div>
+                            )}
+                            {r.meta?.changes && (
+                              <div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Changes</div>
+                                <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                                  <table className="w-full text-[11px]">
+                                    <thead>
+                                      <tr className="bg-slate-50 text-left">
+                                        <th className="px-2 py-1.5 font-semibold text-slate-500">Field</th>
+                                        <th className="px-2 py-1.5 font-semibold text-slate-500">Before</th>
+                                        <th className="px-2 py-1.5 font-semibold text-slate-500">After</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {Object.entries(r.meta.changes as Record<string, { before: any; after: any }>).map(([k, v]) => (
+                                        <tr key={k}>
+                                          <td className="px-2 py-1.5 font-mono text-slate-600">{k}</td>
+                                          <td className="px-2 py-1.5 text-slate-500 line-through decoration-red-300">{String(v.before ?? '—')}</td>
+                                          <td className="px-2 py-1.5 text-emerald-700 font-medium">{String(v.after ?? '—')}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   );
                 })}
               </tbody>
