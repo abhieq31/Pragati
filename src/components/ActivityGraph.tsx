@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/client/api';
 import {
   Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck,
-  Trophy, Zap, Users, Lightbulb, Award, GraduationCap, Scale, Repeat,
+  Trophy, Zap, Users, Lightbulb, Award, GraduationCap, Scale, Gauge,
   UserPlus, ShieldCheck, Database, ScrollText,
 } from 'lucide-react';
 
@@ -16,7 +16,7 @@ const ACHIEVEMENT_ICON: Record<string, any> = {
   lead_finisher: Award,
   lead_mentor:   GraduationCap,
   lead_balance:  Scale,
-  lead_retro:    Repeat,
+  lead_velocity: Gauge,
   adm_onboard:   UserPlus,
   adm_guardian:  ShieldCheck,
   adm_steward:   Database,
@@ -83,7 +83,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 type ContribItem = {
   id: string; title: string; projectName: string; projectCode: string;
   completedAt: string | null; points: number; gxpCritical: boolean; priority: string;
-  kind: 'task' | 'subtask';
+  kind: 'task' | 'subtask' | 'comment' | 'first_day';
 };
 
 type Achievement = {
@@ -395,11 +395,22 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
                     <span className="absolute -left-4 top-1 w-[11px] h-[11px] rounded-full bg-white border-2 border-emerald-400" />
                     <div className="text-[11px] font-bold text-slate-500 mb-1.5">{g.label}</div>
                     <ul className="space-y-1">
-                      {g.items.map((it) => (
+                      {g.items.map((it) => {
+                        const verb = it.kind === 'subtask' ? 'Checked off'
+                          : it.kind === 'comment' ? 'Commented on'
+                          : it.kind === 'first_day' ? '🎉'
+                          : 'Completed';
+                        const glyph = it.kind === 'subtask' ? '☑️'
+                          : it.kind === 'comment' ? '💬'
+                          : it.kind === 'first_day' ? '🌱'
+                          : '✅';
+                        return (
                         <li key={it.id} className="flex items-center gap-2 text-xs">
-                          <span className="text-[11px]">{it.kind === 'subtask' ? '☑️' : '✅'}</span>
+                          <span className="text-[11px]">{glyph}</span>
                           <span className="text-slate-700 dark:text-slate-300 truncate">
-                            {it.kind === 'subtask' ? 'Checked off' : 'Completed'} <span className="font-medium">{it.title}</span>
+                            {it.kind === 'first_day'
+                              ? <span className="font-medium">{it.title}</span>
+                              : <>{verb} <span className="font-medium">{it.title}</span></>}
                           </span>
                           {it.projectCode && (
                             <span className="text-[10px] font-mono text-slate-400 shrink-0">{it.projectCode}</span>
@@ -410,7 +421,8 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
                           <span className="ml-auto text-[10px] font-semibold text-emerald-600 shrink-0">+{it.points}</span>
                           <span className="text-[10px] text-slate-300 shrink-0 w-12 text-right">{timeAgo(it.completedAt)}</span>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}

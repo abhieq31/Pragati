@@ -29,6 +29,8 @@ const W = {
   priorityCrit:   3,   // critical priority
   reviewApproval: 2,   // the task itself was a review/approval/sign-off gate
   subtask:        1,   // each subtask checked off
+  comment:        1,   // each comment authored — collaboration effort
+  firstDay:       1,   // the day the account was created (first login)
 } as const;
 
 export interface ContribItem {
@@ -40,7 +42,7 @@ export interface ContribItem {
   points: number;
   gxpCritical: boolean;
   priority: string;
-  kind: 'task' | 'subtask';
+  kind: 'task' | 'subtask' | 'comment' | 'first_day';
 }
 
 /**
@@ -119,7 +121,7 @@ export async function buildContributions(userId: string, year: number): Promise<
     : (userDoc as any)?.role === 'lead' ? 'lead'
     : 'ic';
 
-  const [yearTasks, totalDone, onTimeAgg, earliest, account] = await Promise.all([
+  const [yearTasks, totalDone, onTimeAgg, earliest, account, commentTasks] = await Promise.all([
     // Tasks where either the task itself, or one of its subtasks, was
     // completed inside the selected year. We score in JS so the weighting
     // stays readable and unit-testable.
@@ -160,10 +162,19 @@ export async function buildContributions(userId: string, year: number): Promise<
       .sort({ completedAt: 1 }).limit(1).select('completedAt').lean(),
 
     User.findById(userOid).select('createdAt').lean(),
+
+    // Tasks the user commented on inside the selected year — collaboration
+    // effort. We pull the title/project to label the activity feed and score
+    // each comment as a small contribution (W.comment).
+    Task.find({ 'comments.userId': userOid, 'comments.createdAt': { $gte: start, $lt: end } })
+      .select('title projectId comments')
+      .lean(),
   ]);
 
-  // Resolve project labels for the items we'll surface.
-  const projectIds = Array.from(new Set(yearTasks.map((t: any) => String(t.projectId)).filter(Boolean)));
+  // Resolve project labels for the items we'll surface (tasks + commented tasks).
+  const projectIds = Array.from(new Set(
+    [...yearTasks, ...(commentTasks as any[])].map((t: any) => String(t.projectId)).filter(Boolean),
+  ));
   const projects = projectIds.length
     ? await Project.find({ _id: { $in: projectIds } }).select('code name').lean()
     : [];
@@ -198,6 +209,39 @@ export async function buildContributions(userId: string, year: number): Promise<
           gxpCritical: !!t.gxpCritical, priority: t.priority || 'medium', kind: 'subtask',
         });
       }
+    }
+  }
+
+  // Comments authored in-year — collaboration counts as effort. Each comment
+  // adds W.comment to its day and appears in the activity feed.
+  for (const t of (commentTasks as any[])) {
+    const proj = projMap.get(String(t.projectId)) || { code: '', name: '' };
+    for (const c of (t.comments || [])) {
+      if (String(c.userId) !== String(userOid)) continue;
+      const at = c.createdAt;
+      if (!at || new Date(at) < start || new Date(at) >= end) continue;
+      const key = dayKey(new Date(at));
+      days[key] = (days[key] || 0) + W.comment;
+      items.push({
+        id: String(c._id), title: t.title || 'Task', projectName: proj.name, projectCode: proj.code,
+        completedAt: new Date(at).toISOString(), points: W.comment,
+        gxpCritical: false, priority: 'medium', kind: 'comment',
+      });
+    }
+  }
+
+  // First day on Pragati — the account-creation day gets a green mark so the
+  // graph is never blank for a brand-new user (their "first login" shows).
+  const createdAt = (account as any)?.createdAt ? new Date((account as any).createdAt) : null;
+  if (createdAt && createdAt >= start && createdAt < end) {
+    const key = dayKey(createdAt);
+    if (!days[key]) {
+      days[key] = W.firstDay;
+      items.push({
+        id: `first-${key}`, title: 'Joined Pragati', projectName: '', projectCode: '',
+        completedAt: createdAt.toISOString(), points: W.firstDay,
+        gxpCritical: false, priority: 'medium', kind: 'first_day',
+      });
     }
   }
 
@@ -299,11 +343,23 @@ async function computeAchievements(
     // 1. Milestone Achiever — total completed task count, tiers at 10/25/50.
     const milestone = tierFor(ctx.totalDone, [10, 25, 50]);
 
-    // 2. On-Time Streak — longest recent run of consecutive on-time tasks.
-    // Pulled from the most recent 40 completed tasks; awarded at 5/10/15.
-    const recent = await Task.find({ assigneeId: userOid, status: 'done', completedAt: { $ne: null } })
-      .sort({ completedAt: -1 }).limit(40)
-      .select('completedAt dueDate ccTcd').lean();
+    // The remaining three metrics are independent queries — run them together
+    // so the achievements rail isn't gated on three sequential round-trips
+    // (this is the "milestone loading is slow" fix).
+    const [recent, distinctProjects, commentAgg] = await Promise.all([
+      // 2. On-Time Streak — longest recent run of consecutive on-time tasks.
+      Task.find({ assigneeId: userOid, status: 'done', completedAt: { $ne: null } })
+        .sort({ completedAt: -1 }).limit(40)
+        .select('completedAt dueDate ccTcd').lean(),
+      // 3. Team Collaborator — distinct projects the IC contributed to.
+      Task.distinct('projectId', { assigneeId: userOid, status: 'done' }),
+      // 4. Idea Contributor — comments the IC left on tasks.
+      Task.aggregate([
+        { $unwind: '$comments' },
+        { $match: { 'comments.userId': userOid } },
+        { $count: 'n' },
+      ]),
+    ]);
     let streak = 0, maxStreak = 0;
     for (const t of recent as any[]) {
       const due = t.ccTcd || t.dueDate;
@@ -312,21 +368,8 @@ async function computeAchievements(
       else streak = 0;
     }
     const otStreak = tierFor(maxStreak, [3, 5, 10]);
-
-    // 3. Team Collaborator — distinct *projects* the IC contributed to.
-    // Cross-project participation is the closest signal we have to
-    // "cross-team work" in the current model.
-    const distinctProjects = await Task.distinct('projectId', { assigneeId: userOid, status: 'done' });
     const collab = tierFor(distinctProjects.length, [2, 5, 10]);
-
-    // 4. Idea Contributor — comments the IC left on tasks (a proxy for
-    // suggesting improvements). When dedicated suggestion tracking lands
-    // we'll switch the source; the threshold and label stay the same.
-    const commentCount = (await Task.aggregate([
-      { $unwind: '$comments' },
-      { $match: { 'comments.userId': userOid } },
-      { $count: 'n' },
-    ]))[0]?.n ?? 0;
+    const commentCount = (commentAgg as any[])[0]?.n ?? 0;
     const ideas = tierFor(commentCount, [3, 10, 25]);
 
     return [
@@ -338,30 +381,36 @@ async function computeAchievements(
   }
 
   if (role === 'lead') {
+    // Owned projects + the lead's own comment-on-others count are independent;
+    // fetch together. We need ownedProjectIds before the load/throughput
+    // queries, so those run in a second parallel batch.
+    const [ownedDone, mentorAgg, ownedProjectIds] = await Promise.all([
+      Project.find({ ownerId: userOid, status: 'completed' }).select('completedAt dueDate').lean(),
+      Task.aggregate([
+        { $unwind: '$comments' },
+        { $match: { 'comments.userId': userOid, assigneeId: { $ne: userOid } } },
+        { $count: 'n' },
+      ]),
+      Project.distinct('_id', { ownerId: userOid }),
+    ]);
+
     // 1. Project Finisher — owned projects delivered (on time at higher tiers).
-    const ownedDone = await Project.find({ ownerId: userOid, status: 'completed' })
-      .select('completedAt dueDate').lean();
     const ownedOnTime = (ownedDone as any[]).filter(
       (p) => p.completedAt && p.dueDate && new Date(p.completedAt) <= new Date(p.dueDate),
     ).length;
     const finisher = tierFor(ownedOnTime, [1, 3, 10]);
 
-    // 2. Mentor — comments left on *other* contributors' tasks
-    // (a proxy for code reviews / coaching feedback).
-    const mentorCount = (await Task.aggregate([
-      { $unwind: '$comments' },
-      { $match: { 'comments.userId': userOid, assigneeId: { $ne: userOid } } },
-      { $count: 'n' },
-    ]))[0]?.n ?? 0;
+    // 2. Mentor — comments left on other contributors' tasks (coaching proxy).
+    const mentorCount = (mentorAgg as any[])[0]?.n ?? 0;
     const mentor = tierFor(mentorCount, [5, 20, 50]);
 
-    // 3. Load Balancer — coefficient-of-variation of open task counts across
-    //    the leader's contributors. Lower CV = more equitable distribution.
-    //    We award when the team has at least 3 ICs with assigned work.
-    const ownedProjectIds = await Project.distinct('_id', { ownerId: userOid });
-    const loadAgg = await Task.aggregate([
-      { $match: { projectId: { $in: ownedProjectIds }, status: { $nin: ['done'] }, assigneeId: { $ne: null } } },
-      { $group: { _id: '$assigneeId', n: { $sum: 1 } } },
+    // 3. Load Balancer + 4. Velocity Driver both key off ownedProjectIds.
+    const [loadAgg, teamThroughput] = await Promise.all([
+      Task.aggregate([
+        { $match: { projectId: { $in: ownedProjectIds }, status: { $nin: ['done'] }, assigneeId: { $ne: null } } },
+        { $group: { _id: '$assigneeId', n: { $sum: 1 } } },
+      ]),
+      Task.countDocuments({ projectId: { $in: ownedProjectIds }, status: 'done' }),
     ]);
     let balanceScore = 0;
     if (loadAgg.length >= 3) {
@@ -374,43 +423,37 @@ async function computeAchievements(
     }
     const balancer = tierFor(balanceScore, [60, 75, 90]);
 
-    // 4. Retrospective Champion — proxy: total team projects completed under
-    //    this lead's ownership. Each closed project implies a wrap-up cycle.
-    const retro = tierFor((ownedDone as any[]).length, [1, 5, 15]);
+    // 4. Velocity Driver — total tasks the team has completed across this
+    //    lead's owned projects. A direct, motivating measure of the throughput
+    //    a lead drives. Tiers at 25 / 100 / 300 closed tasks.
+    const velocity = tierFor(teamThroughput, [25, 100, 300]);
 
     return [
-      { id: 'lead_finisher', role, label: 'Project Finisher',        hint: 'Owned projects delivered on time',                value: ownedOnTime,           ...finisher },
-      { id: 'lead_mentor',   role, label: 'Mentor',                  hint: "Coaching comments on contributors' work (proxy)", value: mentorCount,           ...mentor   },
-      { id: 'lead_balance',  role, label: 'Load Balancer',           hint: 'Workload evenness across your team (0–100)',      value: balanceScore,          ...balancer },
-      { id: 'lead_retro',    role, label: 'Retrospective Champion',  hint: 'Project wrap-ups facilitated (proxy)',            value: (ownedDone as any[]).length, ...retro },
+      { id: 'lead_finisher', role, label: 'Project Finisher', hint: 'Owned projects delivered on time',                value: ownedOnTime,    ...finisher },
+      { id: 'lead_mentor',   role, label: 'Mentor',           hint: "Coaching comments on contributors' work (proxy)", value: mentorCount,    ...mentor   },
+      { id: 'lead_balance',  role, label: 'Load Balancer',    hint: 'Workload evenness across your team (0–100)',      value: balanceScore,   ...balancer },
+      { id: 'lead_velocity', role, label: 'Velocity Driver',  hint: 'Tasks your team has completed',                   value: teamThroughput, ...velocity },
     ];
   }
 
-  // Admin
-  // 1. Onboarder — active users in the system created by anyone, capped/all-time.
-  const activeUsers = await User.countDocuments({ active: { $ne: false } });
-  const onboard = tierFor(activeUsers, [5, 25, 100]);
-
-  // 2. System Guardian — recent days with zero overdue tasks (last 30).
+  // Admin — all four metrics are independent counts; run them together.
   const now = new Date();
   const thirtyAgo = new Date(now.getTime() - 30 * 86400000);
-  const overduePresent = await Task.countDocuments({
-    status: { $ne: 'done' }, dueDate: { $ne: null, $lt: thirtyAgo },
-  });
-  // Score: 30 − recent overdue days proxy (capped 0..30).
+  const [activeUsers, overduePresent, closedProjects, activeProjects] = await Promise.all([
+    User.countDocuments({ active: { $ne: false } }),
+    Task.countDocuments({ status: { $ne: 'done' }, dueDate: { $ne: null, $lt: thirtyAgo } }),
+    Project.countDocuments({ status: 'completed' }),
+    Project.countDocuments({ updatedAt: { $gte: thirtyAgo } }),
+  ]);
+
+  // 1. Onboarder — active users in the workspace.
+  const onboard = tierFor(activeUsers, [5, 25, 100]);
+  // 2. System Guardian — fewer long-standing overdues = higher score.
   const guardianScore = Math.max(0, 30 - Math.min(overduePresent, 30));
   const guardian = tierFor(guardianScore, [15, 25, 30]);
-
-  // 3. Data Steward — completed projects in good standing (proxy for backup
-  //    discipline: each closed project has a known good final state).
-  const closedProjects = await Project.countDocuments({ status: 'completed' });
+  // 3. Data Steward — completed projects in good standing (proxy).
   const steward = tierFor(closedProjects, [5, 25, 100]);
-
-  // 4. Audit Keeper — distinct projects/users touched: signals routine review.
-  // We approximate via projects with recent activity in the last 30d.
-  const activeProjects = await Project.countDocuments({
-    updatedAt: { $gte: thirtyAgo },
-  });
+  // 4. Audit Keeper — projects with recent activity (last 30d).
   const audit = tierFor(activeProjects, [3, 10, 25]);
 
   return [

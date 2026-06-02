@@ -6,10 +6,8 @@ import {
   LIFECYCLE_LABELS, STATUS_COLORS,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
-import { api } from '@/lib/client/api';
-import { playDropTick } from '@/lib/sound';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
+import { useIsLead } from '@/components/CurrentUserContext';
 import dynamic from 'next/dynamic';
 // Lazy — only the lead's contributor-activity modal needs it, so it stays out
 // of the main dashboard bundle (helps FCP/LCP).
@@ -20,7 +18,7 @@ const ActivityGraph = dynamic(
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, GripVertical, BarChart3,
+  Maximize2, X, BarChart3,
 } from 'lucide-react';
 
 /* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
@@ -226,9 +224,13 @@ export default function DashboardClient({
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="mb-5 sm:mb-6 pt-1">
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+        {/* inline-flex + items-baseline keeps the emoji optically seated on the
+            text baseline instead of floating above the cap height. The slight
+            negative translate nudges most emoji glyphs (which sit high in their
+            em-box) down so they read as part of the line. */}
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap">
           <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
-          <span className="ml-2 align-middle" suppressHydrationWarning>{greetingEmoji()}</span>
+          <span className="text-[0.85em] translate-y-[0.06em]" suppressHydrationWarning>{greetingEmoji()}</span>
         </h1>
         {!isFirstRun && (() => {
           const open = visibleTasks.filter(t => t.status !== 'done').length;
@@ -497,108 +499,44 @@ function ProjectsColumn({
 }
 
 
-/* Inline vertical task list inside an expanded project row. Leads can drag
-   the GripVertical handle to reorder rows; the new order is persisted via
-   /api/projects/[id]/reorder-tasks. The dashboard is intentionally NOT a
-   Kanban — it's a quick reorderable list so a lead can re-prioritise from
-   the bird's-eye view without bouncing into the project. */
-function DashboardTaskFlow({ projectId, tasks, canMove }: {
-  projectId: string;
-  tasks: TeamTask[];
-  canMove: boolean;
-}) {
-  const currentUser = useCurrentUser();
-  const soundEnabled = currentUser?.soundDropEnabled !== false;
-  const [local, setLocal] = useState(tasks);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [overId,     setOverId]     = useState<string | null>(null);
-  useEffect(() => setLocal(tasks), [tasks]);
+/* Inline vertical task list inside an expanded project row. Tasks are shown in
+   a single, deterministic order: by CC Target Completion Date (TCD), then due
+   date, soonest first — so the most time-critical work is always at the top
+   and the view is identical for every viewer on every reload. (We deliberately
+   removed dashboard drag-reordering: a quick bird's-eye list shouldn't carry
+   hidden per-user state, and TCD order is the one an auditor expects.) */
+function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
+  // Sort by TCD (fallback dueDate), undated tasks last. Stable + pure.
+  const sorted = useMemo(() => {
+    const keyOf = (t: TeamTask) => {
+      const d = t.ccTcd || t.dueDate;
+      return d ? new Date(d).getTime() : Number.POSITIVE_INFINITY;
+    };
+    return [...tasks].sort((a, b) => keyOf(a) - keyOf(b));
+  }, [tasks]);
 
-  function onDragStart(e: React.DragEvent, id: string) {
-    if (!canMove) return;
-    setDraggingId(id);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', id);
-  }
-  function onDragOverRow(e: React.DragEvent, overTaskId: string) {
-    if (!canMove || !draggingId) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (overId !== overTaskId) setOverId(overTaskId);
-  }
-  async function onDropRow(e: React.DragEvent, targetId: string) {
-    e.preventDefault();
-    setOverId(null);
-    if (!canMove || !draggingId || draggingId === targetId) { setDraggingId(null); return; }
-
-    const next = local.slice();
-    const from = next.findIndex((t) => t.id === draggingId);
-    const to   = next.findIndex((t) => t.id === targetId);
-    if (from < 0 || to < 0) { setDraggingId(null); return; }
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    setLocal(next);
-    setDraggingId(null);
-    // Audible cue confirming the drop landed — fires only on successful
-    // reorders (still suppressed by the user's soundDropEnabled preference
-    // inside playDropSound itself).
-    playDropTick(soundEnabled);
-
-    try {
-      await api(`/projects/${projectId}/reorder-tasks`, {
-        method: 'POST',
-        body: { orderedIds: next.map((t) => t.id) },
-      });
-    } catch {
-      setLocal(tasks); // server rejected → snap back
-    }
-  }
-
-  const visible = local.slice(0, 20);
-  const doneCount = local.filter((t) => t.status === 'done').length;
+  const visible   = sorted.slice(0, 20);
+  const doneCount = sorted.filter((t) => t.status === 'done').length;
 
   return (
     <ul className="divide-y divide-slate-100 dark:divide-white/5">
-      {/* Pipeline header — tasks render in working order so the path from the
-          first step to the last (and how far along it is) reads at a glance. */}
+      {/* Header — tasks render by target date so the nearest deadline is on top
+          and how far along the project is reads at a glance. */}
       <li aria-hidden className="px-3 pt-2 pb-1 flex items-center gap-2">
         <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-          In order · {doneCount}/{local.length} done
+          By target date · {doneCount}/{sorted.length} done
         </span>
         <span className="flex-1 h-px bg-slate-100 dark:bg-white/5" />
       </li>
       {visible.map((t) => {
-        const meta     = FLOW_META[t.status] || FLOW_META.todo;
-        const isDone   = t.status === 'done';
-        const dragging = draggingId === t.id;
-        const over     = overId === t.id;
+        const meta   = FLOW_META[t.status] || FLOW_META.todo;
+        const isDone = t.status === 'done';
         return (
           <li
             key={t.id}
-            onDragOver={(e) => onDragOverRow(e, t.id)}
-            onDrop={(e) => onDropRow(e, t.id)}
-            className={`relative flex items-center gap-3 px-3 py-2 transition-colors ${
-              dragging ? 'opacity-50' : ''
-            } ${over ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'}`}
+            className="relative flex items-center gap-3 px-3 py-2 transition-colors hover:bg-slate-50/60"
           >
-            {over && !dragging && (
-              <span aria-hidden className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-blue-500" />
-            )}
-
-            {canMove ? (
-              <span
-                draggable
-                onDragStart={(e) => onDragStart(e, t.id)}
-                onDragEnd={() => { setDraggingId(null); setOverId(null); }}
-                className="shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500"
-                title="Drag to reorder"
-                aria-label="Reorder task"
-              >
-                <GripVertical size={14} />
-              </span>
-            ) : (
-              <span className="shrink-0 w-3.5" />
-            )}
+            <span className="shrink-0 w-1.5" />
 
             {/* Completed steps get a green check in place of the status dot, so
                 progress down the pipeline is unmistakable. */}
@@ -611,7 +549,6 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
             <Link
               href={`/tasks/${t.id}`}
               className={`flex-1 min-w-0 text-xs leading-snug ${isDone ? 'text-slate-400' : 'text-slate-800 hover:text-blue-700'}`}
-              onClick={(e) => draggingId && e.preventDefault()}
             >
               <span className={`line-clamp-1 font-semibold ${isDone ? 'line-through decoration-slate-300' : ''}`}>{t.title}</span>
               <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
@@ -622,9 +559,9 @@ function DashboardTaskFlow({ projectId, tasks, canMove }: {
           </li>
         );
       })}
-      {local.length > 20 && (
+      {sorted.length > 20 && (
         <li className="px-3 py-2 text-[10px] text-slate-400">
-          Showing 20 of {local.length} tasks — open the project for the full board.
+          Showing 20 of {sorted.length} tasks — open the project for the full board.
         </li>
       )}
     </ul>
@@ -635,18 +572,12 @@ function ProjectRow({
   project, tasks, defaultOpen,
 }: { project: DashProject; tasks: TeamTask[]; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(!!defaultOpen);
-  const isLead = useIsLead();
   const health = HEALTH_META[project.health];
   const total  = project.taskCount ?? 0;
   const done   = project.tasksDone ?? 0;
   const pct    = total > 0 ? Math.round(done / total * 100) : 0;
   const dueIn  = daysUntil(project.dueDate);
   const cat    = project.lifecycle && project.lifecycle !== 'generic' ? (LIFECYCLE_LABELS[project.lifecycle] || project.lifecycle) : null;
-
-  // Show tasks in their working order (the saved board sequence) rather than
-  // re-bucketing by status. Seeing the pipeline top-to-bottom — completed steps
-  // in place — makes progress legible and motivating.
-  const sortedTasks = tasks;
 
   return (
     <article className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden transition-all"
@@ -714,13 +645,13 @@ function ProjectRow({
       {/* Tasks table */}
       {open && (
         <div className="border-t border-slate-100 fade-in-soft">
-          {sortedTasks.length === 0 ? (
+          {tasks.length === 0 ? (
             <div className="py-8 text-center">
               <CheckCircle2 size={18} className="mx-auto text-slate-200 mb-2" />
               <div className="text-xs text-slate-400">No tasks yet for this project.</div>
             </div>
           ) : (
-            <DashboardTaskFlow projectId={project.id} tasks={sortedTasks} canMove={isLead} />
+            <DashboardTaskFlow tasks={tasks} />
           )}
         </div>
       )}

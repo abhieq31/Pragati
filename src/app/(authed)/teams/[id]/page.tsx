@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
-import { Download, Trash2, Printer, Sheet, BarChart3, X } from 'lucide-react';
+import { Trash2, BarChart3, X } from 'lucide-react';
 import {
   Card,
   ProgressBar,
@@ -17,6 +17,7 @@ import {
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { ActivityGraph } from '@/components/ActivityGraph';
 import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
+import { ExportMenu } from '@/components/ExportMenu';
 
 const FUNCTION_LABEL: Record<string, string> = {
   general: 'General',
@@ -173,32 +174,16 @@ export default function TeamDetailPage() {
           <p className="text-sm text-slate-500 mt-1">Function: {team.function}</p>
         </div>
         {/* Any team lead (not just the team's owner) or an admin can export
-            a presentable team report. Leads who don't own a team still need
-            reports for cross-team reviews; the report is generated entirely
-            from data already on screen so this is purely a UI gate. */}
+            a presentable team report. One "Export" button → PDF / CSV / HTML;
+            the report is generated entirely from data already on screen so
+            this is purely a UI gate. */}
         {(isOwnerOrAdmin || isLead) && (
-          <div className="shrink-0 flex items-center gap-2">
-            <button
-              onClick={() => printTeamReport(team, progress, board)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-brand-700 hover:bg-brand-800 transition-colors"
-              title="Open a print-ready report — save as PDF or print for a meeting"
-            >
-              <Printer size={15} /> Print / PDF
-            </button>
-            <button
-              onClick={() => downloadTeamReport(team, progress, board)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-              title="Download a self-contained HTML report of this team's projects and progress"
-            >
-              <Download size={15} /> HTML
-            </button>
-            <button
-              onClick={() => downloadTeamCsv(team, board)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-              title="Download the task backlog as a CSV spreadsheet"
-            >
-              <Sheet size={15} /> CSV
-            </button>
+          <div className="shrink-0">
+            <ExportMenu
+              onPdf={() => printTeamReport(team, progress, board)}
+              onHtml={() => downloadTeamReport(team, progress, board)}
+              onCsv={() => downloadTeamCsv(team, board)}
+            />
           </div>
         )}
       </div>

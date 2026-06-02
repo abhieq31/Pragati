@@ -12,10 +12,12 @@ import { DatePicker } from '@/components/DatePicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { Download, GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck } from 'lucide-react';
+import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
 import { useCurrentUser } from '@/components/CurrentUserContext';
+import { ExportMenu } from '@/components/ExportMenu';
+import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -851,23 +853,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     }
   }
 
-  async function exportProject() {
-    try {
-      const res = await fetch(`/api/projects/${id}/export`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
-      const disposition = res.headers.get('content-disposition') || '';
-      const match = disposition.match(/filename="?([^"]+)"?/);
-      const filename = match ? match[1] : `project_${id}.xlsx`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Downloaded ${filename}`);
-    } catch (e: any) {
-      showToast(e?.message || 'Export failed', 'err');
-    }
-  }
-
   return (
     <div className="space-y-5 page-enter">
       {ToastEl}
@@ -960,12 +945,15 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             )}
           </div>
 
-          {/* Actions — Export for everyone; Archive + Delete admin-only. */}
+          {/* Actions — Export (PDF/CSV/HTML) for everyone; Archive + Delete
+              admin-only. The XLSX workbook is offered as an extra row inside
+              the menu for power users who want the full styled spreadsheet. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <button onClick={exportProject}
-              className="btn-secondary flex items-center gap-1.5 text-xs">
-              <Download size={13} /> Export
-            </button>
+            <ExportMenu
+              onPdf={() => printProjectReport(project, phases)}
+              onHtml={() => downloadProjectReport(project, phases)}
+              onCsv={() => downloadProjectCsv(project)}
+            />
             {isAdmin && (
               <button
                 onClick={async () => {

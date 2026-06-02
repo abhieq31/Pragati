@@ -279,23 +279,23 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
   /* ── Sidebar inner content ─────────────────────────────────────────── */
   const SidebarInner = (
     <>
-      {/* Brand header — the PragatiMark stays anchored at a fixed position
-          (constant size + constant left-offset) regardless of collapse state,
-          so the icon never appears to "squeeze in from both sides" while the
-          sidebar width is animating. The wordmark fades/slides independently;
-          the mark itself stays put. */}
+      {/* Brand header — the mark is `shrink-0` so flexbox never compresses it,
+          and the wordmark is only *rendered* when expanded (not just faded),
+          so it can't occupy width and squeeze the 30px mark in the 68px rail.
+          That double-guard is what fixes the "logo squeezed from both sides"
+          in the collapsed sidebar. */}
       <div className="relative flex items-center h-14 shrink-0 border-b overflow-hidden"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
-        <Link href="/" className="flex items-center min-w-0 w-full" style={{ paddingLeft: 19 }}>
-          {/* Constant 30px — never resizes. The 19px left-padding centres the
-              30px mark in the 68px collapsed rail (19 + 30 + 19 = 68) and
-              keeps it lined up with the nav-icon column when expanded. */}
-          <PragatiMark size={30} flat />
-          <span className={`brand-wordmark text-[21px] whitespace-nowrap transition-opacity duration-200 ml-2.5 ${dark ? 'text-white' : 'brand-wordmark-gradient'} ${
-            showCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          }`}>
-            Pragati
+        <Link href="/"
+          className={`flex items-center min-w-0 w-full ${showCollapsed ? 'justify-center' : 'gap-2.5 pl-[18px] pr-4'}`}>
+          <span className="shrink-0">
+            <PragatiMark size={30} flat />
           </span>
+          {!showCollapsed && (
+            <span className={`brand-wordmark text-[21px] whitespace-nowrap ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}>
+              Pragati
+            </span>
+          )}
         </Link>
         {!showCollapsed && (
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -427,13 +427,16 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
 
           <div className="flex-1 min-w-0">
             <div className={`text-[13px] font-bold truncate leading-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}>{user.name}</div>
-            <div style={{ fontSize: 10 }}
-              className={`truncate mt-0.5 font-semibold uppercase tracking-wider ${
-                user.role === 'admin' ? 'text-amber-500'
-                : (user.role === 'lead') ? 'text-emerald-500'
-                : 'text-blue-500'
-            }`}>
-              {roleText}
+            {/* Role as a small, calm pill with a single accent dot — replaces
+                the loud full-width green text. The dot carries the colour; the
+                label stays a muted grey so it reads as metadata, not an alert. */}
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{
+                background: user.role === 'admin' ? '#f59e0b' : user.role === 'lead' ? '#10b981' : '#3b82f6',
+              }} />
+              <span className={`text-[10px] font-semibold uppercase tracking-wider truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>
+                {roleText}
+              </span>
             </div>
           </div>
 

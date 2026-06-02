@@ -160,17 +160,20 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[]): str
     byProject.get(key)!.push(t);
   }
   const groupedTasks = [...byProject.entries()].map(([code, ts]) => {
-    const rows = ts.map((t) => {
-      const od = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
+    // Within each project, tasks are listed in TCD (target-date) order — the
+    // priority order a reviewer reads top-to-bottom.
+    const rows = [...ts].sort(byTcd).map((t) => {
+      const target = t.ccTcd || t.dueDate;
+      const od = target && new Date(target) < new Date() && t.status !== 'done';
       return `<tr>
         <td>${esc(t.title || '')}</td>
         <td>${esc(t.assigneeName || 'Unassigned')}</td>
         <td><span class="dot" style="background:${STATUS_COLOR[t.status] || '#94a3b8'}"></span>${esc(STATUS_LABEL[t.status] || t.status || '')}</td>
-        <td style="${od ? 'color:#b91c1c;font-weight:600' : ''}">${fmtDate(t.dueDate)}</td>
+        <td style="${od ? 'color:#b91c1c;font-weight:600' : ''}">${fmtDate(t.ccTcd || t.dueDate)}</td>
       </tr>`;
     }).join('');
     return `<h3>${esc(code)} <span class="muted">· ${ts.length} task${ts.length === 1 ? '' : 's'}</span></h3>
-      <table><thead><tr><th>Task</th><th>Assignee</th><th>Status</th><th>Due</th></tr></thead><tbody>${rows}</tbody></table>`;
+      <table><thead><tr><th>Task</th><th>Assignee</th><th>Status</th><th>Target (TCD)</th></tr></thead><tbody>${rows}</tbody></table>`;
   }).join('');
 
   return `<!doctype html>
@@ -283,22 +286,48 @@ function csvCell(v: any): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+// TCD-first ordering helper shared by the HTML + CSV exports. Tasks without a
+// target date sink to the bottom; done tasks sink below open ones at the same
+// date so the action list reads top-down.
+function tcdKey(t: any): number {
+  const d = t.ccTcd || t.dueDate;
+  return d ? new Date(d).getTime() : Number.POSITIVE_INFINITY;
+}
+function byTcd(a: any, b: any): number {
+  const k = tcdKey(a) - tcdKey(b);
+  if (k !== 0) return k;
+  // open before done at the same date
+  return (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0);
+}
+
 export function buildTeamReportCsv(team: any, board: any[]): string {
-  const tasks: any[] = board || [];
+  // Sorted by TCD so the spreadsheet opens in priority order, not insertion
+  // order. The reference number (CC No / project code) is first so a Pragati
+  // project is instantly recognisable and searchable in the sheet.
+  const tasks: any[] = [...(board || [])].sort(byTcd);
+  const now = new Date();
   const header = [
-    'Project Code', 'Project', 'Task', 'Assignee', 'Status', 'Priority', 'Due Date', 'Overdue',
+    'Ref No', 'Project Code', 'Project', 'Task', 'Assignee', 'Status', 'Priority',
+    'Target Date (TCD)', 'Due Date', 'Subtasks', 'Overdue', 'Days Overdue',
   ];
   const rows = tasks.map((t) => {
-    const overdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
+    const target = t.ccTcd || t.dueDate;
+    const overdue = target && new Date(target) < now && t.status !== 'done';
+    const daysOver = overdue ? Math.round((now.getTime() - new Date(target).getTime()) / 86400000) : '';
+    const subs = (t.subtaskCount ?? 0) > 0 ? `${t.subtasksDone ?? 0}/${t.subtaskCount}` : '';
     return [
+      t.ccNo || '',
       t.projectCode || '',
       t.projectName || '',
       t.title || '',
       t.assigneeName || 'Unassigned',
       STATUS_LABEL[t.status] || t.status || '',
       t.priority || '',
+      fmtDate(t.ccTcd),
       fmtDate(t.dueDate),
+      subs,
       overdue ? 'Yes' : 'No',
+      daysOver === '' ? '' : String(daysOver),
     ].map(csvCell).join(',');
   });
   // Prepend a BOM so Excel opens UTF-8 cleanly.
