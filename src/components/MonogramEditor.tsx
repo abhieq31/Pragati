@@ -102,60 +102,93 @@ export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
             />
           </div>
 
-          {/* Background colour swatches */}
+          {/* Background colour swatches — grouped by family so the palette
+              reads as curated rather than a wall of squares. Counts match the
+              groups defined in AVATAR_MONOGRAM_BG (see ui.tsx). */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1.5">
               Background
             </label>
-            <div className="flex gap-2 flex-wrap">
-              {AVATAR_MONOGRAM_BG.map((c) => {
-                const active = c.toLowerCase() === bg.toLowerCase();
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setBg(c)}
-                    className="w-9 h-9 rounded-lg transition-all"
-                    style={{
-                      background: c,
-                      outline: active ? `2px solid ${avatarFg(c)}` : '2px solid transparent',
-                      outlineOffset: '2px',
-                      boxShadow: active ? '0 2px 6px rgba(15,23,42,0.18)' : 'none',
-                    }}
-                    title={c}
-                    aria-label={`Pick colour ${c}`}
-                    aria-pressed={active}
-                  />
-                );
-              })}
+            <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1">
+              {[
+                { label: 'Pastel', start: 0,  end: 12 },
+                { label: 'Vivid',  start: 12, end: 20 },
+                { label: 'Jewel',  start: 20, end: 28 },
+                { label: 'Earth',  start: 28, end: 32 },
+                { label: 'Mono',   start: 32, end: 36 },
+                { label: 'Brand',  start: 36, end: 40 },
+              ].map((group) => (
+                <div key={group.label}>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-slate-300 dark:text-white/30 mb-1">{group.label}</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {AVATAR_MONOGRAM_BG.slice(group.start, group.end).map((c) => {
+                      const active = c.toLowerCase() === bg.toLowerCase();
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setBg(c)}
+                          className="w-7 h-7 rounded-lg transition-all"
+                          style={{
+                            background: c,
+                            outline: active ? `2px solid ${avatarFg(c)}` : '2px solid transparent',
+                            outlineOffset: '2px',
+                            boxShadow: active ? '0 2px 6px rgba(15,23,42,0.18)' : 'none',
+                          }}
+                          title={c}
+                          aria-label={`Pick colour ${c}`}
+                          aria-pressed={active}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Font picker — each sample renders in its own typeface */}
+          {/* Font picker — each sample renders in its own typeface.
+              Compact 36px tiles so the full 13-font set fits without scrolling
+              on a typical viewport. Grouped headings make the choices feel
+              curated (Sans / Display / Serif / Mono / Script). */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40 mb-1.5">
               Font
             </label>
-            <div className="flex gap-2 flex-wrap">
-              {AVATAR_FONTS.map((f, i) => {
-                const active = i === font;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setFont(i)}
-                    className={`w-12 h-12 rounded-lg text-lg transition-all border ${
-                      active
-                        ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
-                        : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20'
-                    }`}
-                    style={{ fontFamily: f.family, fontWeight: f.weight }}
-                    aria-pressed={active}
-                  >
-                    {f.sample}
-                  </button>
-                );
-              })}
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+              {[
+                { label: 'Sans',    start: 0,  end: 4 },
+                { label: 'Display', start: 4,  end: 6 },
+                { label: 'Serif',   start: 6,  end: 9 },
+                { label: 'Mono',    start: 9,  end: 11 },
+                { label: 'Script',  start: 11, end: 13 },
+              ].map((group) => (
+                <div key={group.label}>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-slate-300 dark:text-white/30 mb-1">{group.label}</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {AVATAR_FONTS.slice(group.start, group.end).map((f, i) => {
+                      const fontIndex = group.start + i;
+                      const active = fontIndex === font;
+                      return (
+                        <button
+                          key={fontIndex}
+                          type="button"
+                          onClick={() => setFont(fontIndex)}
+                          className={`w-10 h-10 rounded-lg text-base transition-all border ${
+                            active
+                              ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
+                              : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20'
+                          }`}
+                          style={{ fontFamily: f.family, fontWeight: f.weight }}
+                          aria-pressed={active}
+                        >
+                          {f.sample}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

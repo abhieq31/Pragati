@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useIsLead } from '@/components/CurrentUserContext';
 import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus, Lock } from 'lucide-react';
+import { DatePicker } from '@/components/DatePicker';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
 interface Phase { id: string; name: string; tasks: string[] }
@@ -75,9 +76,6 @@ const LIFECYCLE_GROUPS = [
       { value: 'personal_side_project', label: 'Side Project',        hint: 'Idea → build → ship → iterate' },
       { value: 'personal_creative',     label: 'Creative Project',    hint: 'Write, record or make — to published' },
       { value: 'personal_declutter',    label: 'Declutter & Organise',hint: 'Clear the clutter, room by room' },
-      { value: 'personal_home_move',    label: 'Home Move',           hint: 'Pack, switch, settle in order' },
-      { value: 'personal_network',      label: 'Build Relationships', hint: 'Grow & nurture your network' },
-      { value: 'personal_event',        label: 'Event / Trip Planner',hint: 'Plan a get-together end-to-end' },
     ]
   },
 ];
@@ -384,6 +382,11 @@ export default function NewProjectPage() {
   async function submit() {
     if (!form.name.trim()) { setErr('Project name is required.'); return; }
     setErr(''); setLoading(true);
+    // ICs may toggle off to *browse* lead workflows, but they can only ever
+    // commit a personal project — so we force `personal` back on at submit
+    // for non-leads to spare them a 403 round-trip. The backend still enforces
+    // the same rule (defence in depth).
+    const finalPersonal = isLead ? personal : true;
     try {
       const p = await api<any>('/projects', {
         method: 'POST',
@@ -393,8 +396,8 @@ export default function NewProjectPage() {
           lifecycle:   form.lifecycle,
           priority:    form.priority,
           gxpImpact:   form.gxpImpact,
-          personal,
-          teamId:      personal ? undefined : (form.teamId || undefined),
+          personal:    finalPersonal,
+          teamId:      finalPersonal ? undefined : (form.teamId || undefined),
           startDate:   form.startDate || undefined,
           dueDate:     form.dueDate || undefined,
           useTemplate: false,
@@ -484,11 +487,14 @@ export default function NewProjectPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Start date</label>
-                <input type="date" className="input" value={form.startDate} onChange={e => up('startDate', e.target.value)} />
+                <DatePicker block placeholder="Pick a start date" value={form.startDate || null}
+                  onChange={(v) => up('startDate', v || '')} />
               </div>
               <div>
                 <label className="label">Due date</label>
-                <input type="date" className="input" value={form.dueDate} onChange={e => up('dueDate', e.target.value)} />
+                <DatePicker block placeholder="Pick a due date" value={form.dueDate || null}
+                  onChange={(v) => up('dueDate', v || '')}
+                  minDate={form.startDate ? new Date(form.startDate) : undefined} />
               </div>
             </div>
             {/* Personal toggle — flip it on to keep the project private to
@@ -499,9 +505,7 @@ export default function NewProjectPage() {
                 type="button"
                 role="switch"
                 aria-checked={personal}
-                disabled={!isLead}
                 onClick={() => {
-                  if (!isLead) return; // ICs are locked to personal projects
                   const next = !personal;
                   setPersonal(next);
                   // Switching to personal: drop any GxP / General lifecycle —
@@ -518,9 +522,9 @@ export default function NewProjectPage() {
                     up('lifecycle', 'generic');
                   }
                 }}
-                className={`mt-0.5 relative w-9 h-5 rounded-full shrink-0 transition-colors ${
+                className={`mt-0.5 relative w-9 h-5 rounded-full shrink-0 transition-colors cursor-pointer ${
                   personal ? 'bg-blue-600' : 'bg-slate-300'
-                } ${isLead ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
+                }`}
               >
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${personal ? 'left-4' : 'left-0.5'}`} />
               </button>
@@ -532,7 +536,9 @@ export default function NewProjectPage() {
                 <div className="text-xs text-slate-400 mt-0.5">
                   {isLead
                     ? 'Only visible to you — no team, hidden from everyone else (including admins).'
-                    : 'Contributors create personal projects — private to you, no team attached. Ask a team lead to set up shared projects.'}
+                    : personal
+                      ? 'Private to you — no team attached. Toggle off to browse the QA / GxP workflows your leads use; your final project will still be filed under your name as a personal project.'
+                      : 'Browse-only — you can preview the team lifecycles, but contributors can only commit personal projects. We\'ll switch back to personal on submit.'}
                 </div>
               </div>
             </div>
@@ -567,14 +573,18 @@ export default function NewProjectPage() {
             <p className="text-xs text-slate-400 mb-3 mt-0.5">
               {personal
                 ? 'Pick a ready-made template to jump-start your personal project — or start blank.'
-                : 'Pick a template to get predefined stages and tasks — you can edit everything in the next step.'}
+                : isLead
+                  ? 'Pick a template to get predefined stages and tasks — you can edit everything in the next step.'
+                  : 'Browse every template available — the QA / GxP workflows are listed too so you can see how shared projects are structured. Shared projects can only be created by a lead.'}
             </p>
             <div className="space-y-4">
               {/* When the Personal toggle is on, only show the Personal group
                   plus a single "Custom / Blank" starter — the QA / Life
                   Sciences lifecycles don't fit a private to-do list. When
                   it's off, show the full QI / Life Sciences / General set
-                  (without the Personal group). */}
+                  (without the Personal group). ICs can browse the lead-only
+                  templates so they understand the workflows the team uses,
+                  even though they can only commit a personal project. */}
               {(personal
                 ? [
                     { label: 'Start fresh', description: '', options: [{ value: 'generic', label: 'Custom / Blank', hint: 'Start from scratch' }] },

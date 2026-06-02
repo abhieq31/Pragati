@@ -279,24 +279,26 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
   /* ── Sidebar inner content ─────────────────────────────────────────── */
   const SidebarInner = (
     <>
-      {/* Brand header */}
-      <div className={`flex items-center h-14 shrink-0 border-b overflow-hidden ${showCollapsed ? 'px-0 justify-center' : 'gap-2.5 px-4'}`}
+      {/* Brand header — the PragatiMark stays anchored at a fixed position
+          (constant size + constant left-offset) regardless of collapse state,
+          so the icon never appears to "squeeze in from both sides" while the
+          sidebar width is animating. The wordmark fades/slides independently;
+          the mark itself stays put. */}
+      <div className="relative flex items-center h-14 shrink-0 border-b overflow-hidden"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
-        {/* When collapsed, drop the inter-element gap so the mark sits dead-centre
-            in the 68px rail instead of being nudged left by the (zero-width)
-            wordmark's gap — which made the logo look off/uneven. */}
-        <Link href="/" className={`flex items-center ${showCollapsed ? 'justify-center w-full' : 'gap-2.5 flex-1 min-w-0'}`}>
-          {/* Constant size — the mark used to scale 28↔30 on every collapse,
-              causing a brief squeeze. The wordmark fades out instead. */}
+        <Link href="/" className="flex items-center min-w-0 w-full" style={{ paddingLeft: 19 }}>
+          {/* Constant 30px — never resizes. The 19px left-padding centres the
+              30px mark in the 68px collapsed rail (19 + 30 + 19 = 68) and
+              keeps it lined up with the nav-icon column when expanded. */}
           <PragatiMark size={30} flat />
-          <span className={`brand-wordmark text-[21px] leading-none whitespace-nowrap transition-opacity duration-150 ${dark ? 'text-white' : 'brand-wordmark-gradient'} ${
-            showCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
+          <span className={`brand-wordmark text-[21px] whitespace-nowrap transition-opacity duration-200 ml-2.5 ${dark ? 'text-white' : 'brand-wordmark-gradient'} ${
+            showCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}>
             Pragati
           </span>
         </Link>
         {!showCollapsed && (
-          <div className="ml-auto flex items-center gap-1 shrink-0">
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {/* Close on mobile only */}
             <button className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
               onClick={() => setOpen(false)}>
@@ -398,46 +400,49 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
           </button>
         </div>
       ) : (
-      /* User footer — avatar/name open profile · theme · bell ·
-          sign-out drop-up. No catch-all menu. */
-      <div className="px-3 py-3 border-t shrink-0 relative"
+      /* User footer — avatar + name open the account menu; the bell sits to
+         the side, large enough to tap on touch devices. The whole strip is a
+         single subtly-tinted card so the avatar doesn't read as floating in a
+         corner — it feels like a deliberate identity panel. */
+      <div className="p-3 border-t shrink-0 relative"
         style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
         {AccountMenu}
 
-        <div className={`flex items-center gap-2 rounded-lg px-1.5 py-1.5 ${dark ? '' : ''}`}>
+        <div
+          className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors cursor-pointer ${
+            dark ? 'bg-white/[0.03] hover:bg-white/[0.06]' : 'bg-slate-50 hover:bg-slate-100/80'
+          }`}
+          style={{ border: dark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e8edf4' }}
+          onClick={() => setAccountMenuOpen((v) => !v)}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {/* Avatar + name -> account menu */}
           <button type="button" title="Account menu" aria-label="Account menu"
             data-tour="account-menu"
             onMouseDown={(e) => e.stopPropagation()}
-            onClick={() => setAccountMenuOpen((v) => !v)}
+            onClick={(e) => { e.stopPropagation(); setAccountMenuOpen((v) => !v); }}
             className="relative shrink-0 rounded-full focus:outline-none">
-            <Avatar name={user.name} size={30} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
+            <Avatar name={user.name} size={34} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} />
           </button>
 
-          <button type="button" onClick={() => setAccountMenuOpen((v) => !v)}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="flex-1 min-w-0 group text-left">
-            <div className={`text-xs font-semibold truncate group-hover:underline ${dark ? 'text-white/80' : 'text-slate-700'}`}>{user.name}</div>
+          <div className="flex-1 min-w-0">
+            <div className={`text-[13px] font-bold truncate leading-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}>{user.name}</div>
             <div style={{ fontSize: 10 }}
-              className={`truncate ${
+              className={`truncate mt-0.5 font-semibold uppercase tracking-wider ${
                 user.role === 'admin' ? 'text-amber-500'
                 : (user.role === 'lead') ? 'text-emerald-500'
-                : 'text-blue-400'
+                : 'text-blue-500'
             }`}>
               {roleText}
             </div>
-          </button>
+          </div>
 
           {/* Notifications — opens upward so it's never clipped at the bottom.
               Seeded with the SSR unread count so the badge is correct on first
               paint instead of popping in after the first poll. */}
-          <NotificationBell dark={dark} openUp initialUnread={initialUnread} />
-
-          {/* No standalone sign-out here — it lived behind a LogOut "arrow"
-              that users mistook for a menu-expander and clicked by accident.
-              Sign out now lives only inside the account menu (tap avatar/name),
-              matching the collapsed rail and removing the accidental-logout
-              footgun. */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <NotificationBell dark={dark} openUp initialUnread={initialUnread} />
+          </div>
         </div>
       </div>
       )}

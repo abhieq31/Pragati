@@ -54,6 +54,7 @@ interface DashProject {
   taskCount?: number; tasksDone?: number;
   openTasks: number; overdueCount: number;
   health: 'healthy' | 'at_risk' | 'critical';
+  healthReasons?: string[];
 }
 
 interface DashPerson {
@@ -180,11 +181,10 @@ export default function DashboardClient({
   // first thing a brand-new admin sees, so it should point the way.
   const isFirstRun = isLead && dash.projects.length === 0;
 
-  // Individual contributors get a strictly personal view: their dashboard is
-  // "My Tasks", so every task panel below is scoped to the tasks assigned to
-  // them. Leads/admins keep the full team view. This is what keeps one IC from
-  // seeing another team member's workload or progress (see also: the
-  // Contributors panel, which is hidden for ICs entirely).
+  // ICs see their own task counts in side panels (My Tasks, Actions) but the
+  // expanded project view shows the *full* pipeline so they have the same
+  // visibility their lead does into how their project is progressing. Leads
+  // and admins always see everything.
   const myId = dash.user.id;
   const visibleTasks = useMemo(
     () => (isLead ? dash.teamTasks : dash.teamTasks.filter(t => t.assigneeId === myId)),
@@ -197,14 +197,17 @@ export default function DashboardClient({
     ),
   [dash]);
 
+  // Expanded project view: everyone sees the whole project's tasks, so an IC
+  // can see the path of work around their own assignments — not just their
+  // own row in isolation.
   const tasksByProject = useMemo(() => {
     const m = new Map<string, TeamTask[]>();
-    for (const t of visibleTasks) {
+    for (const t of dash.teamTasks) {
       if (!m.has(t.projectId)) m.set(t.projectId, []);
       m.get(t.projectId)!.push(t);
     }
     return m;
-  }, [visibleTasks]);
+  }, [dash.teamTasks]);
 
   const tasksByAssignee = useMemo(() => {
     const m = new Map<string, TeamTask[]>();
@@ -271,25 +274,23 @@ export default function DashboardClient({
             tasksByProject={tasksByProject}
           />
 
-          {/* Right column — Actions + "My tasks" (for leads: also Contributors). */}
-          {/* `lg:pt-7` (≈ section header height + its mb-3) drops the first card
-              so its top edge lines up with the first project card on the left,
-              instead of floating above the "Your team's projects" heading. */}
-          {/* Flows with the page (no sticky/own-scroll): the previous
-              sticky+max-height+overflow combo clipped the Individual
-              Contributors list and made it feel like it "broke" mid-scroll
-              when the column was taller than the viewport. */}
-          <div className="space-y-4 pr-1 lg:pt-7">
+          {/* Right column — Actions + "My tasks" (for leads: also Contributors).
+             Headers in both columns share the same vertical baseline so the
+             dashboard reads as a single inline strip rather than two stacked
+             layouts. The Actions header carries the same uppercase tracking
+             treatment as "Your team's projects" on the left.
+             Flows with the page (no sticky/own-scroll): the previous
+             sticky+max-height+overflow combo clipped the Individual
+             Contributors list and made it feel like it "broke" mid-scroll
+             when the column was taller than the viewport. */}
+          <div className="space-y-4 pr-1">
             <ActionsPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
-            {/* Layout parity — the right column always carries three panels
-               regardless of role. Leads see workload across their ICs;
-               contributors see a per-project breakdown of their own work, so
-               the dashboard reads as a single product with role-appropriate
-               content, not two layouts. */}
-            {isLead
-              ? <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />
-              : <MyFocusPanel tasks={visibleTasks} projects={ongoingProjects} myId={myId} />}
+            {/* Leads see workload across their ICs. Contributors don't need a
+               per-project rollup of their own work here — "My tasks" above
+               already covers that, and the expanded project rows on the left
+               show the whole pipeline. */}
+            {isLead && <ContributorsPanel people={dash.people} tasksByAssignee={tasksByAssignee} />}
           </div>
         </div>
       )}
@@ -674,7 +675,15 @@ function ProjectRow({
                 {cat}
               </span>
             )}
-            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}>
+            {/* Hover surfaces *why* — same reasoning a reviewer would point
+                at when judging "at risk" vs "on track". The badge is a
+                button so keyboard/touch users can still see the rationale
+                without leaving the dashboard. */}
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-help ${health.bg} ${health.text}`}
+              title={(project.healthReasons || []).join(' · ') || health.label}
+              onClick={(e) => e.stopPropagation()}
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} />
               {health.label}
             </span>
@@ -909,12 +918,19 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
     { key: 'untilDate', label: 'Until…' },
   ];
 
+  const totalCount = overdue.length + due.length;
   const inner = (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={14} className="text-slate-400" />
-          <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Actions</h3>
+      {/* Section header — same visual weight + spacing as "Your team's
+          projects" on the left column, so the two sections sit on the same
+          baseline and the dashboard reads as a single inline strip. */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <TrendingUp size={14} className="text-slate-400 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
+            Actions
+          </h2>
+          <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
         </div>
         {!expanded && <ExpandButton onClick={() => setExpanded(true)} />}
       </div>

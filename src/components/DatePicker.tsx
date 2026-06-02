@@ -137,41 +137,50 @@ export function DatePicker({
       {mounted && open && coords && createPortal(
         <div
           ref={popRef}
-          className="fixed bg-white rounded-xl border border-slate-100 p-3 fade-in-soft datepicker-pop"
+          className="fixed rounded-2xl fade-in-soft datepicker-pop bg-white dark:bg-[#262624] border border-slate-200/80 dark:border-white/10"
           style={{
             top: coords.top,
             left: coords.left,
-            width: 260,
+            width: 280,
             zIndex: 9999,
-            boxShadow: '0 8px 32px rgba(15,23,42,0.18), 0 2px 8px rgba(15,23,42,0.08)',
+            boxShadow: '0 18px 44px rgba(15,23,42,0.18), 0 2px 8px rgba(15,23,42,0.08)',
           }}
           onClick={e => e.stopPropagation()}
           onMouseDown={e => e.stopPropagation()}
         >
-          <CalendarGrid
-            viewMonth={viewMonth}
-            setViewMonth={setViewMonth}
-            selected={selected}
-            today={today}
-            minDate={minDate}
-            onPick={select}
+          {/* Brand-gradient bar at the top — a small, refined cue that links
+              the calendar to the Pragati palette. Replaces the previous flat
+              header that looked indistinguishable from a generic dropdown. */}
+          <div
+            className="h-1 rounded-t-2xl"
+            style={{ background: 'linear-gradient(90deg, #0D47A1 0%, #1565C0 45%, #2E7D32 100%)' }}
           />
+          <div className="p-3">
+            <CalendarGrid
+              viewMonth={viewMonth}
+              setViewMonth={setViewMonth}
+              selected={selected}
+              today={today}
+              minDate={minDate}
+              onPick={select}
+            />
 
-          {/* Quick presets */}
-          <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex gap-1.5 flex-wrap">
-            {[
-              { label: 'Today',       d: new Date() },
-              { label: 'Tomorrow',    d: addDays(new Date(), 1) },
-              { label: 'In 1 week',   d: addDays(new Date(), 7) },
-              { label: 'In 1 month',  d: addDays(new Date(), 30) },
-            ].map(p => (
-              <button key={p.label}
-                type="button"
-                onClick={() => select(p.d)}
-                className="text-[10px] font-semibold px-2 py-1 rounded-full bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                {p.label}
-              </button>
-            ))}
+            {/* Quick presets */}
+            <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-white/5 flex gap-1.5 flex-wrap">
+              {[
+                { label: 'Today',       d: new Date() },
+                { label: 'Tomorrow',    d: addDays(new Date(), 1) },
+                { label: 'In 1 week',   d: addDays(new Date(), 7) },
+                { label: 'In 1 month',  d: addDays(new Date(), 30) },
+              ].map(p => (
+                <button key={p.label}
+                  type="button"
+                  onClick={() => select(p.d)}
+                  className="text-[10px] font-semibold px-2 py-1 rounded-full bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-white/70 hover:bg-blue-50 dark:hover:bg-blue-500/15 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>,
         document.body,
@@ -210,14 +219,23 @@ function CalendarGrid({
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <button type="button"
+          aria-label="Previous month"
           onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}
-          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
           <ChevronLeft size={14} />
         </button>
-        <div className="text-xs font-bold text-slate-700 tracking-tight">{monthLabel}</div>
+        <button
+          type="button"
+          onClick={() => setViewMonth(new Date())}
+          className="text-[13px] font-bold tracking-tight text-slate-800 dark:text-white/90 hover:text-blue-700 transition-colors"
+          title="Jump to current month"
+        >
+          {monthLabel}
+        </button>
         <button type="button"
+          aria-label="Next month"
           onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}
-          className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
           <ChevronRight size={14} />
         </button>
       </div>
@@ -225,7 +243,7 @@ function CalendarGrid({
       {/* Weekday labels */}
       <div className="grid grid-cols-7 gap-0.5 mb-1">
         {['S','M','T','W','T','F','S'].map((w, i) => (
-          <div key={i} className="text-[9px] font-bold text-slate-300 uppercase tracking-wider text-center py-1">
+          <div key={i} className="text-[9px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider text-center py-1">
             {w}
           </div>
         ))}
@@ -239,18 +257,19 @@ function CalendarGrid({
           const isSel     = selected && isSameDay(day, selected);
           const disabled  = minDate ? day < startOfDay(minDate) : false;
 
-          let cls = 'w-8 h-7 text-[11px] font-medium rounded-md transition-all relative';
-          if (disabled) cls += ' text-slate-200 cursor-not-allowed';
-          else if (isSel) cls += ' bg-blue-600 text-white font-bold shadow-sm';
-          else if (isToday) cls += ' text-blue-700 font-bold ring-1 ring-blue-200 hover:bg-blue-50';
-          else if (inMonth) cls += ' text-slate-700 hover:bg-slate-100';
-          else cls += ' text-slate-300 hover:bg-slate-50';
+          let cls = 'w-9 h-8 text-[12px] font-medium rounded-lg transition-all relative';
+          if (disabled) cls += ' text-slate-200 dark:text-white/15 cursor-not-allowed';
+          else if (isSel) cls += ' text-white font-bold shadow-md';
+          else if (isToday) cls += ' text-blue-700 dark:text-blue-300 font-bold ring-1 ring-blue-200 dark:ring-blue-500/40 hover:bg-blue-50 dark:hover:bg-blue-500/15';
+          else if (inMonth) cls += ' text-slate-700 dark:text-white/85 hover:bg-slate-100 dark:hover:bg-white/5';
+          else cls += ' text-slate-300 dark:text-white/30 hover:bg-slate-50 dark:hover:bg-white/[0.02]';
 
           return (
             <button key={i}
               type="button"
               disabled={disabled}
               onClick={() => !disabled && onPick(day)}
+              style={isSel ? { background: 'linear-gradient(135deg, #1565C0 0%, #1976D2 50%, #2E7D32 100%)' } : undefined}
               className={cls}>
               {day.getDate()}
             </button>

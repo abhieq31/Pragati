@@ -24,19 +24,40 @@ import { MonogramEditor } from '@/components/MonogramEditor';
    passes letter/bg/font through, so the preview here matches every other
    surface where this user is shown. */
 function ProfileAvatar({
-  name, letter, bg, font, size = 88, onClick,
+  name, letter, bg, font, size = 88, onClick, title,
 }: {
   name?: string | null;
   letter?: string; bg?: string; font?: number;
   size?: number;
   onClick?: () => void;
+  title?: string;
 }) {
   const inner = <Avatar name={name} size={size} letter={letter} bg={bg} font={font} />;
-
-  // The profile picture is now purely a portrait — no hover overlay. (It used
-  // to flash an "ACHIEVEMENTS" trophy on hover, which read as clutter on the
-  // hero card.) Achievements live in the Activity section below.
-  return inner;
+  if (!onClick) return inner;
+  // Wrap in a button so clicking the portrait opens the monogram editor
+  // (matches user expectation — "click avatar to change it"). The pencil
+  // affordance on hover hints at editability without cluttering the resting
+  // state.
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title || 'Change avatar'}
+      aria-label={title || 'Change avatar'}
+      className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-white/40"
+    >
+      {inner}
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-full flex items-end justify-end p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.45), transparent 55%)' }}
+      >
+        <span className="inline-flex items-center gap-1 rounded-full bg-white/95 text-slate-700 text-[10px] font-bold px-1.5 py-0.5 shadow-sm">
+          Change
+        </span>
+      </span>
+    </button>
+  );
 }
 
 /* (legacy emoji picker removed — see MonogramEditor) */
@@ -521,7 +542,8 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
                   bg={avatarBg}
                   font={avatarFont}
                   size={88}
-                  onClick={() => document.getElementById('activity')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={() => setShowAvatarEditor(true)}
+                  title="Change avatar"
                 />
               </div>
               <div className="min-w-0 pb-1">

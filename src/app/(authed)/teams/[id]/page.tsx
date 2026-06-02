@@ -172,8 +172,11 @@ export default function TeamDetailPage() {
           {team.description && <p className="text-slate-600 mt-1">{team.description}</p>}
           <p className="text-sm text-slate-500 mt-1">Function: {team.function}</p>
         </div>
-        {/* #9 — team owner / admin can export a presentable team report. */}
-        {isOwnerOrAdmin && (
+        {/* Any team lead (not just the team's owner) or an admin can export
+            a presentable team report. Leads who don't own a team still need
+            reports for cross-team reviews; the report is generated entirely
+            from data already on screen so this is purely a UI gate. */}
+        {(isOwnerOrAdmin || isLead) && (
           <div className="shrink-0 flex items-center gap-2">
             <button
               onClick={() => printTeamReport(team, progress, board)}

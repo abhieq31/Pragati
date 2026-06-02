@@ -37,8 +37,17 @@ export async function getLeadDashboardData(
   const visibleProjectIds = projects.map(p => p._id);
 
   const [myTasks, teamTasksRaw, teams, owners, projectTaskAgg, perUserAgg, users] = await Promise.all([
+    // "My tasks" stays sorted by status so the IC's side panel keeps its
+    // pipeline grouping.
     Task.find({ assigneeId: scope.userOid }).sort({ status: 1, dueDate: 1 }).lean(),
-    Task.find({ projectId: { $in: visibleProjectIds } }).sort({ status: 1, dueDate: 1 }).limit(200).lean(),
+    // Project task lists prefer the manually-saved `position` (drag-drop
+    // result), then fall back to TCD/due-date so brand-new projects without
+    // an explicit order still surface the most urgent work first. Without
+    // this, drag-reordering visibly "snapped back" on the next reload.
+    Task.find({ projectId: { $in: visibleProjectIds } })
+      .sort({ position: 1, ccTcd: 1, dueDate: 1, createdAt: 1 })
+      .limit(500)
+      .lean(),
     Team.find({ _id: { $in: scope.teamOids } }).lean(),
     User.find({ _id: { $in: projects.map(p => p.ownerId).filter(Boolean) } }, '_id name').lean(),
     Task.aggregate([
@@ -92,9 +101,22 @@ export async function getLeadDashboardData(
       : open > 0 ? 999 : 0;
     const daysUntilDue = p.dueDate ? Math.floor((new Date(p.dueDate).getTime() - now.getTime()) / 86400000) : null;
 
+    // Health is derived from observable signals; we also surface *why* so a
+    // user hovering "At risk" sees the same reasoning a reviewer would: e.g.
+    // "3 overdue tasks · due in 4 days". No mystery scoring.
     let health: 'healthy' | 'at_risk' | 'critical' = 'healthy';
+    const reasons: string[] = [];
+    if (s.overdue >= 3) reasons.push(`${s.overdue} overdue tasks`);
+    else if (s.overdue > 0) reasons.push(`${s.overdue} overdue task${s.overdue === 1 ? '' : 's'}`);
+    if (daysUntilDue !== null) {
+      if (daysUntilDue < 0 && open > 0) reasons.push(`Past due by ${Math.abs(daysUntilDue)}d with open work`);
+      else if (daysUntilDue <= 5 && open > 0) reasons.push(`Due in ${daysUntilDue}d with open work`);
+    }
+    if (stagnantDays >= 7 && open > 0) reasons.push(`No tasks closed in ${stagnantDays === 999 ? 'a while' : `${stagnantDays}d`}`);
+
     if (s.overdue >= 3 || (daysUntilDue !== null && daysUntilDue < 0 && open > 0)) health = 'critical';
     else if (s.overdue > 0 || stagnantDays >= 7 || (daysUntilDue !== null && daysUntilDue <= 5 && open > 0)) health = 'at_risk';
+    if (health === 'healthy') reasons.push('On track — no overdues, recent progress');
 
     return {
       ...projectS(p, {
@@ -106,6 +128,7 @@ export async function getLeadDashboardData(
       openTasks:    open,
       overdueCount: s.overdue,
       health,
+      healthReasons: reasons,
     };
   });
 

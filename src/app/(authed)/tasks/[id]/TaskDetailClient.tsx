@@ -8,7 +8,7 @@ import { UserAvatar } from '@/components/AvatarRegistry';
 import { DatePicker } from '@/components/DatePicker';
 import { useIsLead } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock } from 'lucide-react';
+import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2 } from 'lucide-react';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -168,6 +168,13 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   }
   async function toggleSub(sub: any) {
     await api(`/tasks/${id}/subtasks/${sub.id}`, { method: 'PATCH', body: { status: sub.status === 'done' ? 'todo' : 'done' } });
+    load();
+  }
+  async function deleteSub(sub: any) {
+    // Match the parent-task delete UX — short confirm + cascade. The server
+    // enforces lead/owner permissions; the button hides for everyone else.
+    if (!confirm(`Delete subtask "${sub.title}"? This can't be undone.`)) return;
+    await api(`/tasks/${id}/subtasks/${sub.id}`, { method: 'DELETE' });
     load();
   }
   async function addComment() {
@@ -351,6 +358,20 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                   {s.title}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(s.dueDate)}</span>
+                {/* Delete affordance — same gesture as the parent task's
+                    delete: visible on row hover, lead/owner-only. Avoids
+                    leaving subtasks behind when the work scope shrinks. */}
+                {isLead && (
+                  <button
+                    type="button"
+                    onClick={() => deleteSub(s)}
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+                    title="Delete subtask"
+                    aria-label={`Delete subtask ${s.title}`}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
               </div>
             ))}
             {task.subtasks.length === 0 && (
