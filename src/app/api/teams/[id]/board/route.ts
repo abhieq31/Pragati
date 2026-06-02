@@ -28,12 +28,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const uMap = new Map(users.map((u) => [String(u._id), u.name]));
     const pMap = new Map(projects.map((p) => [String(p._id), p]));
 
+    // Order by CC Target Completion Date (TCD), then due date — nearest
+    // deadline first. This is the order the report + board expect; an
+    // un-ordered backlog was the complaint from the last review.
     tasks.sort((a, b) => {
-      const s = (STATUS_ORDER[a.status || ''] || 9) - (STATUS_ORDER[b.status || ''] || 9);
-      if (s !== 0) return s;
-      const ad = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const bd = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      return ad - bd;
+      const ad = (a as any).ccTcd ? new Date((a as any).ccTcd).getTime()
+        : a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bd = (b as any).ccTcd ? new Date((b as any).ccTcd).getTime()
+        : b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      if (ad !== bd) return ad - bd;
+      return (STATUS_ORDER[a.status || ''] || 9) - (STATUS_ORDER[b.status || ''] || 9);
     });
 
     return NextResponse.json(

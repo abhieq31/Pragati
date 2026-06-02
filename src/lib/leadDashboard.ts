@@ -40,12 +40,12 @@ export async function getLeadDashboardData(
     // "My tasks" stays sorted by status so the IC's side panel keeps its
     // pipeline grouping.
     Task.find({ assigneeId: scope.userOid }).sort({ status: 1, dueDate: 1 }).lean(),
-    // Project task lists prefer the manually-saved `position` (drag-drop
-    // result), then fall back to TCD/due-date so brand-new projects without
-    // an explicit order still surface the most urgent work first. Without
-    // this, drag-reordering visibly "snapped back" on the next reload.
+    // Project task lists are ordered by CC Target Completion Date (TCD), then
+    // due date — the nearest deadline first. The dashboard re-sorts the same
+    // way client-side, so the order is deterministic for every viewer and
+    // carries no hidden per-user state.
     Task.find({ projectId: { $in: visibleProjectIds } })
-      .sort({ position: 1, ccTcd: 1, dueDate: 1, createdAt: 1 })
+      .sort({ ccTcd: 1, dueDate: 1, createdAt: 1 })
       .limit(500)
       .lean(),
     Team.find({ _id: { $in: scope.teamOids } }).lean(),
@@ -96,27 +96,71 @@ export async function getLeadDashboardData(
   const projectList = projects.map(p => {
     const s: any = projStats.get(String(p._id)) ?? { total: 0, done: 0, overdue: 0, lastCompletedAt: null };
     const open   = s.total - s.done;
+    const pct    = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0;
     const stagnantDays = s.lastCompletedAt
       ? Math.floor((now.getTime() - new Date(s.lastCompletedAt).getTime()) / 86400000)
       : open > 0 ? 999 : 0;
     const daysUntilDue = p.dueDate ? Math.floor((new Date(p.dueDate).getTime() - now.getTime()) / 86400000) : null;
 
+    // ── Schedule pace ──────────────────────────────────────────────────────
+    // Compare how far through the project's calendar we are against how much
+    // work is actually done. If 80% of the time has elapsed but only 30% is
+    // complete, the project is behind pace even with zero overdue tasks yet —
+    // this is the early-warning signal a status badge should carry.
+    let expectedPct: number | null = null;
+    if (p.startDate && p.dueDate) {
+      const startMs = new Date(p.startDate).getTime();
+      const dueMs   = new Date(p.dueDate).getTime();
+      if (dueMs > startMs) {
+        const elapsed = (now.getTime() - startMs) / (dueMs - startMs);
+        expectedPct = Math.round(Math.min(Math.max(elapsed, 0), 1) * 100);
+      }
+    }
+    const paceGap = expectedPct !== null ? expectedPct - pct : 0; // +ve = behind
+
     // Health is derived from observable signals; we also surface *why* so a
-    // user hovering "At risk" sees the same reasoning a reviewer would: e.g.
-    // "3 overdue tasks · due in 4 days". No mystery scoring.
+    // user hovering "At risk" sees the same reasoning a reviewer would. The
+    // badge now reflects real progress + schedule pace, not just overdues.
     let health: 'healthy' | 'at_risk' | 'critical' = 'healthy';
     const reasons: string[] = [];
-    if (s.overdue >= 3) reasons.push(`${s.overdue} overdue tasks`);
-    else if (s.overdue > 0) reasons.push(`${s.overdue} overdue task${s.overdue === 1 ? '' : 's'}`);
-    if (daysUntilDue !== null) {
-      if (daysUntilDue < 0 && open > 0) reasons.push(`Past due by ${Math.abs(daysUntilDue)}d with open work`);
-      else if (daysUntilDue <= 5 && open > 0) reasons.push(`Due in ${daysUntilDue}d with open work`);
-    }
-    if (stagnantDays >= 7 && open > 0) reasons.push(`No tasks closed in ${stagnantDays === 999 ? 'a while' : `${stagnantDays}d`}`);
 
-    if (s.overdue >= 3 || (daysUntilDue !== null && daysUntilDue < 0 && open > 0)) health = 'critical';
-    else if (s.overdue > 0 || stagnantDays >= 7 || (daysUntilDue !== null && daysUntilDue <= 5 && open > 0)) health = 'at_risk';
-    if (health === 'healthy') reasons.push('On track — no overdues, recent progress');
+    // A finished project is simply "Complete" — never flag it.
+    if (p.status === 'completed' || (s.total > 0 && open === 0)) {
+      health = 'healthy';
+      reasons.push(s.total > 0 ? `All ${s.total} tasks complete (100%)` : 'Complete');
+    } else if (p.status === 'on_hold') {
+      health = 'at_risk';
+      reasons.push('On hold — work is paused');
+    } else {
+      if (s.overdue >= 3) reasons.push(`${s.overdue} overdue tasks`);
+      else if (s.overdue > 0) reasons.push(`${s.overdue} overdue task${s.overdue === 1 ? '' : 's'}`);
+      if (daysUntilDue !== null) {
+        if (daysUntilDue < 0 && open > 0) reasons.push(`Past due by ${Math.abs(daysUntilDue)}d, ${pct}% done`);
+        else if (daysUntilDue <= 5 && open > 0) reasons.push(`Due in ${daysUntilDue}d, ${pct}% done`);
+      }
+      if (paceGap >= 25) reasons.push(`Behind pace — ${pct}% done vs ~${expectedPct}% of time elapsed`);
+      if (stagnantDays >= 7 && open > 0) reasons.push(`No tasks closed in ${stagnantDays === 999 ? 'a while' : `${stagnantDays}d`}`);
+
+      // Critical: badly past due, a wall of overdues, or severely behind pace.
+      if (
+        s.overdue >= 3 ||
+        (daysUntilDue !== null && daysUntilDue < 0 && open > 0) ||
+        paceGap >= 40
+      ) health = 'critical';
+      // At risk: any overdue, due-soon with open work, stagnant, or behind pace.
+      else if (
+        s.overdue > 0 ||
+        stagnantDays >= 7 ||
+        (daysUntilDue !== null && daysUntilDue <= 5 && open > 0) ||
+        paceGap >= 25
+      ) health = 'at_risk';
+
+      if (health === 'healthy') {
+        reasons.push(s.total === 0
+          ? 'No tasks yet — nothing at risk'
+          : `On track — ${pct}% done, no overdues`);
+      }
+    }
 
     return {
       ...projectS(p, {
@@ -127,6 +171,7 @@ export async function getLeadDashboardData(
       }),
       openTasks:    open,
       overdueCount: s.overdue,
+      progressPct:  pct,
       health,
       healthReasons: reasons,
     };

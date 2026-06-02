@@ -280,8 +280,23 @@ export default function LoginPage() {
         .pulse-ring    { animation: pulse-ring 3.6s ease-out infinite; }
         .pulse-ring-2  { animation: pulse-ring 3.6s 1.2s ease-out infinite; }
         .pulse-ring-3  { animation: pulse-ring 3.6s 2.4s ease-out infinite; }
+        /* Returning-user orbit rings around the PIN avatar. */
+        @keyframes spin-cw  { to { transform: rotate(360deg); } }
+        @keyframes spin-ccw { to { transform: rotate(-360deg); } }
+        .pin-orbit-a { animation: spin-cw 22s linear infinite; }
+        .pin-orbit-b { animation: spin-ccw 16s linear infinite; }
+        /* Aurora — three large, slow-drifting colour blobs behind the brand
+           panel. Gives the login a living, premium backdrop without the busy
+           orbiting dots. GPU-friendly (transform + opacity only). */
+        @keyframes aurora-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(8%, 6%) scale(1.15); } }
+        @keyframes aurora-2 { 0%,100% { transform: translate(0,0) scale(1.1); } 50% { transform: translate(-7%, -5%) scale(1); } }
+        @keyframes aurora-3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5%, -8%) scale(1.2); } }
+        .aurora-1 { animation: aurora-1 16s ease-in-out infinite; }
+        .aurora-2 { animation: aurora-2 20s ease-in-out infinite; }
+        .aurora-3 { animation: aurora-3 24s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .logo-float, .pulse-ring, .pulse-ring-2, .pulse-ring-3, .shimmer-line::after { animation: none !important; }
+          .logo-float, .pulse-ring, .pulse-ring-2, .pulse-ring-3, .shimmer-line::after,
+          .pin-orbit-a, .pin-orbit-b, .aurora-1, .aurora-2, .aurora-3 { animation: none !important; }
           .fade-up, .fade-up-1, .fade-up-2, .fade-up-3, .fade-in-soft, .form-swap { animation-duration: 0.01ms !important; }
         }
       `}</style>
@@ -293,23 +308,30 @@ export default function LoginPage() {
           className="hidden lg:flex lg:w-[54%] flex-col relative overflow-hidden"
           style={{ background: 'linear-gradient(160deg, #050E1D 0%, #091828 40%, #0B1F3A 70%, #0C2347 100%)' }}
         >
-          {/* Dot grid texture */}
+          {/* Aurora — three slow-drifting colour blobs give the panel a living,
+              premium backdrop. Blurred + blended so they read as soft light. */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute aurora-1" style={{
+              top: '-10%', left: '8%', width: 560, height: 560, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(30,136,229,0.40) 0%, transparent 60%)',
+              filter: 'blur(28px)',
+            }} />
+            <div className="absolute aurora-2" style={{
+              top: '28%', right: '-12%', width: 480, height: 480, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(46,125,50,0.32) 0%, transparent 62%)',
+              filter: 'blur(30px)',
+            }} />
+            <div className="absolute aurora-3" style={{
+              bottom: '-16%', left: '30%', width: 520, height: 520, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 64%)',
+              filter: 'blur(34px)',
+            }} />
+          </div>
+
+          {/* Dot grid texture (above the aurora, very faint) */}
           <div className="absolute inset-0 pointer-events-none" style={{
             backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
             backgroundSize: '28px 28px',
-          }} />
-
-          {/* Glowing blue halo */}
-          <div className="absolute pointer-events-none" style={{
-            top: '20%', left: '50%', transform: 'translateX(-50%)',
-            width: 520, height: 520, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(30,136,229,0.28) 0%, transparent 65%)',
-            animation: 'glow-pulse 6s ease-in-out infinite',
-          }} />
-          {/* Subtle forest accent in the corner */}
-          <div className="absolute pointer-events-none" style={{
-            bottom: '-12%', right: '-12%', width: 380, height: 380, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(43,160,71,0.18) 0%, transparent 70%)',
           }} />
 
           <div className="relative flex flex-col flex-1 px-14 py-12">
@@ -345,7 +367,7 @@ export default function LoginPage() {
 
               {/* Wordmark */}
               <h1
-                className="fade-up-1 brand-wordmark text-center text-white leading-none"
+                className="fade-up-1 brand-wordmark text-center text-white"
                 style={{ fontSize: 'clamp(62px, 6.2vw, 88px)' }}
               >
                 Pragati
@@ -414,31 +436,42 @@ export default function LoginPage() {
             {mode === 'unlock' && (
               <div className="form-swap" key="unlock">
 
-                {/* Avatar + name — a soft breathing halo behind the avatar
-                    makes the re-entry feel alive and welcoming. */}
+                {/* Avatar + name — two concentric rings rotate slowly around the
+                    avatar (the returning-user echo of the brand mark's orbit),
+                    with a soft breathing halo, so re-entry feels alive. */}
                 <div className="flex flex-col items-center text-center mb-7">
-                  <div className="relative mb-4">
-                    <div aria-hidden className="absolute -inset-3 rounded-full"
+                  <div className="relative mb-5" style={{ width: 96, height: 96 }}>
+                    {/* Breathing halo */}
+                    <div aria-hidden className="absolute inset-0 rounded-full"
                       style={{
-                        background: 'radial-gradient(circle, rgba(21,101,192,0.28) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(21,101,192,0.26) 0%, transparent 68%)',
                         animation: 'glow-pulse 3.4s ease-in-out infinite',
                       }} />
-                    <div className="relative w-[72px] h-[72px] rounded-[20px] flex items-center justify-center text-2xl select-none logo-float"
+                    {/* Dashed orbit rings — slow, opposite directions. */}
+                    <div aria-hidden className="absolute inset-0 rounded-full pin-orbit-a"
+                      style={{ border: '1.5px dashed rgba(21,101,192,0.30)' }} />
+                    <div aria-hidden className="absolute rounded-full pin-orbit-b"
+                      style={{ inset: 10, border: '1.5px dashed rgba(46,125,50,0.28)' }} />
+                    {/* Avatar tile */}
+                    <div className="absolute inset-[18px] rounded-[20px] flex items-center justify-center text-2xl select-none"
                       style={{
                         background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
                         color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
                         fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
                         fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
-                        boxShadow: '0 8px 24px rgba(21,101,192,0.32)',
+                        boxShadow: '0 10px 28px rgba(21,101,192,0.34)',
                       }}>
                       {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
                     </div>
                   </div>
-                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-[0.18em] mb-1 fade-up-1">Welcome back</p>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight fade-up-1">
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.22em] mb-1.5 fade-up-1">Welcome back</p>
+                  {/* Name in the display face — matches the brand wordmark
+                      treatment so it reads as crafted, not default sans. */}
+                  <h2 className="font-display text-[26px] font-black text-slate-900 tracking-tight leading-none fade-up-1">
                     {deviceName || 'You'}
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1.5 leading-snug fade-up-2">
+                  <p className="text-[13px] text-slate-400 mt-2 leading-snug fade-up-2 inline-flex items-center gap-1.5">
+                    <Sparkles size={12} className="text-blue-400" />
                     Enter your Quick PIN to continue
                   </p>
                 </div>

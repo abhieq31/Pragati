@@ -67,6 +67,15 @@ export function NotificationBell({ dark = false, openUp = false, initialUnread =
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
   async function loadPrefs() {
+    // Render the toggles immediately with sensible defaults so the panel never
+    // shows a "Loading…" blank — then reconcile with the server's saved values
+    // once they arrive. This removes the perceived lag on opening preferences.
+    setPrefs((p) => p ?? {
+      notifTaskAssigned:  true,
+      notifTaskDueSoon:   true,
+      notifTaskOverdue:   true,
+      notifProjectUpdate: false,
+    });
     try {
       const d: any = await api('/users/me');
       const u = d.user || {};
@@ -76,7 +85,7 @@ export function NotificationBell({ dark = false, openUp = false, initialUnread =
         notifTaskOverdue:   u.notifTaskOverdue   ?? true,
         notifProjectUpdate: u.notifProjectUpdate ?? false,
       });
-    } catch { /* ignore */ }
+    } catch { /* keep optimistic defaults */ }
   }
   function setPref(key: string, value: boolean) {
     setPrefs((p) => ({ ...(p || {}), [key]: value }));
