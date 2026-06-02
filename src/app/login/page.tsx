@@ -192,8 +192,12 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await api('/auth/unlock', { method: 'POST', body: { pin: pinValue } });
+      // `replace` triggers a soft client-side navigation; the dashboard route
+      // re-renders with the freshly-set auth cookie. We *don't* call
+      // `router.refresh()` here — it triggers a hard re-render of every
+      // server tree which made the post-PIN wait feel sluggish (1–2s of
+      // visual blank). The dashboard's loading skeleton covers the swap.
       router.replace('/');
-      router.refresh();
     } catch (e: any) {
       setPin('');
       if (e?.data?.needPassword || /password/i.test(e?.message || '')) {
@@ -250,10 +254,16 @@ export default function LoginPage() {
           0%   { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-        /* Spin the orbit ring around the logo's centre — the dot sits on
-           the ring's edge, so it circles the mark closely. */
-        @keyframes orbit-a { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes orbit-b { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+        /* Rising-chevron echo: a soft, expanding ring that breathes outward
+           from the logo's centre. Echoes the *meaning* of the chevrons
+           (forward / upward motion) rather than the previous two dots circling
+           the mark, which read as decorative noise. Two staggered rings keep
+           the motion sustained without being busy. */
+        @keyframes pulse-ring {
+          0%   { transform: scale(0.65); opacity: 0.55; }
+          70%  { opacity: 0.04; }
+          100% { transform: scale(1.55); opacity: 0; }
+        }
         .logo-float    { animation: logo-float 5.5s ease-in-out infinite; }
         .fade-up       { animation: fade-up 0.55s ease-out forwards; }
         .fade-up-1     { animation: fade-up 0.55s 0.10s ease-out both; }
@@ -267,10 +277,11 @@ export default function LoginPage() {
           background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
           animation: shimmer-line 2.6s ease-in-out infinite;
         }
-        .orbit-a { animation: orbit-a 14s linear infinite; transform-origin: 50% 50%; }
-        .orbit-b { animation: orbit-b 18s linear infinite; transform-origin: 50% 50%; }
+        .pulse-ring    { animation: pulse-ring 3.6s ease-out infinite; }
+        .pulse-ring-2  { animation: pulse-ring 3.6s 1.2s ease-out infinite; }
+        .pulse-ring-3  { animation: pulse-ring 3.6s 2.4s ease-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .logo-float, .orbit-a, .orbit-b, .shimmer-line::after { animation: none !important; }
+          .logo-float, .pulse-ring, .pulse-ring-2, .pulse-ring-3, .shimmer-line::after { animation: none !important; }
           .fade-up, .fade-up-1, .fade-up-2, .fade-up-3, .fade-in-soft, .form-swap { animation-duration: 0.01ms !important; }
         }
       `}</style>
@@ -304,36 +315,31 @@ export default function LoginPage() {
           <div className="relative flex flex-col flex-1 px-14 py-12">
             <div className="flex-1 flex flex-col justify-center">
 
-              {/* Custom Pragati mark with two dots orbiting around it.
-                  The logo is 112px (radius 56). Each orbit ring is an absolute
-                  box centred on the logo; the dot sits at the ring's top edge,
-                  and the ring spins around its centre, so the dot traces a
-                  circle of radius = half the ring box.
-                  • The two rings have DIFFERENT radii (28px gap), so the dots
-                    travel on separate circles and can never collide.
-                  • Both radii clear the logo edge, so the dots never ride
-                    across the mark itself. */}
+              {/* Pragati mark with three staggered, expanding rings —
+                  reads as outward / forward motion, the literal meaning of
+                  "pragati". Replaced the two orbiting dots that were
+                  reported as visually noisy and unrelated to the brand
+                  narrative. The rings stay behind the mark so they read
+                  as a soft halo, never crossing the logo itself. */}
               <div className="flex justify-center mb-10">
                 <div className="relative logo-float" style={{ width: 112, height: 112 }}>
+                  {/* Three staggered rings echo the rising-chevron motion. */}
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      aria-hidden
+                      className={i === 0 ? 'pulse-ring' : i === 1 ? 'pulse-ring-2' : 'pulse-ring-3'}
+                      style={{
+                        position: 'absolute',
+                        inset: -18,
+                        borderRadius: '32%',
+                        border: '1.5px solid rgba(66,165,245,0.45)',
+                        boxShadow: 'inset 0 0 18px rgba(66,165,245,0.12)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  ))}
                   <PragatiMark size={112} />
-                  {/* Inner orbit (blue) — box 168px → radius 84, clears logo (56). */}
-                  <div className="absolute pointer-events-none orbit-a"
-                    style={{ top: -28, left: -28, right: -28, bottom: -28 }}>
-                    <span className="absolute" style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      top: -4, left: '50%', transform: 'translateX(-50%)',
-                      background: '#42A5F5', boxShadow: '0 0 12px rgba(66,165,245,0.9)',
-                    }} />
-                  </div>
-                  {/* Outer orbit (green) — box 224px → radius 112, well outside blue. */}
-                  <div className="absolute pointer-events-none orbit-b"
-                    style={{ top: -56, left: -56, right: -56, bottom: -56 }}>
-                    <span className="absolute" style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      top: -3, left: '50%', transform: 'translateX(-50%)',
-                      background: '#67D376', boxShadow: '0 0 10px rgba(103,211,118,0.9)',
-                    }} />
-                  </div>
                 </div>
               </div>
 

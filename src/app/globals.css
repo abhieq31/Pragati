@@ -22,11 +22,23 @@
 .brand-wordmark {
   font-family: 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
-  letter-spacing: -0.035em;
-  font-feature-settings: 'ss01', 'dlig';
+  letter-spacing: -0.03em;
+  /* The 'ss01' stylistic set rewires lowercase glyphs in General Sans (notably
+     a double-storey 'g' → single-storey). When General Sans hasn't loaded yet
+     and we fall back to system fonts, 'ss01' has no defined mapping and most
+     system fonts render 'ss01' as a tofu-like fragment for the 'g', which is
+     what the team reported as the wordmark looking "broken". We rely on plain
+     ligatures only — the wordmark still reads as a logotype, and the 'g' is
+     consistent across loaded + fallback states. */
+  font-feature-settings: 'liga' 1, 'kern' 1;
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Keep the descender from being clipped at the baseline in tight headers
+     (the 'g' tail was being shaved when the parent had overflow:hidden +
+     small line-height). */
+  line-height: 1.1;
+  padding-bottom: 0.04em;
 }
 
 /* Gradient-filled variant for light surfaces (sidebar in light mode, auth
@@ -240,7 +252,21 @@ body {
     border-color: #c5cdd8;
   }
   .input::placeholder, .textarea::placeholder { @apply text-slate-400; }
-  .select { @apply cursor-pointer; }
+  /* Custom chevron + extra right-padding so the native dropdown arrow doesn't
+     read as generic / fighting the rest of the design system. The SVG is
+     inlined to avoid an extra request and so the colour matches `text-slate-400`
+     in light mode (the dark-mode override is in the .dark .select block
+     further down). */
+  .select {
+    @apply cursor-pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 14px 14px;
+    padding-right: 2.25rem;
+  }
   .textarea { resize: vertical; }
 
   /* ════════════════════════════════════════════════════════════════════
@@ -594,6 +620,10 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   background: #30302e !important;
   border-color: rgba(255,255,255,0.10) !important;
   color: #faf9f5 !important;
+}
+.dark .select {
+  /* Lighter chevron so it stays visible on the dark surface. */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
 }
 .dark .input:focus,
 .dark .select:focus,

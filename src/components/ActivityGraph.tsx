@@ -1,7 +1,36 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/client/api';
-import { Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck } from 'lucide-react';
+import {
+  Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck,
+  Trophy, Zap, Users, Lightbulb, Award, GraduationCap, Scale, Repeat,
+  UserPlus, ShieldCheck, Database, ScrollText,
+} from 'lucide-react';
+
+/* Map each achievement id to a lucide icon. Keeps the renderer pure. */
+const ACHIEVEMENT_ICON: Record<string, any> = {
+  ic_milestone:  Trophy,
+  ic_on_time:    Zap,
+  ic_collab:     Users,
+  ic_ideas:      Lightbulb,
+  lead_finisher: Award,
+  lead_mentor:   GraduationCap,
+  lead_balance:  Scale,
+  lead_retro:    Repeat,
+  adm_onboard:   UserPlus,
+  adm_guardian:  ShieldCheck,
+  adm_steward:   Database,
+  adm_audit:     ScrollText,
+};
+
+/* Tier visual language. 0 = locked grey, 1/2/3 = bronze / silver / gold.
+   The colours echo a podium so the progression is unmistakable at a glance. */
+const TIER_STYLE: Record<0 | 1 | 2 | 3, { ring: string; fg: string; bg: string; label: string }> = {
+  0: { ring: '#e2e8f0', fg: '#94a3b8', bg: '#f8fafc', label: 'Locked' },
+  1: { ring: '#b45309', fg: '#92400e', bg: '#fef3c7', label: 'Bronze' },
+  2: { ring: '#64748b', fg: '#334155', bg: '#e2e8f0', label: 'Silver' },
+  3: { ring: '#b8860b', fg: '#854d0e', bg: '#fef9c3', label: 'Gold'   },
+};
 
 /**
  * GitHub-style contribution graph.
@@ -57,6 +86,16 @@ type ContribItem = {
   kind: 'task' | 'subtask';
 };
 
+type Achievement = {
+  id: string;
+  label: string;
+  hint: string;
+  value: number;
+  target: number | null;
+  tier: 0 | 1 | 2 | 3;
+  role: 'ic' | 'lead' | 'admin';
+};
+
 type ActivityData = {
   year: number;
   firstYear: number;
@@ -70,6 +109,8 @@ type ActivityData = {
   projectsOnTime: number;
   badges: string[];
   recent: ContribItem[];
+  achievements?: Achievement[];
+  role?: 'ic' | 'lead' | 'admin';
 };
 
 function timeAgo(iso: string | null): string {
@@ -82,22 +123,46 @@ function timeAgo(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-/* ── Minimal milestone tile ───────────────────────────────────────────────
-   A clean count + label (e.g. "12 Tasks completed") rather than the old
-   gamified medallions. Reads at a glance and stays factual — every number is
-   a real, traceable count from the contribution data. */
-function StatTile({ icon: Icon, value, label, sub, tint }: {
-  icon: any; value: number; label: string; sub?: string; tint: string;
-}) {
+/* ── Role-based achievement tile ─────────────────────────────────────────
+   Renders a single achievement as an outlined medal tile. Bronze / silver /
+   gold ring + tint signal earned tier; locked tiles stay neutral with a
+   "go-to" target so the path forward is concrete. Every value is a real,
+   traceable count from /api/users/:id/activity (see contributions.ts). */
+function AchievementTile({ a }: { a: Achievement }) {
+  const Icon = ACHIEVEMENT_ICON[a.id] || CheckCircle2;
+  const style = TIER_STYLE[a.tier];
+  const earned = a.tier > 0;
+  const next   = a.target;
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-white/[0.02] px-3 py-2.5">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${tint}1a` }}>
-        <Icon size={15} style={{ color: tint }} />
+    <div
+      className="flex items-center gap-2.5 rounded-xl border bg-white dark:bg-white/[0.02] px-3 py-2.5 transition-all hover:shadow-sm"
+      style={{ borderColor: earned ? `${style.ring}55` : undefined }}
+      title={a.hint}
+    >
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+        style={{
+          background: earned ? style.bg : '#f1f5f9',
+          boxShadow: earned ? `inset 0 0 0 1.5px ${style.ring}` : 'inset 0 0 0 1px #e2e8f0',
+        }}
+      >
+        <Icon size={16} style={{ color: earned ? style.fg : '#94a3b8' }} />
       </div>
-      <div className="min-w-0">
-        <div className="text-lg font-black leading-none text-slate-800 dark:text-slate-100 tabular-nums">{value}</div>
-        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mt-1 leading-tight">{label}</div>
-        {sub && <div className="text-[10px] text-slate-400 leading-tight">{sub}</div>}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <div className="text-[12px] font-bold leading-none text-slate-800 dark:text-slate-100 truncate">{a.label}</div>
+          {earned && (
+            <span
+              className="text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded shrink-0"
+              style={{ color: style.fg, background: style.bg }}
+            >
+              {style.label}
+            </span>
+          )}
+        </div>
+        <div className="text-[10px] text-slate-400 mt-1 leading-tight tabular-nums">
+          {next === null ? `${a.value} · Max tier` : `${a.value} / ${next}`}
+        </div>
       </div>
     </div>
   );
@@ -119,7 +184,7 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
     setLoading(true);
     api<ActivityData>(`/${who}?year=${year}`)
       .then(setData)
-      .catch(() => setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [] }))
+      .catch(() => setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [], achievements: [], role: 'ic' }))
       .finally(() => setLoading(false));
   }, [who, year]);
 
@@ -187,13 +252,12 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
     return groups;
   }, [data?.recent]);
 
-  const tasksDone     = data?.totalTasksDone ?? 0;
-  const onTimeTasks   = data?.onTimeTasks ?? 0;
-  const projectsDone  = data?.projectsCompleted ?? 0;
-  const projectsOnTime = data?.projectsOnTime ?? 0;
+  const achievements = data?.achievements || [];
+  const role         = data?.role || 'ic';
+  const roleLabel    = role === 'admin' ? 'Admin' : role === 'lead' ? 'Team Lead' : 'Individual Contributor';
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[150px_1fr] gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-[210px_1fr] gap-5">
       {/* Floating heatmap tooltip — fixed-positioned, follows the hovered cell. */}
       {tip && (
         <div
@@ -211,24 +275,21 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
           <div className="mx-auto w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-slate-900" />
         </div>
       )}
-      {/* ── Milestones rail (left) — minimal counts, not gamified badges ──── */}
+      {/* ── Milestones rail (left) — role-based achievements ───────────────
+          Each tile is a discrete recognition tied to a traceable metric. The
+          set adapts to the viewed user's role (IC / TL / Admin) so the
+          achievements reflect what each role actually owns. */}
       <aside className="lg:border-r lg:border-slate-100 dark:lg:border-slate-800 lg:pr-4">
-        <div className="flex items-center gap-1.5 mb-3">
-          <CheckCircle2 size={13} className="text-emerald-500" />
+        <div className="flex items-center gap-1.5 mb-1">
+          <Trophy size={13} className="text-amber-500" />
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Milestones</h4>
         </div>
+        <div className="text-[10px] text-slate-400 mb-3">{roleLabel} achievements</div>
         <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-          <StatTile icon={CheckCircle2} value={tasksDone}   label="Tasks completed"  tint="#0284c7" />
-          <StatTile icon={Target}       value={onTimeTasks} label="On-time tasks"
-            sub={tasksDone ? `of ${tasksDone}` : undefined} tint="#db2777" />
-          {/* Project stats only surface once the person has finished one — keeps
-              the rail honest for pure individual contributors. */}
-          {projectsDone > 0 && (
-            <>
-              <StatTile icon={FolderCheck}   value={projectsDone}   label="Projects completed" tint="#7c3aed" />
-              <StatTile icon={CalendarCheck} value={projectsOnTime} label="On-time projects"
-                sub={`of ${projectsDone}`} tint="#ea580c" />
-            </>
+          {achievements.length === 0 ? (
+            <div className="text-[10px] text-slate-300 italic">Loading…</div>
+          ) : (
+            achievements.map((a) => <AchievementTile key={a.id} a={a} />)
           )}
         </div>
       </aside>

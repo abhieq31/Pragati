@@ -270,30 +270,51 @@ const AVATAR_GRADIENTS: Array<[string, string]> = [
   ['#546E7A', '#37474F'], // blue grey
 ];
 
-// User-pickable monogram backgrounds (solid colours, à la Google Contacts).
-// Exposed so the avatar editor and the Avatar component agree on the palette.
+// User-pickable monogram backgrounds. A richer palette so the picker feels
+// expressive without leaving the brand's calm tone: 6 groups (pastels, vivids,
+// jewels, earth, mono, brand-accent) × 4 hues each. The editor groups them
+// visually so the choice feels curated, not a sea of swatches.
 export const AVATAR_MONOGRAM_BG: string[] = [
-  '#F8BBD9', // pink
-  '#FDBA74', // orange
-  '#FDE047', // yellow
-  '#86EFAC', // green
-  '#7DD3FC', // sky
-  '#C4B5FD', // violet
-  '#FCA5A5', // rose
-  '#A7F3D0', // mint
-  '#FBCFE8', // light pink
-  '#FED7AA', // peach
+  // Pastels — soft, friendly defaults
+  '#F8BBD9', '#FDBA74', '#FDE047', '#86EFAC',
+  '#7DD3FC', '#C4B5FD', '#FCA5A5', '#A7F3D0',
+  '#FBCFE8', '#FED7AA', '#FEF08A', '#BAE6FD',
+  // Vivid — punchier saturation
+  '#EC4899', '#F97316', '#EAB308', '#22C55E',
+  '#06B6D4', '#8B5CF6', '#EF4444', '#10B981',
+  // Jewel — deep, rich tones
+  '#9333EA', '#0EA5E9', '#059669', '#B91C1C',
+  '#7C2D12', '#0F766E', '#1D4ED8', '#A21CAF',
+  // Earth — warm neutrals
+  '#A16207', '#854D0E', '#365314', '#1E3A8A',
+  // Mono — professional grayscale
+  '#0F172A', '#334155', '#64748B', '#CBD5E1',
+  // Brand accents — Pragati gradient stops
+  '#1565C0', '#1976D2', '#2E7D32', '#0D47A1',
 ];
 
-// Font choices for the monogram letter. Each is just a CSS font-family stack +
-// weight; pairs (key, family, weight) keep the editor renderable without
-// loading external fonts on the critical path.
+// Font choices for the monogram letter. Curated typefaces that always read
+// well at the small sizes avatars live in — a wider variety than the original
+// 5 system fallbacks. Sample strings show the actual character shape.
 export const AVATAR_FONTS: Array<{ family: string; weight: number; sample: string }> = [
-  { family: 'system-ui, -apple-system, sans-serif',                          weight: 700, sample: 'Aa' },
-  { family: 'Georgia, "Times New Roman", serif',                             weight: 700, sample: 'Aa' },
-  { family: '"Courier New", ui-monospace, monospace',                        weight: 700, sample: 'Aa' },
-  { family: '"Brush Script MT", "Lucida Handwriting", cursive',              weight: 400, sample: 'Aa' },
-  { family: 'Impact, "Arial Black", sans-serif',                             weight: 900, sample: 'Aa' },
+  // Sans-serif — the workhorse defaults
+  { family: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',         weight: 700, sample: 'Aa' },
+  { family: '"Helvetica Neue", Helvetica, Arial, sans-serif',                   weight: 800, sample: 'Aa' },
+  { family: '"Trebuchet MS", "Lucida Sans Unicode", sans-serif',                weight: 700, sample: 'Aa' },
+  { family: '"Avenir Next", Avenir, "Segoe UI", sans-serif',                    weight: 600, sample: 'Aa' },
+  // Display / heavy — strong, confident
+  { family: 'Impact, "Arial Black", sans-serif',                                weight: 900, sample: 'Aa' },
+  { family: '"Futura", "Trebuchet MS", sans-serif',                             weight: 700, sample: 'Aa' },
+  // Serif — classic
+  { family: 'Georgia, "Times New Roman", serif',                                weight: 700, sample: 'Aa' },
+  { family: '"Playfair Display", Georgia, serif',                               weight: 700, sample: 'Aa' },
+  { family: '"Garamond", "Times New Roman", serif',                             weight: 600, sample: 'Aa' },
+  // Slab / mono — technical, GxP-flavoured
+  { family: '"Courier New", ui-monospace, monospace',                           weight: 700, sample: 'Aa' },
+  { family: '"Rockwell", "Courier New", serif',                                 weight: 700, sample: 'Aa' },
+  // Script / handwritten — for a personal touch
+  { family: '"Brush Script MT", "Lucida Handwriting", cursive',                 weight: 400, sample: 'Aa' },
+  { family: '"Snell Roundhand", "Apple Chancery", cursive',                     weight: 500, sample: 'Aa' },
 ];
 
 // Pick a sensible foreground for a given background — black for light pastels,
