@@ -31,7 +31,7 @@ const FirstTimeTour = dynamic(
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
-  UserCircle,
+  UserCircle, Layers,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -75,7 +75,7 @@ function useDarkMode(initialDark: boolean): [boolean, () => void] {
 }
 
 /* ── Main shell ─────────────────────────────────────────────────────── */
-export default function AppShell({ user, initialDark, initialAvatars, initialUnread = 0, children }: { user: CurrentUser; initialDark: boolean; initialAvatars?: Record<string, { letter: string; bg: string; font: number }>; initialUnread?: number; children: React.ReactNode }) {
+export default function AppShell({ user, initialDark, initialSidebarCollapsed = false, initialAvatars, initialUnread = 0, children }: { user: CurrentUser; initialDark: boolean; initialSidebarCollapsed?: boolean; initialAvatars?: Record<string, { letter: string; bg: string; font: number }>; initialUnread?: number; children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -99,15 +99,13 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
   // Desktop "distraction-free" collapse: shrinks the sidebar to an icon rail
-  // (icons + avatar only). Persisted in localStorage so it survives reloads.
-  const [collapsed, setCollapsed] = useState(false);
+  // (icons + avatar only). Persisted in a cookie (read server-side) so the
+  // server knows the initial width on first paint — no layout shift after hydration.
+  const [collapsed, setCollapsed] = useState(initialSidebarCollapsed);
   const [sidebarHovered, setSidebarHovered] = useState(false);
-  useEffect(() => {
-    setCollapsed(localStorage.getItem('pragati_sidebar_collapsed') === '1');
-  }, []);
   const toggleCollapsed = () => setCollapsed((c) => {
     const next = !c;
-    localStorage.setItem('pragati_sidebar_collapsed', next ? '1' : '0');
+    document.cookie = `sidebar_collapsed=${next ? '1' : '0'}; path=/; max-age=31536000; SameSite=Lax`;
     return next;
   });
 
@@ -175,6 +173,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
     { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
   const adminExtra: NavItem[] = [
+    { href: '/admin',    label: 'Console',   icon: Layers,          iconColor: '#4F46E5', iconBg: '#EEF2FF' },
     { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
     { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF' },
   ];
@@ -543,7 +542,7 @@ export default function AppShell({ user, initialDark, initialAvatars, initialUnr
               }}
             />
           )}
-          <div key={pathname} className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 page-enter relative overflow-x-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 relative overflow-x-hidden">
             {children}
           </div>
         </main>

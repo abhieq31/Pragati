@@ -495,24 +495,24 @@ function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="mt-2 w-full flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 text-xs text-slate-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50/40 transition-all group">
-        <Plus size={12} className="group-hover:text-blue-600 transition-colors" />
+        className="mt-2 w-full flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 dark:border-white/[0.07] text-xs text-slate-400 dark:text-white/25 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500/40 hover:bg-blue-50/40 dark:hover:bg-blue-500/[0.06] transition-all group">
+        <Plus size={12} className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
         Add a task
       </button>
     );
   }
 
   return (
-    <form onSubmit={add} className="mt-2 rounded-xl border-2 border-blue-200 overflow-hidden bg-blue-50/20 fade-in-soft">
+    <form onSubmit={add} className="mt-2 rounded-xl border-2 border-blue-200 dark:border-blue-500/30 overflow-hidden bg-blue-50/20 dark:bg-blue-500/[0.05] fade-in-soft">
       <input
         ref={inputRef}
-        className="w-full px-3 py-2.5 text-sm bg-transparent border-none outline-none text-slate-800 placeholder:text-slate-400 font-medium"
+        className="w-full px-3 py-2.5 text-sm bg-transparent border-none outline-none text-slate-800 dark:text-white/85 placeholder:text-slate-400 dark:placeholder:text-white/25 font-medium"
         placeholder="Task title — press Enter to add"
         value={title}
         onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setTitle(''); } }}
       />
-      <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 bg-white/60">
+      <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 dark:border-blue-500/20 bg-white/60 dark:bg-white/[0.02]">
         <UserPicker
           className="flex-1"
           value={assignee}
@@ -529,7 +529,7 @@ function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
           {saving ? '…' : 'Add'}
         </button>
         <button type="button" onClick={() => { setOpen(false); setTitle(''); }}
-          className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors">
+          className="p-1 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 rounded transition-colors">
           <X size={13} />
         </button>
       </div>
