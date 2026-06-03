@@ -13,6 +13,8 @@ const cspDirectives = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
+  // font-src: self covers /_next/static fonts; data: covers inline SVG fonts.
+  // No third-party font CDN — fonts are system-stack or served from self.
   "font-src 'self' data:",
   "connect-src 'self' https://va.vercel-scripts.com https://vitals.vercel-insights.com",
   "frame-ancestors 'none'",
@@ -51,10 +53,29 @@ const nextConfig = {
     // Transform barrel imports (e.g. lucide-react) into direct per-icon
     // imports at build time. Harmless win; lucide-react is imported in 26 files.
     optimizePackageImports: ['lucide-react'],
+    // Cache client-side navigations for 30s (static) and 60s (dynamic) so
+    // navigating back to a visited page avoids a full server round-trip.
+    staleTimes: { static: 30, dynamic: 60 },
   },
   eslint: { ignoreDuringBuilds: true },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }];
+    return [
+      // Immutable cache for fingerprinted Next.js static assets — safe because
+      // the hash in the filename changes every build. Eliminates re-downloads
+      // on repeat visits and subsequent navigations.
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // Favicon and other public-dir assets: 1 week cache with revalidation.
+      {
+        source: '/favicon:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
+      },
+      { source: '/(.*)', headers: securityHeaders },
+    ];
   },
 };
 

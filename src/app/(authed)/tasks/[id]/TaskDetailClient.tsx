@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
@@ -8,11 +9,21 @@ import { UserAvatar } from '@/components/AvatarRegistry';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import { UserPicker } from '@/components/UserPicker';
-import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
-import { AlcoaBadge } from '@/components/AlcoaBadge';
+
+// Heavy components lazy-loaded: AlcoaBadge imports the ALCOA+ scorer (complex
+// rule engine) and TaskCompletePop is only shown on task completion — both are
+// off the critical render path so deferring them improves FCP/LCP.
+const AlcoaBadge = dynamic(
+  () => import('@/components/AlcoaBadge').then(m => m.AlcoaBadge),
+  { ssr: false, loading: () => null },
+);
+const TaskCompletePop = dynamic(
+  () => import('@/components/TaskCompletePop').then(m => m.TaskCompletePop),
+  { ssr: false, loading: () => null },
+);
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
