@@ -3,9 +3,43 @@ import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
 import { Team } from '@/models/Team';
 import { User } from '@/models/User';
-import { project as projectS, task as taskS } from '@/lib/serialize';
+import { project as projectS, date as toIso } from '@/lib/serialize';
 import { LIFECYCLES } from '@/lib/lifecycles';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+
+
+function taskForProjectBoard(t: any, extras: any = {}) {
+  const subtasks = (t.subtasks || []) as any[];
+  return {
+    id: String(t._id),
+    projectId: t.projectId ? String(t.projectId) : undefined,
+    phaseId: t.phaseId ? String(t.phaseId) : undefined,
+    title: t.title,
+    description: t.description || '',
+    assigneeId: t.assigneeId ? String(t.assigneeId) : undefined,
+    status: t.status,
+    priority: t.priority,
+    taskType: t.taskType,
+    gxpCritical: !!t.gxpCritical,
+    requiresQaSignoff: !!t.requiresQaSignoff,
+    startDate: toIso(t.startDate),
+    dueDate: toIso(t.dueDate),
+    completedAt: toIso(t.completedAt),
+    ccNo: t.ccNo || '',
+    ccTcd: toIso(t.ccTcd),
+    documentNo: t.documentNo || '',
+    applicableSite: t.applicableSite || 'na',
+    deployStage: t.deployStage || 'na',
+    remarks: t.remarks || '',
+    pendingWith: t.pendingWith || '',
+    position: t.position ?? 0,
+    createdAt: toIso(t.createdAt),
+    updatedAt: toIso(t.updatedAt),
+    subtaskCount: subtasks.length,
+    subtasksDone: subtasks.filter((s) => s.status === 'done').length,
+    ...extras,
+  };
+}
 
 /**
  * Assemble the full project-detail payload for `id`, scoped to the viewer.
@@ -42,10 +76,8 @@ export async function getProjectDetail(id: string, userId: string, role?: string
         ? { label: lc.label, description: lc.description, regulatoryRefs: lc.regulatoryRefs }
         : null,
       tasks: tasks.map((t) =>
-        taskS(t, {
+        taskForProjectBoard(t, {
           assigneeName: t.assigneeId ? uMap.get(String(t.assigneeId)) : null,
-          subtaskCount: ((t as any).subtasks || []).length,
-          subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
         }),
       ),
     };
