@@ -22,8 +22,16 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3,
+  Maximize2, X, BarChart3, Compass,
 } from 'lucide-react';
+import dynamic2 from 'next/dynamic';
+// Lazy — the bird's-eye view is a heavy SVG layout component and most
+// visits won't open it. Keep it out of the dashboard's first paint.
+const BirdsEyeView = dynamic2(
+  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
+  { ssr: false, loading: () => null },
+);
+import type { BirdsEyeData } from '@/components/BirdsEyeView';
 
 /* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
 interface TeamTask {
@@ -171,6 +179,48 @@ const HEALTH_META: Record<string, { label: string; bg: string; text: string; dot
 
 type ActionFilter = 'week' | 'nextWeek' | 'month' | 'untilDate';
 
+/**
+ * Project the lead-dashboard payload into the BirdsEyeView's shape. We pull
+ * teams from the per-project `teamName` (the lead-dashboard endpoint already
+ * resolved it), de-duplicate by name, and map projects + tasks 1:1.
+ */
+function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
+  // Build a synthetic team id from name. Lead-dashboard doesn't return team
+  // ids on projects, so we group by name — that's fine for visualisation.
+  const teamIdByName = new Map<string, string>();
+  const teams: { id: string; name: string; ownerName?: string | null }[] = [];
+  for (const p of dash.projects) {
+    const name = (p.teamName || '').trim();
+    if (!name) continue;
+    if (!teamIdByName.has(name)) {
+      const id = `team:${name}`;
+      teamIdByName.set(name, id);
+      teams.push({ id, name });
+    }
+  }
+  return {
+    rootLabel: `${dash.user.name}'s workspace`,
+    rootSubLabel: `${dash.teamCount} team${dash.teamCount === 1 ? '' : 's'} · ${dash.projects.length} project${dash.projects.length === 1 ? '' : 's'} · ${dash.teamTasks.length} task${dash.teamTasks.length === 1 ? '' : 's'}`,
+    scope: 'workspace',
+    teams,
+    projects: dash.projects.map((p) => ({
+      id: p.id, code: p.code, name: p.name,
+      teamId: p.teamName ? (teamIdByName.get(p.teamName) ?? null) : null,
+      health: p.health,
+      taskCount: p.taskCount ?? 0,
+      tasksDone: p.tasksDone ?? 0,
+      dueDate: p.dueDate ?? null,
+      ownerName: p.ownerName ?? null,
+    })),
+    tasks: dash.teamTasks.map((t) => ({
+      id: t.id, title: t.title, projectId: t.projectId,
+      status: t.status,
+      assigneeName: t.assigneeName ?? null,
+      dueDate: (t.ccTcd || t.dueDate) ?? null,
+    })),
+  };
+}
+
 /* ── Main page ────────────────────────────────────────────────────────────── */
 export default function DashboardClient({
   initialData,
@@ -178,6 +228,9 @@ export default function DashboardClient({
   const dash = initialData;
   const isLead = useIsLead();
   const [summaryModal, setSummaryModal] = useState<null | 'open' | 'overdue'>(null);
+  // Bird's-eye view — the lead's whole workspace as a packed tree. Opened
+  // from the small compass icon in the greeting row.
+  const [birdsEyeOpen, setBirdsEyeOpen] = useState(false);
 
   // First-run: a lead/admin whose workspace has no projects yet. Show a
   // guided setup path instead of a wall of empty panels — this is the
@@ -235,28 +288,57 @@ export default function DashboardClient({
     <div className="pb-12 max-w-[1440px]">
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
-      <div className="mb-5 sm:mb-6 pt-1">
-        {/* inline-flex + items-baseline keeps the emoji optically seated on the
-            text baseline instead of floating above the cap height. The slight
-            negative translate nudges most emoji glyphs (which sit high in their
-            em-box) down so they read as part of the line. */}
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap">
-          <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
-          <span className="text-[0.85em] translate-y-[0.06em]" suppressHydrationWarning>{greetingEmoji()}</span>
-        </h1>
-        {!isFirstRun && (() => {
-          const open = visibleTasks.filter(t => t.status !== 'done').length;
-          const now = new Date();
-          const isSameDay = (d: Date) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-          const overdue = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now && !isSameDay(new Date(t.dueDate))).length;
-          const dueToday = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && isSameDay(new Date(t.dueDate))).length;
-          return (
-            <p className="mt-1 text-sm text-slate-500 dark:text-white/45" suppressHydrationWarning>
-              {greetingSubline({ open, overdue, dueToday, now })}
-            </p>
-          );
-        })()}
+      <div className="mb-5 sm:mb-6 pt-1 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {/* inline-flex + items-baseline keeps the emoji optically seated on the
+              text baseline instead of floating above the cap height. */}
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap">
+            <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
+            <span className="text-[0.85em] translate-y-[0.06em]" suppressHydrationWarning>{greetingEmoji()}</span>
+          </h1>
+        </div>
+        {/* Bird's-eye view trigger — opens a full-screen tree of the
+            workspace (team → projects → tasks). Minimally rendered (icon
+            only with a tooltip) so it doesn't compete with the greeting. */}
+        {!isFirstRun && (
+          <button
+            type="button"
+            onClick={() => setBirdsEyeOpen(true)}
+            title="Open bird's-eye view"
+            aria-label="Open bird's-eye view"
+            className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+            style={{ background: 'linear-gradient(120deg, #1565C0 0%, #1976D2 50%, #2E7D32 100%)' }}
+          >
+            <Compass size={14} />
+            <span className="hidden sm:inline">Bird&apos;s-eye</span>
+          </button>
+        )}
       </div>
+      {!isFirstRun && (
+        <div className="mb-5 sm:mb-6 -mt-3">
+          {(() => {
+            const open = visibleTasks.filter(t => t.status !== 'done').length;
+            const now = new Date();
+            const isSameDay = (d: Date) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+            const overdue = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now && !isSameDay(new Date(t.dueDate))).length;
+            const dueToday = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && isSameDay(new Date(t.dueDate))).length;
+            return (
+              <p className="mt-1 text-sm text-slate-500 dark:text-white/45" suppressHydrationWarning>
+                {greetingSubline({ open, overdue, dueToday, now })}
+              </p>
+            );
+          })()}
+        </div>
+      )}
+      {/* Bird's-eye view modal — mounted at the page level so the SVG
+          tree gets its own scroll area regardless of where the trigger
+          was clicked from. */}
+      {birdsEyeOpen && (
+        <BirdsEyeView
+          onClose={() => setBirdsEyeOpen(false)}
+          data={buildBirdsEyeDataFromDash(dash)}
+        />
+      )}
 
       {isFirstRun ? (
         <FirstRunGuide hasTeam={dash.people.length > 0} />
@@ -301,7 +383,7 @@ export default function DashboardClient({
              Contributors list and made it feel like it "broke" mid-scroll
              when the column was taller than the viewport. */}
           <div className="space-y-4 pr-1">
-            <DueCenterPanel tasks={visibleTasks} />
+            <UpNextPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Leads see workload across their ICs. Contributors don't need a
                per-project rollup of their own work here — "My tasks" above
@@ -892,9 +974,14 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/*  DUE CENTER PANEL — right column top, due/overdue with filter chips         */
+/*  UP NEXT PANEL — right column top, due/overdue with filter chips             */
+/*  Named for what it answers: "what's coming up?" It surfaces overdue work     */
+/*  first (red), then upcoming due tasks in the chosen window. The name beats   */
+/*  the previous "Actions" / "Work Hub" / "Due Center" iterations because it    */
+/*  reads as immediately purposeful — a lead glancing at the dashboard knows    */
+/*  what they're being asked to look at.                                        */
 /* ────────────────────────────────────────────────────────────────────────── */
-function DueCenterPanel({ tasks }: { tasks: TeamTask[] }) {
+function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
   const [filter, setFilter] = useState<ActionFilter>('week');
   const [untilDate, setUntilDate] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -957,7 +1044,7 @@ function DueCenterPanel({ tasks }: { tasks: TeamTask[] }) {
         <div className="flex items-center gap-2 min-w-0">
           <TrendingUp size={14} className="text-slate-400 shrink-0" />
           <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
-            Due Center
+            Up Next
           </h2>
           <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
         </div>
@@ -1022,15 +1109,15 @@ function DueCenterPanel({ tasks }: { tasks: TeamTask[] }) {
   );
 
   return expanded
-    ? <FullScreenOverlay title="Due Center" icon={<TrendingUp size={14} className="text-blue-500" />}
+    ? <FullScreenOverlay title="Up Next" icon={<TrendingUp size={14} className="text-blue-500" />}
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
 }
 
 function ActionGroup({
-  title, count, icon, dotClass, tasks, isOverdue, emptyHint, showAll,
+  title, count, icon, tasks, isOverdue, emptyHint, showAll,
 }: {
-  title: string; count: number; icon: React.ReactNode; dotClass: string;
+  title: string; count: number; icon: React.ReactNode; dotClass?: string;
   tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showAll?: boolean;
 }) {
   const limit = showAll ? tasks.length : 12;
@@ -1045,46 +1132,66 @@ function ActionGroup({
         <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
       </div>
       {tasks.length === 0 ? (
-        <div className="px-4 py-5 text-center">
-          <CheckCircle2 size={16} className="mx-auto text-emerald-300 mb-1.5" />
+        <div className="px-4 py-6 text-center">
+          <CheckCircle2 size={18} className="mx-auto text-emerald-300 mb-1.5" />
           <div className="text-[11px] text-slate-400 dark:text-white/25">{emptyHint || 'All clear'}</div>
         </div>
       ) : (
         <ul className="divide-y divide-slate-50 dark:divide-white/[0.04]">
           {tasks.slice(0, limit).map(t => {
-            const due = t.ccTcd || t.dueDate;
+            const due   = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
+            // Pill summarising urgency. Overdue is red; today is amber;
+            // anything else is the neutral grey of "in the future".
+            const pill = (() => {
+              if (dueIn === null) return { label: due ? formatDate(due) : '—', cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
+              if (dueIn < 0)  return { label: `${Math.abs(dueIn)}d late`, cls: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300' };
+              if (dueIn === 0) return { label: 'Today',                    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' };
+              if (dueIn <= 2) return { label: `${dueIn}d`,                 cls: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' };
+              return                  { label: `${dueIn}d`,                 cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
+            })();
             return (
               <li key={t.id}>
                 <Link href={`/tasks/${t.id}`}
-                  className={`block px-4 py-2.5 transition-colors group border-l-2 ${isOverdue ? 'border-red-300 hover:bg-red-50/45 dark:hover:bg-red-500/[0.05]' : 'border-blue-200 hover:bg-blue-50/45 dark:hover:bg-blue-500/[0.05]'}`}>
-                  <div className="flex items-start gap-2">
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
+                  className={`block px-4 py-2.5 transition-colors group border-l-2 ${
+                    isOverdue
+                      ? 'border-red-300 hover:bg-red-50/45 dark:hover:bg-red-500/[0.05]'
+                      : 'border-blue-200 hover:bg-blue-50/45 dark:hover:bg-blue-500/[0.05]'
+                  }`}>
+                  <div className="flex items-center gap-2">
+                    {/* Title + project code on row 1 — code is a chip, not a
+                        trailing word, so it reads as identity, not metadata. */}
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-slate-700 dark:text-white/70 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-400">
-                        {t.title}
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/85 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                          {t.title}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
-                        <span className="font-semibold">{t.projectCode}</span>
-                        {due && (
-                          <>
-                            <span>·</span>
-                            <span className={isOverdue ? 'text-red-500 font-semibold' : ''}>
-                              {dueIn === null ? formatDate(due)
-                                : dueIn < 0 ? `${Math.abs(dueIn)}d overdue`
-                                : dueIn === 0 ? 'today'
-                                : `${dueIn}d`}
-                            </span>
-                          </>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
+                        {t.projectCode && (
+                          <span className="font-mono text-[10px] font-bold text-slate-500 dark:text-white/40">
+                            {t.projectCode}
+                          </span>
                         )}
                         {t.assigneeName && (
                           <>
-                            <span>·</span>
-                            <span>{t.assigneeName}</span>
+                            <span className="text-slate-300 dark:text-white/15">·</span>
+                            <span className="truncate max-w-[120px]">{t.assigneeName}</span>
+                          </>
+                        )}
+                        {due && (
+                          <>
+                            <span className="text-slate-300 dark:text-white/15">·</span>
+                            <span>{formatDate(due)}</span>
                           </>
                         )}
                       </div>
                     </div>
+                    {/* Urgency pill — colour-coded so a scan picks out the
+                        red and amber rows first. */}
+                    <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${pill.cls}`}>
+                      {pill.label}
+                    </span>
                   </div>
                 </Link>
               </li>
