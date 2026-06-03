@@ -340,7 +340,7 @@ export default function MyDayClient({ initialData }: {
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
                       <BookmarkCheck size={12} strokeWidth={2.5} /> tracked
                     </a>
-                  ) : isLead && editingId !== n.id ? (
+                  ) : editingId !== n.id ? (
                     <button
                       onClick={() => setPromote(n)}
                       title="Promote to tracked task"
@@ -404,6 +404,7 @@ export default function MyDayClient({ initialData }: {
       {promote && (
         <PromoteModal
           note={promote}
+          canCreateShared={isLead}
           onClose={() => setPromote(null)}
           onDone={() => { setPromote(null); load(); }}
         />
@@ -413,7 +414,7 @@ export default function MyDayClient({ initialData }: {
 }
 
 /* ── Promote modal ────────────────────────────────────────────────────── */
-function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => void; onDone: () => void }) {
+function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; canCreateShared: boolean; onClose: () => void; onDone: () => void }) {
   const [projects,    setProjects]  = useState<any[]>([]);
   const [projectId,   setProjectId] = useState('');
   const [phases,      setPhases]    = useState<{ id: string; name: string }[]>([]);
@@ -422,7 +423,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
   const [priority,    setPriority]  = useState('medium');
   const [assigneeId,  setAssignee]  = useState('');
   const [due,         setDue]       = useState('');
-  const [privateToMe, setPrivateToMe] = useState(false);
+  const [privateToMe, setPrivateToMe] = useState(!canCreateShared);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [saving,      setSaving]    = useState(false);
   const [err,         setErr]       = useState('');
@@ -438,13 +439,13 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
     setPhaseId(''); setAssignee('');
     const proj = projects.find((p) => p.id === projectId);
     setPhases((proj?.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
-    if (privateToMe) { setMembers([]); setLoadingMeta(false); return; }
+    if (privateToMe || !canCreateShared) { setMembers([]); setLoadingMeta(false); return; }
     setLoadingMeta(true);
     api<any[]>(`/users${proj?.teamId ? `?teamId=${proj.teamId}` : ''}`)
       .then((r) => setMembers(r))
       .catch(() => setMembers([]))
       .finally(() => setLoadingMeta(false));
-  }, [projectId, projects, privateToMe]);
+  }, [projectId, projects, privateToMe, canCreateShared]);
 
   async function go() {
     if (!projectId) { setErr('Pick a project.'); return; }
@@ -507,7 +508,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
 
           <button
             type="button"
-            onClick={() => setPrivateToMe((v) => !v)}
+            onClick={() => canCreateShared && setPrivateToMe((v) => !v)}
             className={`w-full mb-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${privateToMe ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600 dark:bg-white/[0.03]'}`}
           >
             <div className="flex items-center justify-between gap-3">
@@ -515,7 +516,9 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
                 <Shield size={14} className={privateToMe ? 'text-emerald-600' : 'text-slate-400'} />
                 <div>
                   <div className="text-xs font-black">Track this task as private</div>
-                  <div className="text-[10px] opacity-70 mt-0.5">Visible only to you, while linked to the selected project.</div>
+                  <div className="text-[10px] opacity-70 mt-0.5">
+                    {canCreateShared ? 'Visible only to you, while linked to the selected project.' : 'Contributor notes are tracked privately and stay visible only to you.'}
+                  </div>
                 </div>
               </div>
               <span className={`w-9 h-5 rounded-full p-0.5 transition-colors ${privateToMe ? 'bg-emerald-500' : 'bg-slate-200'}`}>
