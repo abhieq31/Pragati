@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Download, RotateCcw, Map } from 'lucide-react';
+import { X, Download, RotateCcw, Map, StickyNote, Trash2 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -20,6 +20,14 @@ interface BirdEyeEdge {
   label?: string;
 }
 
+interface Annotation {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+}
+
 export interface BirdEyeViewProps {
   title: string;
   nodes: BirdEyeNode[];
@@ -28,6 +36,8 @@ export interface BirdEyeViewProps {
   onClose: () => void;
   onTaskUpdated?: () => void;
 }
+
+const NOTE_COLORS = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'];
 
 /* ── Layout helper ───────────────────────────────────────────────────────── */
 
@@ -195,6 +205,10 @@ export default function BirdEyeView({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [mode, setMode] = useState<'select' | 'note'>('select');
+  const [noteColor, setNoteColor] = useState(NOTE_COLORS[0]);
+  const draggingNoteRef = useRef<string | null>(null);
 
   // Drag state
   const draggingNodeRef = useRef<string | null>(null);
@@ -204,7 +218,7 @@ export default function BirdEyeView({
   const panStartRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
   // SVG ref for export
   const svgRef = useRef<SVGSVGElement>(null);
-  // Whether the click landed on a node (to suppress canvas deselect)
+  // Whether the click landed on a node/note (to suppress canvas deselect)
   const clickOnNodeRef = useRef(false);
 
   // Animation: nodes drop in from above on mount
@@ -268,13 +282,37 @@ export default function BirdEyeView({
   function onCanvasMouseDown(e: React.MouseEvent) {
     if (e.button !== 0) return;
     clickOnNodeRef.current = false;
+    if (mode === 'note') {
+      const { mx, my } = svgCoords(e);
+      const cx = (mx - pan.x) / scale;
+      const cy = (my - pan.y) / scale;
+      setAnnotations((prev) => [...prev, { id: `note-${Date.now()}`, x: cx - 80, y: cy - 50, text: '', color: noteColor }]);
+      return;
+    }
     const { mx, my } = svgCoords(e);
     panningRef.current = true;
     panStartRef.current = { mx, my, px: pan.x, py: pan.y };
   }
 
+  function onNoteMouseDown(e: React.MouseEvent, noteId: string) {
+    e.stopPropagation();
+    clickOnNodeRef.current = true;
+    const note = annotations.find((a) => a.id === noteId)!;
+    const { mx, my } = svgCoords(e);
+    draggingNoteRef.current = noteId;
+    dragStartRef.current = { mx, my, nx: note.x, ny: note.y };
+  }
+
   function onMouseMove(e: React.MouseEvent) {
     const { mx, my } = svgCoords(e);
+    if (draggingNoteRef.current && dragStartRef.current) {
+      const { mx: sx, my: sy, nx, ny } = dragStartRef.current;
+      const dx = (mx - sx) / scale;
+      const dy = (my - sy) / scale;
+      const id = draggingNoteRef.current;
+      setAnnotations((prev) => prev.map((a) => (a.id === id ? { ...a, x: nx + dx, y: ny + dy } : a)));
+      return;
+    }
     if (draggingNodeRef.current && dragStartRef.current) {
       const { mx: sx, my: sy, nx, ny } = dragStartRef.current;
       const dx = (mx - sx) / scale;
@@ -289,6 +327,7 @@ export default function BirdEyeView({
 
   function onMouseUp(e: React.MouseEvent) {
     draggingNodeRef.current = null;
+    draggingNoteRef.current = null;
     dragStartRef.current = null;
     panningRef.current = false;
     panStartRef.current = null;
@@ -356,6 +395,38 @@ export default function BirdEyeView({
       label.textContent = labelText;
       g.appendChild(label);
 
+      clone.appendChild(g);
+    });
+
+    // Annotations (sticky notes) as plain SVG rects + text
+    annotations.forEach((note) => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('transform', `scale(${scale})`);
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', String((note.x + pan.x)));
+      rect.setAttribute('y', String((note.y + pan.y)));
+      rect.setAttribute('width', '160');
+      rect.setAttribute('height', '100');
+      rect.setAttribute('rx', '8');
+      rect.setAttribute('fill', note.color);
+      rect.setAttribute('opacity', '0.9');
+      g.appendChild(rect);
+      if (note.text) {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', String((note.x + pan.x) + 6));
+        text.setAttribute('y', String((note.y + pan.y) + 16));
+        text.setAttribute('font-size', '10');
+        text.setAttribute('font-family', 'system-ui, sans-serif');
+        text.setAttribute('fill', '#1e293b');
+        note.text.split('\n').slice(0, 6).forEach((line, li) => {
+          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', String((note.x + pan.x) + 6));
+          tspan.setAttribute('dy', li === 0 ? '0' : '13');
+          tspan.textContent = line;
+          text.appendChild(tspan);
+        });
+        g.appendChild(text);
+      }
       clone.appendChild(g);
     });
 
@@ -495,10 +566,37 @@ export default function BirdEyeView({
           </div>
           <div>
             <div className="text-xs font-bold" style={{ color: textMain }}>{title}</div>
-            <div className="text-[10px]" style={{ color: textMuted }}>Bird's Eye View · {nodes.length} nodes · Scroll to zoom, drag to pan</div>
+            <div className="text-[10px]" style={{ color: textMuted }}>Bird's Eye View · {nodes.length} nodes · Scroll to zoom · Drag to pan · Add notes</div>
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          {/* Note mode toggle */}
+          <button
+            onClick={() => setMode((m) => m === 'note' ? 'select' : 'note')}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+            style={{
+              color: mode === 'note' ? '#1d4ed8' : textMuted,
+              background: mode === 'note' ? (dark ? 'rgba(59,130,246,0.2)' : '#eff6ff') : (dark ? 'rgba(255,255,255,0.06)' : '#f8fafc'),
+              border: `1px solid ${mode === 'note' ? '#3b82f6' : cardBorder}`,
+            }}
+            title="Sticky note mode — click anywhere on the canvas to add a note"
+          >
+            <StickyNote size={11} /> {mode === 'note' ? 'Placing note…' : 'Add note'}
+          </button>
+          {/* Note color picker — only when note mode is active */}
+          {mode === 'note' && (
+            <div className="flex items-center gap-1">
+              {NOTE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setNoteColor(c)}
+                  className="w-4 h-4 rounded-full transition-transform hover:scale-125"
+                  style={{ background: c, outline: noteColor === c ? '2px solid #3b82f6' : 'none', outlineOffset: '1px' }}
+                  title={`Use this colour`}
+                />
+              ))}
+            </div>
+          )}
           <button
             onClick={resetView}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -531,7 +629,7 @@ export default function BirdEyeView({
         viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
         width="100%"
         height="100%"
-        style={{ position: 'absolute', inset: 0, cursor: panningRef.current ? 'grabbing' : 'default', overflow: 'visible' }}
+        style={{ position: 'absolute', inset: 0, cursor: mode === 'note' ? 'copy' : (panningRef.current ? 'grabbing' : 'default'), overflow: 'visible' }}
         onMouseDown={onCanvasMouseDown}
         onDoubleClick={onCanvasDoubleClick}
         onClick={onCanvasClick}
@@ -596,6 +694,46 @@ export default function BirdEyeView({
 
           {/* ── Nodes ── */}
           {nodes.map((n, i) => renderNode(n, i))}
+
+          {/* ── Sticky notes ── */}
+          {annotations.map((note) => (
+            <foreignObject
+              key={note.id}
+              x={note.x + pan.x}
+              y={note.y + pan.y}
+              width={160}
+              height={100}
+              style={{ transform: `scale(${scale})`, transformOrigin: `${note.x + pan.x}px ${note.y + pan.y}px`, overflow: 'visible', cursor: 'grab' }}
+              onMouseDown={(e) => onNoteMouseDown(e as any, note.id)}
+            >
+              <div
+                style={{
+                  width: 160, height: 100, background: note.color,
+                  borderRadius: 8, padding: '6px 8px', boxShadow: '0 3px 10px rgba(0,0,0,0.15)',
+                  display: 'flex', flexDirection: 'column', position: 'relative',
+                }}
+              >
+                <button
+                  style={{ position: 'absolute', top: 3, right: 3, background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5, padding: 0, lineHeight: 1 }}
+                  onClick={(e) => { e.stopPropagation(); setAnnotations((prev) => prev.filter((a) => a.id !== note.id)); }}
+                  title="Delete note"
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2l-6 6" stroke="#374151" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
+                <textarea
+                  value={note.text}
+                  placeholder="Type a note…"
+                  onChange={(e) => setAnnotations((prev) => prev.map((a) => a.id === note.id ? { ...a, text: e.target.value } : a))}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
+                    fontSize: 11, lineHeight: 1.4, color: '#1e293b', fontFamily: 'inherit',
+                    padding: '2px 16px 2px 2px', width: '100%',
+                  }}
+                />
+              </div>
+            </foreignObject>
+          ))}
         </g>
       </svg>
 
