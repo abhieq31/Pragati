@@ -484,12 +484,11 @@ function ProjectsColumn({
         </div>
       ) : (
         <div className="space-y-3">
-          {projects.map((p, i) => (
+          {projects.map((p) => (
             <ProjectRow
               key={p.id}
               project={p}
               tasks={tasksByProject.get(p.id) || []}
-              defaultOpen={i < 2}
             />
           ))}
         </div>
@@ -569,9 +568,11 @@ function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
 }
 
 function ProjectRow({
-  project, tasks, defaultOpen,
-}: { project: DashProject; tasks: TeamTask[]; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+  project, tasks,
+}: { project: DashProject; tasks: TeamTask[] }) {
+  // Collapsed by default — the dashboard should land quiet. The user expands
+  // only what they want to inspect.
+  const [open, setOpen] = useState(false);
   const health = HEALTH_META[project.health];
   const total  = project.taskCount ?? 0;
   const done   = project.tasksDone ?? 0;
@@ -579,10 +580,23 @@ function ProjectRow({
   const dueIn  = daysUntil(project.dueDate);
   const cat    = project.lifecycle && project.lifecycle !== 'generic' ? (LIFECYCLE_LABELS[project.lifecycle] || project.lifecycle) : null;
 
+  // Human-readable due summary. Renders as one short phrase that conveys
+  // "when is this expected to land" without a verbose "Due Jul 3 · 30d left"
+  // strip running across the row.
+  const dueLabel = !project.dueDate ? null
+    : dueIn === null ? formatDate(project.dueDate)
+    : dueIn < 0  ? `${Math.abs(dueIn)}d overdue`
+    : dueIn === 0 ? 'Due today'
+    : dueIn <= 7  ? `${dueIn}d left`
+    : `Due ${formatDate(project.dueDate)}`;
+  const dueUrgent = dueIn !== null && (dueIn < 0 || dueIn === 0);
+
   return (
     <article className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      {/* Project header */}
+      {/* Collapsed-state header — two readable rows, never a 5-piece chip strip.
+          Row 1: title + identity badges (code, lifecycle, health). Row 2: the
+          essential metrics — progress, tasks-done, due, owner. */}
       <header
         onClick={() => setOpen(o => !o)}
         className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
@@ -605,20 +619,7 @@ function ProjectRow({
               <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
                 {cat}
               </span>
-            )}
-            {/* Hover surfaces *why* — same reasoning a reviewer would point
-                at when judging "at risk" vs "on track". The badge is a
-                button so keyboard/touch users can still see the rationale
-                without leaving the dashboard. */}
-            <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-help ${health.bg} ${health.text}`}
-              title={(project.healthReasons || []).join(' · ') || health.label}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} />
-              {health.label}
-            </span>
-          </div>
+            </div>
 
           <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30 flex-wrap">
             <span><span className="font-semibold text-slate-600 dark:text-white/50">{done}/{total}</span> tasks</span>
@@ -1006,9 +1007,9 @@ function ActionGroup({
 function ContributorsPanel({
   people, tasksByAssignee,
 }: { people: DashPerson[]; tasksByAssignee: Map<string, TeamTask[]> }) {
-  // Open by default — the member list + their task counts come from props, so
-  // there's nothing to lazy-load; collapsing it just made the card look empty.
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Collapsed by default — keeps the dashboard quiet on landing; the lead
+  // expands when they want a contributor-by-contributor breakdown.
+  const [panelOpen, setPanelOpen] = useState(false);
   // The contributor whose activity graph is being viewed (lead-only deep-dive,
   // same gesture as the team & people pages).
   const [activityPerson, setActivityPerson] = useState<DashPerson | null>(null);
