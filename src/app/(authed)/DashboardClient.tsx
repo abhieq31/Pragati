@@ -301,7 +301,7 @@ export default function DashboardClient({
              Contributors list and made it feel like it "broke" mid-scroll
              when the column was taller than the viewport. */}
           <div className="space-y-4 pr-1">
-            <DueCenterPanel tasks={visibleTasks} />
+            <UpNextPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Leads see workload across their ICs. Contributors don't need a
                per-project rollup of their own work here — "My tasks" above
@@ -892,9 +892,14 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/*  DUE CENTER PANEL — right column top, due/overdue with filter chips         */
+/*  UP NEXT PANEL — right column top, due/overdue with filter chips             */
+/*  Named for what it answers: "what's coming up?" It surfaces overdue work     */
+/*  first (red), then upcoming due tasks in the chosen window. The name beats   */
+/*  the previous "Actions" / "Work Hub" / "Due Center" iterations because it    */
+/*  reads as immediately purposeful — a lead glancing at the dashboard knows    */
+/*  what they're being asked to look at.                                        */
 /* ────────────────────────────────────────────────────────────────────────── */
-function DueCenterPanel({ tasks }: { tasks: TeamTask[] }) {
+function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
   const [filter, setFilter] = useState<ActionFilter>('week');
   const [untilDate, setUntilDate] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -957,7 +962,7 @@ function DueCenterPanel({ tasks }: { tasks: TeamTask[] }) {
         <div className="flex items-center gap-2 min-w-0">
           <TrendingUp size={14} className="text-slate-400 shrink-0" />
           <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
-            Due Center
+            Up Next
           </h2>
           <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
         </div>
@@ -1022,15 +1027,15 @@ function DueCenterPanel({ tasks }: { tasks: TeamTask[] }) {
   );
 
   return expanded
-    ? <FullScreenOverlay title="Due Center" icon={<TrendingUp size={14} className="text-blue-500" />}
+    ? <FullScreenOverlay title="Up Next" icon={<TrendingUp size={14} className="text-blue-500" />}
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
 }
 
 function ActionGroup({
-  title, count, icon, dotClass, tasks, isOverdue, emptyHint, showAll,
+  title, count, icon, tasks, isOverdue, emptyHint, showAll,
 }: {
-  title: string; count: number; icon: React.ReactNode; dotClass: string;
+  title: string; count: number; icon: React.ReactNode; dotClass?: string;
   tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showAll?: boolean;
 }) {
   const limit = showAll ? tasks.length : 12;
@@ -1045,46 +1050,66 @@ function ActionGroup({
         <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
       </div>
       {tasks.length === 0 ? (
-        <div className="px-4 py-5 text-center">
-          <CheckCircle2 size={16} className="mx-auto text-emerald-300 mb-1.5" />
+        <div className="px-4 py-6 text-center">
+          <CheckCircle2 size={18} className="mx-auto text-emerald-300 mb-1.5" />
           <div className="text-[11px] text-slate-400 dark:text-white/25">{emptyHint || 'All clear'}</div>
         </div>
       ) : (
         <ul className="divide-y divide-slate-50 dark:divide-white/[0.04]">
           {tasks.slice(0, limit).map(t => {
-            const due = t.ccTcd || t.dueDate;
+            const due   = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
+            // Pill summarising urgency. Overdue is red; today is amber;
+            // anything else is the neutral grey of "in the future".
+            const pill = (() => {
+              if (dueIn === null) return { label: due ? formatDate(due) : '—', cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
+              if (dueIn < 0)  return { label: `${Math.abs(dueIn)}d late`, cls: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300' };
+              if (dueIn === 0) return { label: 'Today',                    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' };
+              if (dueIn <= 2) return { label: `${dueIn}d`,                 cls: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' };
+              return                  { label: `${dueIn}d`,                 cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
+            })();
             return (
               <li key={t.id}>
                 <Link href={`/tasks/${t.id}`}
-                  className={`block px-4 py-2.5 transition-colors group border-l-2 ${isOverdue ? 'border-red-300 hover:bg-red-50/45 dark:hover:bg-red-500/[0.05]' : 'border-blue-200 hover:bg-blue-50/45 dark:hover:bg-blue-500/[0.05]'}`}>
-                  <div className="flex items-start gap-2">
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} />
+                  className={`block px-4 py-2.5 transition-colors group border-l-2 ${
+                    isOverdue
+                      ? 'border-red-300 hover:bg-red-50/45 dark:hover:bg-red-500/[0.05]'
+                      : 'border-blue-200 hover:bg-blue-50/45 dark:hover:bg-blue-500/[0.05]'
+                  }`}>
+                  <div className="flex items-center gap-2">
+                    {/* Title + project code on row 1 — code is a chip, not a
+                        trailing word, so it reads as identity, not metadata. */}
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-slate-700 dark:text-white/70 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-400">
-                        {t.title}
+                      <div className="flex items-center gap-1.5">
+                        <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/85 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                          {t.title}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
-                        <span className="font-semibold">{t.projectCode}</span>
-                        {due && (
-                          <>
-                            <span>·</span>
-                            <span className={isOverdue ? 'text-red-500 font-semibold' : ''}>
-                              {dueIn === null ? formatDate(due)
-                                : dueIn < 0 ? `${Math.abs(dueIn)}d overdue`
-                                : dueIn === 0 ? 'today'
-                                : `${dueIn}d`}
-                            </span>
-                          </>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
+                        {t.projectCode && (
+                          <span className="font-mono text-[10px] font-bold text-slate-500 dark:text-white/40">
+                            {t.projectCode}
+                          </span>
                         )}
                         {t.assigneeName && (
                           <>
-                            <span>·</span>
-                            <span>{t.assigneeName}</span>
+                            <span className="text-slate-300 dark:text-white/15">·</span>
+                            <span className="truncate max-w-[120px]">{t.assigneeName}</span>
+                          </>
+                        )}
+                        {due && (
+                          <>
+                            <span className="text-slate-300 dark:text-white/15">·</span>
+                            <span>{formatDate(due)}</span>
                           </>
                         )}
                       </div>
                     </div>
+                    {/* Urgency pill — colour-coded so a scan picks out the
+                        red and amber rows first. */}
+                    <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${pill.cls}`}>
+                      {pill.label}
+                    </span>
                   </div>
                 </Link>
               </li>

@@ -153,6 +153,13 @@ const UserSchema = new Schema(
 // unique indexes from their field definitions above.
 UserSchema.index({ role: 1 });
 UserSchema.index({ active: 1 });
+// Picker queries sort by name and frequently filter by role/active. A
+// compound index on those plus the sort key lets Mongo skip a separate sort
+// stage — the difference shows up most on the first open of an assignee
+// dropdown (the very thing reported as slow), where there's no cached result
+// to fall back on.
+UserSchema.index({ active: 1, role: 1, name: 1 });
+UserSchema.index({ name: 1 });
 
 export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: mongoose.Types.ObjectId };
 

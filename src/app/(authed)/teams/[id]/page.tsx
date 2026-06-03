@@ -282,6 +282,34 @@ export default function TeamDetailPage() {
             ))}
           </div>
 
+          {/* Skeleton placeholder while the progress aggregation is loading,
+              so the page doesn't appear frozen while Mongo is responding. */}
+          {view === 'progress' && isLead && !progress && (
+            <div className="space-y-4" aria-busy="true" aria-live="polite">
+              <Card title="Project progress">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="skeleton h-3 w-1/2" />
+                      <div className="skeleton h-2 flex-1" />
+                      <div className="skeleton h-3 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+              <Card title="Member workload">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="skeleton h-7 w-7 rounded-full shrink-0" />
+                      <div className="skeleton h-3 flex-1" />
+                      <div className="skeleton h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
           {view === 'progress' && isLead && progress && (
             <>
               <Card title="Project progress">
