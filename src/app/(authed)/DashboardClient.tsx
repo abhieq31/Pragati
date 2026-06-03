@@ -619,18 +619,21 @@ function ProjectRow({
               <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
                 {cat}
               </span>
-            </div>
+            )}
+            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} aria-hidden />
+              {health.label}
+            </span>
+          </div>
 
           <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30 flex-wrap">
             <span><span className="font-semibold text-slate-600 dark:text-white/50">{done}/{total}</span> tasks</span>
             {project.overdueCount > 0 && (
               <span className="text-red-600 dark:text-red-400 font-semibold">{project.overdueCount} overdue</span>
             )}
-            {project.dueDate && (
-              <span className={dueIn !== null && dueIn < 0 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
-                Due {formatDate(project.dueDate)}
-                {dueIn !== null && dueIn >= 0 && ` · ${dueIn === 0 ? 'today' : `${dueIn}d left`}`}
-                {dueIn !== null && dueIn < 0 && ` · ${Math.abs(dueIn)}d late`}
+            {dueLabel && (
+              <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
+                {dueLabel}
               </span>
             )}
             {project.ownerName && <span>Owner: <span className="text-slate-600 dark:text-white/50">{project.ownerName}</span></span>}
