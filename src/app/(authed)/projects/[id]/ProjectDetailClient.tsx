@@ -1125,8 +1125,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             </button>
             <ExportMenu
               onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
-              onPdf={() => printProjectReport(project, phases)}
-              onCsv={() => downloadProjectCsv(project, phases)}
+              onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
+              onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
             />
             {isAdmin && !project.isPersonal && (
               <Link

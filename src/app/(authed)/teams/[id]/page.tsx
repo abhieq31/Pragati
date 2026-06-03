@@ -190,8 +190,8 @@ export default function TeamDetailPage() {
           </button>
           {(isOwnerOrAdmin || isLead) && (
             <ExportMenu
-              onPdf={() => printTeamReport(team, progress, board)}
-              onCsv={() => downloadTeamCsv(team, board)}
+              onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+              onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
             />
           )}
         </div>
