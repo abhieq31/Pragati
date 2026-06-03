@@ -619,7 +619,11 @@ function ProjectRow({
               <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
                 {cat}
               </span>
-            </div>
+            )}
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}>
+              {health.label}
+            </span>
+          </div>
 
           <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30 flex-wrap">
             <span><span className="font-semibold text-slate-600 dark:text-white/50">{done}/{total}</span> tasks</span>
