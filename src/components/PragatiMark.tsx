@@ -18,12 +18,7 @@ export function PragatiMark({
   flat?: boolean;
   className?: string;
 }) {
-  // Diagonal squircle — matches the avatar shape system: TL/BR are rounder
-  // (0.38×) and TR/BL are tighter (0.20×), giving the tile a subtle gem-like
-  // quality that feels deliberate rather than default.
-  const r1 = Math.round(size * 0.38);
-  const r2 = Math.round(size * 0.20);
-  const borderRadius = `${r1}px ${r2}px ${r1}px ${r2}px`;
+  const radius = size * 0.26;
   const shadow = flat
     ? 'inset 0 1px 0 rgba(255,255,255,0.22)'
     : 'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.18), ' +
@@ -37,7 +32,7 @@ export function PragatiMark({
       style={{
         width:  size,
         height: size,
-        borderRadius,
+        borderRadius: radius,
         background: 'linear-gradient(135deg, #1565C0 0%, #1769C8 45%, #2B8C29 100%)',
         boxShadow: shadow,
       }}
@@ -47,7 +42,7 @@ export function PragatiMark({
         className="absolute"
         style={{
           inset: Math.max(2, size * 0.04),
-          borderRadius: `${Math.round(r1 * 0.80)}px ${Math.round(r2 * 0.80)}px ${Math.round(r1 * 0.80)}px ${Math.round(r2 * 0.80)}px`,
+          borderRadius: radius * 0.86,
           background:
             'linear-gradient(155deg, rgba(255,255,255,0.14) 0%, transparent 55%)',
         }}
