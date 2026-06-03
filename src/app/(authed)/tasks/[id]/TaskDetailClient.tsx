@@ -85,12 +85,19 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     // follow-up calls.
     (async () => {
       try {
-        const t = task || await api<any>(`/tasks/${id}`);
-        if (!task) setTask(t);
-        const m = me ? { user: me } : await api<any>('/auth/me');
-        setMe(m.user);
-        const proj = t.projectId ? await api<any>(`/projects/${t.projectId}`).catch(() => null) : null;
-        setTeamId(proj?.teamId || null);
+        const hasCurrentTask = task && String(task.id) === String(id);
+        const t = hasCurrentTask ? task : await api<any>(`/tasks/${id}`);
+        if (!hasCurrentTask) setTask(t);
+        if (!me) {
+          const m = await api<any>('/auth/me');
+          setMe(m.user);
+        }
+        if (t.projectTeamId !== undefined) {
+          setTeamId(t.projectTeamId || null);
+        } else {
+          const proj = t.projectId ? await api<any>(`/projects/${t.projectId}`).catch(() => null) : null;
+          setTeamId(proj?.teamId || null);
+        }
       } catch (e: any) {
         setLoadErr(e?.message || 'Could not load this task.');
       }

@@ -179,7 +179,7 @@ export default function DashboardClient({
   // first thing a brand-new admin sees, so it should point the way.
   const isFirstRun = isLead && dash.projects.length === 0;
 
-  // ICs see their own task counts in side panels (My Tasks, Actions) but the
+  // ICs see their own task counts in side panels (My Tasks, Work Hub) but the
   // expanded project view shows the *full* pipeline so they have the same
   // visibility their lead does into how their project is progressing. Leads
   // and admins always see everything.
@@ -266,7 +266,7 @@ export default function DashboardClient({
         </>
       )}
 
-      {/* ── Main layout: Projects (left) · Actions (right, same row) ───── */}
+      {/* ── Main layout: Projects (left) · Work Hub (right, same row) ───── */}
       {!isFirstRun && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
 
@@ -276,17 +276,17 @@ export default function DashboardClient({
             tasksByProject={tasksByProject}
           />
 
-          {/* Right column — Actions + "My tasks" (for leads: also Contributors).
+          {/* Right column — Work Hub + "My tasks" (for leads: also Contributors).
              Headers in both columns share the same vertical baseline so the
              dashboard reads as a single inline strip rather than two stacked
-             layouts. The Actions header carries the same uppercase tracking
+             layouts. The Work Hub header carries the same uppercase tracking
              treatment as "Your team's projects" on the left.
              Flows with the page (no sticky/own-scroll): the previous
              sticky+max-height+overflow combo clipped the Individual
              Contributors list and made it feel like it "broke" mid-scroll
              when the column was taller than the viewport. */}
           <div className="space-y-4 pr-1">
-            <ActionsPanel tasks={visibleTasks} />
+            <WorkHubPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Leads see workload across their ICs. Contributors don't need a
                per-project rollup of their own work here — "My tasks" above
@@ -304,7 +304,7 @@ export default function DashboardClient({
 }
 
 /* ── Full-screen overlay ──────────────────────────────────────────────────
-   Lets the Actions and Contributors panels expand to a distraction-free,
+   Lets the Work Hub and Contributors panels expand to a distraction-free,
    full-page view (#12). Click the backdrop or the ✕ to close. */
 function FullScreenOverlay({
   title, icon, onClose, children,
@@ -590,59 +590,94 @@ function ProjectRow({
     : dueIn <= 7  ? `${dueIn}d left`
     : `Due ${formatDate(project.dueDate)}`;
   const dueUrgent = dueIn !== null && (dueIn < 0 || dueIn === 0);
+  const openCount = Math.max(0, total - done);
+  const blockedCount = tasks.filter(t => t.status === 'blocked').length;
+  const nextTask = tasks.find(t => t.status !== 'done');
 
   return (
-    <article className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all"
-      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      {/* Collapsed-state header — two readable rows, never a 5-piece chip strip.
-          Row 1: title + identity badges (code, lifecycle, health). Row 2: the
-          essential metrics — progress, tasks-done, due, owner. */}
+    <article className="group relative bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all hover:-translate-y-0.5 hover:border-blue-200/80 dark:hover:border-white/[0.12]"
+      style={{ boxShadow: '0 10px 28px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.04)' }}>
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-500 opacity-80" aria-hidden />
+      {/* Collapsed-state header — designed as a project command card after login:
+          strong title, clear health/timing chips, progress, and one visible
+          next-work hint before the user expands the row. */}
       <header
         onClick={() => setOpen(o => !o)}
-        className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
+        className="px-4 sm:px-5 pt-4 pb-4 cursor-pointer hover:bg-blue-50/25 dark:hover:bg-white/[0.03] transition-colors select-none"
       >
-        <button className="p-0.5 text-slate-400 dark:text-white/30 transition-transform" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-          <ChevronDown size={14} />
-        </button>
+        <div className="flex items-start gap-3">
+          <button
+            className="mt-0.5 w-7 h-7 rounded-full bg-slate-50 dark:bg-white/[0.05] border border-slate-100 dark:border-white/[0.06] text-slate-400 dark:text-white/35 flex items-center justify-center transition-all group-hover:border-blue-200 group-hover:text-blue-600"
+            aria-label={open ? 'Collapse project tasks' : 'Expand project tasks'}
+            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          >
+            <ChevronDown size={14} />
+          </button>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            {/* On mobile the title claims the full first line and wraps to two
-                lines rather than truncating to "BOT Automa…"; the code + badges
-                flow onto the next line. */}
-            <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
-              className="text-sm font-bold text-slate-800 dark:text-white/80 hover:text-blue-700 dark:hover:text-blue-400 basis-full sm:basis-auto sm:min-w-0 line-clamp-2 sm:truncate">
-              {project.name}
-            </Link>
-            <span className="text-[10px] font-bold text-slate-300 dark:text-white/20 tracking-wider shrink-0">{project.code}</span>
-            {cat && (
-              <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
-                {cat}
-              </span>
-            )}
-            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} aria-hidden />
-              {health.label}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
+                  className="text-sm sm:text-[15px] font-black text-slate-900 dark:text-white/85 hover:text-blue-700 dark:hover:text-blue-400 line-clamp-2">
+                  {project.name}
+                </Link>
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-bold font-mono text-slate-400 dark:text-white/25 tracking-wider bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.05] px-1.5 py-0.5 rounded">
+                    {project.code}
+                  </span>
+                  {cat && (
+                    <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
+                      {cat}
+                    </span>
+                  )}
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} aria-hidden />
+                    {health.label}
+                  </span>
+                </div>
+              </div>
+
+              <Link
+                href={`/projects/${project.id}`}
+                onClick={e => e.stopPropagation()}
+                className="hidden sm:inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 text-[10px] font-bold hover:bg-blue-100 transition-colors"
+              >
+                Open board <ArrowRight size={11} />
+              </Link>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_130px] gap-3 items-end">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-white/35 flex-wrap">
+                  <span><span className="font-bold text-slate-700 dark:text-white/65">{done}/{total}</span> tasks done</span>
+                  <span><span className="font-bold text-slate-700 dark:text-white/65">{openCount}</span> open</span>
+                  {project.overdueCount > 0 && (
+                    <span className="text-red-600 dark:text-red-400 font-bold">{project.overdueCount} overdue</span>
+                  )}
+                  {blockedCount > 0 && (
+                    <span className="text-red-600 dark:text-red-400 font-bold">{blockedCount} blocked</span>
+                  )}
+                  {dueLabel && (
+                    <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-bold' : ''}>
+                      {dueLabel}
+                    </span>
+                  )}
+                  {project.ownerName && <span>Owner: <span className="font-semibold text-slate-600 dark:text-white/50">{project.ownerName}</span></span>}
+                </div>
+                <div className="mt-2 text-[11px] text-slate-400 dark:text-white/30 truncate">
+                  {nextTask ? <>Next up: <span className="font-semibold text-slate-600 dark:text-white/55">{nextTask.title}</span></> : 'All tracked tasks are complete.'}
+                </div>
+              </div>
+
+              <div className="shrink-0">
+                <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 dark:text-white/30 mb-1">
+                  <span>Progress</span>
+                  <span className="text-slate-600 dark:text-white/55">{pct}%</span>
+                </div>
+                <ProgressBar value={pct} />
+              </div>
+            </div>
           </div>
-
-          <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30 flex-wrap">
-            <span><span className="font-semibold text-slate-600 dark:text-white/50">{done}/{total}</span> tasks</span>
-            {project.overdueCount > 0 && (
-              <span className="text-red-600 dark:text-red-400 font-semibold">{project.overdueCount} overdue</span>
-            )}
-            {dueLabel && (
-              <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
-                {dueLabel}
-              </span>
-            )}
-            {project.ownerName && <span>Owner: <span className="text-slate-600 dark:text-white/50">{project.ownerName}</span></span>}
-          </div>
-        </div>
-
-        <div className="w-14 sm:w-28 shrink-0">
-          <ProgressBar value={pct} />
-          <div className="text-[10px] text-slate-400 dark:text-white/30 mt-1 text-right font-semibold">{pct}%</div>
         </div>
       </header>
 
@@ -798,9 +833,9 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/*  ACTIONS PANEL — right column top, due/overdue with filter chips           */
+/*  WORK HUB PANEL — right column top, due/overdue with filter chips          */
 /* ────────────────────────────────────────────────────────────────────────── */
-function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
+function WorkHubPanel({ tasks }: { tasks: TeamTask[] }) {
   const [filter, setFilter] = useState<ActionFilter>('week');
   const [untilDate, setUntilDate] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -863,7 +898,7 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
         <div className="flex items-center gap-2 min-w-0">
           <TrendingUp size={14} className="text-slate-400 shrink-0" />
           <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
-            Actions
+            Work Hub
           </h2>
           <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
         </div>
@@ -920,7 +955,7 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
           dotClass="bg-blue-400"
           tasks={due}
           showAll={expanded}
-          emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming actions.' : 'Nothing due — all clear.'}
+          emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming work.' : 'Nothing due — all clear.'}
         />
       </div>
     </section>
@@ -928,7 +963,7 @@ function ActionsPanel({ tasks }: { tasks: TeamTask[] }) {
   );
 
   return expanded
-    ? <FullScreenOverlay title="Actions" icon={<TrendingUp size={14} className="text-blue-500" />}
+    ? <FullScreenOverlay title="Work Hub" icon={<TrendingUp size={14} className="text-blue-500" />}
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
 }
