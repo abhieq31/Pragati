@@ -13,13 +13,14 @@ import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText } from 'lucide-react';
+import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText, Eye } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
 import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
+import BirdEyeView, { getInitialLayout } from '@/components/BirdEyeView';
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -267,10 +268,9 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                     )}
                     <Link href={`/tasks/${t.id}`} className="block p-3 pl-4" onClick={e => isDragging && e.preventDefault()}>
                       <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2">{t.title}</div>
-                      {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                      {(t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                         <div className="mt-1.5 flex gap-1 flex-wrap">
-                          {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
-                          {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Sign-off</span>}
+                          {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Approval</span>}
                           {t.requiresQaSignoff && t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Approved ✓</span>}
                           {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
                         </div>
@@ -389,10 +389,9 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
               style={{ borderColor: '#e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <Link href={`/tasks/${t.id}`} className="block p-3.5">
                 <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug pr-8">{t.title}</div>
-                {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                {(t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                   <div className="mt-2 flex gap-1.5 flex-wrap">
-                    {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
-                    {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Sign-off</span>}
+                    {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Approval</span>}
                     {t.requiresQaSignoff && t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Approved ✓</span>}
                     {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
                   </div>
@@ -747,6 +746,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [savingDue, setSavingDue]             = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
+  const [showBirdEye, setShowBirdEye] = useState(false);
   // Milestone celebration — set when finishing a task closes out its phase or
   // the whole project. The Celebration overlay fires a fanfare + confetti.
   const [celebration, setCelebration] = useState<{ title: string; subtitle?: string; emoji?: string } | null>(null);
@@ -1116,10 +1116,16 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           {/* Actions — Export (PDF/CSV/HTML) for everyone; Archive + Delete
               admin-only. */}
           <div className="flex flex-wrap items-center md:justify-end gap-2">
+            <button
+              onClick={() => setShowBirdEye(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-white/40 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
+            >
+              <Eye size={13} />
+              Bird's eye
+            </button>
             <ExportMenu
               onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
               onPdf={() => printProjectReport(project, phases)}
-              onHtml={() => downloadProjectReport(project, phases)}
               onCsv={() => downloadProjectCsv(project, phases)}
             />
             {isAdmin && !project.isPersonal && (
@@ -1253,10 +1259,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                             ⏳ {t.pendingWith}
                           </span>
                         )}
-                        {t.gxpCritical && <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>}
                         {t.requiresQaSignoff && (t.qaSignoffAt
-                          ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">QA ✓</span>
-                          : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
+                          ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">Approved ✓</span>
+                          : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Approval</span>
                         )}
                         <PriorityTag priority={t.priority} />
                         {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
@@ -1370,6 +1375,20 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           onDeleted={() => { setDeleteOpen(false); window.location.replace('/projects'); }}
         />
       )}
+
+      {showBirdEye && project && (() => {
+        const { nodes, edges } = getInitialLayout(project, tasks);
+        return (
+          <BirdEyeView
+            title={project.name}
+            nodes={nodes}
+            edges={edges}
+            exportedBy={currentUser?.name || currentUser?.email || 'User'}
+            onClose={() => setShowBirdEye(false)}
+            onTaskUpdated={load}
+          />
+        );
+      })()}
     </div>
   );
 }

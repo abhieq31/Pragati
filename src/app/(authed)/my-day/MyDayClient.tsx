@@ -201,22 +201,13 @@ export default function MyDayClient({ initialData }: {
         )}
       </div>
 
-      {/* ── Capture bar ──────────────────────────────────────────────── */}
-      <form onSubmit={add} className="mb-5">
-        <div className={`
-          flex gap-2 items-center pl-2 pr-2 py-1.5 rounded-xl border transition-all duration-200
-          bg-white dark:bg-white/[0.03]
-          border-slate-200 dark:border-white/[0.08]
-          focus-within:border-blue-300 dark:focus-within:border-white/20
-          focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.08)] dark:focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]
-        `}>
-          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
-            <Plus size={13} className="text-blue-500 dark:text-blue-400" />
-          </div>
+      {/* ── Capture bar — intentionally minimal so it doesn't disrupt flow ── */}
+      <form onSubmit={add} className="mb-6 group">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/70 dark:border-white/[0.06] transition-colors focus-within:border-blue-300/60 dark:focus-within:border-white/15">
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white/85 placeholder-slate-400 dark:placeholder-white/25 border-0 outline-none py-1.5 min-w-0"
-            placeholder="What's on your mind? Press Enter to add…"
+            className="flex-1 bg-transparent text-sm text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/20 border-0 outline-none py-0.5 min-w-0"
+            placeholder="Empty your mind…"
             value={text}
             onChange={(e) => setText(e.target.value)}
             autoFocus
@@ -224,8 +215,8 @@ export default function MyDayClient({ initialData }: {
           />
           {text.trim() && (
             <button type="submit"
-              className="btn-primary shrink-0 py-1.5 px-3 text-xs gap-1 fade-in-soft">
-              <Plus size={12} /> Add
+              className="shrink-0 text-[11px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 fade-in-soft transition-colors">
+              Add ↵
             </button>
           )}
         </div>

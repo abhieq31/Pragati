@@ -13,13 +13,8 @@ import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
 
-// Heavy components lazy-loaded: AlcoaBadge imports the ALCOA+ scorer (complex
-// rule engine) and TaskCompletePop is only shown on task completion — both are
-// off the critical render path so deferring them improves FCP/LCP.
-const AlcoaBadge = dynamic(
-  () => import('@/components/AlcoaBadge').then(m => m.AlcoaBadge),
-  { ssr: false, loading: () => null },
-);
+// TaskCompletePop is only shown on task completion — off the critical render
+// path so deferring it improves FCP/LCP.
 const TaskCompletePop = dynamic(
   () => import('@/components/TaskCompletePop').then(m => m.TaskCompletePop),
   { ssr: false, loading: () => null },
@@ -263,11 +258,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
           <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
-            {task.gxpCritical && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 border border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25 px-2 py-0.5 rounded">
-                <Shield size={11} /> Compliance Critical
-              </span>
-            )}
             {task.requiresQaSignoff && (
               task.qaSignoffAt ? (
                 <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25 px-2 py-0.5 rounded">
@@ -275,7 +265,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 </span>
               ) : (
                 <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/25 px-2 py-0.5 rounded">
-                  Sign-off required
+                  Approval required
                 </span>
               )
             )}
@@ -284,30 +274,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 {TASK_TYPE_LABELS[task.taskType] ?? task.taskType.replace(/_/g, ' ')}
               </span>
             )}
-            <AlcoaBadge task={{
-              title:            task.title,
-              description:      task.description,
-              status:           task.status,
-              taskType:         task.taskType,
-              priority:         task.priority,
-              assigneeId:       task.assigneeId,
-              requiresQaSignoff: task.requiresQaSignoff,
-              qaSignoffUserId:  task.qaSignoffUserId,
-              qaSignoffAt:      task.qaSignoffAt,
-              gxpCritical:      task.gxpCritical,
-              ccNo:             task.ccNo,
-              documentNo:       task.documentNo,
-              applicableSite:   task.applicableSite,
-              deployStage:      task.deployStage,
-              createdAt:        task.createdAt,
-              startDate:        task.startDate,
-              dueDate:          task.dueDate,
-              completedAt:      task.completedAt,
-              remarks:          task.remarks,
-              pendingWith:      task.pendingWith,
-              aiTriage:         task.aiTriage,
-              projectIsPersonal: task.projectIsPersonal ?? task.isPersonal,
-            }} />
           </div>
         </div>
 
@@ -618,19 +584,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 </div>
               </div>
             </div>
-            {/* Compliance toggles live behind a disclosure so the default
-                view stays simple. Schema-side these fields remain explicit
-                per the GxP requirements in CLAUDE.md. */}
             <details className="pt-1 group">
               <summary className="text-[11px] font-semibold text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors">
-                Advanced — compliance flags
+                Advanced options
               </summary>
               <div className="flex gap-4 pt-2 text-xs">
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={!!task.gxpCritical} disabled={!isLead}
-                    onChange={(e) => isLead && update({ gxpCritical: e.target.checked })} />
-                  Compliance critical
-                </label>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={!!task.requiresQaSignoff} disabled={!isLead}
                     onChange={(e) => isLead && update({ requiresQaSignoff: e.target.checked })} />

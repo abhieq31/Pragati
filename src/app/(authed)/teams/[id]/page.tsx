@@ -15,7 +15,11 @@ import {
   TaskLink
 } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { ActivityGraph } from '@/components/ActivityGraph';
+import dynamic from 'next/dynamic';
+const ActivityGraph = dynamic(
+  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
+  { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
+);
 import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
 import { ExportMenu } from '@/components/ExportMenu';
 import { UserPicker } from '@/components/UserPicker';
@@ -176,7 +180,6 @@ export default function TeamDetailPage() {
           <div className="shrink-0">
             <ExportMenu
               onPdf={() => printTeamReport(team, progress, board)}
-              onHtml={() => downloadTeamReport(team, progress, board)}
               onCsv={() => downloadTeamCsv(team, board)}
             />
           </div>
@@ -369,7 +372,6 @@ export default function TeamDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <TaskLink task={t} />
-                          {t.gxpCritical && <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>}
                         </div>
                         <div className="text-[11px] text-slate-400 truncate mt-0.5">
                           <Link href={`/projects/${t.projectId}`} className="hover:underline font-medium">
