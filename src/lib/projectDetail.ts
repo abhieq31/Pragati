@@ -59,12 +59,7 @@ export async function getProjectDetail(id: string, userId: string, role?: string
     const [team, owner, tasks] = await Promise.all([
       p.teamId ? Team.findById(p.teamId).lean() : Promise.resolve(null),
       p.ownerId ? User.findById(p.ownerId).lean() : Promise.resolve(null),
-      Task.find({ projectId: p._id })
-        // Project boards/lists only need task summary fields and subtask counts;
-        // omit heavy comment/effort/AI arrays that belong on the task detail page.
-        .select('projectId phaseId title description assigneeId status priority taskType gxpCritical requiresQaSignoff startDate dueDate completedAt ccNo ccTcd documentNo applicableSite deployStage remarks pendingWith position createdAt updatedAt subtasks.status')
-        .sort({ position: 1, createdAt: 1 })
-        .lean(),
+      Task.find({ projectId: p._id, $or: [{ privateToUserId: null }, { privateToUserId: { $exists: false } }, { privateToUserId: scope.userOid }] }).sort({ position: 1, createdAt: 1 }).lean(),
     ]);
     const assignees = await User.find({
       _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) },

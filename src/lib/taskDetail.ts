@@ -22,6 +22,8 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
     // shell (which surfaces a graceful error) instead of crashing the boundary.
     const t = await Task.findById(id).lean();
     if (!t) return null;
+    const privateOwner = (t as any).privateToUserId;
+    if (privateOwner && String(privateOwner) !== String(userId)) return null;
     const scope = await getLeadScope(userId, role);
     const proj = await Project.findOne({
       _id: (t as any).projectId,

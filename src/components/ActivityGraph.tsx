@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/client/api';
+import { useCurrentUser } from '@/components/CurrentUserContext';
 import {
   Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck,
   Trophy, Zap, Users, Lightbulb, Award, GraduationCap, Scale, Gauge,
@@ -82,64 +83,28 @@ function cellColor(n: number, dark: boolean): string {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 
-const ACTIVITY_CACHE_TTL_MS = 2 * 60 * 1000;
-const activityCache = new Map<string, { data: ActivityData; expiresAt: number }>();
-const activityInflight = new Map<string, Promise<ActivityData>>();
+const ACTIVITY_GRAPH_CACHE_MS = 2 * 60_000;
+const activityGraphCache = new Map<string, { at: number; data: ActivityData }>();
+const activityGraphInflight = new Map<string, Promise<ActivityData>>();
 
-function fallbackActivityData(year: number): ActivityData {
-  return {
-    year,
-    firstYear: year,
-    days: {},
-    total: 0,
-    streak: 0,
-    totalTasksDone: 0,
-    onTimeTasks: 0,
-    onTimeRate: 0,
-    projectsCompleted: 0,
-    projectsOnTime: 0,
-    badges: [],
-    recent: [],
-    achievements: [],
-    role: 'ic',
-  };
+function activityKey(who: string, year: number, viewerId?: string) {
+  return viewerId ? `${viewerId}:${who}:${year}` : '';
 }
 
-function activityCacheKey(who: string, year: number) {
-  return `${who}:${year}`;
-}
-
-function getCachedActivityData(who: string, year: number): ActivityData | null {
-  const hit = activityCache.get(activityCacheKey(who, year));
-  if (!hit) return null;
-  if (hit.expiresAt <= Date.now()) {
-    activityCache.delete(activityCacheKey(who, year));
-    return null;
+function loadActivity(who: string, year: number, viewerId?: string) {
+  const key = activityKey(who, year, viewerId);
+  if (key) {
+    const cached = activityGraphCache.get(key);
+    if (cached && Date.now() - cached.at < ACTIVITY_GRAPH_CACHE_MS) return Promise.resolve(cached.data);
+    const pending = activityGraphInflight.get(key);
+    if (pending) return pending;
   }
-  return hit.data;
-}
-
-function fetchActivityData(who: string, year: number): Promise<ActivityData> {
-  const key = activityCacheKey(who, year);
-  const cached = getCachedActivityData(who, year);
-  if (cached) return Promise.resolve(cached);
-
-  const pending = activityInflight.get(key);
-  if (pending) return pending;
-
-  const request = api<ActivityData>(`/${who}?year=${year}`)
-    .then((data) => {
-      activityCache.set(key, { data, expiresAt: Date.now() + ACTIVITY_CACHE_TTL_MS });
-      return data;
-    })
-    .finally(() => activityInflight.delete(key));
-  activityInflight.set(key, request);
-  return request;
-}
-
-export function preloadActivityGraphData({ userId, year = new Date().getFullYear() }: { userId?: string; year?: number } = {}) {
-  const who = userId ? `users/${userId}/activity` : 'users/me/activity';
-  return fetchActivityData(who, year).catch(() => null);
+  const req = api<ActivityData>(`/${who}?year=${year}`).then((data) => {
+    if (key) activityGraphCache.set(key, { at: Date.now(), data });
+    return data;
+  }).finally(() => { if (key) activityGraphInflight.delete(key); });
+  if (key) activityGraphInflight.set(key, req);
+  return req;
 }
 
 type ContribItem = {
@@ -239,26 +204,20 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
   // Custom heatmap tooltip — replaces the native `title=""` so the hover reads
   // cleanly (formatted date + point count) instead of the OS' slow tooltip.
   const [tip, setTip] = useState<{ x: number; y: number; count: number; date: string } | null>(null);
+  const currentUser = useCurrentUser();
 
   const who = userId ? `users/${userId}/activity` : 'users/me/activity';
+  const viewerId = currentUser?.id;
 
   useEffect(() => {
     let alive = true;
-    const cached = getCachedActivityData(who, year);
-    if (cached) {
-      setData(cached);
-      setLoading(false);
-      return () => { alive = false; };
-    }
-
     setLoading(true);
-    fetchActivityData(who, year)
+    loadActivity(who, year, viewerId)
       .then((next) => { if (alive) setData(next); })
-      .catch(() => { if (alive) setData(fallbackActivityData(year)); })
+      .catch(() => { if (alive) setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [], achievements: [], role: 'ic' }); })
       .finally(() => { if (alive) setLoading(false); });
-
     return () => { alive = false; };
-  }, [who, year]);
+  }, [who, year, viewerId]);
 
   const days = useMemo(() => data?.days || {}, [data?.days]);
 
