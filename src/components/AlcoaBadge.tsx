@@ -60,7 +60,7 @@ export function AlcoaBadge({ task }: { task: TaskSnapshot }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-400 hover:text-slate-600 hover:bg-slate-100/70 transition-colors cursor-pointer select-none"
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold text-slate-400 hover:text-slate-600 hover:bg-slate-100/70 dark:text-white/35 dark:hover:text-white/60 dark:hover:bg-white/8 transition-colors cursor-pointer select-none"
         title={`ALCOA+ data integrity ${score.total}/100 · grade ${score.grade} — click for breakdown`}
         aria-label={`ALCOA+ data integrity score ${score.total} out of 100, grade ${score.grade}`}
       >
@@ -70,14 +70,14 @@ export function AlcoaBadge({ task }: { task: TaskSnapshot }) {
 
       {open && (
         <div
-          className="absolute left-0 top-full mt-1 z-50 w-80 rounded-xl border border-slate-200 bg-white shadow-lg"
+          className="absolute left-0 top-full mt-1 z-50 w-80 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1e1e1c] shadow-lg"
           style={{ boxShadow: '0 4px 16px rgba(15,23,42,0.10)' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/70 rounded-t-xl">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-white/8 bg-slate-50/70 dark:bg-white/5 rounded-t-xl">
             <div className="flex items-center gap-2">
-              <Activity size={13} className="text-slate-500" />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">ALCOA⁺ Score</span>
+              <Activity size={13} className="text-slate-500 dark:text-white/40" />
+              <span className="text-xs font-bold text-slate-700 dark:text-white/70 uppercase tracking-wide">ALCOA⁺ Score</span>
             </div>
             <div className="flex items-center gap-2">
               <span
@@ -105,15 +105,15 @@ export function AlcoaBadge({ task }: { task: TaskSnapshot }) {
                 <div key={key}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black text-slate-400 w-6 shrink-0">{PRINCIPLE_ABBR[key]}</span>
-                      <span className="text-[11px] font-semibold text-slate-700">{p.label}</span>
+                      <span className="text-[10px] font-black text-slate-400 dark:text-white/35 w-6 shrink-0">{PRINCIPLE_ABBR[key]}</span>
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-white/70">{p.label}</span>
                     </div>
                     <span className="text-[10px] font-bold" style={{ color: barColor }}>
                       {p.score}/{p.max}
                     </span>
                   </div>
                   {/* Bar */}
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{ width: `${Math.round(pct * 100)}%`, background: barColor }}
@@ -121,7 +121,7 @@ export function AlcoaBadge({ task }: { task: TaskSnapshot }) {
                   </div>
                   {/* Gap signals */}
                   {p.signals.filter(s => !s.pass && !s.na).map((s, i) => (
-                    <p key={i} className="text-[10px] text-red-600 mt-0.5 ml-7 leading-tight">
+                    <p key={i} className="text-[10px] text-red-600 dark:text-red-400 mt-0.5 ml-7 leading-tight">
                       ✕ {s.label}
                     </p>
                   ))}
@@ -131,8 +131,8 @@ export function AlcoaBadge({ task }: { task: TaskSnapshot }) {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2 border-t border-slate-100 rounded-b-xl bg-slate-50/50">
-            <p className="text-[9px] text-slate-400 leading-tight">
+          <div className="px-4 py-2 border-t border-slate-100 dark:border-white/8 rounded-b-xl bg-slate-50/50 dark:bg-white/5">
+            <p className="text-[9px] text-slate-400 dark:text-white/30 leading-tight">
               Based on 21 CFR Part 11 / ALCOA+ data-integrity principles. Score is deterministic and locally traceable.
             </p>
           </div>

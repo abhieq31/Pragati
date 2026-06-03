@@ -177,8 +177,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   }
   async function addSubtask() {
     if (!newSub.trim()) return;
-    await api(`/tasks/${id}/subtasks`, { method: 'POST', body: { title: newSub.trim() } });
-    setNewSub(''); load();
+    try {
+      await api(`/tasks/${id}/subtasks`, { method: 'POST', body: { title: newSub.trim() } });
+      setNewSub(''); load();
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to add subtask', 'err');
+    }
   }
   async function toggleSub(sub: any) {
     await api(`/tasks/${id}/subtasks/${sub.id}`, { method: 'PATCH', body: { status: sub.status === 'done' ? 'todo' : 'done' } });
@@ -193,8 +197,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   }
   async function addComment() {
     if (!comment.trim()) return;
-    await api(`/tasks/${id}/comments`, { method: 'POST', body: { body: comment.trim() } });
-    setComment(''); load();
+    try {
+      await api(`/tasks/${id}/comments`, { method: 'POST', body: { body: comment.trim() } });
+      setComment(''); load();
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to post comment', 'err');
+    }
   }
   async function signoff() { await api(`/tasks/${id}/signoff`, { method: 'POST' }); load(); }
 
@@ -245,23 +253,23 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
             {task.gxpCritical && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 border border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25 px-2 py-0.5 rounded">
                 <Shield size={11} /> Compliance Critical
               </span>
             )}
             {task.requiresQaSignoff && (
               task.qaSignoffAt ? (
-                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25 px-2 py-0.5 rounded">
                   Approved ✓ {task.qaSignoffName} · {formatDate(task.qaSignoffAt)}
                 </span>
               ) : (
-                <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
+                <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/25 px-2 py-0.5 rounded">
                   Sign-off required
                 </span>
               )
             )}
             {task.taskType && task.taskType !== 'task' && (
-              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded capitalize">
+              <span className="text-xs font-medium text-slate-600 bg-slate-100 dark:bg-white/5 dark:text-white/60 px-2 py-0.5 rounded capitalize">
                 {TASK_TYPE_LABELS[task.taskType] ?? task.taskType.replace(/_/g, ' ')}
               </span>
             )}
@@ -402,7 +410,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 >
                   {s.status === 'done' && <span className="text-white text-[8px] font-black">✓</span>}
                 </button>
-                <span className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                <span className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400 dark:text-white/35' : 'text-slate-700'}`}>
                   {s.title}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(s.dueDate)}</span>
