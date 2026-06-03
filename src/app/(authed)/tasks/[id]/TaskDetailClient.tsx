@@ -590,10 +590,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               </summary>
               <div className="flex gap-4 pt-2 text-xs">
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={!!task.requiresQaSignoff} disabled={!isLead}
                     onChange={(e) => isLead && update({ requiresQaSignoff: e.target.checked })} />
-                  Requires sign-off
+                  Approval required
                 </label>
               </div>
             </details>

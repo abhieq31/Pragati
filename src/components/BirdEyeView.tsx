@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, Download, RotateCcw, Map } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api } from '@/lib/client/api';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 
@@ -82,6 +82,36 @@ export function getInitialLayout(
       .forEach((t) => {
         edges.push({ from: `task-${t.id}`, to: `person-${p.id}` });
       });
+  });
+
+  return { nodes, edges };
+}
+
+/** Layout for a team canvas: team at center, projects in middle ring, members in outer ring. */
+export function getTeamLayout(
+  team: any,
+  projects: any[],
+  members: any[],
+): { nodes: BirdEyeNode[]; edges: BirdEyeEdge[] } {
+  const cx = 600;
+  const cy = 400;
+  const nodes: BirdEyeNode[] = [];
+  const edges: BirdEyeEdge[] = [];
+
+  nodes.push({ id: `team-${team.id}`, type: 'project', x: cx, y: cy, data: { ...team, name: team.name, code: team.function || 'TEAM' } });
+
+  projects.forEach((p, i) => {
+    const angle = (i / Math.max(projects.length, 1)) * 2 * Math.PI - Math.PI / 2;
+    const r = 240;
+    nodes.push({ id: `proj-${p.id}`, type: 'task', x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), data: p });
+    edges.push({ from: `team-${team.id}`, to: `proj-${p.id}` });
+  });
+
+  members.forEach((m, i) => {
+    const angle = (i / Math.max(members.length, 1)) * 2 * Math.PI;
+    const r = 420;
+    nodes.push({ id: `person-${m.id}`, type: 'person', x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), data: m });
+    edges.push({ from: `team-${team.id}`, to: `person-${m.id}` });
   });
 
   return { nodes, edges };

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { api } from '@/lib/api';
+import { api } from '@/lib/client/api';
 import {
   Users, FolderKanban, Shield, BarChart3, Lock, AlertTriangle,
   Trash2, UserCheck, Activity, Clock, Check, RefreshCw,

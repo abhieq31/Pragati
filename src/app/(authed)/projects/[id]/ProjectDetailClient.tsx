@@ -1383,7 +1383,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             title={project.name}
             nodes={nodes}
             edges={edges}
-            exportedBy={currentUser?.name || currentUser?.email || 'User'}
+            exportedBy={me?.name || me?.email || 'User'}
             onClose={() => setShowBirdEye(false)}
             onTaskUpdated={load}
           />
