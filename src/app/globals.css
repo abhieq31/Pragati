@@ -599,6 +599,13 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 .dark [class*="bg-slate-100"] {
   background-color: var(--bg-subtle) !important;
 }
+.dark .bg-slate-200,
+.dark .bg-slate-300 {
+  background-color: #3a3935 !important;
+}
+/* Filter/tab chips */
+.dark .hover\:bg-slate-200:hover { background-color: #3a3935 !important; }
+.dark .hover\:bg-slate-100:hover { background-color: var(--bg-subtle) !important; }
 
 /* Section header bar — class-based so it can theme in dark mode (inline
    background styles can't be overridden by .dark rules). */
@@ -679,6 +686,49 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 .dark .text-blue-900 { color: #e8a98c !important; }
 .dark .border-blue-100,
 .dark .border-blue-200 { border-color: rgba(217,119,87,0.22) !important; }
+
+/* Semantic status colours — keep red=danger, green=success, amber=warning */
+.dark .bg-red-50   { background-color: rgba(239,68,68,0.10)  !important; }
+.dark .bg-red-100  { background-color: rgba(239,68,68,0.16)  !important; }
+.dark .text-red-500 { color: #fca5a5 !important; }
+.dark .text-red-600 { color: #f87171 !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-red-800 { color: #fecaca !important; }
+.dark .border-red-100,
+.dark .border-red-200 { border-color: rgba(239,68,68,0.22) !important; }
+
+.dark .bg-emerald-50,
+.dark .bg-green-50  { background-color: rgba(34,197,94,0.09)  !important; }
+.dark .bg-emerald-100,
+.dark .bg-green-100 { background-color: rgba(34,197,94,0.15)  !important; }
+.dark .text-emerald-600,
+.dark .text-green-600 { color: #6ee7b7 !important; }
+.dark .text-emerald-700,
+.dark .text-green-700 { color: #a7f3d0 !important; }
+.dark .text-emerald-800,
+.dark .text-green-800 { color: #bbf7d0 !important; }
+.dark .border-emerald-100,
+.dark .border-green-100,
+.dark .border-emerald-200,
+.dark .border-green-200 { border-color: rgba(34,197,94,0.20) !important; }
+
+.dark .bg-amber-50  { background-color: rgba(245,158,11,0.10) !important; }
+.dark .bg-amber-100 { background-color: rgba(245,158,11,0.16) !important; }
+.dark .text-amber-600 { color: #fcd34d !important; }
+.dark .text-amber-700 { color: #fde68a !important; }
+.dark .text-amber-800 { color: #fef3c7 !important; }
+.dark .border-amber-100,
+.dark .border-amber-200 { border-color: rgba(245,158,11,0.22) !important; }
+
+.dark .bg-purple-50  { background-color: rgba(168,85,247,0.10) !important; }
+.dark .bg-violet-50  { background-color: rgba(139,92,246,0.10) !important; }
+.dark .text-purple-600,
+.dark .text-violet-600 { color: #c4b5fd !important; }
+.dark .text-purple-700,
+.dark .text-violet-700 { color: #ddd6fe !important; }
+.dark .bg-indigo-50  { background-color: rgba(99,102,241,0.10) !important; }
+.dark .bg-teal-50    { background-color: rgba(20,184,166,0.10) !important; }
+.dark .bg-cyan-50    { background-color: rgba(6,182,212,0.10)  !important; }
 
 /* Kanban horizontal scroller — slim track so the slider doesn't add visual weight. */
 .kanban-scroll::-webkit-scrollbar         { height: 8px; }
