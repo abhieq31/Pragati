@@ -484,12 +484,11 @@ function ProjectsColumn({
         </div>
       ) : (
         <div className="space-y-3">
-          {projects.map((p, i) => (
+          {projects.map((p) => (
             <ProjectRow
               key={p.id}
               project={p}
               tasks={tasksByProject.get(p.id) || []}
-              defaultOpen={i < 2}
             />
           ))}
         </div>
@@ -569,9 +568,11 @@ function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
 }
 
 function ProjectRow({
-  project, tasks, defaultOpen,
-}: { project: DashProject; tasks: TeamTask[]; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+  project, tasks,
+}: { project: DashProject; tasks: TeamTask[] }) {
+  // Collapsed by default — the dashboard should land quiet. The user expands
+  // only what they want to inspect.
+  const [open, setOpen] = useState(false);
   const health = HEALTH_META[project.health];
   const total  = project.taskCount ?? 0;
   const done   = project.tasksDone ?? 0;
@@ -579,66 +580,96 @@ function ProjectRow({
   const dueIn  = daysUntil(project.dueDate);
   const cat    = project.lifecycle && project.lifecycle !== 'generic' ? (LIFECYCLE_LABELS[project.lifecycle] || project.lifecycle) : null;
 
+  // Human-readable due summary. Renders as one short phrase that conveys
+  // "when is this expected to land" without a verbose "Due Jul 3 · 30d left"
+  // strip running across the row.
+  const dueLabel = !project.dueDate ? null
+    : dueIn === null ? formatDate(project.dueDate)
+    : dueIn < 0  ? `${Math.abs(dueIn)}d overdue`
+    : dueIn === 0 ? 'Due today'
+    : dueIn <= 7  ? `${dueIn}d left`
+    : `Due ${formatDate(project.dueDate)}`;
+  const dueUrgent = dueIn !== null && (dueIn < 0 || dueIn === 0);
+
   return (
-    <article className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden transition-all"
+    <article className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden transition-all hover:border-slate-300/80"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      {/* Project header */}
+      {/* Collapsed-state header — two readable rows, never a 5-piece chip strip.
+          Row 1: title + identity badges (code, lifecycle, health). Row 2: the
+          essential metrics — progress, tasks-done, due, owner. */}
       <header
         onClick={() => setOpen(o => !o)}
-        className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 transition-colors select-none"
+        className="px-4 py-3 cursor-pointer hover:bg-slate-50/40 transition-colors select-none"
       >
-        <button className="p-0.5 text-slate-400 transition-transform" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-          <ChevronDown size={14} />
-        </button>
+        <div className="flex items-start gap-2.5">
+          <button
+            aria-label={open ? 'Collapse project' : 'Expand project'}
+            className="mt-0.5 p-0.5 text-slate-300 hover:text-slate-500 transition-transform shrink-0"
+            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          >
+            <ChevronDown size={14} />
+          </button>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            {/* On mobile the title claims the full first line and wraps to two
-                lines rather than truncating to "BOT Automa…"; the code + badges
-                flow onto the next line. */}
-            <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
-              className="text-sm font-bold text-slate-800 hover:text-blue-700 basis-full sm:basis-auto sm:min-w-0 line-clamp-2 sm:truncate">
-              {project.name}
-            </Link>
-            <span className="text-[10px] font-bold text-slate-300 tracking-wider shrink-0">{project.code}</span>
-            {cat && (
-              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                {cat}
+          <div className="flex-1 min-w-0">
+            {/* Row 1 — identity */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link href={`/projects/${project.id}`} onClick={(e) => e.stopPropagation()}
+                className="text-sm font-bold text-slate-800 hover:text-blue-700 leading-snug min-w-0 truncate basis-full sm:basis-auto sm:max-w-[60%]">
+                {project.name}
+              </Link>
+              <span className="text-[10px] font-mono text-slate-300 tracking-wider shrink-0">{project.code}</span>
+              {cat && (
+                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                  {cat}
+                </span>
+              )}
+              {/* Hover reveals *why* — same reasoning a reviewer would point at.
+                  Stops propagation so the click doesn't toggle the panel. */}
+              <span
+                className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-help ${health.bg} ${health.text}`}
+                title={(project.healthReasons || []).join(' · ') || health.label}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} />
+                {health.label}
               </span>
-            )}
-            {/* Hover surfaces *why* — same reasoning a reviewer would point
-                at when judging "at risk" vs "on track". The badge is a
-                button so keyboard/touch users can still see the rationale
-                without leaving the dashboard. */}
-            <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-help ${health.bg} ${health.text}`}
-              title={(project.healthReasons || []).join(' · ') || health.label}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} />
-              {health.label}
-            </span>
-          </div>
+            </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
-            <span><span className="font-semibold text-slate-600">{done}/{total}</span> tasks</span>
-            {project.overdueCount > 0 && (
-              <span className="text-red-600 font-semibold">{project.overdueCount} overdue</span>
-            )}
-            {project.dueDate && (
-              <span className={dueIn !== null && dueIn < 0 ? 'text-red-600 font-semibold' : ''}>
-                Due {formatDate(project.dueDate)}
-                {dueIn !== null && dueIn >= 0 && ` · ${dueIn === 0 ? 'today' : `${dueIn}d left`}`}
-                {dueIn !== null && dueIn < 0 && ` · ${Math.abs(dueIn)}d late`}
+            {/* Row 2 — at-a-glance metrics. Progress bar carries the visual
+                weight; the rest are short, dot-separated. */}
+            <div className="mt-2 flex items-center gap-3">
+              <div className="flex-1 min-w-0 max-w-[260px]">
+                <ProgressBar value={pct} />
+              </div>
+              <span className="text-[11px] font-bold text-slate-700 tabular-nums shrink-0">{pct}%</span>
+              <span className="text-[11px] text-slate-400 shrink-0">·</span>
+              <span className="text-[11px] text-slate-500 shrink-0 tabular-nums">
+                <span className="font-semibold text-slate-700">{done}</span>/<span>{total}</span> done
               </span>
-            )}
-            {project.ownerName && <span>Owner: <span className="text-slate-600">{project.ownerName}</span></span>}
+              {project.overdueCount > 0 && (
+                <>
+                  <span className="text-[11px] text-slate-300 shrink-0">·</span>
+                  <span className="text-[11px] font-semibold text-red-600 shrink-0">{project.overdueCount} overdue</span>
+                </>
+              )}
+              {dueLabel && (
+                <>
+                  <span className="text-[11px] text-slate-300 shrink-0 hidden sm:inline">·</span>
+                  <span className={`text-[11px] shrink-0 hidden sm:inline ${dueUrgent ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                    {dueLabel}
+                  </span>
+                </>
+              )}
+              {project.ownerName && (
+                <>
+                  <span className="text-[11px] text-slate-300 shrink-0 hidden md:inline">·</span>
+                  <span className="text-[11px] text-slate-500 shrink-0 hidden md:inline truncate max-w-[140px]">
+                    {project.ownerName}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-
-        <div className="w-14 sm:w-28 shrink-0">
-          <ProgressBar value={pct} />
-          <div className="text-[10px] text-slate-400 mt-1 text-right font-semibold">{pct}%</div>
         </div>
       </header>
 
@@ -1006,9 +1037,9 @@ function ActionGroup({
 function ContributorsPanel({
   people, tasksByAssignee,
 }: { people: DashPerson[]; tasksByAssignee: Map<string, TeamTask[]> }) {
-  // Open by default — the member list + their task counts come from props, so
-  // there's nothing to lazy-load; collapsing it just made the card look empty.
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Collapsed by default — keeps the dashboard quiet on landing; the lead
+  // expands when they want a contributor-by-contributor breakdown.
+  const [panelOpen, setPanelOpen] = useState(false);
   // The contributor whose activity graph is being viewed (lead-only deep-dive,
   // same gesture as the team & people pages).
   const [activityPerson, setActivityPerson] = useState<DashPerson | null>(null);

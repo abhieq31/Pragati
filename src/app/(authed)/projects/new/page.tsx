@@ -503,9 +503,10 @@ export default function NewProjectPage() {
                   minDate={form.startDate ? new Date(form.startDate) : undefined} />
               </div>
             </div>
-            {/* Personal toggle — flip it on to keep the project private to
-                you (no team, hidden from everyone else). Off = a shared
-                project belonging to a team. */}
+            {/* Personal toggle — flips the project between a private personal
+                project (no team) and a shared team project. The privacy of
+                personal projects is intentionally not advertised in the copy
+                here — it's a property of the data model, not a sales pitch. */}
             <div className="rounded-lg border border-slate-200 px-3 py-2.5 flex items-start gap-3">
               <button
                 type="button"
@@ -541,10 +542,10 @@ export default function NewProjectPage() {
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">
                   {isLead
-                    ? 'Only visible to you — no team, hidden from everyone else (including admins).'
+                    ? 'Personal to-do list — no team attached.'
                     : personal
-                      ? 'Private to you — no team attached. Toggle off to browse the QA / GxP workflows your leads use; your final project will still be filed under your name as a personal project.'
-                      : 'Browse-only — you can preview the team lifecycles, but contributors can only commit personal projects. We\'ll switch back to personal on submit.'}
+                      ? 'No team attached. Toggle off to browse the QA / GxP workflow templates.'
+                      : 'Preview mode — contributors can only create personal projects, so we\'ll switch back on submit.'}
                 </div>
               </div>
             </div>
