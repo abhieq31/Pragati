@@ -765,12 +765,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   }
 
   useEffect(() => {
-    // The route is server-seeded with the project and current user. Avoid a
-    // duplicate hydration fetch; only fall back to the API if a client-side
-    // transition ever mounts without those props. Mutations still call load().
-    if (!project || String(project.id) !== String(id)) load();
-    if (!me) api<any>('/auth/me').then(d => setMe(d.user)).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    load();
+    api<any>('/auth/me').then(d => setMe(d.user)).catch(() => {});
   }, [id]);
 
   if (loadErr) {
