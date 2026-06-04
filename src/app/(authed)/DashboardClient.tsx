@@ -22,7 +22,7 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3, Compass,
+  Maximize2, X, BarChart3, Eye,
 } from 'lucide-react';
 import dynamic2 from 'next/dynamic';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
@@ -309,10 +309,9 @@ export default function DashboardClient({
             onClick={() => setBirdsEyeOpen(true)}
             title="Open bird's-eye view"
             aria-label="Open bird's-eye view"
-            className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
-            style={{ background: 'linear-gradient(120deg, #1565C0 0%, #1976D2 50%, #2E7D32 100%)' }}
+            className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-white/40 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
           >
-            <Compass size={14} />
+            <Eye size={14} />
             <span className="hidden sm:inline">Bird&apos;s-eye</span>
           </button>
         )}

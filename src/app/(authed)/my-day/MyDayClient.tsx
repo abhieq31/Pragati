@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/client/api';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
-  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit,
+  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit, Network,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
@@ -23,13 +23,24 @@ const MindMap = dynamicImport(
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 5)  return 'Night shift';
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  if (h < 21) return 'Good evening';
-  return 'Good night';
+/* The home page already shows the time-of-day greeting; My Day opens with an
+   encouraging line instead, so the page feels like a fresh start each day. The
+   line is keyed to the day-of-year so it's stable through the day (no flicker)
+   yet rotates over time. */
+const ENCOURAGEMENTS = [
+  'Let’s make today count',
+  'One clear thought at a time',
+  'Small steps, real progress',
+  'Capture it, then conquer it',
+  'A clear mind moves fast',
+  'Today is yours to shape',
+  'Progress beats perfection',
+  'Start light — empty your head',
+];
+function encouragement() {
+  const d = new Date();
+  const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86_400_000);
+  return ENCOURAGEMENTS[dayOfYear % ENCOURAGEMENTS.length];
 }
 
 /* Live clock day/date — suppresses hydration mismatch via suppressHydrationWarning */
@@ -89,6 +100,8 @@ export default function MyDayClient({ initialData }: {
   initialData: { open: Note[]; done: Note[] };
 }) {
   const isLead  = useIsLead();
+  const me      = useCurrentUser();
+  const firstName = (me?.name || '').trim().split(/\s+/)[0] || '';
   const dateLabel = useDateLabel();
 
   const [open, setOpen]   = useState<Note[]>(initialData.open);
@@ -181,7 +194,9 @@ export default function MyDayClient({ initialData }: {
               )}
             </div>
             <h1 className="text-[1.75rem] font-black tracking-tight leading-tight">
-              <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}.</span>
+              <span className="brand-shimmer-text" suppressHydrationWarning>
+                {encouragement()}{firstName ? `, ${firstName}` : ''}.
+              </span>
             </h1>
             {dateLabel && (
               <div className="flex items-center gap-1.5 mt-1.5">
@@ -215,54 +230,60 @@ export default function MyDayClient({ initialData }: {
         )}
       </div>
 
-      {/* ── Capture bar — intentionally minimal so it doesn't disrupt flow ── */}
-      <form onSubmit={add} className="mb-6 group">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/70 dark:border-white/[0.06] transition-colors focus-within:border-blue-300/60 dark:focus-within:border-white/15">
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent text-sm text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/20 border-0 outline-none py-0.5 min-w-0"
-            placeholder="Empty your mind…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            autoFocus
-            maxLength={2000}
-          />
-          {text.trim() && (
-            <button type="submit"
-              className="shrink-0 text-[11px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 fade-in-soft transition-colors">
-              Add ↵
-            </button>
-          )}
+      {/* ── Capture — the heart of My Day: get it out of your head first ── */}
+      <form onSubmit={add} className="mb-6">
+        <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm focus-within:border-blue-400/70 dark:focus-within:border-blue-500/40 focus-within:shadow-md transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/15 dark:to-indigo-500/15 flex items-center justify-center shrink-0">
+              <BrainCircuit size={17} className="text-blue-500 dark:text-blue-400" />
+            </div>
+            <input
+              ref={inputRef}
+              className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-400 dark:placeholder-white/30 border-0 outline-none py-1 min-w-0"
+              placeholder="Empty your mind — what’s on it right now?"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              autoFocus
+              maxLength={2000}
+            />
+            {text.trim() ? (
+              <button type="submit"
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors">
+                Capture ↵
+              </button>
+            ) : (
+              <span className="shrink-0 hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 font-medium pr-1">Press Enter</span>
+            )}
+          </div>
         </div>
       </form>
 
-      {/* Mind map toggle — opens the per-user mind map below. Single button
-          (replacing the row of three "coming next" stubs) so the feature
-          reads as actually shipped rather than a teaser. */}
-      <div className="mb-5">
+      {/* Mind map — a quieter section header (the capture above is the hero);
+          opening it reveals the full node-link whiteboard, framed like a real
+          canvas so the surface itself carries the weight, not the toggle. */}
+      <div className="mb-6">
         <button type="button"
           onClick={() => setMindMapOpen((v) => !v)}
-          className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-colors text-left ${
-            mindMapOpen
-              ? 'border-blue-300 bg-blue-50/60 dark:bg-blue-500/10 dark:border-blue-500/30'
-              : 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.025] hover:border-slate-300'
-          }`}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #1565C0, #22C55E)' }}>
-              <BrainCircuit size={15} className="text-white" />
-            </div>
-            <div>
-              <div className="text-[12px] font-black text-slate-700 dark:text-white/80">Mind map</div>
-              <div className="text-[10px] text-slate-400 dark:text-white/35">Branch your thinking — drag nodes, draw connections, persists per user.</div>
-            </div>
+          className="group w-full flex items-center justify-between gap-3 py-2 text-left">
+          <div className="flex items-center gap-2 min-w-0">
+            <Network size={14} className="text-slate-400 dark:text-white/30 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors shrink-0" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/55 transition-colors">
+              Mind map
+            </span>
+            <span className="hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 truncate">· branch a thought into a whiteboard</span>
           </div>
-          <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
-            {mindMapOpen ? 'Hide' : 'Open'}
+          <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+            {mindMapOpen ? 'Hide' : 'Open canvas'}
+            {mindMapOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </span>
         </button>
         {mindMapOpen && (
-          <div className="mt-3 fade-in-soft">
+          <div className="mt-2 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] overflow-hidden shadow-sm fade-in-soft"
+            style={{
+              backgroundColor: 'var(--bg-page)',
+              backgroundImage: 'radial-gradient(circle, rgba(100,116,139,0.16) 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
+            }}>
             <MindMap />
           </div>
         )}
