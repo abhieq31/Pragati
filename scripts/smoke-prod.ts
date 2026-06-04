@@ -5,7 +5,7 @@
  *
  * What this confirms:
  *   ✓ /api/health is 200 and Mongo ping latency is healthy
- *   ✓ /bootstrap returns 404 (the production-safe state)
+ *   ✓ /bootstrap returns 404 (legacy page removed)
  *   ✓ /api/admin/bootstrap returns 404 (token not set)
  *   ✓ /api/auth/register returns 403 (public registration disabled)
  *   ✓ /login renders
@@ -52,11 +52,11 @@ async function main() {
     }
   }
 
-  // 2. /bootstrap must be 404 in steady state
+  // 2. Legacy /bootstrap page must stay removed
   {
     const r = await probe('/bootstrap', 404);
-    if (r.ok) pass('/bootstrap → 404', 'token not configured (correct)');
-    else      fail('/bootstrap → 404', `status ${r.status} — ADMIN_BOOTSTRAP_TOKEN appears to be set in prod env`);
+    if (r.ok) pass('/bootstrap → 404', 'legacy bootstrap UI removed');
+    else      fail('/bootstrap → 404', `status ${r.status} — expected removed legacy page to stay unavailable`);
   }
 
   // 3. /api/admin/bootstrap must be 404 in steady state

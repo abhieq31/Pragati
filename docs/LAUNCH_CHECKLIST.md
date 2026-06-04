@@ -30,8 +30,7 @@ In **Vercel → Settings → Environment Variables → Production**, confirm:
 | `MONGODB_URI` | Atlas connection string | **YES** |
 | `JWT_SECRET` | Output of `openssl rand -base64 48` (≥16 chars) | **YES — refuses to sign tokens otherwise** |
 | `ADMIN_EMAIL` | `abhipatel33360@gmail.com` | Optional (hardcoded fallback covers it) |
-| `GEMINI_API_KEY` | Your Gemini key | Optional (only enables LLM Copilot) |
-| `ADMIN_BOOTSTRAP_TOKEN` | **UNSET** | Only set when you specifically need `/bootstrap`; delete + redeploy immediately after. |
+| `ADMIN_BOOTSTRAP_TOKEN` | **UNSET** | Only set for a one-time API bootstrap operation; delete + redeploy immediately after. The legacy `/bootstrap` UI is removed. |
 | `ALLOW_PUBLIC_REGISTRATION` | **UNSET** | Never set in production. Public sign-up is permanently off. |
 
 Re-deploy once after any change so the new values take effect.
@@ -53,7 +52,7 @@ npm run smoke-prod https://pragatialm.vercel.app
 The script checks the four things that absolutely must be true before opening:
 
 - ✓ `/api/health` returns 200 with `db: up` and latency < 1 s
-- ✓ `/bootstrap` returns **404** (the safe state — token unset)
+- ✓ `/bootstrap` returns **404** (legacy UI removed)
 - ✓ `/api/admin/bootstrap` returns 404
 - ✓ `/api/auth/register` returns 403 (public sign-up off)
 - ✓ Security headers are present (CSP, X-Frame-Options, HSTS, etc.)

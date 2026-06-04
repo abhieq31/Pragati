@@ -10,7 +10,7 @@
  *  login, loaders, favicon, apple-icon — and lines up with the rounded-xl
  *  avatar shape system used across the app.
  *
- *  Use this everywhere the app needs a logo (login, signup, forgot-password,
+ *  Use this everywhere the app needs a logo (login, signup,
  *  sidebar, loading state, favicon). No external assets, no corporate logo.
  */
 export function PragatiMark({

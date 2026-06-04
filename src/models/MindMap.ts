@@ -30,8 +30,6 @@ const MindMapSchema = new Schema({
   edges:  { type: [MMEdgeSchema], default: [] },
 }, { timestamps: true });
 
-MindMapSchema.index({ userId: 1 }, { unique: true });
-
 export type MindMapDoc = InferSchemaType<typeof MindMapSchema>;
 export const MindMap = (mongoose.models.MindMap as mongoose.Model<MindMapDoc>) ||
   mongoose.model<MindMapDoc>('MindMap', MindMapSchema);
