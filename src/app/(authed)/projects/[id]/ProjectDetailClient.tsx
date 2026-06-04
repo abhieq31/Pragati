@@ -1169,7 +1169,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                 meaning; no shouted label. */}
             <button
               type="button"
-              onClick={() => setBirdsEyeOpen(true)}
+              onClick={() => setShowBirdEye(true)}
               title="Bird's-eye view"
               aria-label="Open bird's-eye view"
               className="inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
