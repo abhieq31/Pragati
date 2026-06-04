@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
-import { Trash2, BarChart3, X, Eye } from 'lucide-react';
+import { Trash2, BarChart3, X, Compass } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getTeamLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
 // Heavy interactive SVG canvas — defer it until a viewer opens the modal.
