@@ -686,7 +686,6 @@ function ProjectsColumn({
    removed dashboard drag-reordering: a quick bird's-eye list shouldn't carry
    hidden per-user state, and TCD order is the one an auditor expects.) */
 function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
-  // Sort by TCD (fallback dueDate), undated tasks last. Stable + pure.
   const sorted = useMemo(() => {
     const keyOf = (t: TeamTask) => {
       const d = t.ccTcd || t.dueDate;
@@ -699,48 +698,119 @@ function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
   const doneCount = sorted.filter((t) => t.status === 'done').length;
 
   return (
-    <ul className="divide-y divide-slate-100 dark:divide-white/5">
-      {/* Header — tasks render by target date so the nearest deadline is on top
-          and how far along the project is reads at a glance. */}
-      <li aria-hidden className="px-3 pt-2 pb-1 flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/25">
-          By target date · {doneCount}/{sorted.length} done
-        </span>
-        <span className="flex-1 h-px bg-slate-100 dark:bg-white/5" />
+    <ul>
+      {/* ── Section divider ─────────────────────────────────────────── */}
+      <li aria-hidden className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-white/35">
+            Tasks by target date
+          </span>
+          <span className="text-[9px] font-bold text-slate-400 dark:text-white/25 tabular-nums">
+            {doneCount} / {sorted.length} done
+          </span>
+        </div>
+        <div className="mt-1.5 h-px bg-slate-100 dark:bg-white/[0.06]" />
       </li>
+
       {visible.map((t) => {
-        const meta   = FLOW_META[t.status] || FLOW_META.todo;
-        const isDone = t.status === 'done';
+        const isDone    = t.status === 'done';
+        const due       = t.ccTcd || t.dueDate;
+        const dueIn     = daysUntil(due);
+        const isOverdue = !isDone && !!due && dueIn !== null && dueIn < 0;
+        const isBlocked = t.status === 'blocked';
+
+        /* Dot colour — five-value system:
+           green=done (check icon), red=overdue|blocked, amber=due≤3d,
+           blue=active, grey=todo/future/undated */
+        const [dotColor, dotTitle] = ((): [string, string] => {
+          if (isBlocked) return ['#ef4444', 'Blocked'];
+          if (isOverdue) return ['#ef4444', 'Overdue'];
+          if (dueIn !== null && dueIn <= 3) return ['#d97706', 'Due soon'];
+          if (t.status === 'in_progress') return ['#1565C0', 'In progress'];
+          if (t.status === 'review')      return ['#1565C0', 'In review'];
+          return ['#94a3b8', 'To do'];
+        })();
+
         return (
           <li
             key={t.id}
-            className="relative flex items-center gap-3 px-3 py-2 transition-colors hover:bg-slate-50/60 dark:hover:bg-white/[0.03]"
+            className="group flex items-start gap-2.5 px-4 py-2 hover:bg-slate-50/60 dark:hover:bg-white/[0.025] transition-colors border-t border-slate-50 dark:border-white/[0.03]"
           >
-            <span className="shrink-0 w-1.5" />
+            {/* Status indicator — vertically aligned with title baseline */}
+            <div className="shrink-0 mt-[4px]">
+              {isDone ? (
+                <CheckCircle2 size={13} className="text-emerald-500" />
+              ) : (
+                <span
+                  title={dotTitle}
+                  aria-label={dotTitle}
+                  className="block w-2 h-2 rounded-full"
+                  style={{ background: dotColor }}
+                />
+              )}
+            </div>
 
-            {/* Completed steps get a green check in place of the status dot, so
-                progress down the pipeline is unmistakable. */}
-            {isDone ? (
-              <CheckCircle2 size={14} className="shrink-0 text-emerald-500" aria-hidden />
-            ) : (
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} aria-hidden />
-            )}
+            {/* Row content */}
+            <div className="flex-1 min-w-0">
+              {/* Title + right-side exceptions/date */}
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/tasks/${t.id}`}
+                  className={`flex-1 min-w-0 text-[12.5px] font-semibold line-clamp-1 leading-snug ${
+                    isDone
+                      ? 'line-through decoration-slate-300 dark:decoration-white/20 text-slate-500 dark:text-white/40'
+                      : 'text-slate-800 dark:text-white/82 hover:text-blue-700 dark:hover:text-blue-400'
+                  }`}
+                >
+                  {t.title}
+                </Link>
 
-            <Link
-              href={`/tasks/${t.id}`}
-              className={`flex-1 min-w-0 text-xs leading-snug ${isDone ? 'text-slate-400 dark:text-white/25' : 'text-slate-800 dark:text-white/75 hover:text-blue-700 dark:hover:text-blue-400'}`}
-            >
-              <span className={`line-clamp-1 font-semibold ${isDone ? 'line-through decoration-slate-300 dark:decoration-white/20' : ''}`}>{t.title}</span>
-              <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400 dark:text-white/30">
-                <span className="truncate">{t.assigneeName || 'Unassigned'}</span>
-                {(t.ccTcd || t.dueDate) && <span>· {formatDate(t.ccTcd || t.dueDate)}</span>}
-              </span>
-            </Link>
+                {/* Exception badges — only when action is needed */}
+                {isOverdue && (
+                  <span className="shrink-0 text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
+                    Overdue
+                  </span>
+                )}
+                {isBlocked && !isOverdue && (
+                  <span className="shrink-0 text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
+                    Blocked
+                  </span>
+                )}
+                {!t.assigneeName && !isDone && (
+                  <span className="shrink-0 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded">
+                    Unassigned
+                  </span>
+                )}
+
+                {/* Due date — always on the right */}
+                {due && (
+                  <span className="shrink-0 text-[10px] text-slate-400 dark:text-white/28 tabular-nums">
+                    {formatDate(due)}
+                  </span>
+                )}
+
+                {/* Hover action */}
+                <Link
+                  href={`/tasks/${t.id}`}
+                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 ml-0.5"
+                >
+                  Open
+                </Link>
+              </div>
+
+              {/* Metadata: assignee (skip if shown as "Unassigned" badge above) */}
+              {(t.assigneeName || isDone) && (
+                <div className="text-[11px] text-slate-400 dark:text-white/28 mt-0.5">
+                  {t.assigneeName}
+                </div>
+              )}
+            </div>
           </li>
         );
       })}
+
       {sorted.length > 20 && (
-        <li className="px-3 py-2 text-[10px] text-slate-400 dark:text-white/30">
+        <li className="px-4 py-2.5 text-[10px] text-slate-400 dark:text-white/28 border-t border-slate-50 dark:border-white/[0.03]">
           Showing 20 of {sorted.length} tasks — open the project for the full board.
         </li>
       )}
