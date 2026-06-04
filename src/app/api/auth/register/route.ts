@@ -5,6 +5,7 @@ import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 import { normalizeRole, signToken, setAuthCookie, configuredAdminEmail } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
+import { rateLimit } from '@/lib/rateLimit';
 import { u } from '@/lib/serialize';
 
 export const runtime = 'nodejs';
@@ -33,6 +34,14 @@ const Body = z.object({
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anon';
+    if (!rateLimit(`register:${ip}`, 5, 60_000)) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Wait a minute and try again.' },
+        { status: 429 },
+      );
+    }
+
     await connectDB();
 
     if (process.env.ALLOW_PUBLIC_REGISTRATION !== 'true') {
