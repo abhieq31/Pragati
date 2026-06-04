@@ -6,7 +6,9 @@ import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X, Eye } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import BirdEyeView, { getTeamLayout, downloadBirdEyeSvg } from '@/components/BirdEyeView';
+import { getTeamLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
+// Heavy interactive SVG canvas — defer it until a viewer opens the modal.
+const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
 const ActivityGraph = dynamic(
   () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
   { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },

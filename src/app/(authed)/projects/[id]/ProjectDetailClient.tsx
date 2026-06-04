@@ -20,7 +20,10 @@ import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
-import BirdEyeView, { getInitialLayout, downloadBirdEyeSvg } from '@/components/BirdEyeView';
+import dynamic from 'next/dynamic';
+import { getInitialLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
+// Heavy interactive SVG canvas — only load it when a viewer actually opens it.
+const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
