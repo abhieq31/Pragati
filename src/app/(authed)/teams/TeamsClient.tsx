@@ -105,8 +105,8 @@ export default function TeamsClient({
       </div>
 
       {/* Search — same card shell as the Projects toolbar so both pages align */}
-      <div className="card p-4">
-        <div className="relative">
+      <div className="card p-4 min-h-[72px] flex items-center">
+        <div className="relative w-full">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none" />
           <input
             className="input pl-8 text-sm"
@@ -131,7 +131,7 @@ export default function TeamsClient({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
           {filtered.map((t) => (
             <TeamCard
               key={t.id}
@@ -195,7 +195,7 @@ function TeamCard({
     <div className="card p-5 group hover:shadow-md transition-shadow flex flex-col">
       {/* Top row: avatar + name + function tag + manage actions */}
       <div className="flex items-start gap-3">
-        <Avatar name={team.name} size={38} />
+        <Avatar name={team.name} size={40} />
         <div className="flex-1 min-w-0">
           <Link href={`/teams/${team.id}`} className="font-bold text-[15px] text-slate-900 hover:text-brand-700 truncate block leading-snug">
             {team.name}

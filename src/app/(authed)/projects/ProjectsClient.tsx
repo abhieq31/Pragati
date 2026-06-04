@@ -104,8 +104,8 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="card p-4 min-h-[72px] flex items-center">
+        <div className="flex flex-wrap items-center gap-3 w-full">
           <div className="relative flex-1 min-w-[180px]">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none" />
             <input
@@ -149,7 +149,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Loading skeleton */}
       {!loaded && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" aria-busy="true" aria-live="polite">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }} aria-busy="true" aria-live="polite">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="card p-5 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -172,7 +172,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Grid */}
       {loaded && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
         {projects.map((p) => {
           const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
           const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
