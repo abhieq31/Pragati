@@ -22,7 +22,7 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3, Eye,
+  Maximize2, X, BarChart3, Eye, Compass,
 } from 'lucide-react';
 import dynamic2 from 'next/dynamic';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
