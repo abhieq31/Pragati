@@ -133,11 +133,15 @@ function greetingEmoji(now = new Date()): string {
   const fest = festivalFor(now);
   if (fest) return fest.emoji;
   const h = now.getHours();
-  if (h < 5)  return '🌙';
-  if (h < 12) return '☀️';
-  if (h < 17) return '👋';
-  if (h < 21) return '🌆';
-  return '🌙';
+  const day = now.getDay();
+  if (h < 5)  return '🌃';
+  if (h < 7)  return '🌅';
+  if (h < 12) return day === 1 ? '🚀' : day === 5 ? '⚡' : '🌤️';
+  if (h < 14) return '☀️';
+  if (h < 17) return day === 5 ? '🎯' : '🛫';
+  if (h < 19) return '🌇';
+  if (h < 22) return '🌆';
+  return '🌃';
 }
 
 // A meaningful one-liner driven by the user's actual state — not filler. On a
@@ -145,15 +149,14 @@ function greetingEmoji(now = new Date()): string {
 function greetingSubline({ open, overdue, dueToday, now = new Date() }: { open: number; overdue: number; dueToday: number; now?: Date }) {
   const fest = festivalFor(now);
   if (fest && open === 0) return fest.note;
-  if (overdue > 0)   return `${overdue} task${overdue === 1 ? '' : 's'} slipped past due — let's bring ${overdue === 1 ? 'it' : 'them'} back in control.`;
-  if (dueToday > 0)  return `${dueToday} due today. Clear ${dueToday === 1 ? 'it' : 'them'} and stay audit-ready.`;
-  if (open === 0)    return 'Nothing open — every record is closed and in control. 🎯';
+  if (overdue > 0) return `${overdue} task${overdue === 1 ? '' : 's'} past due — clear ${overdue === 1 ? 'it' : 'the backlog'} and move forward.`;
+  if (dueToday > 0) return `${dueToday} landing today. Let's make it count.`;
+  if (open === 0) return 'All clear — nothing open. Take a breath. ✦';
   const day = now.getDay();
-  const dayFlavour = day === 1 ? 'A fresh week — '
-    : day === 5 ? 'Bring it home for the week — '
-    : (day === 0 || day === 6) ? 'Weekend focus — '
-    : '';
-  return `${dayFlavour}${open} task${open === 1 ? '' : 's'} moving through the pipeline. Steady progress.`;
+  if (day === 1) return `${open} open. What matters most this week?`;
+  if (day === 5) return `${open} open heading into the weekend. Finish strong.`;
+  if (day === 0 || day === 6) return `${open} on the board. You've got this.`;
+  return `${open} in flight.`;
 }
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
@@ -851,7 +854,6 @@ function TaskTableRow({ t }: { t: TeamTask }) {
           className="text-xs text-slate-800 font-medium hover:text-blue-700 line-clamp-1 group-hover:underline underline-offset-2">
           {t.title}
         </Link>
-        {t.gxpCritical && <span className="ml-1.5 text-[9px] text-amber-600 font-bold">· GxP</span>}
       </td>
       <td className="px-2 py-2.5 whitespace-nowrap">
         {t.subtaskCount > 0 ? (

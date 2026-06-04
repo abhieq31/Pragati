@@ -612,10 +612,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
           <form onSubmit={(e) => { saveIdentity(e); }} className="space-y-4">
             <div className="flex items-center gap-3">
               <Avatar name={user.name} size={52} letter={avatarLetter} bg={avatarBg} font={avatarFont} />
-              <button type="button" onClick={() => setShowAvatarEditor(true)}
-                className="btn-secondary inline-flex items-center gap-1.5 text-xs">
-                <Pencil size={12} /> Change avatar
-              </button>
+              <p className="text-xs text-slate-400 dark:text-white/30">Tap your avatar on the profile page to change it.</p>
             </div>
             <Field label="Full name">
               <input className="input" value={name} onChange={e => setName(e.target.value)} required />
