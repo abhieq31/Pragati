@@ -10,13 +10,13 @@ import {
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import dynamicImport from 'next/dynamic';
-// The mind map is interactive SVG with autosave; keep it out of the My Day
-// first paint unless the user opens it.
-const MindMap = dynamicImport(
-  () => import('@/components/MindMap').then((m) => m.MindMap),
+// The whiteboard is an interactive canvas with autosave; keep it out of the
+// My Day first paint unless the user opens it.
+const Whiteboard = dynamicImport(
+  () => import('@/components/Whiteboard').then((m) => m.Whiteboard),
   { ssr: false, loading: () => (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 h-[460px] flex items-center justify-center text-xs text-slate-400">
-      Loading mind map…
+      Loading whiteboard…
     </div>
   ) },
 );
@@ -258,19 +258,27 @@ export default function MyDayClient({ initialData }: {
         </div>
       </form>
 
-      {/* Mind map — a quieter section header (the capture above is the hero);
-          opening it reveals the full node-link whiteboard, framed like a real
-          canvas so the surface itself carries the weight, not the toggle. */}
-      <div className="mb-6">
+      {/* Whiteboard toggle — opens a free-form drawing surface below. A
+          board, not a mind-map: drag-to-draw, switch tools, erase, start
+          over. Forces real thinking rather than the pre-formatted polish of
+          a node graph. */}
+      <div className="mb-5">
         <button type="button"
           onClick={() => setMindMapOpen((v) => !v)}
-          className="group w-full flex items-center justify-between gap-3 py-2 text-left">
-          <div className="flex items-center gap-2 min-w-0">
-            <Network size={14} className="text-slate-400 dark:text-white/30 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors shrink-0" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/55 transition-colors">
-              Mind map
-            </span>
-            <span className="hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 truncate">· branch a thought into a whiteboard</span>
+          className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-colors text-left ${
+            mindMapOpen
+              ? 'border-blue-300 bg-blue-50/60 dark:bg-blue-500/10 dark:border-blue-500/30'
+              : 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.025] hover:border-slate-300'
+          }`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #1565C0, #22C55E)' }}>
+              <BrainCircuit size={15} className="text-white" />
+            </div>
+            <div>
+              <div className="text-[12px] font-black text-slate-700 dark:text-white/80">Whiteboard</div>
+              <div className="text-[10px] text-slate-400 dark:text-white/35">Marker on board — draw, erase, start over. Nothing precious.</div>
+            </div>
           </div>
           <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
             {mindMapOpen ? 'Hide' : 'Open canvas'}
@@ -278,8 +286,8 @@ export default function MyDayClient({ initialData }: {
           </span>
         </button>
         {mindMapOpen && (
-          <div className="mt-2 fade-in-soft">
-            <MindMap />
+          <div className="mt-3 fade-in-soft">
+            <Whiteboard />
           </div>
         )}
       </div>

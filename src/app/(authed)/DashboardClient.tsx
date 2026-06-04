@@ -22,7 +22,7 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3, Eye,
+  Maximize2, X, BarChart3, Eye, Compass,
 } from 'lucide-react';
 import dynamic2 from 'next/dynamic';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
@@ -300,38 +300,24 @@ export default function DashboardClient({
             <span className="text-[0.85em] translate-y-[0.06em]" suppressHydrationWarning>{greetingEmoji()}</span>
           </h1>
         </div>
-        {/* Bird's-eye view trigger — opens a full-screen tree of the
-            workspace (team → projects → tasks). Minimally rendered (icon
-            only with a tooltip) so it doesn't compete with the greeting. */}
+        {/* Bird's-eye view trigger — icon-only, deliberately minimal. The
+            label was reading as marketing copy on the greeting row; the icon
+            speaks for itself and the tooltip carries the affordance. */}
         {!isFirstRun && (
           <button
             type="button"
             onClick={() => setBirdsEyeOpen(true)}
-            title="Open bird's-eye view"
+            title="Bird's-eye view"
             aria-label="Open bird's-eye view"
-            className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-white/40 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+            className="shrink-0 mt-1 inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
           >
-            <Eye size={14} />
-            <span className="hidden sm:inline">Bird&apos;s-eye</span>
+            <Compass size={18} />
           </button>
         )}
       </div>
-      {!isFirstRun && (
-        <div className="mb-5 sm:mb-6 -mt-3">
-          {(() => {
-            const open = visibleTasks.filter(t => t.status !== 'done').length;
-            const now = new Date();
-            const isSameDay = (d: Date) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-            const overdue = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now && !isSameDay(new Date(t.dueDate))).length;
-            const dueToday = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && isSameDay(new Date(t.dueDate))).length;
-            return (
-              <p className="mt-1 text-sm text-slate-500 dark:text-white/45" suppressHydrationWarning>
-                {greetingSubline({ open, overdue, dueToday, now })}
-              </p>
-            );
-          })()}
-        </div>
-      )}
+      {/* Subline removed. The summary chips below (Ongoing / Open / Overdue
+          / Teams) already convey workspace state at a glance; an extra
+          sentence above them was repeating the same numbers in prose. */}
       {/* Bird's-eye view modal — mounted at the page level so the SVG
           tree gets its own scroll area regardless of where the trigger
           was clicked from. */}
@@ -465,6 +451,25 @@ function SummaryChip({
   return <Link href={href || '#'} className={className}>{content}</Link>;
 }
 
+/** Compress a verbose project code (CHANGE_CONTROL-2026-0011) into a
+ *  badge-friendly short form (CC-26-0011). Keeps a stable mapping for the
+ *  prefixes we actually use; anything else falls back to first letters. */
+function shortProjectCode(code: string): string {
+  if (!code) return '';
+  const PREFIX: Record<string, string> = {
+    CHANGE_CONTROL: 'CC', SOFTWARE_CHANGE: 'SC', DEVIATION: 'DEV',
+    CAPA: 'CAPA', DEVIATION_CAPA: 'DEV/CAPA', SOP: 'SOP', AUDIT: 'AUD',
+    VALIDATION: 'VAL', CSV: 'CSV', AGILE: 'AGI', SOFTWARE_RELEASE: 'REL',
+    PRODUCT_LAUNCH: 'LAU', RESEARCH: 'RES', GENERIC: 'PRJ', PRSN: 'PRSN',
+  };
+  const m = code.match(/^([A-Z_]+)-?(\d{2,4})?-?(\d+)?$/);
+  if (!m) return code.length > 14 ? code.slice(0, 13) + '…' : code;
+  const prefix = PREFIX[m[1]] ?? m[1].split('_').map((w) => w[0]).join('');
+  const year = m[2] ? m[2].slice(-2) : '';
+  const num  = m[3] || '';
+  return [prefix, year, num].filter(Boolean).join('-');
+}
+
 function SummaryTaskPopup({
   title, subtitle, tasks, tone, onClose,
 }: { title: string; subtitle: string; tasks: TeamTask[]; tone: 'blue' | 'red'; onClose: () => void }) {
@@ -500,7 +505,10 @@ function SummaryTaskPopup({
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-slate-800 dark:text-white/80 line-clamp-1">{t.title}</div>
                         <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-white/35 flex-wrap">
-                          <span className="font-semibold">{t.projectCode}</span>
+                          <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55"
+                                title={t.projectCode}>
+                            {shortProjectCode(t.projectCode)}
+                          </span>
                           {t.assigneeName && <><span>·</span><span>{t.assigneeName}</span></>}
                           {due && (
                             <>
@@ -776,7 +784,7 @@ function ProjectRow({
         className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
       >
         <button
-          className={`p-0.5 text-slate-400 dark:text-white/30 transition-transform rounded-full ${nudgeExpand && !open ? 'dashboard-expand-nudge' : ''}`}
+          className={`p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform rounded-full ${nudgeExpand && !open ? 'dashboard-expand-nudge' : ''}`}
           aria-label={open ? 'Collapse project tasks' : 'Expand project tasks'}
           style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         >
@@ -1053,35 +1061,9 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
       </div>
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      <div className="px-4 pt-3 pb-2 border-b border-slate-100 dark:border-white/[0.06]">
-        <div className="flex gap-1 flex-wrap">
-          {FILTERS.map(f => (
-            <button key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${
-                filter === f.key
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.10]'
-              }`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        {filter === 'untilDate' && (
-          <div className="mt-2.5">
-            <DatePicker
-              value={untilDate}
-              onChange={setUntilDate}
-              placeholder="Pick an end date"
-              size="sm"
-              minDate={new Date()}
-            />
-          </div>
-        )}
-      </div>
-
       <div className="overflow-y-auto" style={{ maxHeight: expanded ? 'calc(100vh - 220px)' : '60vh' }}>
-        {/* Overdue group */}
+        {/* Overdue group — sits at the top: nothing to filter, just the
+            tasks that have slipped past their date. */}
         {overdue.length > 0 && (
           <ActionGroup
             title="Overdue"
@@ -1094,16 +1076,55 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
           />
         )}
 
-        {/* Due group */}
-        <ActionGroup
-          title="Due"
-          count={due.length}
-          icon={<Clock size={11} className="text-blue-500" />}
-          dotClass="bg-blue-400"
-          tasks={due}
-          showAll={expanded}
-          emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming work.' : 'Nothing due — all clear.'}
-        />
+        {/* Due group — header first, then the window filters (they control
+            this group), then the list. Reading order matches the question:
+            "what's due, and over what window?". */}
+        <div>
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
+            <div className="flex items-center gap-1.5">
+              <Clock size={11} className="text-blue-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">Due</span>
+              {due.length > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{due.length}</span>
+          </div>
+          <div className="px-4 pt-2 pb-2 border-b border-slate-100 dark:border-white/[0.05]">
+            <div className="flex gap-1 flex-wrap">
+              {FILTERS.map(f => (
+                <button key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${
+                    filter === f.key
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.10]'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {filter === 'untilDate' && (
+              <div className="mt-2.5">
+                <DatePicker
+                  value={untilDate}
+                  onChange={setUntilDate}
+                  placeholder="Pick an end date"
+                  size="sm"
+                  minDate={new Date()}
+                />
+              </div>
+            )}
+          </div>
+          <ActionGroup
+            title=""
+            count={due.length}
+            icon={null}
+            dotClass="bg-blue-400"
+            tasks={due}
+            showAll={expanded}
+            emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming work.' : 'Nothing due — all clear.'}
+            hideHeader
+          />
+        </div>
       </div>
     </section>
     </div>
@@ -1116,22 +1137,28 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
 }
 
 function ActionGroup({
-  title, count, icon, tasks, isOverdue, emptyHint, showAll,
+  title, count, icon, tasks, isOverdue, emptyHint, showAll, hideHeader,
 }: {
   title: string; count: number; icon: React.ReactNode; dotClass?: string;
   tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showAll?: boolean;
+  /** When true, the small group header is suppressed — the parent has
+   *  already rendered its own (e.g. the Up Next panel pulls the Due header
+   *  out so the filter chips can sit between it and the list). */
+  hideHeader?: boolean;
 }) {
   const limit = showAll ? tasks.length : 12;
   return (
     <div>
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
-        <div className="flex items-center gap-1.5">
-          {icon}
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
-          {count > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
+          <div className="flex items-center gap-1.5">
+            {icon}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
+            {count > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
         </div>
-        <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
-      </div>
+      )}
       {tasks.length === 0 ? (
         <div className="px-4 py-6 text-center">
           <CheckCircle2 size={18} className="mx-auto text-emerald-300 mb-1.5" />
@@ -1255,7 +1282,7 @@ function ContributorsPanel({
         <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{people.length}</span>
         <ChevronDown
           size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
+          className={`text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
@@ -1339,7 +1366,7 @@ function MyFocusPanel({
         <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{rows.length}</span>
         <ChevronDown
           size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
+          className={`text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
@@ -1426,7 +1453,7 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${loadBadge}`}>
             {loadLabel}
           </span>
-          <button className="p-0.5 text-slate-400 dark:text-white/30 transition-transform"
+          <button className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform"
             style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
             <ChevronDown size={12} />
           </button>

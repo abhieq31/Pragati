@@ -99,11 +99,16 @@ interface PositionedNode {
 
 interface Edge { from: string; to: string }
 
-const NODE_WIDTH = { root: 220, team: 200, project: 230, task: 240, count: 110 } as const;
-const NODE_HEIGHT = { root: 64, team: 56, project: 56, task: 42, count: 36 } as const;
-const COL_GAP    = 90;
-const ROW_GAP    = 12;
-const SUBTREE_PAD = 24;
+// Top-down org-chart layout. Nodes shrink at deeper levels so a wide tree
+// stays scannable from above. Tasks stack vertically under their project
+// (one column per project) rather than fanning sideways — keeps the canvas
+// width bounded even on projects with many tasks.
+const NODE_WIDTH = { root: 280, team: 220, project: 220, task: 220, count: 220 } as const;
+const NODE_HEIGHT = { root: 70, team: 60, project: 60, task: 40, count: 36 } as const;
+const LEVEL_GAP_Y = 70;   // vertical distance between depth levels
+const SIBLING_GAP_X = 32; // horizontal distance between siblings of the same parent
+const SUBTREE_GAP_X = 56; // extra horizontal gap between sibling subtrees
+const TASK_STACK_GAP_Y = 8;  // vertical spacing inside a project's task stack
 
 function nodeKey(kind: string, id: string) { return `${kind}:${id}`; }
 
@@ -111,6 +116,11 @@ function nodeKey(kind: string, id: string) { return `${kind}:${id}`; }
  * Pure layout pass. Returns absolute coordinates for every node + the edges
  * between them. Layout is deterministic (alphabetical) so the export and
  * the on-screen view share pixel coordinates.
+ *
+ * Direction: TOP-DOWN. Root sits at the top, with each level below it
+ * spreading horizontally so the tree reads as an org chart. Tasks under a
+ * project stack vertically rather than fanning out, so a project with
+ * 30 tasks doesn't blow the canvas width past two screens.
  */
 function layout(data: BirdsEyeData, opts: { collapseTasks: boolean }): {
   nodes: PositionedNode[];
@@ -149,47 +159,42 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean }): {
     });
   }
 
-  // Walk three levels right-to-left, computing each subtree's height first
-  // so its parent can centre against it.
-  type Subtree = { node: PositionedNode; children: Subtree[]; height: number };
+  // Walk top-down: compute each subtree's WIDTH first so its parent can
+  // centre against it. (The previous left-to-right layout summed heights;
+  // top-down sums widths.)
+  type Subtree = { node: PositionedNode; children: Subtree[]; width: number; tasks?: PositionedNode[] };
 
+  /** Project subtree — its children are a vertical task stack (not branches),
+   *  so the subtree width is just the project node's width. */
   function buildProjectSubtree(p: BirdsEyeProject): Subtree {
     const tasks = tasksByProject.get(p.id) || [];
-    const childW = NODE_WIDTH.task;
-    const childH = NODE_HEIGHT.task;
-    const children: Subtree[] = [];
+    const taskNodes: PositionedNode[] = [];
     if (opts.collapseTasks && tasks.length > 0) {
-      // Single "X tasks" chip instead of all the individual rows.
-      const countNode: PositionedNode = {
+      taskNodes.push({
         kind: 'count', id: `count:${p.id}`,
         x: 0, y: 0, width: NODE_WIDTH.count, height: NODE_HEIGHT.count,
         label: `${tasks.length} task${tasks.length === 1 ? '' : 's'}`,
         sub: `${p.tasksDone}/${p.taskCount} done`,
-      };
-      children.push({ node: countNode, children: [], height: NODE_HEIGHT.count });
+      });
     } else {
-      // Render up to TASK_CAP per project. Beyond that the SVG starts to
-      // out-scroll a typical viewport; we surface a clear "+N more" chip
-      // so it's never silently truncated when shown to leadership.
+      // Cap individual task rendering so a giant project doesn't drag the
+      // canvas past a reasonable height. Grouped mode shows everything.
       const TASK_CAP = 60;
       for (const t of tasks.slice(0, TASK_CAP)) {
-        const n: PositionedNode = {
+        taskNodes.push({
           kind: 'task', id: nodeKey('task', t.id),
-          x: 0, y: 0, width: childW, height: childH,
+          x: 0, y: 0, width: NODE_WIDTH.task, height: NODE_HEIGHT.task,
           label: t.title,
           sub: [t.assigneeName, t.status].filter(Boolean).join(' · '),
           data: t,
-        };
-        children.push({ node: n, children: [], height: childH });
+        });
       }
       if (tasks.length > TASK_CAP) {
-        const more: PositionedNode = {
+        taskNodes.push({
           kind: 'count', id: `more:${p.id}`,
           x: 0, y: 0, width: NODE_WIDTH.count, height: NODE_HEIGHT.count,
-          label: `+${tasks.length - TASK_CAP} more — group to see all`,
-          sub: 'click Group tasks',
-        };
-        children.push({ node: more, children: [], height: NODE_HEIGHT.count });
+          label: `+${tasks.length - TASK_CAP} more — Group tasks for all`,
+        });
       }
     }
     const projectNode: PositionedNode = {
@@ -197,8 +202,7 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean }): {
       x: 0, y: 0, width: NODE_WIDTH.project, height: NODE_HEIGHT.project,
       label: p.name, sub: `${p.code} · ${p.tasksDone}/${p.taskCount}`, data: p,
     };
-    const childrenH = children.length === 0 ? NODE_HEIGHT.project : children.reduce((sum, c) => sum + c.height + ROW_GAP, -ROW_GAP);
-    return { node: projectNode, children, height: Math.max(NODE_HEIGHT.project, childrenH) };
+    return { node: projectNode, children: [], width: NODE_WIDTH.project, tasks: taskNodes };
   }
 
   function buildTeamSubtree(team: BirdsEyeTeam, teamProjects: BirdsEyeProject[]): Subtree {
@@ -209,8 +213,10 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean }): {
       data: team,
     };
     const children = teamProjects.map(buildProjectSubtree);
-    const childrenH = children.length === 0 ? NODE_HEIGHT.team : children.reduce((sum, c) => sum + c.height + SUBTREE_PAD, -SUBTREE_PAD);
-    return { node: teamNode, children, height: Math.max(NODE_HEIGHT.team, childrenH) };
+    const childrenW = children.length === 0
+      ? NODE_WIDTH.team
+      : children.reduce((sum, c) => sum + c.width + SIBLING_GAP_X, -SIBLING_GAP_X);
+    return { node: teamNode, children, width: Math.max(NODE_WIDTH.team, childrenW) };
   }
 
   // Build the forest.
@@ -226,63 +232,79 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean }): {
   } else if (data.scope === 'team') {
     for (const p of data.projects.slice().sort((a, b) => a.name.localeCompare(b.name))) subtrees.push(buildProjectSubtree(p));
   } else {
-    // project scope — flatten one level (skip the team column)
     for (const p of data.projects.slice().sort((a, b) => a.name.localeCompare(b.name))) subtrees.push(buildProjectSubtree(p));
   }
 
-  // ── Position pass ──
-  const startX = 40;
-  let y = 40;
+  // ── Top-down position pass ──
+  // Each subtree gets its allotted width; nodes are placed at the centre of
+  // that allotment so parent + children line up vertically.
+  const startY = 40;
+  const PADDING_X = 40;
 
-  function placeChildren(parent: PositionedNode, children: Subtree[], childX: number) {
-    // Centre the children's vertical range against the parent.
-    const totalH = children.reduce((s, c) => s + c.height + ROW_GAP, -ROW_GAP);
-    let cy = parent.y + parent.height / 2 - totalH / 2;
-    for (const c of children) {
-      placeSubtree(c, childX, cy);
-      cy += c.height + ROW_GAP;
-    }
-  }
-
-  function placeSubtree(s: Subtree, x: number, y0: number) {
-    s.node.x = x;
-    s.node.y = y0 + s.height / 2 - s.node.height / 2;
+  function placeSubtreeAt(s: Subtree, leftX: number, topY: number) {
+    // Centre the subtree's root horizontally within its allotted width.
+    s.node.x = leftX + (s.width - s.node.width) / 2;
+    s.node.y = topY;
     nodes.push(s.node);
+
+    // Project's task stack — vertical column below the project node.
+    if (s.tasks && s.tasks.length) {
+      let stackY = topY + s.node.height + LEVEL_GAP_Y / 2;
+      const stackX = s.node.x + (s.node.width - NODE_WIDTH.task) / 2;
+      for (const t of s.tasks) {
+        t.x = stackX + (NODE_WIDTH.task - t.width) / 2;
+        t.y = stackY;
+        nodes.push(t);
+        // Only edge the first one to the project; the rest are visually a
+        // contiguous stack and a single connector reads cleaner.
+        edges.push({ from: s.node.id, to: t.id });
+        stackY += t.height + TASK_STACK_GAP_Y;
+      }
+    }
+
+    // Child subtrees laid out left-to-right beneath the parent.
     if (s.children.length) {
-      const childX = x + s.node.width + COL_GAP;
-      placeChildren(s.node, s.children, childX);
+      const childTop = topY + s.node.height + LEVEL_GAP_Y;
+      let cursor = leftX + (s.width - s.children.reduce((sum, c) => sum + c.width + SIBLING_GAP_X, -SIBLING_GAP_X)) / 2;
       for (const c of s.children) {
+        placeSubtreeAt(c, cursor, childTop);
         edges.push({ from: s.node.id, to: c.node.id });
+        cursor += c.width + SIBLING_GAP_X;
       }
     }
   }
 
-  // Root column (workspace or project label)
+  // Root: centred horizontally above the forest.
+  const forestW = subtrees.length === 0
+    ? NODE_WIDTH.root
+    : subtrees.reduce((sum, s) => sum + s.width + SUBTREE_GAP_X, -SUBTREE_GAP_X);
+  const totalW = Math.max(NODE_WIDTH.root, forestW);
+
   const rootNode: PositionedNode = {
     kind: 'root', id: 'root',
-    x: startX, y: 40, width: NODE_WIDTH.root, height: NODE_HEIGHT.root,
+    x: PADDING_X + (totalW - NODE_WIDTH.root) / 2,
+    y: startY,
+    width: NODE_WIDTH.root, height: NODE_HEIGHT.root,
     label: data.rootLabel, sub: data.rootSubLabel,
   };
-  const totalH = subtrees.reduce((s, c) => s + c.height + SUBTREE_PAD, -SUBTREE_PAD);
-  rootNode.y = 40 + (Math.max(totalH, NODE_HEIGHT.root) - NODE_HEIGHT.root) / 2;
   nodes.push(rootNode);
 
-  // Subtrees fan out to the right of root.
-  let cy = 40;
-  const childX = startX + NODE_WIDTH.root + COL_GAP;
+  // Lay subtrees out left-to-right beneath the root.
+  let cursorX = PADDING_X + (totalW - forestW) / 2;
+  const childTop = startY + NODE_HEIGHT.root + LEVEL_GAP_Y;
   for (const s of subtrees) {
-    placeSubtree(s, childX, cy);
+    placeSubtreeAt(s, cursorX, childTop);
     edges.push({ from: 'root', to: s.node.id });
-    cy += s.height + SUBTREE_PAD;
+    cursorX += s.width + SUBTREE_GAP_X;
   }
 
-  // Final dimensions.
+  // Final canvas dimensions.
   let maxX = 0, maxY = 0;
   for (const n of nodes) {
-    if (n.x + n.width > maxX)   maxX = n.x + n.width;
-    if (n.y + n.height > maxY)  maxY = n.y + n.height;
+    if (n.x + n.width  > maxX) maxX = n.x + n.width;
+    if (n.y + n.height > maxY) maxY = n.y + n.height;
   }
-  return { nodes, edges, width: maxX + 40, height: Math.max(maxY + 40, cy + 40) };
+  return { nodes, edges, width: maxX + PADDING_X, height: maxY + PADDING_X };
 }
 
 function NodeShape({ n }: { n: PositionedNode }) {
@@ -347,14 +369,16 @@ function NodeShape({ n }: { n: PositionedNode }) {
   );
 }
 
-/** Smooth cubic-Bézier between two node anchor points. */
+/** Smooth cubic-Bézier between two node anchor points. The connection
+ *  exits the bottom centre of `from` and enters the top centre of `to`,
+ *  matching the top-down org-chart layout. */
 function edgePath(from: PositionedNode, to: PositionedNode): string {
-  const x1 = from.x + from.width;
-  const y1 = from.y + from.height / 2;
-  const x2 = to.x;
-  const y2 = to.y + to.height / 2;
-  const mid = (x1 + x2) / 2;
-  return `M ${x1},${y1} C ${mid},${y1} ${mid},${y2} ${x2},${y2}`;
+  const x1 = from.x + from.width / 2;
+  const y1 = from.y + from.height;
+  const x2 = to.x + to.width / 2;
+  const y2 = to.y;
+  const mid = (y1 + y2) / 2;
+  return `M ${x1},${y1} C ${x1},${mid} ${x2},${mid} ${x2},${y2}`;
 }
 
 function trim(s: string, max: number): string {
