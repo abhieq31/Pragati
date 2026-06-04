@@ -5,10 +5,15 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X, Compass } from 'lucide-react';
-import dynamicImport from 'next/dynamic';
-const BirdsEyeView = dynamicImport(
+import dynamic from 'next/dynamic';
+// Heavy interactive SVG canvas — defer it until a viewer opens the modal.
+const BirdsEyeView = dynamic(
   () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
   { ssr: false, loading: () => null },
+);
+const ActivityGraph = dynamic(
+  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
+  { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
 );
 import {
   Card,
@@ -20,7 +25,6 @@ import {
   TaskLink
 } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { ActivityGraph } from '@/components/ActivityGraph';
 import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
 import { ExportMenu } from '@/components/ExportMenu';
 import { UserPicker } from '@/components/UserPicker';
@@ -46,12 +50,12 @@ export default function TeamDetailPage() {
   const [adding, setAdding] = useState(false);
   const [newMember, setNewMember] = useState('');
   const [activityMember, setActivityMember] = useState<any | null>(null);
+  const [showBirdEye, setShowBirdEye] = useState(false);
   const me = useCurrentUser();
   const isLead = me?.role === 'lead' || me?.role === 'admin';
   // An IC's team view is personal: they see their own micro-tasks only and
   // none of their teammates' progress. Default them straight to micro-tasks.
   const [view, setView] = useState<'progress' | 'microtasks' | 'projects'>(isLead ? 'progress' : 'microtasks');
-  const [birdsEyeOpen, setBirdsEyeOpen] = useState(false);
 
   async function load() {
     setLoadError('');
@@ -183,7 +187,7 @@ export default function TeamDetailPage() {
             {/* Bird's-eye view trigger — icon-only across the app. */}
             <button
               type="button"
-              onClick={() => setBirdsEyeOpen(true)}
+              onClick={() => setShowBirdEye(true)}
               title="Bird's-eye view"
               aria-label="Open bird's-eye view"
               className="inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
@@ -191,40 +195,13 @@ export default function TeamDetailPage() {
               <Compass size={17} />
             </button>
             <ExportMenu
-              onPdf={() => printTeamReport(team, progress, board)}
-              onHtml={() => downloadTeamReport(team, progress, board)}
-              onCsv={() => downloadTeamCsv(team, board)}
+              onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+              onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
             />
           </div>
         )}
       </div>
 
-      {birdsEyeOpen && team && (
-        <BirdsEyeView
-          onClose={() => setBirdsEyeOpen(false)}
-          data={{
-            rootLabel: team.name,
-            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
-            scope: 'team',
-            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
-            projects: (team.projects || []).map((p: any) => ({
-              id: p.id, code: p.code, name: p.name,
-              teamId: team.id,
-              health: 'healthy',
-              taskCount: p.taskCount ?? 0,
-              tasksDone: p.tasksDone ?? 0,
-              dueDate: p.dueDate ?? null,
-              ownerName: p.ownerName ?? null,
-            })),
-            tasks: (board || []).map((t: any) => ({
-              id: t.id, title: t.title, projectId: t.projectId,
-              status: t.status,
-              assigneeName: t.assigneeName ?? null,
-              dueDate: (t.ccTcd || t.dueDate) ?? null,
-            })),
-          }}
-        />
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-4">
@@ -440,7 +417,6 @@ export default function TeamDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <TaskLink task={t} />
-                          {t.gxpCritical && <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>}
                         </div>
                         <div className="text-[11px] text-slate-400 truncate mt-0.5">
                           <Link href={`/projects/${t.projectId}`} className="hover:underline font-medium">
@@ -497,6 +473,32 @@ export default function TeamDetailPage() {
           )}
         </div>
       </div>
+      {showBirdEye && team && (
+        <BirdsEyeView
+          onClose={() => setShowBirdEye(false)}
+          data={{
+            rootLabel: team.name,
+            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
+            scope: 'team',
+            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
+            projects: (team.projects || []).map((p: any) => ({
+              id: p.id, code: p.code, name: p.name,
+              teamId: team.id,
+              health: 'healthy',
+              taskCount: p.taskCount ?? 0,
+              tasksDone: p.tasksDone ?? 0,
+              dueDate: p.dueDate ?? null,
+              ownerName: p.ownerName ?? null,
+            })),
+            tasks: (board || []).map((t: any) => ({
+              id: t.id, title: t.title, projectId: t.projectId,
+              status: t.status,
+              assigneeName: t.assigneeName ?? null,
+              dueDate: (t.ccTcd || t.dueDate) ?? null,
+            })),
+          }}
+        />
+      )}
     </div>
   );
 }

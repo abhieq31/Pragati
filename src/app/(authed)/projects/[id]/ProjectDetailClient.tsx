@@ -13,16 +13,16 @@ import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText, Compass } from 'lucide-react';
+import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText, Eye, Sparkles, Compass } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
 import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
-import dynamicImport from 'next/dynamic';
-// Bird's-eye view is heavy SVG — defer it until a viewer opens the modal.
-const BirdsEyeView = dynamicImport(
+import dynamic from 'next/dynamic';
+// Heavy interactive SVG canvas — only load it when a viewer actually opens it.
+const BirdsEyeView = dynamic(
   () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
   { ssr: false, loading: () => null },
 );
@@ -273,10 +273,9 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                     )}
                     <Link href={`/tasks/${t.id}`} className="block p-3 pl-4" onClick={e => isDragging && e.preventDefault()}>
                       <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2">{t.title}</div>
-                      {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                      {(t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                         <div className="mt-1.5 flex gap-1 flex-wrap">
-                          {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
-                          {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Sign-off</span>}
+                          {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Approval</span>}
                           {t.requiresQaSignoff && t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Approved ✓</span>}
                           {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
                         </div>
@@ -395,10 +394,9 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
               style={{ borderColor: '#e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <Link href={`/tasks/${t.id}`} className="block p-3.5">
                 <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug pr-8">{t.title}</div>
-                {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                {(t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                   <div className="mt-2 flex gap-1.5 flex-wrap">
-                    {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
-                    {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Sign-off</span>}
+                    {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Approval</span>}
                     {t.requiresQaSignoff && t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Approved ✓</span>}
                     {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
                   </div>
@@ -480,8 +478,29 @@ function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
   const [due, setDue]         = useState('');
   const [saving, setSaving]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Task-assist suggestions (assignee + due date). Read-only, computed from the
+  // team's own history; the user always confirms by clicking a chip.
+  const [sug, setSug] = useState<{
+    assignee: { id: string; name: string; reason: string } | null;
+    dueDate:  { date: string; days: number; reason: string } | null;
+  } | null>(null);
 
   useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 50); }, [open]);
+
+  // Debounced lookup — only once a meaningful title exists.
+  useEffect(() => {
+    if (!open) { setSug(null); return; }
+    const t = title.trim();
+    if (t.length < 3) { setSug(null); return; }
+    let cancelled = false;
+    const h = setTimeout(async () => {
+      try {
+        const r = await api<any>(`/tasks/suggest?projectId=${encodeURIComponent(projectId)}&title=${encodeURIComponent(t)}`);
+        if (!cancelled) setSug(r);
+      } catch { if (!cancelled) setSug(null); }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(h); };
+  }, [title, open, projectId]);
 
   async function add(e?: React.FormEvent) {
     e?.preventDefault();
@@ -518,6 +537,25 @@ function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
         onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setTitle(''); } }}
       />
+      {((sug?.assignee && !assignee) || (sug?.dueDate && !due)) && (
+        <div className="flex flex-wrap items-center gap-1.5 px-2.5 pb-2">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-blue-500/70 dark:text-blue-400/70">
+            <Sparkles size={10} /> Suggested
+          </span>
+          {sug?.assignee && !assignee && (
+            <button type="button" onClick={() => setAssignee(sug.assignee!.id)} title={sug.assignee.reason}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-500/25 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors">
+              Assign {sug.assignee.name}
+            </button>
+          )}
+          {sug?.dueDate && !due && (
+            <button type="button" onClick={() => setDue(sug.dueDate!.date)} title={sug.dueDate.reason}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              Due {new Date(sug.dueDate.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 dark:border-blue-500/20 bg-white/60 dark:bg-white/[0.02]">
         <UserPicker
           className="flex-1"
@@ -747,7 +785,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [savingStatus, setSavingStatus]       = useState(false);
   // Bird's-eye view modal — shows this project's tasks as a tree (project
   // scope, single-column layout, no team level).
-  const [birdsEyeOpen, setBirdsEyeOpen]       = useState(false);
   // The status the user picked that's awaiting an e-signature (password +
   // reason). Null when no sign-off is in flight.
   const [pendingStatus, setPendingStatus]     = useState<string | null>(null);
@@ -756,6 +793,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [savingDue, setSavingDue]             = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
+  const [showBirdEye, setShowBirdEye] = useState(false);
   // Milestone celebration — set when finishing a task closes out its phase or
   // the whole project. The Celebration overlay fires a fanfare + confetti.
   const [celebration, setCelebration] = useState<{ title: string; subtitle?: string; emoji?: string } | null>(null);
@@ -1133,7 +1171,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                 meaning; no shouted label. */}
             <button
               type="button"
-              onClick={() => setBirdsEyeOpen(true)}
+              onClick={() => setShowBirdEye(true)}
               title="Bird's-eye view"
               aria-label="Open bird's-eye view"
               className="inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
@@ -1142,9 +1180,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             </button>
             <ExportMenu
               onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
-              onPdf={() => printProjectReport(project, phases)}
-              onHtml={() => downloadProjectReport(project, phases)}
-              onCsv={() => downloadProjectCsv(project, phases)}
+              onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
+              onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
             />
             {isAdmin && !project.isPersonal && (
               <Link
@@ -1277,10 +1314,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                             ⏳ {t.pendingWith}
                           </span>
                         )}
-                        {t.gxpCritical && <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>}
                         {t.requiresQaSignoff && (t.qaSignoffAt
-                          ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">QA ✓</span>
-                          : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
+                          ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">Approved ✓</span>
+                          : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Approval</span>
                         )}
                         <PriorityTag priority={t.priority} />
                         {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
@@ -1394,9 +1430,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           onDeleted={() => { setDeleteOpen(false); window.location.replace('/projects'); }}
         />
       )}
-      {birdsEyeOpen && project && (
+      {showBirdEye && project && (
         <BirdsEyeView
-          onClose={() => setBirdsEyeOpen(false)}
+          onClose={() => setShowBirdEye(false)}
           data={{
             rootLabel: project.name,
             rootSubLabel: `${project.code || 'Project'} · ${(tasks || []).length} task${(tasks || []).length === 1 ? '' : 's'}`,

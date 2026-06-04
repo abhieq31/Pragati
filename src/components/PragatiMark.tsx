@@ -5,6 +5,11 @@
  *  Pairs cleanly with the wordmark "Pragati" rendered alongside it; the mark
  *  is symbolic, not a literal P.
  *
+ *  The tile uses a single, *symmetric* squircle radius (equal on all four
+ *  corners) so the mark reads identically everywhere it appears — sidebar,
+ *  login, loaders, favicon, apple-icon — and lines up with the rounded-xl
+ *  avatar shape system used across the app.
+ *
  *  Use this everywhere the app needs a logo (login, signup, forgot-password,
  *  sidebar, loading state, favicon). No external assets, no corporate logo.
  */
@@ -18,12 +23,9 @@ export function PragatiMark({
   flat?: boolean;
   className?: string;
 }) {
-  // Diagonal squircle — matches the avatar shape system: TL/BR are rounder
-  // (0.38×) and TR/BL are tighter (0.20×), giving the tile a subtle gem-like
-  // quality that feels deliberate rather than default.
-  const r1 = Math.round(size * 0.38);
-  const r2 = Math.round(size * 0.20);
-  const borderRadius = `${r1}px ${r2}px ${r1}px ${r2}px`;
+  // Symmetric squircle — one radius on every corner (matches icon.svg's rx and
+  // the rounded-xl avatar treatment). ~27% keeps it soft without going pill.
+  const r = Math.round(size * 0.27);
   const shadow = flat
     ? 'inset 0 1px 0 rgba(255,255,255,0.22)'
     : 'inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 0 rgba(0,0,0,0.18), ' +
@@ -37,17 +39,17 @@ export function PragatiMark({
       style={{
         width:  size,
         height: size,
-        borderRadius,
+        borderRadius: r,
         background: 'linear-gradient(135deg, #1565C0 0%, #1769C8 45%, #2B8C29 100%)',
         boxShadow: shadow,
       }}
     >
       {/* Inner glossy ring */}
       <div
-        className="absolute"
+        className="absolute pointer-events-none"
         style={{
           inset: Math.max(2, size * 0.04),
-          borderRadius: `${Math.round(r1 * 0.80)}px ${Math.round(r2 * 0.80)}px ${Math.round(r1 * 0.80)}px ${Math.round(r2 * 0.80)}px`,
+          borderRadius: Math.round(r * 0.80),
           background:
             'linear-gradient(155deg, rgba(255,255,255,0.14) 0%, transparent 55%)',
         }}

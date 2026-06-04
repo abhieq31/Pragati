@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { RoleBadge } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { ActivityGraph } from '@/components/ActivityGraph';
+import dynamic from 'next/dynamic';
+const ActivityGraph = dynamic(
+  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
+  { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
+);
 import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, BarChart3, Search, UserX, RotateCcw, ScrollText, CheckSquare, Square, MinusSquare } from 'lucide-react';
 
 /* ── Activity peek modal — team leaders click a teammate to see how they're
