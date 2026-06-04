@@ -22,16 +22,16 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3, Eye,
+  Maximize2, X, BarChart3,
 } from 'lucide-react';
-import dynamic2 from 'next/dynamic';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
 // visits won't open it. Keep it out of the dashboard's first paint.
-const BirdsEyeView = dynamic2(
+const BirdsEyeView = dynamic(
   () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
   { ssr: false, loading: () => null },
 );
 import type { BirdsEyeData } from '@/components/BirdsEyeView';
+import { BirdEyeButton } from '@/components/BirdEyeButton';
 
 /* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
 interface TeamTask {
@@ -166,14 +166,6 @@ const STATUS_LABEL: Record<string, string> = {
   blocked: 'Blocked', done: 'Done',
 };
 
-const FLOW_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  todo: { label: 'To do', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
-  in_progress: { label: 'In progress', color: '#1565C0', bg: '#eff6ff', border: '#bfdbfe' },
-  review: { label: 'Review', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-  blocked: { label: 'Blocked', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-  done: { label: 'Done', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
-};
-
 const HEALTH_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
   healthy:  { label: 'On track',  bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-400' },
   at_risk:  { label: 'At risk',   bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
@@ -291,47 +283,24 @@ export default function DashboardClient({
     <div className="pb-12 max-w-[1440px]">
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
-      <div className="mb-5 sm:mb-6 pt-1 flex items-start justify-between gap-3">
+      <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* inline-flex + items-baseline keeps the emoji optically seated on the
-              text baseline instead of floating above the cap height. */}
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap">
-            <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
-            <span className="text-[0.85em] translate-y-[0.06em]" suppressHydrationWarning>{greetingEmoji()}</span>
+          <h1 className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap text-slate-800 dark:text-white/90">
+            <span suppressHydrationWarning>
+              {greeting()},{' '}
+              <span className="text-blue-700 dark:text-blue-400">{firstName}.</span>
+            </span>
+            <span className="text-[0.7em] translate-y-[0.05em] opacity-80" suppressHydrationWarning>{greetingEmoji()}</span>
           </h1>
         </div>
-        {/* Bird's-eye view trigger — opens a full-screen tree of the
-            workspace (team → projects → tasks). Minimally rendered (icon
-            only with a tooltip) so it doesn't compete with the greeting. */}
+        {/* Bird's-eye view trigger — custom icon, blinks once per session. */}
         {!isFirstRun && (
-          <button
-            type="button"
-            onClick={() => setBirdsEyeOpen(true)}
-            title="Open bird's-eye view"
-            aria-label="Open bird's-eye view"
-            className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-white/40 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
-          >
-            <Eye size={14} />
-            <span className="hidden sm:inline">Bird&apos;s-eye</span>
-          </button>
+          <BirdEyeButton scopeKey="dashboard" onClick={() => setBirdsEyeOpen(true)} className="shrink-0" />
         )}
       </div>
-      {!isFirstRun && (
-        <div className="mb-5 sm:mb-6 -mt-3">
-          {(() => {
-            const open = visibleTasks.filter(t => t.status !== 'done').length;
-            const now = new Date();
-            const isSameDay = (d: Date) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-            const overdue = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now && !isSameDay(new Date(t.dueDate))).length;
-            const dueToday = visibleTasks.filter(t => t.status !== 'done' && t.dueDate && isSameDay(new Date(t.dueDate))).length;
-            return (
-              <p className="mt-1 text-sm text-slate-500 dark:text-white/45" suppressHydrationWarning>
-                {greetingSubline({ open, overdue, dueToday, now })}
-              </p>
-            );
-          })()}
-        </div>
-      )}
+      {/* Subline removed. The summary chips below (Ongoing / Open / Overdue
+          / Teams) already convey workspace state at a glance; an extra
+          sentence above them was repeating the same numbers in prose. */}
       {/* Bird's-eye view modal — mounted at the page level so the SVG
           tree gets its own scroll area regardless of where the trigger
           was clicked from. */}
@@ -347,7 +316,7 @@ export default function DashboardClient({
       ) : (
         <>
           {/* ── Summary strip ──────────────────────────────────────────── */}
-          <div className="flex flex-wrap gap-2.5 mb-6">
+          <div className="flex flex-wrap gap-2 mb-5">
             <SummaryChip label="Ongoing projects" value={ongoingProjects.length} accent="blue"  href="/projects" />
             <SummaryChip label="Open tasks"       value={openTasks.length}       accent="slate" onClick={() => setSummaryModal('open')} />
             <SummaryChip label="Overdue"          value={overdueTasks.length}    accent={overdueTasks.length > 0 ? 'red' : 'slate'} onClick={() => setSummaryModal('overdue')} />
@@ -443,14 +412,14 @@ function SummaryChip({
   const styles = {
     blue:  'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
     red:   'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
-    slate: 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-white/55',
+    slate: 'bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55',
     green: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   }[accent];
-  const className = `flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:brightness-95 hover:shadow-sm ${styles}`;
+  const className = `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all hover:brightness-95 hover:shadow-sm ${styles}`;
   const content = (
     <>
-      <span className="text-sm font-black">{value}</span>
-      <span className="text-xs font-medium opacity-80">{label}</span>
+      <span className="text-[13px] font-black tabular-nums">{value}</span>
+      <span className="text-[12px] font-medium opacity-80">{label}</span>
     </>
   );
 
@@ -463,6 +432,25 @@ function SummaryChip({
   }
 
   return <Link href={href || '#'} className={className}>{content}</Link>;
+}
+
+/** Compress a verbose project code (CHANGE_CONTROL-2026-0011) into a
+ *  badge-friendly short form (CC-26-0011). Keeps a stable mapping for the
+ *  prefixes we actually use; anything else falls back to first letters. */
+function shortProjectCode(code: string): string {
+  if (!code) return '';
+  const PREFIX: Record<string, string> = {
+    CHANGE_CONTROL: 'CC', SOFTWARE_CHANGE: 'SC', DEVIATION: 'DEV',
+    CAPA: 'CAPA', DEVIATION_CAPA: 'DEV/CAPA', SOP: 'SOP', AUDIT: 'AUD',
+    VALIDATION: 'VAL', CSV: 'CSV', AGILE: 'AGI', SOFTWARE_RELEASE: 'REL',
+    PRODUCT_LAUNCH: 'LAU', RESEARCH: 'RES', GENERIC: 'PRJ', PRSN: 'PRSN',
+  };
+  const m = code.match(/^([A-Z_]+)-?(\d{2,4})?-?(\d+)?$/);
+  if (!m) return code.length > 14 ? code.slice(0, 13) + '…' : code;
+  const prefix = PREFIX[m[1]] ?? m[1].split('_').map((w) => w[0]).join('');
+  const year = m[2] ? m[2].slice(-2) : '';
+  const num  = m[3] || '';
+  return [prefix, year, num].filter(Boolean).join('-');
 }
 
 function SummaryTaskPopup({
@@ -500,7 +488,10 @@ function SummaryTaskPopup({
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-bold text-slate-800 dark:text-white/80 line-clamp-1">{t.title}</div>
                         <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-white/35 flex-wrap">
-                          <span className="font-semibold">{t.projectCode}</span>
+                          <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55"
+                                title={t.projectCode}>
+                            {shortProjectCode(t.projectCode)}
+                          </span>
                           {t.assigneeName && <><span>·</span><span>{t.assigneeName}</span></>}
                           {due && (
                             <>
@@ -679,7 +670,6 @@ function ProjectsColumn({
    removed dashboard drag-reordering: a quick bird's-eye list shouldn't carry
    hidden per-user state, and TCD order is the one an auditor expects.) */
 function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
-  // Sort by TCD (fallback dueDate), undated tasks last. Stable + pure.
   const sorted = useMemo(() => {
     const keyOf = (t: TeamTask) => {
       const d = t.ccTcd || t.dueDate;
@@ -694,38 +684,104 @@ function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
   return (
     <ul className="divide-y divide-slate-100 dark:divide-white/5">
       {visible.map((t) => {
-        const meta   = FLOW_META[t.status] || FLOW_META.todo;
-        const isDone = t.status === 'done';
+        const isDone    = t.status === 'done';
+        const due       = t.ccTcd || t.dueDate;
+        const dueIn     = daysUntil(due);
+        const isOverdue = !isDone && !!due && dueIn !== null && dueIn < 0;
+        const isBlocked = t.status === 'blocked';
+
+        /* Dot colour — five-value system:
+           green=done (check icon), red=overdue|blocked, amber=due≤3d,
+           blue=active, grey=todo/future/undated */
+        const [dotColor, dotTitle] = ((): [string, string] => {
+          if (isBlocked) return ['#ef4444', 'Blocked'];
+          if (isOverdue) return ['#ef4444', 'Overdue'];
+          if (dueIn !== null && dueIn <= 3) return ['#d97706', 'Due soon'];
+          if (t.status === 'in_progress') return ['#1565C0', 'In progress'];
+          if (t.status === 'review')      return ['#1565C0', 'In review'];
+          return ['#94a3b8', 'To do'];
+        })();
+
         return (
           <li
             key={t.id}
-            className="relative flex items-center gap-3 px-3 py-2 transition-colors hover:bg-slate-50/60 dark:hover:bg-white/[0.03]"
+            className="group flex items-start gap-2.5 px-4 py-2 hover:bg-slate-50/60 dark:hover:bg-white/[0.025] transition-colors border-t border-slate-50 dark:border-white/[0.03]"
           >
-            <span className="shrink-0 w-1.5" />
+            {/* Status indicator — vertically aligned with title baseline */}
+            <div className="shrink-0 mt-[4px]">
+              {isDone ? (
+                <CheckCircle2 size={13} className="text-emerald-500" />
+              ) : (
+                <span
+                  title={dotTitle}
+                  aria-label={dotTitle}
+                  className="block w-2 h-2 rounded-full"
+                  style={{ background: dotColor }}
+                />
+              )}
+            </div>
 
-            {/* Completed steps get a green check in place of the status dot, so
-                progress down the pipeline is unmistakable. */}
-            {isDone ? (
-              <CheckCircle2 size={14} className="shrink-0 text-emerald-500" aria-hidden />
-            ) : (
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: meta.color }} aria-hidden />
-            )}
+            {/* Row content */}
+            <div className="flex-1 min-w-0">
+              {/* Title + right-side exceptions/date */}
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/tasks/${t.id}`}
+                  className={`flex-1 min-w-0 text-[12.5px] font-semibold line-clamp-1 leading-snug ${
+                    isDone
+                      ? 'line-through decoration-slate-300 dark:decoration-white/20 text-slate-500 dark:text-white/40'
+                      : 'text-slate-800 dark:text-white/82 hover:text-blue-700 dark:hover:text-blue-400'
+                  }`}
+                >
+                  {t.title}
+                </Link>
 
-            <Link
-              href={`/tasks/${t.id}`}
-              className={`flex-1 min-w-0 text-xs leading-snug ${isDone ? 'text-slate-400 dark:text-white/25' : 'text-slate-800 dark:text-white/75 hover:text-blue-700 dark:hover:text-blue-400'}`}
-            >
-              <span className={`line-clamp-1 font-semibold ${isDone ? 'line-through decoration-slate-300 dark:decoration-white/20' : ''}`}>{t.title}</span>
-              <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400 dark:text-white/30">
-                <span className="truncate">{t.assigneeName || 'Unassigned'}</span>
-                {(t.ccTcd || t.dueDate) && <span>· {formatDate(t.ccTcd || t.dueDate)}</span>}
-              </span>
-            </Link>
+                {/* Exception badges — only when action is needed */}
+                {isOverdue && (
+                  <span className="shrink-0 text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
+                    Overdue
+                  </span>
+                )}
+                {isBlocked && !isOverdue && (
+                  <span className="shrink-0 text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
+                    Blocked
+                  </span>
+                )}
+                {!t.assigneeName && !isDone && (
+                  <span className="shrink-0 text-[9px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded">
+                    Unassigned
+                  </span>
+                )}
+
+                {/* Due date — always on the right */}
+                {due && (
+                  <span className="shrink-0 text-[10px] text-slate-400 dark:text-white/28 tabular-nums">
+                    {formatDate(due)}
+                  </span>
+                )}
+
+                {/* Hover action */}
+                <Link
+                  href={`/tasks/${t.id}`}
+                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 ml-0.5"
+                >
+                  Open
+                </Link>
+              </div>
+
+              {/* Metadata: assignee (skip if shown as "Unassigned" badge above) */}
+              {(t.assigneeName || isDone) && (
+                <div className="text-[11px] text-slate-400 dark:text-white/28 mt-0.5">
+                  {t.assigneeName}
+                </div>
+              )}
+            </div>
           </li>
         );
       })}
+
       {sorted.length > 20 && (
-        <li className="px-3 py-2 text-[10px] text-slate-400 dark:text-white/30">
+        <li className="px-4 py-2.5 text-[10px] text-slate-400 dark:text-white/28 border-t border-slate-50 dark:border-white/[0.03]">
           Showing 20 of {sorted.length} tasks — open the project for the full board.
         </li>
       )}
@@ -765,26 +821,29 @@ function ProjectRow({
           essential metrics — progress, tasks-done, due, owner. */}
       <header
         onClick={() => setOpen(o => !o)}
-        className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
+        className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none ${nudgeExpand && !open ? 'pragati-row-expand-blink' : ''}`}
       >
         <button
-          className={`p-0.5 text-slate-400 dark:text-white/30 transition-transform rounded-full ${nudgeExpand && !open ? 'dashboard-expand-nudge' : ''}`}
+          className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform rounded-full shrink-0"
           aria-label={open ? 'Collapse project tasks' : 'Expand project tasks'}
           style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         >
           <ChevronDown size={14} />
         </button>
 
+        {/* Three-level hierarchy:
+             1. Title (largest, dark)
+             2. Reference code (small, muted — its own line)
+             3. Tags + single muted metadata strip */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            {/* On mobile the title claims the full first line and wraps to two
-                lines rather than truncating to "BOT Automa…"; the code + badges
-                flow onto the next line. */}
-            <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
-              className="text-sm font-bold text-slate-800 dark:text-white/80 hover:text-blue-700 dark:hover:text-blue-400 basis-full sm:basis-auto sm:min-w-0 line-clamp-2 sm:truncate">
-              {project.name}
-            </Link>
-            <span className="text-[10px] font-bold text-slate-300 dark:text-white/20 tracking-wider shrink-0">{project.code}</span>
+          <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
+            className="block text-[15px] font-bold text-slate-800 dark:text-white/85 hover:text-blue-700 dark:hover:text-blue-400 line-clamp-2 sm:truncate leading-snug">
+            {project.name}
+          </Link>
+          <div className="text-[10px] font-bold text-slate-400/80 dark:text-white/25 tracking-wider mt-0.5">
+            {project.code}
+          </div>
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
             {cat && (
               <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
                 {cat}
@@ -794,25 +853,35 @@ function ProjectRow({
               <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} aria-hidden />
               {health.label}
             </span>
-          </div>
-
-          <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30 flex-wrap">
-            <span><span className="font-semibold text-slate-600 dark:text-white/50">{done}/{total}</span> tasks</span>
-            {project.overdueCount > 0 && (
-              <span className="text-red-600 dark:text-red-400 font-semibold">{project.overdueCount} overdue</span>
-            )}
-            {dueLabel && (
-              <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
-                {dueLabel}
-              </span>
-            )}
-            {project.ownerName && <span>Owner: <span className="text-slate-600 dark:text-white/50">{project.ownerName}</span></span>}
+            <span className="text-slate-300 dark:text-white/15">·</span>
+            <span className="text-[11px] text-slate-500 dark:text-white/40">
+              {done}/{total} tasks
+              {dueLabel && (
+                <>
+                  <span className="text-slate-300 dark:text-white/15 mx-1.5">·</span>
+                  <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>{dueLabel}</span>
+                </>
+              )}
+              {project.overdueCount > 0 && (
+                <>
+                  <span className="text-slate-300 dark:text-white/15 mx-1.5">·</span>
+                  <span className="text-red-600 dark:text-red-400 font-semibold">{project.overdueCount} overdue</span>
+                </>
+              )}
+              {project.ownerName && (
+                <>
+                  <span className="text-slate-300 dark:text-white/15 mx-1.5">·</span>
+                  Owner: <span className="text-slate-600 dark:text-white/55">{project.ownerName}</span>
+                </>
+              )}
+            </span>
           </div>
         </div>
 
-        <div className="w-14 sm:w-28 shrink-0">
+        {/* Progress + percentage — vertically centred next to the row */}
+        <div className="w-14 sm:w-28 shrink-0 flex flex-col items-end justify-center gap-1">
           <ProgressBar value={pct} />
-          <div className="text-[10px] text-slate-400 dark:text-white/30 mt-1 text-right font-semibold">{pct}%</div>
+          <div className="text-[10px] text-slate-400 dark:text-white/30 font-semibold tabular-nums">{pct}%</div>
         </div>
       </header>
 
@@ -949,7 +1018,7 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
                         )}
                       </div>
                     </div>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 opacity-80 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
                       {STATUS_LABEL[t.status] || t.status}
                     </span>
                   </div>
@@ -1053,35 +1122,9 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
       </div>
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      <div className="px-4 pt-3 pb-2 border-b border-slate-100 dark:border-white/[0.06]">
-        <div className="flex gap-1 flex-wrap">
-          {FILTERS.map(f => (
-            <button key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${
-                filter === f.key
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.10]'
-              }`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        {filter === 'untilDate' && (
-          <div className="mt-2.5">
-            <DatePicker
-              value={untilDate}
-              onChange={setUntilDate}
-              placeholder="Pick an end date"
-              size="sm"
-              minDate={new Date()}
-            />
-          </div>
-        )}
-      </div>
-
       <div className="overflow-y-auto" style={{ maxHeight: expanded ? 'calc(100vh - 220px)' : '60vh' }}>
-        {/* Overdue group */}
+        {/* Overdue group — sits at the top: nothing to filter, just the
+            tasks that have slipped past their date. */}
         {overdue.length > 0 && (
           <ActionGroup
             title="Overdue"
@@ -1094,16 +1137,55 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
           />
         )}
 
-        {/* Due group */}
-        <ActionGroup
-          title="Due"
-          count={due.length}
-          icon={<Clock size={11} className="text-blue-500" />}
-          dotClass="bg-blue-400"
-          tasks={due}
-          showAll={expanded}
-          emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming work.' : 'Nothing due — all clear.'}
-        />
+        {/* Due group — header first, then the window filters (they control
+            this group), then the list. Reading order matches the question:
+            "what's due, and over what window?". */}
+        <div>
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
+            <div className="flex items-center gap-1.5">
+              <Clock size={11} className="text-blue-500" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">Due</span>
+              {due.length > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
+            </div>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{due.length}</span>
+          </div>
+          <div className="px-4 pt-2 pb-2 border-b border-slate-100 dark:border-white/[0.05]">
+            <div className="flex gap-1 flex-wrap">
+              {FILTERS.map(f => (
+                <button key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                    filter === f.key
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-white/35 hover:bg-slate-100 dark:hover:bg-white/[0.08]'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {filter === 'untilDate' && (
+              <div className="mt-2.5">
+                <DatePicker
+                  value={untilDate}
+                  onChange={setUntilDate}
+                  placeholder="Pick an end date"
+                  size="sm"
+                  minDate={new Date()}
+                />
+              </div>
+            )}
+          </div>
+          <ActionGroup
+            title=""
+            count={due.length}
+            icon={null}
+            dotClass="bg-blue-400"
+            tasks={due}
+            showAll={expanded}
+            emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming work.' : 'Nothing due — all clear.'}
+            hideHeader
+          />
+        </div>
       </div>
     </section>
     </div>
@@ -1116,21 +1198,27 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
 }
 
 function ActionGroup({
-  title, count, icon, tasks, isOverdue, emptyHint, showAll,
+  title, count, icon, tasks, isOverdue, emptyHint, showAll, hideHeader,
 }: {
   title: string; count: number; icon: React.ReactNode; dotClass?: string;
   tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showAll?: boolean;
+  /** When true, the small group header is suppressed — the parent has
+   *  already rendered its own (e.g. the Up Next panel pulls the Due header
+   *  out so the filter chips can sit between it and the list). */
+  hideHeader?: boolean;
 }) {
   const limit = showAll ? tasks.length : 12;
   return (
     <div>
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
-        <div className="flex items-center gap-1.5">
-          {icon}
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
+          <div className="flex items-center gap-1.5">
+            {icon}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
         </div>
-        <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
-      </div>
+      )}
       {tasks.length === 0 ? (
         <div className="px-4 py-6 text-center">
           <CheckCircle2 size={18} className="mx-auto text-emerald-300 mb-1.5" />
@@ -1244,7 +1332,7 @@ function ContributorsPanel({
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
-        className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
+        className={`px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
         onClick={() => setPanelOpen(o => !o)}
       >
         <UsersIcon size={13} className="text-slate-400 dark:text-white/30" />
@@ -1254,7 +1342,7 @@ function ContributorsPanel({
         <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{people.length}</span>
         <ChevronDown
           size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
+          className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full"
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
@@ -1330,7 +1418,7 @@ function MyFocusPanel({
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
-        className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
+        className={`px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
         onClick={() => setPanelOpen((o) => !o)}
       >
         <FolderKanban size={13} className="text-slate-400 dark:text-white/30" />
@@ -1338,7 +1426,7 @@ function MyFocusPanel({
         <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{rows.length}</span>
         <ChevronDown
           size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
+          className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full"
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
@@ -1425,7 +1513,7 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${loadBadge}`}>
             {loadLabel}
           </span>
-          <button className="p-0.5 text-slate-400 dark:text-white/30 transition-transform"
+          <button className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform"
             style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
             <ChevronDown size={12} />
           </button>

@@ -4,11 +4,14 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
-import { Trash2, BarChart3, X, Eye } from 'lucide-react';
+import { Trash2, BarChart3, X } from 'lucide-react';
+import { BirdEyeButton } from '@/components/BirdEyeButton';
 import dynamic from 'next/dynamic';
-import { getTeamLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
 // Heavy interactive SVG canvas — defer it until a viewer opens the modal.
-const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
+const BirdsEyeView = dynamic(
+  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
+  { ssr: false, loading: () => null },
+);
 const ActivityGraph = dynamic(
   () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
   { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
@@ -180,26 +183,15 @@ export default function TeamDetailPage() {
             a presentable team report. One "Export" button → PDF / CSV / HTML;
             the report is generated entirely from data already on screen so
             this is purely a UI gate. */}
-        <div className="shrink-0 flex items-center gap-2">
-          <button
-            onClick={() => setShowBirdEye(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-white/40 dark:hover:text-white/70 dark:hover:bg-white/5 transition-colors"
-            title="Bird's eye view"
-          >
-            <Eye size={15} />
-            <span className="hidden sm:inline">Bird's eye</span>
-          </button>
-          {(isOwnerOrAdmin || isLead) && (
+        {(isOwnerOrAdmin || isLead) && (
+          <div className="shrink-0 flex items-center gap-2 flex-wrap">
+            <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
             <ExportMenu
               onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
               onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
-              onBirdEye={() => {
-                const { nodes, edges } = getTeamLayout(team, team.projects || [], team.members || []);
-                downloadBirdEyeSvg(team.name, nodes, edges, me?.name || me?.email || 'User');
-              }}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
 
@@ -473,18 +465,33 @@ export default function TeamDetailPage() {
           )}
         </div>
       </div>
-      {showBirdEye && team && (() => {
-        const { nodes, edges } = getTeamLayout(team, team.projects || [], team.members || []);
-        return (
-          <BirdEyeView
-            title={team.name}
-            nodes={nodes}
-            edges={edges}
-            exportedBy={me?.name || me?.email || 'User'}
-            onClose={() => setShowBirdEye(false)}
-          />
-        );
-      })()}
+      {showBirdEye && team && (
+        <BirdsEyeView
+          onClose={() => setShowBirdEye(false)}
+          onChange={load}
+          data={{
+            rootLabel: team.name,
+            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
+            scope: 'team',
+            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
+            projects: (team.projects || []).map((p: any) => ({
+              id: p.id, code: p.code, name: p.name,
+              teamId: team.id,
+              health: 'healthy',
+              taskCount: p.taskCount ?? 0,
+              tasksDone: p.tasksDone ?? 0,
+              dueDate: p.dueDate ?? null,
+              ownerName: p.ownerName ?? null,
+            })),
+            tasks: (board || []).map((t: any) => ({
+              id: t.id, title: t.title, projectId: t.projectId,
+              status: t.status,
+              assigneeName: t.assigneeName ?? null,
+              dueDate: (t.ccTcd || t.dueDate) ?? null,
+            })),
+          }}
+        />
+      )}
     </div>
   );
 }

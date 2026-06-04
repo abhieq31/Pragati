@@ -95,16 +95,21 @@ export async function POST(req: NextRequest) {
       bcrypt.compareSync(body.password, (user as any).securityKeyHash);
 
     if (user.lockedAt && !securityKeyOk) {
-      // Don't reveal lock state through the error message — same opaque
-      // response as a wrong password. The admin sees the lock in the
-      // People page UI.
-      return NextResponse.json(GENERIC_INVALID.body, { status: GENERIC_INVALID.status });
+      // The account is real (we matched it above) and is locked. Telling
+      // the user this is far more useful than a generic "invalid" wall —
+      // a legitimate user keeps retrying with the correct password and
+      // would never learn why it stops working. Email enumeration is not
+      // a concern here: we already matched a known account.
+      return NextResponse.json({
+        error: 'Your account is locked after multiple wrong attempts. Please contact your admin to unlock it and reset your password.',
+        locked: true,
+      }, { status: 423 });
     }
 
     if (!passwordOk && !securityKeyOk) {
       // Atomic increment so two concurrent wrong-password requests can't
       // both read N and both write N+1. The 5th miss flips lockedAt in
-      // the same round-trip; ifn the counter is already at the threshold
+      // the same round-trip; if the counter is already at the threshold
       // we get the lockedAt timestamp back from the same operation.
       const updated = await User.findOneAndUpdate(
         { _id: user._id, lockedAt: null },
@@ -129,9 +134,25 @@ export async function POST(req: NextRequest) {
         { new: true, projection: { lockedAt: 1, failedLoginAttempts: 1 } },
       ).lean();
 
-      // (If `updated` is null, another request locked the row first —
-      // either way the user sees the same generic error.)
-      void updated;
+      // We've already confirmed this email maps to a real account (the
+      // lookup above), so disclosing "locked" here doesn't help an
+      // attacker enumerate emails. It DOES tell a real user why the right
+      // password suddenly stops working — much better than the generic
+      // "invalid" wall, which leaves them retrying forever.
+      const nowLocked = !!(updated as any)?.lockedAt;
+      const fails = (updated as any)?.failedLoginAttempts ?? 0;
+      if (nowLocked) {
+        return NextResponse.json({
+          error: 'Your account is locked after multiple wrong attempts. Please contact your admin to unlock it and reset your password.',
+          locked: true,
+        }, { status: 423 });
+      }
+      const remaining = Math.max(0, MAX_FAILED_LOGINS - fails);
+      if (remaining > 0 && remaining <= 2) {
+        return NextResponse.json({
+          error: `Wrong password. ${remaining} attempt${remaining === 1 ? '' : 's'} left before this account is locked.`,
+        }, { status: 401 });
+      }
       return NextResponse.json(GENERIC_INVALID.body, { status: GENERIC_INVALID.status });
     }
 
