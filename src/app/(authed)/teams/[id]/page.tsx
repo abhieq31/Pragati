@@ -180,14 +180,15 @@ export default function TeamDetailPage() {
             this is purely a UI gate. */}
         {(isOwnerOrAdmin || isLead) && (
           <div className="shrink-0 flex items-center gap-2 flex-wrap">
+            {/* Bird's-eye view trigger — icon-only across the app. */}
             <button
               type="button"
               onClick={() => setBirdsEyeOpen(true)}
-              title="Open this team's bird's-eye view"
-              className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg text-white shadow-sm hover:shadow-md transition-all font-semibold"
-              style={{ background: 'linear-gradient(120deg, #1565C0 0%, #1976D2 50%, #2E7D32 100%)' }}
+              title="Bird's-eye view"
+              aria-label="Open bird's-eye view"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
             >
-              <Compass size={15} /> Bird&apos;s-eye
+              <Compass size={17} />
             </button>
             <ExportMenu
               onPdf={() => printTeamReport(team, progress, board)}

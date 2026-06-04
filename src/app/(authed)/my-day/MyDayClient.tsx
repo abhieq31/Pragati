@@ -10,13 +10,13 @@ import {
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import dynamicImport from 'next/dynamic';
-// The mind map is interactive SVG with autosave; keep it out of the My Day
-// first paint unless the user opens it.
-const MindMap = dynamicImport(
-  () => import('@/components/MindMap').then((m) => m.MindMap),
+// The whiteboard is an interactive canvas with autosave; keep it out of the
+// My Day first paint unless the user opens it.
+const Whiteboard = dynamicImport(
+  () => import('@/components/Whiteboard').then((m) => m.Whiteboard),
   { ssr: false, loading: () => (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 h-[460px] flex items-center justify-center text-xs text-slate-400">
-      Loading mind map…
+      Loading whiteboard…
     </div>
   ) },
 );
@@ -245,9 +245,10 @@ export default function MyDayClient({ initialData }: {
         </div>
       </form>
 
-      {/* Mind map toggle — opens the per-user mind map below. Single button
-          (replacing the row of three "coming next" stubs) so the feature
-          reads as actually shipped rather than a teaser. */}
+      {/* Whiteboard toggle — opens a free-form drawing surface below. A
+          board, not a mind-map: drag-to-draw, switch tools, erase, start
+          over. Forces real thinking rather than the pre-formatted polish of
+          a node graph. */}
       <div className="mb-5">
         <button type="button"
           onClick={() => setMindMapOpen((v) => !v)}
@@ -262,8 +263,8 @@ export default function MyDayClient({ initialData }: {
               <BrainCircuit size={15} className="text-white" />
             </div>
             <div>
-              <div className="text-[12px] font-black text-slate-700 dark:text-white/80">Mind map</div>
-              <div className="text-[10px] text-slate-400 dark:text-white/35">Branch your thinking — drag nodes, draw connections, persists per user.</div>
+              <div className="text-[12px] font-black text-slate-700 dark:text-white/80">Whiteboard</div>
+              <div className="text-[10px] text-slate-400 dark:text-white/35">Marker on board — draw, erase, start over. Nothing precious.</div>
             </div>
           </div>
           <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
@@ -272,7 +273,7 @@ export default function MyDayClient({ initialData }: {
         </button>
         {mindMapOpen && (
           <div className="mt-3 fade-in-soft">
-            <MindMap />
+            <Whiteboard />
           </div>
         )}
       </div>

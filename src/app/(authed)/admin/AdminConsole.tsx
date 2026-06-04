@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import {
-  Users, Shield, Lock, Mail, UserX, UserCheck, Activity,
+  Users, Shield, Lock, UserX, UserCheck, Activity,
   ArrowRight, AlertTriangle, Check, RefreshCw, ScrollText,
   UserPlus, Download, Zap, Clock, ChevronRight, Layers,
 } from 'lucide-react';
@@ -109,14 +109,8 @@ export default function AdminConsole({
       bg: stats.lockedCount > 0 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-slate-50 dark:bg-white/[0.03]',
       border: stats.lockedCount > 0 ? 'border-red-100 dark:border-red-500/20' : 'border-slate-100 dark:border-white/[0.06]',
     },
-    {
-      label: 'Open invites',
-      value: stats.pendingInvites,
-      icon: Mail,
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-50 dark:bg-amber-500/10',
-      border: 'border-amber-100 dark:border-amber-500/20',
-    },
+    // The invite flow was retired in favour of direct admin-created
+    // accounts, so the Open-invites stat is hidden from the console.
     {
       label: 'Deactivated',
       value: stats.deactivatedCount,

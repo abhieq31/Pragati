@@ -1129,17 +1129,16 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           {/* Actions — Export (PDF/CSV/HTML) for everyone; Archive + Delete
               admin-only. */}
           <div className="flex flex-wrap items-center md:justify-end gap-2">
-            {/* Bird's-eye view — opens this project's task tree in a
-                full-screen modal. Same SVG component the dashboard uses,
-                scoped to the single project here. */}
+            {/* Bird's-eye view trigger — icon-only. Tooltip carries the
+                meaning; no shouted label. */}
             <button
               type="button"
               onClick={() => setBirdsEyeOpen(true)}
-              title="Open bird's-eye view"
-              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg text-white shadow-sm hover:shadow-md transition-all"
-              style={{ background: 'linear-gradient(120deg, #1565C0 0%, #1976D2 50%, #2E7D32 100%)' }}
+              title="Bird's-eye view"
+              aria-label="Open bird's-eye view"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
             >
-              <Compass size={13} /> Bird&apos;s-eye
+              <Compass size={17} />
             </button>
             <ExportMenu
               onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
