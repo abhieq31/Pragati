@@ -21,9 +21,11 @@ import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
 import dynamic from 'next/dynamic';
-import { getInitialLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
 // Heavy interactive SVG canvas — only load it when a viewer actually opens it.
-const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
+const BirdsEyeView = dynamic(
+  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
+  { ssr: false, loading: () => null },
+);
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -1180,10 +1182,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
               onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
               onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
-              onBirdEye={() => {
-                const { nodes, edges } = getInitialLayout(project, tasks);
-                downloadBirdEyeSvg(project.name, nodes, edges, me?.name || me?.email || 'User');
-              }}
             />
             {isAdmin && !project.isPersonal && (
               <Link
@@ -1432,20 +1430,33 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           onDeleted={() => { setDeleteOpen(false); window.location.replace('/projects'); }}
         />
       )}
-
-      {showBirdEye && project && (() => {
-        const { nodes, edges } = getInitialLayout(project, tasks);
-        return (
-          <BirdEyeView
-            title={project.name}
-            nodes={nodes}
-            edges={edges}
-            exportedBy={me?.name || me?.email || 'User'}
-            onClose={() => setShowBirdEye(false)}
-            onTaskUpdated={load}
-          />
-        );
-      })()}
+      {showBirdEye && project && (
+        <BirdsEyeView
+          onClose={() => setShowBirdEye(false)}
+          data={{
+            rootLabel: project.name,
+            rootSubLabel: `${project.code || 'Project'} · ${(tasks || []).length} task${(tasks || []).length === 1 ? '' : 's'}`,
+            scope: 'project',
+            teams: [],
+            projects: [{
+              id: project.id, code: project.code, name: project.name,
+              teamId: null,
+              health: 'healthy',
+              taskCount: (tasks || []).length,
+              tasksDone: (tasks || []).filter((t: any) => t.status === 'done').length,
+              dueDate: project.dueDate || null,
+              ownerName: project.ownerName || null,
+            }],
+            tasks: (tasks || []).map((t: any) => ({
+              id: t.id, title: t.title, projectId: project.id,
+              status: t.status,
+              assigneeName: t.assigneeName ?? null,
+              dueDate: (t.ccTcd || t.dueDate) ?? null,
+              phaseName: (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.name ?? null,
+            })),
+          }}
+        />
+      )}
     </div>
   );
 }

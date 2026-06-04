@@ -6,9 +6,11 @@ import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X, Compass } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { getTeamLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
 // Heavy interactive SVG canvas — defer it until a viewer opens the modal.
-const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
+const BirdsEyeView = dynamic(
+  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
+  { ssr: false, loading: () => null },
+);
 const ActivityGraph = dynamic(
   () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
   { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
@@ -195,10 +197,6 @@ export default function TeamDetailPage() {
             <ExportMenu
               onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
               onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
-              onBirdEye={() => {
-                const { nodes, edges } = getTeamLayout(team, team.projects || [], team.members || []);
-                downloadBirdEyeSvg(team.name, nodes, edges, me?.name || me?.email || 'User');
-              }}
             />
           </div>
         )}
@@ -475,18 +473,32 @@ export default function TeamDetailPage() {
           )}
         </div>
       </div>
-      {showBirdEye && team && (() => {
-        const { nodes, edges } = getTeamLayout(team, team.projects || [], team.members || []);
-        return (
-          <BirdEyeView
-            title={team.name}
-            nodes={nodes}
-            edges={edges}
-            exportedBy={me?.name || me?.email || 'User'}
-            onClose={() => setShowBirdEye(false)}
-          />
-        );
-      })()}
+      {showBirdEye && team && (
+        <BirdsEyeView
+          onClose={() => setShowBirdEye(false)}
+          data={{
+            rootLabel: team.name,
+            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
+            scope: 'team',
+            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
+            projects: (team.projects || []).map((p: any) => ({
+              id: p.id, code: p.code, name: p.name,
+              teamId: team.id,
+              health: 'healthy',
+              taskCount: p.taskCount ?? 0,
+              tasksDone: p.tasksDone ?? 0,
+              dueDate: p.dueDate ?? null,
+              ownerName: p.ownerName ?? null,
+            })),
+            tasks: (board || []).map((t: any) => ({
+              id: t.id, title: t.title, projectId: t.projectId,
+              status: t.status,
+              assigneeName: t.assigneeName ?? null,
+              dueDate: (t.ccTcd || t.dueDate) ?? null,
+            })),
+          }}
+        />
+      )}
     </div>
   );
 }
