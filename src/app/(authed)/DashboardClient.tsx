@@ -291,25 +291,24 @@ export default function DashboardClient({
     <div className="pb-12 max-w-[1440px]">
 
       {/* ── Greeting ────────────────────────────────────────────────────── */}
-      <div className="mb-5 sm:mb-6 pt-1 flex items-start justify-between gap-3">
+      <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* inline-flex + items-baseline keeps the emoji optically seated on the
-              text baseline instead of floating above the cap height. */}
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap">
-            <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}, {firstName}.</span>
-            <span className="text-[0.85em] translate-y-[0.06em]" suppressHydrationWarning>{greetingEmoji()}</span>
+          <h1 className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap text-slate-800 dark:text-white/90">
+            <span suppressHydrationWarning>
+              {greeting()},{' '}
+              <span className="text-blue-700 dark:text-blue-400">{firstName}.</span>
+            </span>
+            <span className="text-[0.7em] translate-y-[0.05em] opacity-80" suppressHydrationWarning>{greetingEmoji()}</span>
           </h1>
         </div>
-        {/* Bird's-eye view trigger — icon-only, deliberately minimal. The
-            label was reading as marketing copy on the greeting row; the icon
-            speaks for itself and the tooltip carries the affordance. */}
+        {/* Bird's-eye view trigger — icon-only, aligned with the greeting row. */}
         {!isFirstRun && (
           <button
             type="button"
             onClick={() => setBirdsEyeOpen(true)}
             title="Bird's-eye view"
             aria-label="Open bird's-eye view"
-            className="shrink-0 mt-1 inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+            className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
           >
             <Compass size={18} />
           </button>
@@ -333,7 +332,7 @@ export default function DashboardClient({
       ) : (
         <>
           {/* ── Summary strip ──────────────────────────────────────────── */}
-          <div className="flex flex-wrap gap-2.5 mb-6">
+          <div className="flex flex-wrap gap-2 mb-5">
             <SummaryChip label="Ongoing projects" value={ongoingProjects.length} accent="blue"  href="/projects" />
             <SummaryChip label="Open tasks"       value={openTasks.length}       accent="slate" onClick={() => setSummaryModal('open')} />
             <SummaryChip label="Overdue"          value={overdueTasks.length}    accent={overdueTasks.length > 0 ? 'red' : 'slate'} onClick={() => setSummaryModal('overdue')} />
@@ -429,14 +428,14 @@ function SummaryChip({
   const styles = {
     blue:  'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
     red:   'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
-    slate: 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-white/55',
+    slate: 'bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55',
     green: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   }[accent];
-  const className = `flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:brightness-95 hover:shadow-sm ${styles}`;
+  const className = `inline-flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all hover:brightness-95 hover:shadow-sm ${styles}`;
   const content = (
     <>
-      <span className="text-sm font-black">{value}</span>
-      <span className="text-xs font-medium opacity-80">{label}</span>
+      <span className="text-[13px] font-black tabular-nums">{value}</span>
+      <span className="text-[12px] font-medium opacity-80">{label}</span>
     </>
   );
 
@@ -781,26 +780,29 @@ function ProjectRow({
           essential metrics — progress, tasks-done, due, owner. */}
       <header
         onClick={() => setOpen(o => !o)}
-        className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
+        className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
       >
         <button
-          className={`p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform rounded-full ${nudgeExpand && !open ? 'dashboard-expand-nudge' : ''}`}
+          className={`p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform rounded-full shrink-0 ${nudgeExpand && !open ? 'dashboard-expand-nudge' : ''}`}
           aria-label={open ? 'Collapse project tasks' : 'Expand project tasks'}
           style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         >
           <ChevronDown size={14} />
         </button>
 
+        {/* Three-level hierarchy:
+             1. Title (largest, dark)
+             2. Reference code (small, muted — its own line)
+             3. Tags + single muted metadata strip */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            {/* On mobile the title claims the full first line and wraps to two
-                lines rather than truncating to "BOT Automa…"; the code + badges
-                flow onto the next line. */}
-            <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
-              className="text-sm font-bold text-slate-800 dark:text-white/80 hover:text-blue-700 dark:hover:text-blue-400 basis-full sm:basis-auto sm:min-w-0 line-clamp-2 sm:truncate">
-              {project.name}
-            </Link>
-            <span className="text-[10px] font-bold text-slate-300 dark:text-white/20 tracking-wider shrink-0">{project.code}</span>
+          <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
+            className="block text-[15px] font-bold text-slate-800 dark:text-white/85 hover:text-blue-700 dark:hover:text-blue-400 line-clamp-2 sm:truncate leading-snug">
+            {project.name}
+          </Link>
+          <div className="text-[10px] font-bold text-slate-400/80 dark:text-white/25 tracking-wider mt-0.5">
+            {project.code}
+          </div>
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
             {cat && (
               <span className="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded">
                 {cat}
@@ -810,25 +812,35 @@ function ProjectRow({
               <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} aria-hidden />
               {health.label}
             </span>
-          </div>
-
-          <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30 flex-wrap">
-            <span><span className="font-semibold text-slate-600 dark:text-white/50">{done}/{total}</span> tasks</span>
-            {project.overdueCount > 0 && (
-              <span className="text-red-600 dark:text-red-400 font-semibold">{project.overdueCount} overdue</span>
-            )}
-            {dueLabel && (
-              <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
-                {dueLabel}
-              </span>
-            )}
-            {project.ownerName && <span>Owner: <span className="text-slate-600 dark:text-white/50">{project.ownerName}</span></span>}
+            <span className="text-slate-300 dark:text-white/15">·</span>
+            <span className="text-[11px] text-slate-500 dark:text-white/40">
+              {done}/{total} tasks
+              {dueLabel && (
+                <>
+                  <span className="text-slate-300 dark:text-white/15 mx-1.5">·</span>
+                  <span className={dueUrgent ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>{dueLabel}</span>
+                </>
+              )}
+              {project.overdueCount > 0 && (
+                <>
+                  <span className="text-slate-300 dark:text-white/15 mx-1.5">·</span>
+                  <span className="text-red-600 dark:text-red-400 font-semibold">{project.overdueCount} overdue</span>
+                </>
+              )}
+              {project.ownerName && (
+                <>
+                  <span className="text-slate-300 dark:text-white/15 mx-1.5">·</span>
+                  Owner: <span className="text-slate-600 dark:text-white/55">{project.ownerName}</span>
+                </>
+              )}
+            </span>
           </div>
         </div>
 
-        <div className="w-14 sm:w-28 shrink-0">
+        {/* Progress + percentage — vertically centred next to the row */}
+        <div className="w-14 sm:w-28 shrink-0 flex flex-col items-end justify-center gap-1">
           <ProgressBar value={pct} />
-          <div className="text-[10px] text-slate-400 dark:text-white/30 mt-1 text-right font-semibold">{pct}%</div>
+          <div className="text-[10px] text-slate-400 dark:text-white/30 font-semibold tabular-nums">{pct}%</div>
         </div>
       </header>
 
@@ -963,7 +975,7 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
                         )}
                       </div>
                     </div>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 opacity-80 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
                       {STATUS_LABEL[t.status] || t.status}
                     </span>
                   </div>
@@ -1093,10 +1105,10 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
               {FILTERS.map(f => (
                 <button key={f.key}
                   onClick={() => setFilter(f.key)}
-                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
                     filter === f.key
                       ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.10]'
+                      : 'bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-white/35 hover:bg-slate-100 dark:hover:bg-white/[0.08]'
                   }`}>
                   {f.label}
                 </button>
