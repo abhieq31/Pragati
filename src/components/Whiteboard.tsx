@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Pen, Eraser, Undo2, Redo2, Save, RotateCcw, Highlighter, Type as TypeIcon } from 'lucide-react';
+import { Pen, Eraser, Undo2, Redo2, Save, RotateCcw, Highlighter, Type as TypeIcon, Square, Circle, ArrowRight as ArrowIcon, Download } from 'lucide-react';
 import { api } from '@/lib/client/api';
 
 /**
@@ -24,7 +24,7 @@ import { api } from '@/lib/client/api';
  *   - Canvas backing-store is sized to DPR for crisp lines on retina.
  */
 
-type Tool = 'pen' | 'highlighter' | 'eraser' | 'text';
+type Tool = 'pen' | 'highlighter' | 'eraser' | 'text' | 'rect' | 'ellipse' | 'arrow';
 interface Stroke {
   tool: Tool;
   color: string;
@@ -47,7 +47,7 @@ const COLORS: { value: string; label: string }[] = [
 
 const PEN_SIZES = [1.5, 2.5, 4, 6];
 
-export function Whiteboard() {
+export function Whiteboard({ onSaveToNotes }: { onSaveToNotes?: (strokes: Stroke[]) => void } = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 800, h: 480 });
@@ -151,9 +151,49 @@ export function Whiteboard() {
       lines.forEach((ln, i) => ctx.fillText(ln, p.x, p.y + i * Math.round(s.size * 7)));
       return;
     }
-    if (s.points.length < 1) return;
+    if (s.points.length < 2) return;
+    const p0 = s.points[0];
+    const p1 = s.points[s.points.length - 1];
+
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.size;
+
+    if (s.tool === 'rect') {
+      ctx.beginPath();
+      ctx.strokeRect(p0.x, p0.y, p1.x - p0.x, p1.y - p0.y);
+      return;
+    }
+    if (s.tool === 'ellipse') {
+      const rx = Math.abs(p1.x - p0.x) / 2;
+      const ry = Math.abs(p1.y - p0.y) / 2;
+      const cx = p0.x + (p1.x - p0.x) / 2;
+      const cy = p0.y + (p1.y - p0.y) / 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      return;
+    }
+    if (s.tool === 'arrow') {
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
+      const angle = Math.atan2(dy, dx);
+      const headLen = Math.max(12, s.size * 4);
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p1.x - headLen * Math.cos(angle - Math.PI / 6), p1.y - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p1.x - headLen * Math.cos(angle + Math.PI / 6), p1.y - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.stroke();
+      return;
+    }
+
     if (s.tool === 'highlighter') {
       ctx.globalAlpha = 0.32;
       ctx.strokeStyle = s.color;
@@ -162,10 +202,6 @@ export function Whiteboard() {
       ctx.globalCompositeOperation = 'destination-out';
       ctx.strokeStyle = 'rgba(0,0,0,1)';
       ctx.lineWidth = s.size * 4;
-    } else {
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = s.size;
     }
     ctx.beginPath();
     ctx.moveTo(s.points[0].x, s.points[0].y);
@@ -187,6 +223,8 @@ export function Whiteboard() {
     return { x: me.clientX - r.left, y: me.clientY - r.top };
   }
 
+  const SHAPE_TOOLS: Tool[] = ['rect', 'ellipse', 'arrow'];
+
   function startStroke(e: React.MouseEvent | React.TouchEvent) {
     const p = pointFromEvent(e);
     if (!p) return;
@@ -203,11 +241,16 @@ export function Whiteboard() {
     if (!drawing.current || !currentStroke.current) return;
     const p = pointFromEvent(e);
     if (!p) return;
-    // Skip points that are basically a duplicate — keeps the stroke list
-    // light and the canvas crisp on touch devices.
-    const last = currentStroke.current.points[currentStroke.current.points.length - 1];
-    if (Math.hypot(p.x - last.x, p.y - last.y) < 1.2) return;
-    currentStroke.current.points.push(p);
+    if (SHAPE_TOOLS.includes(currentStroke.current.tool)) {
+      // For shapes keep only start + current end — avoids storing every mousemove
+      currentStroke.current.points = [currentStroke.current.points[0], p];
+    } else {
+      // Skip points that are basically a duplicate — keeps the stroke list
+      // light and the canvas crisp on touch devices.
+      const last = currentStroke.current.points[currentStroke.current.points.length - 1];
+      if (Math.hypot(p.x - last.x, p.y - last.y) < 1.2) return;
+      currentStroke.current.points.push(p);
+    }
     paintLive();
   }
 
@@ -254,6 +297,16 @@ export function Whiteboard() {
   function undo() { if (pointer > 0) { setPointer((n) => n - 1); dirty.current = true; } }
   function redo() { if (pointer < doc.strokes.length) { setPointer((n) => n + 1); dirty.current = true; } }
 
+  function exportPng() {
+    const cv = canvasRef.current;
+    if (!cv) return;
+    const url = cv.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `whiteboard-${new Date().toISOString().slice(0, 10)}.png`;
+    a.click();
+  }
+
   function clearAll() {
     if (!confirm('Erase the whole board? This can\'t be undone after the next save.')) return;
     setDoc({ strokes: [] });
@@ -285,6 +338,10 @@ export function Whiteboard() {
           <ToolBtn active={tool === 'highlighter'} label="Highlighter" icon={<Highlighter size={14} />} onClick={() => setTool('highlighter')} />
           <ToolBtn active={tool === 'eraser'}      label="Eraser"      icon={<Eraser size={14} />}      onClick={() => setTool('eraser')} />
           <ToolBtn active={tool === 'text'}        label="Text"        icon={<TypeIcon size={14} />}    onClick={() => setTool('text')} />
+          <span className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-0.5" />
+          <ToolBtn active={tool === 'rect'}    label="Rectangle" icon={<Square size={14} />}    onClick={() => setTool('rect')} />
+          <ToolBtn active={tool === 'ellipse'} label="Ellipse"   icon={<Circle size={14} />}    onClick={() => setTool('ellipse')} />
+          <ToolBtn active={tool === 'arrow'}   label="Arrow"     icon={<ArrowIcon size={14} />} onClick={() => setTool('arrow')} />
         </div>
 
         {/* Colour swatches */}
@@ -314,7 +371,7 @@ export function Whiteboard() {
           ))}
         </div>
 
-        {/* Undo / redo / save / clear */}
+        {/* Undo / redo / export / save / clear */}
         <div className="flex items-center gap-1">
           {savedAt && (
             <span className="text-[10px] text-slate-400 dark:text-white/30 hidden sm:inline mr-1">
@@ -323,12 +380,16 @@ export function Whiteboard() {
           )}
           <ToolBtn label="Undo" icon={<Undo2 size={14} />} onClick={undo} disabled={pointer === 0} />
           <ToolBtn label="Redo" icon={<Redo2 size={14} />} onClick={redo} disabled={pointer >= doc.strokes.length} />
+          <ToolBtn label="Export as PNG" icon={<Download size={14} />} onClick={exportPng} disabled={visibleStrokes.length === 0} />
+          {onSaveToNotes && (
+            <ToolBtn label="Save to Notes" icon={<Save size={14} />} onClick={() => onSaveToNotes(visibleStrokes)} disabled={visibleStrokes.length === 0} />
+          )}
           <ToolBtn label="Save now" icon={<Save size={14} />} onClick={() => void save()} disabled={busy} />
           <ToolBtn label="Clear board" icon={<RotateCcw size={14} />} onClick={clearAll} dangerous />
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 relative" style={{ cursor: tool === 'text' ? 'text' : 'crosshair' }}>
+      <div ref={containerRef} className="flex-1 relative" style={{ cursor: tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
         <canvas
           ref={canvasRef}
           onMouseDown={startStroke}

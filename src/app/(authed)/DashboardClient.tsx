@@ -971,14 +971,19 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
   return (
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      <div className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.05] flex items-center gap-2">
-        <CheckCircle2 size={13} className="text-blue-500 dark:text-blue-400/70" />
-        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-white/50">Assigned to me</h3>
+      <div className="px-4 py-3.5 border-b border-slate-100 dark:border-white/[0.05] flex items-center gap-2.5"
+        style={{ background: 'linear-gradient(to right, rgba(59,130,246,0.06), transparent)' }}>
+        <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
+          <CheckCircle2 size={13} className="text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-white/70">Assigned to me</h3>
+        </div>
         {myTasks.length > 0 && (
-          <span className="ml-1 text-[10px] font-bold text-slate-400 dark:text-white/25 bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{myTasks.length}</span>
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15 px-1.5 py-0.5 rounded-full">{myTasks.length}</span>
         )}
         {myOverdue > 0 && (
-          <span className="ml-auto text-[10px] font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">{myOverdue} overdue</span>
+          <span className="text-[10px] font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">{myOverdue} overdue</span>
         )}
       </div>
       {myTasks.length === 0 ? (
@@ -1145,7 +1150,6 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
             <div className="flex items-center gap-1.5">
               <Clock size={11} className="text-blue-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">Due</span>
-              {due.length > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
             </div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{due.length}</span>
           </div>
@@ -1332,17 +1336,22 @@ function ContributorsPanel({
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
-        className={`px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
+        className="px-4 py-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
+        style={{ background: 'linear-gradient(to right, rgba(139,92,246,0.05), transparent)' }}
         onClick={() => setPanelOpen(o => !o)}
       >
-        <UsersIcon size={13} className="text-slate-400 dark:text-white/30" />
-        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">
-          Individual Contributors
-        </h3>
-        <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{people.length}</span>
+        <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-500/15 flex items-center justify-center shrink-0">
+          <UsersIcon size={13} className="text-violet-600 dark:text-violet-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-white/70">
+            Individual Contributors
+          </h3>
+        </div>
+        <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{people.length}</span>
         <ChevronDown
           size={12}
-          className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full"
+          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
@@ -1418,15 +1427,20 @@ function MyFocusPanel({
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
-        className={`px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
+        className="px-4 py-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
+        style={{ background: 'linear-gradient(to right, rgba(139,92,246,0.05), transparent)' }}
         onClick={() => setPanelOpen((o) => !o)}
       >
-        <FolderKanban size={13} className="text-slate-400 dark:text-white/30" />
-        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">Focus by project</h3>
-        <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{rows.length}</span>
+        <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-500/15 flex items-center justify-center shrink-0">
+          <FolderKanban size={13} className="text-violet-600 dark:text-violet-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-white/70">Focus by project</h3>
+        </div>
+        <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{rows.length}</span>
         <ChevronDown
           size={12}
-          className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full"
+          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>

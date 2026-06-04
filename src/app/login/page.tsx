@@ -691,15 +691,8 @@ export default function LoginPage() {
                   </button>
                   {showForgot && (
                     <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left fade-in-soft">
-                      <p className="text-[12px] font-semibold text-blue-800 mb-1">How to reset your password</p>
-                      <ol className="text-[11px] text-blue-700 space-y-1 list-decimal list-inside leading-snug">
-                        <li>Contact your workspace admin or lead.</li>
-                        <li>Ask them to open <strong>People → Reset password</strong> on your account.</li>
-                        <li>They'll share a temporary password with you verbally or over chat.</li>
-                        <li>Sign in with the temporary password — you'll be prompted to set a new one immediately.</li>
-                      </ol>
-                      <p className="text-[10px] text-blue-500 mt-2 leading-snug">
-                        If you <em>are</em> the admin, use your recovery key on the password field, or ask your master admin.
+                      <p className="text-[12px] text-blue-700 leading-snug">
+                        Contact your administrator to reset your password.
                       </p>
                     </div>
                   )}
