@@ -160,6 +160,7 @@ UserSchema.index({ active: 1 });
 // to fall back on.
 UserSchema.index({ active: 1, role: 1, name: 1 });
 UserSchema.index({ name: 1 });
+UserSchema.index({ avatarBg: 1 });
 
 export type UserDoc = InferSchemaType<typeof UserSchema> & { _id: mongoose.Types.ObjectId };
 

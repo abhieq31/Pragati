@@ -14,36 +14,9 @@
     </linearGradient>
   </defs>
 
-  <!-- Diagonal squircle — matches PragatiMark exactly. TL/BR corners are
-       rounder (0.38 × 64 ≈ 24px); TR/BL are tighter (0.20 × 64 ≈ 13px). The
-       previous favicon used a uniform rounded square, which made the tab-bar
-       icon read as a different mark from the in-app logo. -->
-  <path
-    d="M 24,0
-       L 51,0
-       A 13,13 0 0 1 64,13
-       L 64,40
-       A 24,24 0 0 1 40,64
-       L 13,64
-       A 13,13 0 0 1 0,51
-       L 0,24
-       A 24,24 0 0 1 24,0 Z"
-    fill="url(#bg)"
-  />
-  <!-- Inner glossy overlay — inset 2.5px and corner radii scaled by 0.80 so
-       the highlight follows the outer tile's shape (matching PragatiMark). -->
-  <path
-    d="M 21.7,2.5
-       L 51,2.5
-       A 10.4,10.4 0 0 1 61.5,12.9
-       L 61.5,40.7
-       A 21.7,21.7 0 0 1 39.8,62.5
-       L 12.9,62.5
-       A 10.4,10.4 0 0 1 2.5,52.1
-       L 2.5,24.3
-       A 21.7,21.7 0 0 1 24.3,2.5 Z"
-    fill="url(#gloss)"
-  />
+  <!-- Symmetric squircle (rx == ry), identical to PragatiMark's tile shape. -->
+  <rect width="64" height="64" rx="17" fill="url(#bg)"/>
+  <rect x="2.5" y="2.5" width="59" height="59" rx="14.5" fill="url(#gloss)"/>
 
   <!-- Two rising chevrons: progress / forward motion. Identical geometry to
        PragatiMark so the brand is consistent everywhere. -->

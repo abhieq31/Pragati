@@ -9,8 +9,8 @@ import { PragatiMark } from '@/components/PragatiMark';
  * `inline` drops the tall min-height so it can sit inside a card or modal.
  */
 export function BirdsEyeLoader({
-  label = "Bird's-eye view, loading…",
-  sublabel = 'Pragati — progress, one step at a time.',
+  label = "Ascending…",
+  sublabel = 'Getting your bird\'s-eye view ready.',
   size = 'md',
   inline = false,
 }: {

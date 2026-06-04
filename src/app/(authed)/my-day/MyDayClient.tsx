@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/client/api';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
-  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit,
+  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit, Network,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
@@ -23,13 +23,24 @@ const Whiteboard = dynamicImport(
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 5)  return 'Night shift';
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  if (h < 21) return 'Good evening';
-  return 'Good night';
+/* The home page already shows the time-of-day greeting; My Day opens with an
+   encouraging line instead, so the page feels like a fresh start each day. The
+   line is keyed to the day-of-year so it's stable through the day (no flicker)
+   yet rotates over time. */
+const ENCOURAGEMENTS = [
+  'Let’s make today count',
+  'One clear thought at a time',
+  'Small steps, real progress',
+  'Capture it, then conquer it',
+  'A clear mind moves fast',
+  'Today is yours to shape',
+  'Progress beats perfection',
+  'Start light — empty your head',
+];
+function encouragement() {
+  const d = new Date();
+  const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86_400_000);
+  return ENCOURAGEMENTS[dayOfYear % ENCOURAGEMENTS.length];
 }
 
 /* Live clock day/date — suppresses hydration mismatch via suppressHydrationWarning */
@@ -89,6 +100,8 @@ export default function MyDayClient({ initialData }: {
   initialData: { open: Note[]; done: Note[] };
 }) {
   const isLead  = useIsLead();
+  const me      = useCurrentUser();
+  const firstName = (me?.name || '').trim().split(/\s+/)[0] || '';
   const dateLabel = useDateLabel();
 
   const [open, setOpen]   = useState<Note[]>(initialData.open);
@@ -181,7 +194,9 @@ export default function MyDayClient({ initialData }: {
               )}
             </div>
             <h1 className="text-[1.75rem] font-black tracking-tight leading-tight">
-              <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}.</span>
+              <span className="brand-shimmer-text" suppressHydrationWarning>
+                {encouragement()}{firstName ? `, ${firstName}` : ''}.
+              </span>
             </h1>
             {dateLabel && (
               <div className="flex items-center gap-1.5 mt-1.5">
@@ -215,33 +230,31 @@ export default function MyDayClient({ initialData }: {
         )}
       </div>
 
-      {/* ── Capture bar ──────────────────────────────────────────────── */}
-      <form onSubmit={add} className="mb-5">
-        <div className={`
-          flex gap-2 items-center pl-2 pr-2 py-1.5 rounded-xl border transition-all duration-200
-          bg-white dark:bg-white/[0.03]
-          border-slate-200 dark:border-white/[0.08]
-          focus-within:border-blue-300 dark:focus-within:border-white/20
-          focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.08)] dark:focus-within:shadow-[0_0_0_3px_rgba(255,255,255,0.04)]
-        `}>
-          <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
-            <Plus size={13} className="text-blue-500 dark:text-blue-400" />
+      {/* ── Capture — the heart of My Day: get it out of your head first ── */}
+      <form onSubmit={add} className="mb-6">
+        <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm focus-within:border-blue-400/70 dark:focus-within:border-blue-500/40 focus-within:shadow-md transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/15 dark:to-indigo-500/15 flex items-center justify-center shrink-0">
+              <BrainCircuit size={17} className="text-blue-500 dark:text-blue-400" />
+            </div>
+            <input
+              ref={inputRef}
+              className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-400 dark:placeholder-white/30 border-0 outline-none py-1 min-w-0"
+              placeholder="Empty your mind — what’s on it right now?"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              autoFocus
+              maxLength={2000}
+            />
+            {text.trim() ? (
+              <button type="submit"
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors">
+                Capture ↵
+              </button>
+            ) : (
+              <span className="shrink-0 hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 font-medium pr-1">Press Enter</span>
+            )}
           </div>
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white/85 placeholder-slate-400 dark:placeholder-white/25 border-0 outline-none py-1.5 min-w-0"
-            placeholder="Empty your mind here — press Enter to capture…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            autoFocus
-            maxLength={2000}
-          />
-          {text.trim() && (
-            <button type="submit"
-              className="btn-primary shrink-0 py-1.5 px-3 text-xs gap-1 fade-in-soft">
-              <Plus size={12} /> Add
-            </button>
-          )}
         </div>
       </form>
 
@@ -267,8 +280,9 @@ export default function MyDayClient({ initialData }: {
               <div className="text-[10px] text-slate-400 dark:text-white/35">Marker on board — draw, erase, start over. Nothing precious.</div>
             </div>
           </div>
-          <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
-            {mindMapOpen ? 'Hide' : 'Open'}
+          <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+            {mindMapOpen ? 'Hide' : 'Open canvas'}
+            {mindMapOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
           </span>
         </button>
         {mindMapOpen && (
