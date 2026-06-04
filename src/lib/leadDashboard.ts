@@ -5,6 +5,8 @@ import { User } from '@/models/User';
 import { Team } from '@/models/Team';
 import { project as projectS, task as taskS, date as toIso } from '@/lib/serialize';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStrip';
+import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
 
 const STATUS_ORDER: Record<string, number> = { in_progress: 0, review: 1, blocked: 2, todo: 3, done: 4 };
 
@@ -15,6 +17,9 @@ export interface LeadDashboardData {
   teamTasks: any[];
   people:    any[];
   teamCount: number;
+  /** Bounded fact-based "Needs attention" strip payload — server-computed so
+   *  the browser never sees raw signals. Null when nothing surfaces. */
+  flowSignal?: FlowSignalPayload | null;
 }
 
 // Pure data fetcher — used by both the API route and the server-rendered
@@ -35,23 +40,24 @@ export async function getLeadDashboardData(
 
   const projects = await Project.find(projFilter).sort({ createdAt: -1 }).lean();
   const visibleProjectIds = projects.map(p => p._id);
+  const visibleTaskPrivacyFilter = { $or: [{ privateToUserId: null }, { privateToUserId: { $exists: false } }, { privateToUserId: scope.userOid }] };
 
   const [myTasks, teamTasksRaw, teams, owners, projectTaskAgg, perUserAgg, users] = await Promise.all([
     // "My tasks" stays sorted by status so the IC's side panel keeps its
     // pipeline grouping.
-    Task.find({ assigneeId: scope.userOid }).sort({ status: 1, dueDate: 1 }).lean(),
+    Task.find({ assigneeId: scope.userOid, ...visibleTaskPrivacyFilter }).sort({ status: 1, dueDate: 1 }).lean(),
     // Project task lists are ordered by CC Target Completion Date (TCD), then
     // due date — the nearest deadline first. The dashboard re-sorts the same
     // way client-side, so the order is deterministic for every viewer and
     // carries no hidden per-user state.
-    Task.find({ projectId: { $in: visibleProjectIds } })
+    Task.find({ projectId: { $in: visibleProjectIds }, ...visibleTaskPrivacyFilter })
       .sort({ ccTcd: 1, dueDate: 1, createdAt: 1 })
       .limit(500)
       .lean(),
     Team.find({ _id: { $in: scope.teamOids } }).lean(),
     User.find({ _id: { $in: projects.map(p => p.ownerId).filter(Boolean) } }, '_id name').lean(),
     Task.aggregate([
-      { $match: { projectId: { $in: visibleProjectIds } } },
+      { $match: { projectId: { $in: visibleProjectIds }, ...visibleTaskPrivacyFilter } },
       {
         $group: {
           _id: '$projectId',
@@ -69,7 +75,7 @@ export async function getLeadDashboardData(
       },
     ]),
     Task.aggregate([
-      { $match: { projectId: { $in: visibleProjectIds }, assigneeId: { $in: scope.memberOids } } },
+      { $match: { projectId: { $in: visibleProjectIds }, assigneeId: { $in: scope.memberOids }, ...visibleTaskPrivacyFilter } },
       {
         $facet: {
           open:     [{ $match: { status: { $ne: 'done' } } }, { $group: { _id: '$assigneeId', c: { $sum: 1 } } }],
@@ -228,6 +234,38 @@ export async function getLeadDashboardData(
     return { id: uid, name: u.name, title: u.title || '', openTasks, overdueCount, completedThisWeek, loadScore, loadLevel };
   }).sort((a, b) => b.loadScore - a.loadScore);
 
+  // ── Flow Signal strip ──────────────────────────────────────────────
+  // Bounded, fact-only computation done on the SAME data we already loaded
+  // — no extra DB calls. Returns null when nothing surfaces, when the
+  // feature is off, or when the viewer's teams aren't in the pilot
+  // allowlist. The browser will simply render nothing in that case.
+  const cfg = getFlowConfig();
+  let flowSignal: FlowSignalPayload | null = null;
+  if (isUiEnabled(cfg)) {
+    const teamIdsForViewer = scope.teamOids.map((o) => String(o));
+    if (isPilotTeamVisible(teamIdsForViewer, cfg)) {
+      // Build a small id→name map from the data we already loaded; falling
+      // back to the assignee map for "Confirmed today by X" copy when the
+      // confirmer happens to be a teammate already in scope.
+      const userNameById = new Map<string, string>();
+      for (const u of assigneeUsers) userNameById.set(String(u._id), u.name);
+      for (const u of users)         userNameById.set(String(u._id), u.name);
+      // The viewer might confirm their own task — make sure their name is
+      // resolvable for the "by you" headline.
+      userNameById.set(jwtUser.sub, jwtUser.name);
+
+      flowSignal = computeFlowStrip({
+        viewer: { id: jwtUser.sub, role: jwtUser.role },
+        // teamTasksRaw is already privacy-filtered by visibleTaskPrivacyFilter
+        // and scoped to projects the viewer can see.
+        tasks: teamTasksRaw as any,
+        projects,
+        userNameById,
+        cfg,
+      });
+    }
+  }
+
   return {
     user:     { id: jwtUser.sub, name: jwtUser.name, email: jwtUser.email, role: jwtUser.role },
     projects: projectList,
@@ -236,5 +274,6 @@ export async function getLeadDashboardData(
     people,
     // Number of teams the viewer belongs to (or all teams, for admin).
     teamCount: scope.teamOids.length,
+    flowSignal,
   };
 }

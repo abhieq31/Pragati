@@ -5,6 +5,17 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X } from 'lucide-react';
+import { BirdEyeButton } from '@/components/BirdEyeButton';
+import dynamic from 'next/dynamic';
+// Heavy interactive SVG canvas — defer it until a viewer opens the modal.
+const BirdsEyeView = dynamic(
+  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
+  { ssr: false, loading: () => null },
+);
+const ActivityGraph = dynamic(
+  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
+  { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
+);
 import {
   Card,
   ProgressBar,
@@ -15,7 +26,6 @@ import {
   TaskLink
 } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { ActivityGraph } from '@/components/ActivityGraph';
 import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
 import { ExportMenu } from '@/components/ExportMenu';
 import { Select } from '@/components/Select';
@@ -42,6 +52,7 @@ export default function TeamDetailPage() {
   const [adding, setAdding] = useState(false);
   const [newMember, setNewMember] = useState('');
   const [activityMember, setActivityMember] = useState<any | null>(null);
+  const [showBirdEye, setShowBirdEye] = useState(false);
   const me = useCurrentUser();
   const isLead = me?.role === 'lead' || me?.role === 'admin';
   // An IC's team view is personal: they see their own micro-tasks only and
@@ -179,15 +190,16 @@ export default function TeamDetailPage() {
             the report is generated entirely from data already on screen so
             this is purely a UI gate. */}
         {(isOwnerOrAdmin || isLead) && (
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-2 flex-wrap">
+            <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
             <ExportMenu
-              onPdf={() => printTeamReport(team, progress, board)}
-              onHtml={() => downloadTeamReport(team, progress, board)}
-              onCsv={() => downloadTeamCsv(team, board)}
+              onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+              onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
             />
           </div>
         )}
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-4">
@@ -289,6 +301,34 @@ export default function TeamDetailPage() {
             ))}
           </div>
 
+          {/* Skeleton placeholder while the progress aggregation is loading,
+              so the page doesn't appear frozen while Mongo is responding. */}
+          {view === 'progress' && isLead && !progress && (
+            <div className="space-y-4" aria-busy="true" aria-live="polite">
+              <Card title="Project progress">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="skeleton h-3 w-1/2" />
+                      <div className="skeleton h-2 flex-1" />
+                      <div className="skeleton h-3 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+              <Card title="Member workload">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="skeleton h-7 w-7 rounded-full shrink-0" />
+                      <div className="skeleton h-3 flex-1" />
+                      <div className="skeleton h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
           {view === 'progress' && isLead && progress && (
             <>
               <Card title="Project progress">
@@ -376,7 +416,6 @@ export default function TeamDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <TaskLink task={t} />
-                          {t.gxpCritical && <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>}
                         </div>
                         <div className="text-[11px] text-slate-400 truncate mt-0.5">
                           <Link href={`/projects/${t.projectId}`} className="hover:underline font-medium">
@@ -433,6 +472,33 @@ export default function TeamDetailPage() {
           )}
         </div>
       </div>
+      {showBirdEye && team && (
+        <BirdsEyeView
+          onClose={() => setShowBirdEye(false)}
+          onChange={load}
+          data={{
+            rootLabel: team.name,
+            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
+            scope: 'team',
+            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
+            projects: (team.projects || []).map((p: any) => ({
+              id: p.id, code: p.code, name: p.name,
+              teamId: team.id,
+              health: 'healthy',
+              taskCount: p.taskCount ?? 0,
+              tasksDone: p.tasksDone ?? 0,
+              dueDate: p.dueDate ?? null,
+              ownerName: p.ownerName ?? null,
+            })),
+            tasks: (board || []).map((t: any) => ({
+              id: t.id, title: t.title, projectId: t.projectId,
+              status: t.status,
+              assigneeName: t.assigneeName ?? null,
+              dueDate: (t.ccTcd || t.dueDate) ?? null,
+            })),
+          }}
+        />
+      )}
     </div>
   );
 }

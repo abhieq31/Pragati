@@ -249,8 +249,27 @@ export const TaskCreateSchema = z.object({
   applicableSite: ApplicableSiteEnum.optional(),  // val / prd / val_prd / na
   deployStage: DeployStageEnum.optional(),        // dev / int / prd / na
   remarks: z.string().max(5000).optional(),
+  privateToMe: z.boolean().optional(),
 });
 export type TaskCreateInput = z.infer<typeof TaskCreateSchema>;
+
+/* ── Mind-map → tasks (AI assist) ─────────────────────────────────────────────
+   Input contract for POST /api/ai/mindmap-to-tasks. This endpoint is a pure
+   transform — it returns *suggested* task titles and never writes a record (the
+   user reviews them, then creates tasks through the validated POST /api/tasks
+   path). Validated here per the API-boundary rule even though it doesn't
+   persist, so the shape stays explicit and bounded. */
+export const MindmapToTasksSchema = z.object({
+  nodes: z.array(z.object({
+    id: z.string().max(64),
+    text: z.string().max(500),
+  })).max(120),
+  edges: z.array(z.object({
+    from: z.string().max(64),
+    to: z.string().max(64),
+  })).max(240).optional().default([]),
+});
+export type MindmapToTasksInput = z.infer<typeof MindmapToTasksSchema>;
 
 export const TaskUpdateSchema = z.object({
   title: z.string().min(1).max(300).optional(),

@@ -39,17 +39,21 @@ export async function getTaskAccess(
   const task = await Task.findById(taskId).lean();
   if (!task) return { task: null, visible: false, isAssignee: false, isLead: false };
 
+  const privateOwner = (task as any).privateToUserId;
+  const canSeePrivateTask = !privateOwner || String(privateOwner) === String(userId);
   const scope = await getLeadScope(userId, role);
-  const proj  = await Project.findOne(
-    { _id: (task as any).projectId, ...projectsVisibleFilter(scope) },
-    '_id',
-  ).lean();
+  const proj  = canSeePrivateTask
+    ? await Project.findOne(
+        { _id: (task as any).projectId, ...projectsVisibleFilter(scope) },
+        '_id',
+      ).lean()
+    : null;
 
   return {
     task,
     visible:    !!proj,
     isAssignee: !!(task as any).assigneeId && String((task as any).assigneeId) === String(userId),
-    isLead:     canMutate(role),
+    isLead:     !!proj && canMutate(role),
   };
 }
 

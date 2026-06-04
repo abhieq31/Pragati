@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
@@ -7,10 +8,18 @@ import { Card, PriorityTag, StatusTag, formatDate, useToast } from '@/components
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
-import { TaskCompletePop } from '@/components/TaskCompletePop';
+import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
+import { FlowSignalTaskStrip } from '@/components/FlowSignalTaskStrip';
+
+// TaskCompletePop is only shown on task completion — off the critical render
+// path so deferring it improves FCP/LCP.
+const TaskCompletePop = dynamic(
+  () => import('@/components/TaskCompletePop').then(m => m.TaskCompletePop),
+  { ssr: false, loading: () => null },
+);
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -42,7 +51,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   // Seed from the server-rendered payload so real content paints on first
   // byte; the mount-time refetch below keeps it fresh.
   const [task, setTask] = useState<any>(initialTask);
-  const [users, setUsers] = useState<any[]>([]);
+  // Project team scope for the assignee picker. The picker fetches its own
+  // (paginated) roster from /api/users?teamId=… — we only need the id here.
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [me, setMe] = useState<any>(initialMe);
   const [comment, setComment] = useState('');
   const [newSub, setNewSub] = useState('');
@@ -72,12 +83,16 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
       try {
         const t = task || await api<any>(`/tasks/${id}`);
         if (!task) setTask(t);
-        const m = me ? { user: me } : await api<any>('/auth/me');
-        setMe(m.user);
-        const proj = t.projectId ? await api<any>(`/projects/${t.projectId}`).catch(() => null) : null;
-        const teamId = proj?.teamId;
-        const u = await api<any[]>(`/users${teamId ? `?teamId=${teamId}` : ''}`);
-        setUsers(u.filter((x) => x.role !== 'admin'));   // admin is never assignable
+        if (!me) {
+          const m = await api<any>('/auth/me');
+          setMe(m.user);
+        }
+        if (t.projectTeamId !== undefined) {
+          setTeamId(t.projectTeamId || null);
+        } else {
+          const proj = t.projectId ? await api<any>(`/projects/${t.projectId}`).catch(() => null) : null;
+          setTeamId(proj?.teamId || null);
+        }
       } catch (e: any) {
         setLoadErr(e?.message || 'Could not load this task.');
       }
@@ -175,8 +190,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   }
   async function addSubtask() {
     if (!newSub.trim()) return;
-    await api(`/tasks/${id}/subtasks`, { method: 'POST', body: { title: newSub.trim() } });
-    setNewSub(''); load();
+    try {
+      await api(`/tasks/${id}/subtasks`, { method: 'POST', body: { title: newSub.trim() } });
+      setNewSub(''); load();
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to add subtask', 'err');
+    }
   }
   async function toggleSub(sub: any) {
     await api(`/tasks/${id}/subtasks/${sub.id}`, { method: 'PATCH', body: { status: sub.status === 'done' ? 'todo' : 'done' } });
@@ -191,8 +210,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   }
   async function addComment() {
     if (!comment.trim()) return;
-    await api(`/tasks/${id}/comments`, { method: 'POST', body: { body: comment.trim() } });
-    setComment(''); load();
+    try {
+      await api(`/tasks/${id}/comments`, { method: 'POST', body: { body: comment.trim() } });
+      setComment(''); load();
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to post comment', 'err');
+    }
   }
   async function signoff() { await api(`/tasks/${id}/signoff`, { method: 'POST' }); load(); }
 
@@ -242,28 +265,36 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
           <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
-            {task.gxpCritical && (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
-                <Shield size={11} /> Compliance Critical
-              </span>
-            )}
             {task.requiresQaSignoff && (
               task.qaSignoffAt ? (
-                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25 px-2 py-0.5 rounded">
                   Approved ✓ {task.qaSignoffName} · {formatDate(task.qaSignoffAt)}
                 </span>
               ) : (
-                <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
-                  Sign-off required
+                <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/25 px-2 py-0.5 rounded">
+                  Approval required
                 </span>
               )
             )}
             {task.taskType && task.taskType !== 'task' && (
-              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded capitalize">
+              <span className="text-xs font-medium text-slate-600 bg-slate-100 dark:bg-white/5 dark:text-white/60 px-2 py-0.5 rounded capitalize">
                 {TASK_TYPE_LABELS[task.taskType] ?? task.taskType.replace(/_/g, ' ')}
               </span>
             )}
           </div>
+
+          {/* Quiet "Waiting on …" strip — only renders when the assignee or
+              a lead has confirmed a waiting/decision/help state. Same source
+              of truth as the dashboard strip (Task.flowPending*). */}
+          <FlowSignalTaskStrip
+            taskId={task.id}
+            pendingType={task.flowPendingType}
+            detail={task.flowPendingDetail}
+            confirmedAt={task.flowPendingConfirmedAt}
+            confirmedByName={task.flowPendingConfirmedByName}
+            canResolve={isLead || isAdmin || (me && task.flowPendingConfirmedByUserId === me.id)}
+            onChanged={load}
+          />
         </div>
 
         {/* Description */}
@@ -376,7 +407,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 >
                   {s.status === 'done' && <span className="text-white text-[8px] font-black">✓</span>}
                 </button>
-                <span className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                <span className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400 dark:text-white/35' : 'text-slate-700'}`}>
                   {s.title}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(s.dueDate)}</span>
@@ -495,15 +526,14 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             </div>
             <div>
               <label className="label">Assignee</label>
-              <Select
+              <UserPicker
                 value={task.assigneeId || ''}
+                valueLabel={task.assigneeName}
                 disabled={!isLead}
                 ariaLabel="Assignee"
+                teamId={teamId}
+                excludeAdmin
                 onChange={(v) => isLead && update({ assigneeId: v || null })}
-                options={[
-                  { value: '', label: 'Unassigned' },
-                  ...users.map((u: any) => ({ value: u.id, label: u.name })),
-                ]}
               />
             </div>
             {/* Waiting on — who the task is stuck/pending with (QA, a person,
@@ -574,23 +604,15 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 </div>
               </div>
             </div>
-            {/* Compliance toggles live behind a disclosure so the default
-                view stays simple. Schema-side these fields remain explicit
-                per the GxP requirements in CLAUDE.md. */}
             <details className="pt-1 group">
               <summary className="text-[11px] font-semibold text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors">
-                Advanced — compliance flags
+                Advanced options
               </summary>
               <div className="flex gap-4 pt-2 text-xs">
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={!!task.gxpCritical} disabled={!isLead}
-                    onChange={(e) => isLead && update({ gxpCritical: e.target.checked })} />
-                  Compliance critical
-                </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input type="checkbox" checked={!!task.requiresQaSignoff} disabled={!isLead}
                     onChange={(e) => isLead && update({ requiresQaSignoff: e.target.checked })} />
-                  Requires sign-off
+                  Approval required
                 </label>
               </div>
             </details>

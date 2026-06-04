@@ -1,22 +1,13 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Download, FileText, Sheet, FileCode2, ChevronDown } from 'lucide-react';
+import { Download, FileText, Sheet, ChevronDown, FileSpreadsheet } from 'lucide-react';
 
-/**
- * A single "Export" button that opens a small menu of formats (PDF, CSV, HTML).
- * Replaces the row of three separate download buttons we used to show on the
- * team & project pages, so the action reads as one decision ("export") with a
- * format choice — cleaner and consistent everywhere.
- *
- * Each handler is supplied by the caller, so this component stays presentation
- * only and the actual report generation lives next to the data.
- */
 export function ExportMenu({
-  onPdf, onCsv, onHtml, label = 'Export', disabled = false,
+  onExcel, onPdf, onCsv, label = 'Export', disabled = false,
 }: {
-  onPdf: () => void;
+  onExcel?: () => void;
+  onPdf?: () => void;
   onCsv: () => void;
-  onHtml: () => void;
   label?: string;
   disabled?: boolean;
 }) {
@@ -33,9 +24,9 @@ export function ExportMenu({
   }, [open]);
 
   const items = [
-    { key: 'pdf',  label: 'PDF',  hint: 'Print-ready, for meetings', icon: FileText,  onClick: onPdf,  tint: '#dc2626' },
-    { key: 'csv',  label: 'CSV',  hint: 'Spreadsheet — pivot & filter', icon: Sheet,     onClick: onCsv,  tint: '#16a34a' },
-    { key: 'html', label: 'HTML', hint: 'Self-contained web page',  icon: FileCode2, onClick: onHtml, tint: '#2563eb' },
+    ...(onExcel ? [{ key: 'xlsx', label: 'Excel', hint: 'Editable — dropdowns, filters, live totals', icon: FileSpreadsheet, onClick: onExcel, tint: '#15803d' }] : []),
+    ...(onPdf   ? [{ key: 'pdf',  label: 'PDF',   hint: 'Formatted report, ready to share',           icon: FileText,        onClick: onPdf,   tint: '#dc2626' }] : []),
+    { key: 'csv', label: 'CSV', hint: 'Raw data — import to any spreadsheet', icon: Sheet, onClick: onCsv, tint: '#16a34a' },
   ];
 
   return (

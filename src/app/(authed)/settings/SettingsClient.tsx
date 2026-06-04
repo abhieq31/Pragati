@@ -457,6 +457,21 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
     if (initialUser.role === 'admin') {
       api('/auth/security-key').then((r: any) => setHasRecoveryKey(r.hasKey)).catch(() => {});
     }
+
+    // Warm the below-the-fold activity bundle + current-year data as soon as
+    // the profile shell is interactive, so opening/scanning the graph does not
+    // sit on an avoidable dynamic-import + API waterfall.
+    const warm = () => {
+      void import('@/components/ActivityGraph').then((m) => m.preloadActivityGraphData());
+    };
+    const w = window as any;
+    const id = typeof w.requestIdleCallback === 'function'
+      ? w.requestIdleCallback(warm, { timeout: 900 })
+      : window.setTimeout(warm, 250);
+    return () => {
+      if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id);
+      else window.clearTimeout(id);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -597,10 +612,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
           <form onSubmit={(e) => { saveIdentity(e); }} className="space-y-4">
             <div className="flex items-center gap-3">
               <Avatar name={user.name} size={52} letter={avatarLetter} bg={avatarBg} font={avatarFont} />
-              <button type="button" onClick={() => setShowAvatarEditor(true)}
-                className="btn-secondary inline-flex items-center gap-1.5 text-xs">
-                <Pencil size={12} /> Change avatar
-              </button>
+              <p className="text-xs text-slate-400 dark:text-white/30">Tap your avatar on the profile page to change it.</p>
             </div>
             <Field label="Full name">
               <input className="input" value={name} onChange={e => setName(e.target.value)} required />

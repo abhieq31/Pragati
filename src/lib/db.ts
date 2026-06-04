@@ -12,9 +12,13 @@ async function resolveUri(): Promise<string> {
     const { MongoMemoryServer } = await import('mongodb-memory-server');
     const g = global as any;
     if (!g.__mongoMemoryServer) {
+      // mongodb-memory-server downloads a binary at first start. Some Mongo
+      // patch versions stop being hosted upstream over time (we hit a 403
+      // on 7.0.14 for Ubuntu 22.04 in mid-2026), so prefer a known-stable
+      // minor release and let the operator override via MONGOMS_VERSION.
       g.__mongoMemoryServer = await MongoMemoryServer.create({
         instance: { dbName: 'pragati' },
-        binary: { version: process.env.MONGOMS_VERSION || '7.0.14' },
+        binary: { version: process.env.MONGOMS_VERSION || '7.0.7' },
       });
       console.log(`[db] in-memory Mongo @ ${g.__mongoMemoryServer.getUri()}`);
     }
@@ -30,7 +34,26 @@ async function resolveUri(): Promise<string> {
   );
 }
 
+// Fail loudly on the FIRST request after a misconfigured production deploy,
+// rather than letting the app appear healthy until the first auth operation
+// trips over a missing JWT_SECRET. connectDB() is the earliest shared
+// chokepoint every authenticated request funnels through, and it runs at
+// runtime (not during `next build`), so this never blocks a CI build on a box
+// that legitimately lacks the secret.
+function assertProductionConfig() {
+  if (process.env.NODE_ENV !== 'production') return;
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 16) {
+    throw new Error(
+      '[CONFIG] JWT_SECRET is missing or shorter than 16 chars in production. ' +
+      'Set a long random value in the hosting dashboard before serving traffic — ' +
+      'auth tokens cannot be signed or verified safely without it.',
+    );
+  }
+}
+
 export async function connectDB(): Promise<typeof mongoose> {
+  assertProductionConfig();
   if (cached.conn) return cached.conn;
   if (!cached.promise) {
     cached.promise = resolveUri().then((uri) =>

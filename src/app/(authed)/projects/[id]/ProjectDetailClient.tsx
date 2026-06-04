@@ -9,16 +9,24 @@ import {
   TaskLink, formatDate, useToast,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
+import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText } from 'lucide-react';
+import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText, Eye, Sparkles } from 'lucide-react';
+import { BirdEyeButton } from '@/components/BirdEyeButton';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
 import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
+import dynamic from 'next/dynamic';
+// Heavy interactive SVG canvas — only load it when a viewer actually opens it.
+const BirdsEyeView = dynamic(
+  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
+  { ssr: false, loading: () => null },
+);
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -266,10 +274,9 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                     )}
                     <Link href={`/tasks/${t.id}`} className="block p-3 pl-4" onClick={e => isDragging && e.preventDefault()}>
                       <div className="text-xs font-semibold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2">{t.title}</div>
-                      {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                      {(t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                         <div className="mt-1.5 flex gap-1 flex-wrap">
-                          {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
-                          {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Sign-off</span>}
+                          {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Approval</span>}
                           {t.requiresQaSignoff && t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Approved ✓</span>}
                           {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
                         </div>
@@ -388,10 +395,9 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
               style={{ borderColor: '#e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
               <Link href={`/tasks/${t.id}`} className="block p-3.5">
                 <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug pr-8">{t.title}</div>
-                {(t.gxpCritical || t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
+                {(t.requiresQaSignoff || (t.priority && t.priority !== 'low')) && (
                   <div className="mt-2 flex gap-1.5 flex-wrap">
-                    {t.gxpCritical && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">Compliance</span>}
-                    {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Sign-off</span>}
+                    {t.requiresQaSignoff && !t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">Approval</span>}
                     {t.requiresQaSignoff && t.qaSignoffAt && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">Approved ✓</span>}
                     {t.priority && t.priority !== 'low' && <PriorityTag priority={t.priority} />}
                   </div>
@@ -464,8 +470,8 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
 }
 
 /* ── Quick-add task ───────────────────────────────────────────────────────── */
-function QuickAddTask({ projectId, phaseId, users, onAdded }: {
-  projectId: string; phaseId?: string; users: any[]; onAdded: () => void;
+function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
+  projectId: string; phaseId?: string; teamId?: string | null; onAdded: () => void;
 }) {
   const [open, setOpen]       = useState(false);
   const [title, setTitle]     = useState('');
@@ -473,8 +479,29 @@ function QuickAddTask({ projectId, phaseId, users, onAdded }: {
   const [due, setDue]         = useState('');
   const [saving, setSaving]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Task-assist suggestions (assignee + due date). Read-only, computed from the
+  // team's own history; the user always confirms by clicking a chip.
+  const [sug, setSug] = useState<{
+    assignee: { id: string; name: string; reason: string } | null;
+    dueDate:  { date: string; days: number; reason: string } | null;
+  } | null>(null);
 
   useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 50); }, [open]);
+
+  // Debounced lookup — only once a meaningful title exists.
+  useEffect(() => {
+    if (!open) { setSug(null); return; }
+    const t = title.trim();
+    if (t.length < 3) { setSug(null); return; }
+    let cancelled = false;
+    const h = setTimeout(async () => {
+      try {
+        const r = await api<any>(`/tasks/suggest?projectId=${encodeURIComponent(projectId)}&title=${encodeURIComponent(t)}`);
+        if (!cancelled) setSug(r);
+      } catch { if (!cancelled) setSug(null); }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(h); };
+  }, [title, open, projectId]);
 
   async function add(e?: React.FormEvent) {
     e?.preventDefault();
@@ -494,36 +521,60 @@ function QuickAddTask({ projectId, phaseId, users, onAdded }: {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)}
-        className="mt-2 w-full flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 text-xs text-slate-400 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50/40 transition-all group">
-        <Plus size={12} className="group-hover:text-blue-600 transition-colors" />
+        className="mt-2 w-full flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-dashed border-slate-200 dark:border-white/[0.07] text-xs text-slate-400 dark:text-white/25 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-500/40 hover:bg-blue-50/40 dark:hover:bg-blue-500/[0.06] transition-all group">
+        <Plus size={12} className="group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
         Add a task
       </button>
     );
   }
 
   return (
-    <form onSubmit={add} className="mt-2 rounded-xl border-2 border-blue-200 overflow-hidden bg-blue-50/20 fade-in-soft">
+    <form onSubmit={add} className="mt-2 rounded-xl border-2 border-blue-200 dark:border-blue-500/30 overflow-hidden bg-blue-50/20 dark:bg-blue-500/[0.05] fade-in-soft">
       <input
         ref={inputRef}
-        className="w-full px-3 py-2.5 text-sm bg-transparent border-none outline-none text-slate-800 placeholder:text-slate-400 font-medium"
+        className="w-full px-3 py-2.5 text-sm bg-transparent border-none outline-none text-slate-800 dark:text-white/85 placeholder:text-slate-400 dark:placeholder:text-white/25 font-medium"
         placeholder="Task title — press Enter to add"
         value={title}
         onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setTitle(''); } }}
       />
-      <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 bg-white/60">
-        <select className="flex-1 text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-600 focus:outline-none focus:border-blue-300"
-          value={assignee} onChange={e => setAssignee(e.target.value)}>
-          <option value="">Unassigned</option>
-          {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
+      {((sug?.assignee && !assignee) || (sug?.dueDate && !due)) && (
+        <div className="flex flex-wrap items-center gap-1.5 px-2.5 pb-2">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-blue-500/70 dark:text-blue-400/70">
+            <Sparkles size={10} /> Suggested
+          </span>
+          {sug?.assignee && !assignee && (
+            <button type="button" onClick={() => setAssignee(sug.assignee!.id)} title={sug.assignee.reason}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-500/25 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors">
+              Assign {sug.assignee.name}
+            </button>
+          )}
+          {sug?.dueDate && !due && (
+            <button type="button" onClick={() => setDue(sug.dueDate!.date)} title={sug.dueDate.reason}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              Due {new Date(sug.dueDate.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+            </button>
+          )}
+        </div>
+      )}
+      <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 dark:border-blue-500/20 bg-white/60 dark:bg-white/[0.02]">
+        <UserPicker
+          className="flex-1"
+          value={assignee}
+          onChange={setAssignee}
+          teamId={teamId}
+          excludeAdmin
+          size="sm"
+          placeholder="Search to assign…"
+          ariaLabel="Assignee"
+        />
         <DatePicker value={due} onChange={v => setDue(v || '')} placeholder="Due date" size="sm" />
         <button type="submit" disabled={!title.trim() || saving}
           className="px-3 py-1 text-xs font-bold rounded-lg bg-blue-600 text-white disabled:opacity-50 hover:bg-blue-700 transition-colors shrink-0">
           {saving ? '…' : 'Add'}
         </button>
         <button type="button" onClick={() => { setOpen(false); setTitle(''); }}
-          className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors">
+          className="p-1 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 rounded transition-colors">
           <X size={13} />
         </button>
       </div>
@@ -723,7 +774,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // byte. The client still refetches on mount to stay live; SSR is the fast
   // first paint, the client fetch is the freshness pass.
   const [project, setProject] = useState<any>(initialProject);
-  const [users, setUsers]     = useState<any[]>([]);
   const [me, setMe]           = useState<any>(initialMe);
   const [view, setView]       = useState<'phases' | 'board'>('phases');
   // The owner of a personal project may fully manage it even as an IC — that
@@ -734,6 +784,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [deleteOpen, setDeleteOpen]           = useState(false);
   const [blockCompleteOpen, setBlockComplete] = useState(false);
   const [savingStatus, setSavingStatus]       = useState(false);
+  // Bird's-eye view modal — shows this project's tasks as a tree (project
+  // scope, single-column layout, no team level).
   // The status the user picked that's awaiting an e-signature (password +
   // reason). Null when no sign-off is in flight.
   const [pendingStatus, setPendingStatus]     = useState<string | null>(null);
@@ -742,6 +794,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [savingDue, setSavingDue]             = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
+  const [showBirdEye, setShowBirdEye] = useState(false);
   // Milestone celebration — set when finishing a task closes out its phase or
   // the whole project. The Celebration overlay fires a fanfare + confetti.
   const [celebration, setCelebration] = useState<{ title: string; subtitle?: string; emoji?: string } | null>(null);
@@ -752,20 +805,20 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
 
   async function load() {
     try {
-      // Fetch the project first so we know its team — then pull only that
-      // team's roster for the assignee dropdown. Falls back to all users
-      // when a project hasn't been assigned to a team yet.
+      // The assignee picker (UserPicker) fetches its own paginated roster
+      // scoped to the project's team, so we only need the project here.
       const p = await api<any>(`/projects/${id}`);
-      const u = await api<any[]>(`/users${p.teamId ? `?teamId=${p.teamId}` : ''}`);
-      // The admin is the workspace owner, never a task assignee — keep them
-      // out of every picker.
-      setProject(p); setUsers(u.filter((x) => x.role !== 'admin')); setLoadErr(null);
+      setProject(p); setLoadErr(null);
     } catch (e: any) { setLoadErr(e?.message || 'Could not load this project.'); }
   }
 
   useEffect(() => {
-    load();
-    api<any>('/auth/me').then(d => setMe(d.user)).catch(() => {});
+    // The route is server-seeded with the project and current user. Avoid a
+    // duplicate hydration fetch; only fall back to the API if a client-side
+    // transition ever mounts without those props. Mutations still call load().
+    if (!project) load();
+    if (!me) api<any>('/auth/me').then(d => setMe(d.user)).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loadErr) {
@@ -1115,10 +1168,11 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           {/* Actions — Export (PDF/CSV/HTML) for everyone; Archive + Delete
               admin-only. */}
           <div className="flex flex-wrap items-center md:justify-end gap-2">
+            <BirdEyeButton scopeKey={`project:${id}`} onClick={() => setShowBirdEye(true)} />
             <ExportMenu
-              onPdf={() => printProjectReport(project, phases)}
-              onHtml={() => downloadProjectReport(project, phases)}
-              onCsv={() => downloadProjectCsv(project, phases)}
+              onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
+              onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
+              onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
             />
             {isAdmin && !project.isPersonal && (
               <Link
@@ -1251,16 +1305,15 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                             ⏳ {t.pendingWith}
                           </span>
                         )}
-                        {t.gxpCritical && <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>}
                         {t.requiresQaSignoff && (t.qaSignoffAt
-                          ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">QA ✓</span>
-                          : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Sign-off</span>
+                          ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">Approved ✓</span>
+                          : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Approval</span>
                         )}
                         <PriorityTag priority={t.priority} />
                         {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
                         {canManage && (
                           <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
-                            className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-all shrink-0">
                             <Trash2 size={13} />
                           </button>
                         )}
@@ -1270,7 +1323,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                   })}
                 </div>
                 {canManage && (
-                  <QuickAddTask projectId={project.id} phaseId={ph.id} users={users} onAdded={load} />
+                  <QuickAddTask projectId={project.id} phaseId={ph.id} teamId={project.teamId} onAdded={load} />
                 )}
               </Card>
             );
@@ -1315,7 +1368,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
                     {canManage && (
                       <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
-                        className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-all shrink-0">
                         <Trash2 size={13} />
                       </button>
                     )}
@@ -1328,7 +1381,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               )}
             </div>
             {canManage && (
-              <QuickAddTask projectId={project.id} users={users} onAdded={load} />
+              <QuickAddTask projectId={project.id} teamId={project.teamId} onAdded={load} />
             )}
           </Card>
         </div>
@@ -1366,6 +1419,34 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           projectName={project.name} projectId={id}
           onClose={() => setDeleteOpen(false)}
           onDeleted={() => { setDeleteOpen(false); window.location.replace('/projects'); }}
+        />
+      )}
+      {showBirdEye && project && (
+        <BirdsEyeView
+          onClose={() => setShowBirdEye(false)}
+          onChange={load}
+          data={{
+            rootLabel: project.name,
+            rootSubLabel: `${project.code || 'Project'} · ${(tasks || []).length} task${(tasks || []).length === 1 ? '' : 's'}`,
+            scope: 'project',
+            teams: [],
+            projects: [{
+              id: project.id, code: project.code, name: project.name,
+              teamId: null,
+              health: 'healthy',
+              taskCount: (tasks || []).length,
+              tasksDone: (tasks || []).filter((t: any) => t.status === 'done').length,
+              dueDate: project.dueDate || null,
+              ownerName: project.ownerName || null,
+            }],
+            tasks: (tasks || []).map((t: any) => ({
+              id: t.id, title: t.title, projectId: project.id,
+              status: t.status,
+              assigneeName: t.assigneeName ?? null,
+              dueDate: (t.ccTcd || t.dueDate) ?? null,
+              phaseName: (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.name ?? null,
+            })),
+          }}
         />
       )}
     </div>

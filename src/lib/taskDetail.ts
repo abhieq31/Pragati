@@ -16,27 +16,29 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
   try {
     await connectDB();
 
-    // Visibility gate: the task's project must fall inside the viewer's scope.
-    // A bad/stale id throws a CastError from Mongoose — swallow it and return
-    // null so the page renders the client shell (which surfaces a graceful
-    // error message) instead of crashing into the global error boundary.
-    const ref = await Task.findById(id).select('projectId').lean();
-    if (!ref) return null;
+    // Fetch the task once, then gate on visibility: its project must fall inside
+    // the viewer's scope. A bad/stale id throws a CastError from Mongoose —
+    // swallow it (see catch) and return null so the page renders the client
+    // shell (which surfaces a graceful error) instead of crashing the boundary.
+    const t = await Task.findById(id).lean();
+    if (!t) return null;
+    const privateOwner = (t as any).privateToUserId;
+    if (privateOwner && String(privateOwner) !== String(userId)) return null;
     const scope = await getLeadScope(userId, role);
     const proj = await Project.findOne({
-      _id: (ref as any).projectId,
+      _id: (t as any).projectId,
       ...projectsVisibleFilter(scope),
     }).select('_id').lean();
     if (!proj) return null;
 
-    const t = await Task.findById(id).lean();
-    if (!t) return null;
-
-    const [project, assignee, qa, commentUsers] = await Promise.all([
-      Project.findById((t as any).projectId).lean(),
+    const [project, assignee, qa, commentUsers, flowConfirmer] = await Promise.all([
+      Project.findById((t as any).projectId).select('code name teamId').lean(),
       (t as any).assigneeId ? User.findById((t as any).assigneeId).lean() : Promise.resolve(null),
       (t as any).qaSignoffUserId ? User.findById((t as any).qaSignoffUserId).lean() : Promise.resolve(null),
       User.find({ _id: { $in: ((t as any).comments || []).map((c: any) => c.userId) } }).lean(),
+      (t as any).flowPendingConfirmedByUserId
+        ? User.findById((t as any).flowPendingConfirmedByUserId).select('name').lean()
+        : Promise.resolve(null),
     ]);
     const uMap = new Map(commentUsers.map((u) => [String(u._id), u.name]));
     const comments = ((t as any).comments || []).map((c: any) => ({
@@ -53,6 +55,8 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
         qaSignoffName:  (qa as any)?.name || null,
         projectCode:    (project as any)?.code,
         projectName:    (project as any)?.name,
+        projectTeamId:  (project as any)?.teamId ? String((project as any).teamId) : null,
+        flowPendingConfirmedByName: (flowConfirmer as any)?.name || null,
       }),
       comments,
     };

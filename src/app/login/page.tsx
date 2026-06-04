@@ -224,9 +224,11 @@ export default function LoginPage() {
       }
       router.replace('/');
       router.refresh();
+      // Keep loading=true — component unmounts during navigation.
+      // Resetting here causes the button to briefly reappear before the
+      // dashboard finishes loading, making users think the sign-in failed.
     } catch (e: any) {
       setErr(e.message || 'Something went wrong.');
-    } finally {
       setLoading(false);
     }
   }
@@ -412,7 +414,7 @@ export default function LoginPage() {
                 <PragatiMark size={44} />
               </div>
               <div className="brand-wordmark text-[2rem] text-white mt-3 drop-shadow">Pragati</div>
-              <div className="text-sm text-white/70 mt-1">Quality Informatics Platform</div>
+              <div className="text-sm text-white/70 mt-1">The view from above</div>
             </div>
 
             {/* White card on mobile to contrast the shimmer; transparent on desktop */}

@@ -14,8 +14,8 @@
     </linearGradient>
   </defs>
 
+  <!-- Symmetric squircle (rx == ry), identical to PragatiMark's tile shape. -->
   <rect width="64" height="64" rx="17" fill="url(#bg)"/>
-  <!-- Inner glossy ring (inset 2.5px, radius scaled) to match PragatiMark. -->
   <rect x="2.5" y="2.5" width="59" height="59" rx="14.5" fill="url(#gloss)"/>
 
   <!-- Two rising chevrons: progress / forward motion. Identical geometry to
