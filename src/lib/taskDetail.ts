@@ -22,6 +22,8 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
     // shell (which surfaces a graceful error) instead of crashing the boundary.
     const t = await Task.findById(id).lean();
     if (!t) return null;
+    const privateOwner = (t as any).privateToUserId;
+    if (privateOwner && String(privateOwner) !== String(userId)) return null;
     const scope = await getLeadScope(userId, role);
     const proj = await Project.findOne({
       _id: (t as any).projectId,
@@ -30,7 +32,7 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
     if (!proj) return null;
 
     const [project, assignee, qa, commentUsers] = await Promise.all([
-      Project.findById((t as any).projectId).lean(),
+      Project.findById((t as any).projectId).select('code name teamId').lean(),
       (t as any).assigneeId ? User.findById((t as any).assigneeId).lean() : Promise.resolve(null),
       (t as any).qaSignoffUserId ? User.findById((t as any).qaSignoffUserId).lean() : Promise.resolve(null),
       User.find({ _id: { $in: ((t as any).comments || []).map((c: any) => c.userId) } }).lean(),
@@ -50,6 +52,7 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
         qaSignoffName:  (qa as any)?.name || null,
         projectCode:    (project as any)?.code,
         projectName:    (project as any)?.name,
+        projectTeamId:  (project as any)?.teamId ? String((project as any).teamId) : null,
       }),
       comments,
     };

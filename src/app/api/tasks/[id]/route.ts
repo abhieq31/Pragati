@@ -16,15 +16,20 @@ import { logOperation } from '@/lib/audit';
 export const runtime = 'nodejs';
 
 async function assertTaskInScope(taskId: string, userId: string, role?: string | null) {
-  const t = await Task.findById(taskId).select('projectId').lean();
-  if (!t) return { t: null, forbidden: false, ownsPersonal: false };
+  const t = await Task.findById(taskId).select('projectId privateToUserId').lean();
+  if (!t) return { t: null, forbidden: false, ownsPersonal: false, ownsPrivate: false };
+  const privateOwner = (t as any).privateToUserId;
+  const ownsPrivate = !!privateOwner && String(privateOwner) === String(userId);
+  if (privateOwner && !ownsPrivate) {
+    return { t, forbidden: true, ownsPersonal: false, ownsPrivate: false };
+  }
   const scope = await getLeadScope(userId, role);
   const proj = await Project.findOne({ _id: t.projectId, ...projectsVisibleFilter(scope) })
     .select('_id isPersonal ownerId').lean();
   // The owner of a personal project has full authority over its tasks, even as
   // an IC — a private workspace would be pointless otherwise.
   const ownsPersonal = !!(proj && (proj as any).isPersonal && String((proj as any).ownerId) === String(userId));
-  return { t, forbidden: !proj, ownsPersonal };
+  return { t, forbidden: !proj, ownsPersonal, ownsPrivate };
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -45,10 +50,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const { forbidden, ownsPersonal } = await assertTaskInScope(params.id, user!.sub, user!.role);
+    const { forbidden, ownsPersonal, ownsPrivate } = await assertTaskInScope(params.id, user!.sub, user!.role);
     if (forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     const body = await readBody(req, TaskUpdateSchema);
-    const current = await Task.findById(params.id).select('status assigneeId').lean();
+    const current = await Task.findById(params.id).select('status assigneeId privateToUserId').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     // Contributors may edit only the description and due date, and only on a
@@ -63,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // filter for contributor-scoped edits. If the task was reassigned before
     // our write lands, findOneAndUpdate returns null and we surface a 403
     // rather than silently mutating a task the caller no longer owns.
-    const icEdit = !canMutate(user!.role) && !ownsPersonal;
+    const icEdit = !canMutate(user!.role) && !ownsPersonal && !ownsPrivate;
     if (icEdit) {
       const isAssignee = current.assigneeId && String(current.assigneeId) === String(user!.sub);
       const keys = Object.keys(body).filter(k => body[k as keyof typeof body] !== undefined);
@@ -104,9 +109,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // ── Notifications ────────────────────────────────────────────────
     // Reassigned → tell the new assignee. Marked done by an assignee →
     // tell the project owner their work landed.
+    const isPrivateTask = !!(fresh as any).privateToUserId;
     const reassigned = body.assigneeId !== undefined
       && String(body.assigneeId || '') !== String(current.assigneeId || '');
-    if (reassigned && body.assigneeId) {
+    if (!isPrivateTask && reassigned && body.assigneeId) {
       await notify({
         userId:    String(body.assigneeId),
         actorId:   user!.sub,
@@ -117,7 +123,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         projectId: String((fresh as any)?.projectId || ''),
       });
     }
-    if (body.status === 'done' && current.status !== 'done') {
+    if (!isPrivateTask && body.status === 'done' && current.status !== 'done') {
       const proj = await Project.findById((fresh as any)?.projectId).select('ownerId name').lean();
       if (proj && (proj as any).ownerId) {
         await notify({
@@ -134,7 +140,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const statusChanged = !!body.status && body.status !== current.status;
     const proj = await Project.findById((fresh as any)?.projectId).select('isPersonal code').lean();
-    if (!((proj as any)?.isPersonal || String((proj as any)?.code || '').startsWith('PRSN-'))) {
+    if (!isPrivateTask && !((proj as any)?.isPersonal || String((proj as any)?.code || '').startsWith('PRSN-'))) {
       await logOperation({
         action: statusChanged ? 'task.status' : 'task.update', category: 'task', actor: user,
         targetType: 'task', targetId: params.id, targetLabel: (fresh as any)?.title || '',
@@ -154,10 +160,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const { t, forbidden, ownsPersonal } = await assertTaskInScope(params.id, user!.sub, user!.role);
+    const { t, forbidden, ownsPersonal, ownsPrivate } = await assertTaskInScope(params.id, user!.sub, user!.role);
     if (!t || forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    // Leads delete any task; ICs may delete tasks inside their own personal project.
-    if (!canMutate(user!.role) && !ownsPersonal) {
+    // Leads delete visible shared tasks; ICs may delete tasks inside their own personal project
+    // and the owner can delete private task overlays linked to shared projects.
+    if (!canMutate(user!.role) && !ownsPersonal && !ownsPrivate) {
       return NextResponse.json({ error: 'Only leads can delete tasks.' }, { status: 403 });
     }
     const doomed = await Task.findById(params.id).select('title projectId').lean();

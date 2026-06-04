@@ -13,14 +13,17 @@ import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { useIsDark } from '@/lib/client/useIsDark';
 import { weightedProgress } from '@/lib/progress';
-import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText, Eye } from 'lucide-react';
+import { GripVertical, CheckCircle2, Plus, Trash2, AlertTriangle, Archive, X, ChevronLeft, ChevronRight, Lock, Pencil, ShieldCheck, ScrollText, Eye, Sparkles } from 'lucide-react';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
 import { Celebration } from '@/components/Celebration';
 import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
-import BirdEyeView, { getInitialLayout } from '@/components/BirdEyeView';
+import dynamic from 'next/dynamic';
+import { getInitialLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
+// Heavy interactive SVG canvas — only load it when a viewer actually opens it.
+const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
@@ -473,8 +476,29 @@ function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
   const [due, setDue]         = useState('');
   const [saving, setSaving]   = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Task-assist suggestions (assignee + due date). Read-only, computed from the
+  // team's own history; the user always confirms by clicking a chip.
+  const [sug, setSug] = useState<{
+    assignee: { id: string; name: string; reason: string } | null;
+    dueDate:  { date: string; days: number; reason: string } | null;
+  } | null>(null);
 
   useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 50); }, [open]);
+
+  // Debounced lookup — only once a meaningful title exists.
+  useEffect(() => {
+    if (!open) { setSug(null); return; }
+    const t = title.trim();
+    if (t.length < 3) { setSug(null); return; }
+    let cancelled = false;
+    const h = setTimeout(async () => {
+      try {
+        const r = await api<any>(`/tasks/suggest?projectId=${encodeURIComponent(projectId)}&title=${encodeURIComponent(t)}`);
+        if (!cancelled) setSug(r);
+      } catch { if (!cancelled) setSug(null); }
+    }, 450);
+    return () => { cancelled = true; clearTimeout(h); };
+  }, [title, open, projectId]);
 
   async function add(e?: React.FormEvent) {
     e?.preventDefault();
@@ -511,6 +535,25 @@ function QuickAddTask({ projectId, phaseId, teamId, onAdded }: {
         onChange={e => setTitle(e.target.value)}
         onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); setTitle(''); } }}
       />
+      {((sug?.assignee && !assignee) || (sug?.dueDate && !due)) && (
+        <div className="flex flex-wrap items-center gap-1.5 px-2.5 pb-2">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-blue-500/70 dark:text-blue-400/70">
+            <Sparkles size={10} /> Suggested
+          </span>
+          {sug?.assignee && !assignee && (
+            <button type="button" onClick={() => setAssignee(sug.assignee!.id)} title={sug.assignee.reason}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-500/25 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors">
+              Assign {sug.assignee.name}
+            </button>
+          )}
+          {sug?.dueDate && !due && (
+            <button type="button" onClick={() => setDue(sug.dueDate!.date)} title={sug.dueDate.reason}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+              Due {new Date(sug.dueDate.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-2 px-2.5 py-1.5 border-t border-blue-100 dark:border-blue-500/20 bg-white/60 dark:bg-white/[0.02]">
         <UserPicker
           className="flex-1"
@@ -738,6 +781,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [deleteOpen, setDeleteOpen]           = useState(false);
   const [blockCompleteOpen, setBlockComplete] = useState(false);
   const [savingStatus, setSavingStatus]       = useState(false);
+  // Bird's-eye view modal — shows this project's tasks as a tree (project
+  // scope, single-column layout, no team level).
   // The status the user picked that's awaiting an e-signature (password +
   // reason). Null when no sign-off is in flight.
   const [pendingStatus, setPendingStatus]     = useState<string | null>(null);
@@ -765,8 +810,12 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   }
 
   useEffect(() => {
-    load();
-    api<any>('/auth/me').then(d => setMe(d.user)).catch(() => {});
+    // The route is server-seeded with the project and current user. Avoid a
+    // duplicate hydration fetch; only fall back to the API if a client-side
+    // transition ever mounts without those props. Mutations still call load().
+    if (!project) load();
+    if (!me) api<any>('/auth/me').then(d => setMe(d.user)).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loadErr) {
@@ -1127,6 +1176,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               onExcel={project.isPersonal ? undefined : () => { window.location.href = `/api/projects/${project.id}/export`; }}
               onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
               onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
+              onBirdEye={() => {
+                const { nodes, edges } = getInitialLayout(project, tasks);
+                downloadBirdEyeSvg(project.name, nodes, edges, me?.name || me?.email || 'User');
+              }}
             />
             {isAdmin && !project.isPersonal && (
               <Link

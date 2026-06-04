@@ -1,24 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Download, RotateCcw, Map, StickyNote, Trash2 } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import {
+  type BirdEyeNode,
+  type BirdEyeEdge,
+  NODE_SIZE,
+  CANVAS_W,
+  CANVAS_H,
+  computeFit,
+  STATUS_COLOR,
+  STATUS_LABEL,
+  formatDate,
+  initials,
+  downloadBirdEyeSvg,
+} from '@/components/birdsEyeLayout';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
-
-interface BirdEyeNode {
-  id: string;
-  type: 'project' | 'task' | 'person';
-  x: number;
-  y: number;
-  data: any;
-}
-
-interface BirdEyeEdge {
-  from: string;
-  to: string;
-  label?: string;
-}
 
 interface Annotation {
   id: string;
@@ -39,138 +38,12 @@ export interface BirdEyeViewProps {
 
 const NOTE_COLORS = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#e9d5ff', '#fed7aa'];
 
-/* ── Layout helper ───────────────────────────────────────────────────────── */
-
-export function getInitialLayout(
-  project: any,
-  tasks: any[],
-): { nodes: BirdEyeNode[]; edges: BirdEyeEdge[] } {
-  const cx = 600;
-  const cy = 400;
-  const nodes: BirdEyeNode[] = [];
-  const edges: BirdEyeEdge[] = [];
-
-  // Project at center
-  nodes.push({ id: `proj-${project.id}`, type: 'project', x: cx, y: cy, data: project });
-
-  // Tasks in a ring
-  tasks.forEach((t, i) => {
-    const angle = (i / Math.max(tasks.length, 1)) * 2 * Math.PI - Math.PI / 2;
-    const r = 220;
-    nodes.push({
-      id: `task-${t.id}`,
-      type: 'task',
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle),
-      data: t,
-    });
-    edges.push({ from: `proj-${project.id}`, to: `task-${t.id}` });
-  });
-
-  // People in outer ring — deduplicate by assigneeId
-  const seen = new Set<string>();
-  const uniquePeople: { id: string; name: string }[] = [];
-  tasks.forEach((t) => {
-    if (t.assigneeId && !seen.has(t.assigneeId)) {
-      seen.add(t.assigneeId);
-      uniquePeople.push({ id: t.assigneeId, name: t.assigneeName || 'Unknown' });
-    }
-  });
-
-  uniquePeople.forEach((p, i) => {
-    const angle = (i / Math.max(uniquePeople.length, 1)) * 2 * Math.PI;
-    const r = 390;
-    nodes.push({
-      id: `person-${p.id}`,
-      type: 'person',
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle),
-      data: p,
-    });
-    tasks
-      .filter((t) => t.assigneeId === p.id)
-      .forEach((t) => {
-        edges.push({ from: `task-${t.id}`, to: `person-${p.id}` });
-      });
-  });
-
-  return { nodes, edges };
-}
-
-/** Layout for a team canvas: team at center, projects in middle ring, members in outer ring. */
-export function getTeamLayout(
-  team: any,
-  projects: any[],
-  members: any[],
-): { nodes: BirdEyeNode[]; edges: BirdEyeEdge[] } {
-  const cx = 600;
-  const cy = 400;
-  const nodes: BirdEyeNode[] = [];
-  const edges: BirdEyeEdge[] = [];
-
-  nodes.push({ id: `team-${team.id}`, type: 'project', x: cx, y: cy, data: { ...team, name: team.name, code: team.function || 'TEAM' } });
-
-  projects.forEach((p, i) => {
-    const angle = (i / Math.max(projects.length, 1)) * 2 * Math.PI - Math.PI / 2;
-    const r = 240;
-    nodes.push({ id: `proj-${p.id}`, type: 'task', x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), data: p });
-    edges.push({ from: `team-${team.id}`, to: `proj-${p.id}` });
-  });
-
-  members.forEach((m, i) => {
-    const angle = (i / Math.max(members.length, 1)) * 2 * Math.PI;
-    const r = 420;
-    nodes.push({ id: `person-${m.id}`, type: 'person', x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle), data: m });
-    edges.push({ from: `team-${team.id}`, to: `person-${m.id}` });
-  });
-
-  return { nodes, edges };
-}
-
-/* ── Status helpers ──────────────────────────────────────────────────────── */
-
-const STATUS_COLOR: Record<string, string> = {
-  todo: '#94a3b8',
-  in_progress: '#3b82f6',
-  review: '#f59e0b',
-  blocked: '#ef4444',
-  done: '#22c55e',
-  planning: '#94a3b8',
-  on_hold: '#f59e0b',
-  completed: '#22c55e',
-  cancelled: '#ef4444',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  todo: 'To Do',
-  in_progress: 'In Progress',
-  review: 'Review',
-  blocked: 'Blocked',
-  done: 'Done',
-  planning: 'Planning',
-  on_hold: 'On Hold',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
-};
+/* ── Status helpers (component-only; shared maps live in birdsEyeLayout) ───── */
 
 const TASK_STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
 function statusDot(s: string) {
   return STATUS_COLOR[s] || '#94a3b8';
-}
-
-function formatDate(d?: string | null): string {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
-}
-
-function initials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0] || '')
-    .join('')
-    .toUpperCase();
 }
 
 function healthBadge(tasks: any[]): { label: string; color: string; bg: string } {
@@ -181,14 +54,6 @@ function healthBadge(tasks: any[]): { label: string; color: string; bg: string }
   if (done === tasks.length) return { label: 'Complete', color: '#15803d', bg: '#f0fdf4' };
   return { label: 'On track', color: '#1565C0', bg: '#eff6ff' };
 }
-
-/* ── Node dimensions ─────────────────────────────────────────────────────── */
-
-const NODE_SIZE: Record<BirdEyeNode['type'], { w: number; h: number }> = {
-  project: { w: 200, h: 110 },
-  task: { w: 170, h: 82 },
-  person: { w: 100, h: 80 },
-};
 
 /* ── Main component ──────────────────────────────────────────────────────── */
 
@@ -202,8 +67,10 @@ export default function BirdEyeView({
 }: BirdEyeViewProps) {
   /* ── State ── */
   const [nodes, setNodes] = useState<BirdEyeNode[]>(initialNodes);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
+  // Auto-fit on open so every node is visible and centred regardless of count.
+  const initialFit = useMemo(() => computeFit(initialNodes), [initialNodes]);
+  const [pan, setPan] = useState(initialFit.pan);
+  const [scale, setScale] = useState(initialFit.scale);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [mode, setMode] = useState<'select' | 'note'>('select');
@@ -334,8 +201,7 @@ export default function BirdEyeView({
   }
 
   function onCanvasDoubleClick() {
-    setPan({ x: 0, y: 0 });
-    setScale(1);
+    fitView();
   }
 
   function onCanvasClick() {
@@ -345,110 +211,19 @@ export default function BirdEyeView({
     clickOnNodeRef.current = false;
   }
 
-  /* ── Reset view ── */
+  /* ── Reset view — re-fit all nodes, centred ── */
+  function fitView() {
+    const f = computeFit(nodes);
+    setScale(f.scale);
+    setPan(f.pan);
+  }
   function resetView() {
-    setPan({ x: 0, y: 0 });
-    setScale(1);
+    fitView();
   }
 
-  /* ── SVG Export ── */
+  /* ── SVG Export — presentable, light-themed, full titles (shared builder) ── */
   function downloadSvg() {
-    if (!svgRef.current) return;
-    // Clone so we can embed inline styles without mutating the live DOM
-    const clone = svgRef.current.cloneNode(true) as SVGSVGElement;
-
-    // Remove foreignObject (HTML inside SVG doesn't serialize well for standalone)
-    clone.querySelectorAll('foreignObject').forEach((fo) => fo.remove());
-
-    // Add node labels as plain SVG text in the clone
-    nodes.forEach((n) => {
-      const size = NODE_SIZE[n.type];
-      const cx = n.x + pan.x;
-      const cy = n.y + pan.y;
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('transform', `scale(${scale})`);
-
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', String(cx - size.w / 2));
-      rect.setAttribute('y', String(cy - size.h / 2));
-      rect.setAttribute('width', String(size.w));
-      rect.setAttribute('height', String(size.h));
-      rect.setAttribute('rx', '10');
-      rect.setAttribute('fill', dark ? '#1a2035' : '#ffffff');
-      rect.setAttribute('stroke', dark ? 'rgba(255,255,255,0.1)' : '#e2e8f0');
-      rect.setAttribute('stroke-width', '1.5');
-      g.appendChild(rect);
-
-      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      label.setAttribute('x', String(cx));
-      label.setAttribute('y', String(cy));
-      label.setAttribute('text-anchor', 'middle');
-      label.setAttribute('dominant-baseline', 'middle');
-      label.setAttribute('font-size', '11');
-      label.setAttribute('font-family', 'system-ui, sans-serif');
-      label.setAttribute('fill', dark ? 'rgba(255,255,255,0.8)' : '#1e293b');
-      const labelText = n.type === 'project'
-        ? n.data.name
-        : n.type === 'task'
-        ? n.data.title
-        : n.data.name;
-      label.textContent = labelText;
-      g.appendChild(label);
-
-      clone.appendChild(g);
-    });
-
-    // Annotations (sticky notes) as plain SVG rects + text
-    annotations.forEach((note) => {
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      g.setAttribute('transform', `scale(${scale})`);
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      rect.setAttribute('x', String((note.x + pan.x)));
-      rect.setAttribute('y', String((note.y + pan.y)));
-      rect.setAttribute('width', '160');
-      rect.setAttribute('height', '100');
-      rect.setAttribute('rx', '8');
-      rect.setAttribute('fill', note.color);
-      rect.setAttribute('opacity', '0.9');
-      g.appendChild(rect);
-      if (note.text) {
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', String((note.x + pan.x) + 6));
-        text.setAttribute('y', String((note.y + pan.y) + 16));
-        text.setAttribute('font-size', '10');
-        text.setAttribute('font-family', 'system-ui, sans-serif');
-        text.setAttribute('fill', '#1e293b');
-        note.text.split('\n').slice(0, 6).forEach((line, li) => {
-          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-          tspan.setAttribute('x', String((note.x + pan.x) + 6));
-          tspan.setAttribute('dy', li === 0 ? '0' : '13');
-          tspan.textContent = line;
-          text.appendChild(tspan);
-        });
-        g.appendChild(text);
-      }
-      clone.appendChild(g);
-    });
-
-    // Footer
-    const footer = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    footer.setAttribute('x', '10');
-    footer.setAttribute('y', '790');
-    footer.setAttribute('font-size', '9');
-    footer.setAttribute('font-family', 'system-ui, sans-serif');
-    footer.setAttribute('fill', '#94a3b8');
-    footer.textContent = `Exported by ${exportedBy} • ${new Date().toLocaleDateString()}`;
-    clone.appendChild(footer);
-
-    const serializer = new XMLSerializer();
-    const svgStr = serializer.serializeToString(clone);
-    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${title.replace(/\s+/g, '_')}_birds_eye.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBirdEyeSvg(title, nodes, edges, exportedBy);
   }
 
   /* ── Edge path calculation ── */
@@ -524,7 +299,6 @@ export default function BirdEyeView({
 
   /* ── Mini-map ── */
   const MINI_W = 140, MINI_H = 90;
-  const CANVAS_W = 1200, CANVAS_H = 800;
   const miniScaleX = MINI_W / CANVAS_W;
   const miniScaleY = MINI_H / CANVAS_H;
 

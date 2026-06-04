@@ -2,23 +2,45 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/client/api';
-import { useIsLead } from '@/components/CurrentUserContext';
+import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
-  ChevronDown, ChevronUp, Target, BookmarkCheck,
+  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit, Network,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
+import dynamicImport from 'next/dynamic';
+// The mind map is interactive SVG with autosave; keep it out of the My Day
+// first paint unless the user opens it.
+const MindMap = dynamicImport(
+  () => import('@/components/MindMap').then((m) => m.MindMap),
+  { ssr: false, loading: () => (
+    <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 h-[460px] flex items-center justify-center text-xs text-slate-400">
+      Loading mind map…
+    </div>
+  ) },
+);
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 5)  return 'Night shift';
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  if (h < 21) return 'Good evening';
-  return 'Good night';
+/* The home page already shows the time-of-day greeting; My Day opens with an
+   encouraging line instead, so the page feels like a fresh start each day. The
+   line is keyed to the day-of-year so it's stable through the day (no flicker)
+   yet rotates over time. */
+const ENCOURAGEMENTS = [
+  'Let’s make today count',
+  'One clear thought at a time',
+  'Small steps, real progress',
+  'Capture it, then conquer it',
+  'A clear mind moves fast',
+  'Today is yours to shape',
+  'Progress beats perfection',
+  'Start light — empty your head',
+];
+function encouragement() {
+  const d = new Date();
+  const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86_400_000);
+  return ENCOURAGEMENTS[dayOfYear % ENCOURAGEMENTS.length];
 }
 
 /* Live clock day/date — suppresses hydration mismatch via suppressHydrationWarning */
@@ -78,6 +100,8 @@ export default function MyDayClient({ initialData }: {
   initialData: { open: Note[]; done: Note[] };
 }) {
   const isLead  = useIsLead();
+  const me      = useCurrentUser();
+  const firstName = (me?.name || '').trim().split(/\s+/)[0] || '';
   const dateLabel = useDateLabel();
 
   const [open, setOpen]   = useState<Note[]>(initialData.open);
@@ -89,6 +113,9 @@ export default function MyDayClient({ initialData }: {
   const [editText,  setEditText]    = useState('');
   const [savedAt,   setSavedAt]     = useState<Date | null>(null);
   const [justDone,  setJustDone]    = useState<string | null>(null);
+  // Mind map panel — collapsed by default so the focused "what's on" view
+  // stays the My Day landing experience.
+  const [mindMapOpen, setMindMapOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const total   = open.length + done.length;
@@ -167,7 +194,9 @@ export default function MyDayClient({ initialData }: {
               )}
             </div>
             <h1 className="text-[1.75rem] font-black tracking-tight leading-tight">
-              <span className="brand-shimmer-text" suppressHydrationWarning>{greeting()}.</span>
+              <span className="brand-shimmer-text" suppressHydrationWarning>
+                {encouragement()}{firstName ? `, ${firstName}` : ''}.
+              </span>
             </h1>
             {dateLabel && (
               <div className="flex items-center gap-1.5 mt-1.5">
@@ -201,26 +230,59 @@ export default function MyDayClient({ initialData }: {
         )}
       </div>
 
-      {/* ── Capture bar — intentionally minimal so it doesn't disrupt flow ── */}
-      <form onSubmit={add} className="mb-6 group">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-200/70 dark:border-white/[0.06] transition-colors focus-within:border-blue-300/60 dark:focus-within:border-white/15">
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent text-sm text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/20 border-0 outline-none py-0.5 min-w-0"
-            placeholder="Empty your mind…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            autoFocus
-            maxLength={2000}
-          />
-          {text.trim() && (
-            <button type="submit"
-              className="shrink-0 text-[11px] font-semibold text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 fade-in-soft transition-colors">
-              Add ↵
-            </button>
-          )}
+      {/* ── Capture — the heart of My Day: get it out of your head first ── */}
+      <form onSubmit={add} className="mb-6">
+        <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm focus-within:border-blue-400/70 dark:focus-within:border-blue-500/40 focus-within:shadow-md transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/15 dark:to-indigo-500/15 flex items-center justify-center shrink-0">
+              <BrainCircuit size={17} className="text-blue-500 dark:text-blue-400" />
+            </div>
+            <input
+              ref={inputRef}
+              className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-400 dark:placeholder-white/30 border-0 outline-none py-1 min-w-0"
+              placeholder="Empty your mind — what’s on it right now?"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              autoFocus
+              maxLength={2000}
+            />
+            {text.trim() ? (
+              <button type="submit"
+                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors">
+                Capture ↵
+              </button>
+            ) : (
+              <span className="shrink-0 hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 font-medium pr-1">Press Enter</span>
+            )}
+          </div>
         </div>
       </form>
+
+      {/* Mind map — a quieter section header (the capture above is the hero);
+          opening it reveals the full node-link whiteboard, framed like a real
+          canvas so the surface itself carries the weight, not the toggle. */}
+      <div className="mb-6">
+        <button type="button"
+          onClick={() => setMindMapOpen((v) => !v)}
+          className="group w-full flex items-center justify-between gap-3 py-2 text-left">
+          <div className="flex items-center gap-2 min-w-0">
+            <Network size={14} className="text-slate-400 dark:text-white/30 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors shrink-0" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/55 transition-colors">
+              Mind map
+            </span>
+            <span className="hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 truncate">· branch a thought into a whiteboard</span>
+          </div>
+          <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+            {mindMapOpen ? 'Hide' : 'Open canvas'}
+            {mindMapOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+          </span>
+        </button>
+        {mindMapOpen && (
+          <div className="mt-2 fade-in-soft">
+            <MindMap />
+          </div>
+        )}
+      </div>
 
       {/* ── Empty state ──────────────────────────────────────────────── */}
       {open.length === 0 && done.length === 0 && (
@@ -311,7 +373,7 @@ export default function MyDayClient({ initialData }: {
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
                       <BookmarkCheck size={12} strokeWidth={2.5} /> tracked
                     </a>
-                  ) : isLead && editingId !== n.id ? (
+                  ) : editingId !== n.id ? (
                     <button
                       onClick={() => setPromote(n)}
                       title="Promote to tracked task"
@@ -375,6 +437,7 @@ export default function MyDayClient({ initialData }: {
       {promote && (
         <PromoteModal
           note={promote}
+          canCreateShared={isLead}
           onClose={() => setPromote(null)}
           onDone={() => { setPromote(null); load(); }}
         />
@@ -384,7 +447,7 @@ export default function MyDayClient({ initialData }: {
 }
 
 /* ── Promote modal ────────────────────────────────────────────────────── */
-function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => void; onDone: () => void }) {
+function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; canCreateShared: boolean; onClose: () => void; onDone: () => void }) {
   const [projects,    setProjects]  = useState<any[]>([]);
   const [projectId,   setProjectId] = useState('');
   const [phases,      setPhases]    = useState<{ id: string; name: string }[]>([]);
@@ -393,6 +456,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
   const [priority,    setPriority]  = useState('medium');
   const [assigneeId,  setAssignee]  = useState('');
   const [due,         setDue]       = useState('');
+  const [privateToMe, setPrivateToMe] = useState(!canCreateShared);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [saving,      setSaving]    = useState(false);
   const [err,         setErr]       = useState('');
@@ -408,20 +472,21 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
     setPhaseId(''); setAssignee('');
     const proj = projects.find((p) => p.id === projectId);
     setPhases((proj?.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
+    if (privateToMe || !canCreateShared) { setMembers([]); setLoadingMeta(false); return; }
     setLoadingMeta(true);
     api<any[]>(`/users${proj?.teamId ? `?teamId=${proj.teamId}` : ''}`)
       .then((r) => setMembers(r))
       .catch(() => setMembers([]))
       .finally(() => setLoadingMeta(false));
-  }, [projectId, projects]);
+  }, [projectId, projects, privateToMe, canCreateShared]);
 
   async function go() {
     if (!projectId) { setErr('Pick a project.'); return; }
     setSaving(true); setErr('');
     try {
-      const body: any = { projectId, title: note.text, priority };
+      const body: any = { projectId, title: note.text, priority, privateToMe };
       if (phaseId)    body.phaseId    = phaseId;
-      if (assigneeId) body.assigneeId = assigneeId;
+      if (!privateToMe && assigneeId) body.assigneeId = assigneeId;
       if (due)        body.dueDate    = due;
       const task = await api<{ id: string }>('/tasks', { method: 'POST', body });
       await api(`/scratch/${note.id}`, { method: 'PATCH', body: { done: true, promotedTaskId: task.id } });
@@ -451,7 +516,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
                 </div>
                 <span className="text-base font-bold text-slate-900 dark:text-white/90">Add to project</span>
               </div>
-              <p className="text-xs text-slate-400 dark:text-white/35 ml-8">This note becomes a tracked task.</p>
+              <p className="text-xs text-slate-400 dark:text-white/35 ml-8">Turn this thought into project work — or keep it private to you.</p>
             </div>
             <button onClick={onClose}
               className="text-slate-300 dark:text-white/25 hover:text-slate-500 dark:hover:text-white/50 transition-colors p-0.5 rounded">
@@ -474,6 +539,27 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
             />
           </div>
 
+          <button
+            type="button"
+            onClick={() => canCreateShared && setPrivateToMe((v) => !v)}
+            className={`w-full mb-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${privateToMe ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600 dark:bg-white/[0.03]'}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Shield size={14} className={privateToMe ? 'text-emerald-600' : 'text-slate-400'} />
+                <div>
+                  <div className="text-xs font-black">Track this task as private</div>
+                  <div className="text-[10px] opacity-70 mt-0.5">
+                    {canCreateShared ? 'Visible only to you, while linked to the selected project.' : 'Contributor notes are tracked privately and stay visible only to you.'}
+                  </div>
+                </div>
+              </div>
+              <span className={`w-9 h-5 rounded-full p-0.5 transition-colors ${privateToMe ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                <span className={`block w-4 h-4 rounded-full bg-white transition-transform ${privateToMe ? 'translate-x-4' : ''}`} />
+              </span>
+            </div>
+          </button>
+
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className="label">Phase</label>
@@ -487,7 +573,7 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
                 ]}
               />
             </div>
-            <div>
+            <div className={privateToMe ? 'hidden' : ''}>
               <label className="label">Priority</label>
               <Select
                 value={priority} onChange={setPriority} ariaLabel="Priority"
@@ -501,8 +587,8 @@ function PromoteModal({ note, onClose, onDone }: { note: Note; onClose: () => vo
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
+          <div className={`grid gap-3 mb-4 ${privateToMe ? 'grid-cols-1' : 'grid-cols-2'}`}> 
+            <div className={privateToMe ? 'hidden' : ''}>
               <label className="label">Assign to</label>
               <Select
                 value={assigneeId} onChange={setAssignee} ariaLabel="Assign to"

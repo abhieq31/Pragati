@@ -6,8 +6,9 @@ import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X, Eye } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { getTeamLayout } from '@/components/BirdEyeView';
-import BirdEyeView from '@/components/BirdEyeView';
+import { getTeamLayout, downloadBirdEyeSvg } from '@/components/birdsEyeLayout';
+// Heavy interactive SVG canvas — defer it until a viewer opens the modal.
+const BirdEyeView = dynamic(() => import('@/components/BirdEyeView'), { ssr: false, loading: () => null });
 const ActivityGraph = dynamic(
   () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
   { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
@@ -192,10 +193,15 @@ export default function TeamDetailPage() {
             <ExportMenu
               onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
               onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+              onBirdEye={() => {
+                const { nodes, edges } = getTeamLayout(team, team.projects || [], team.members || []);
+                downloadBirdEyeSvg(team.name, nodes, edges, me?.name || me?.email || 'User');
+              }}
             />
           )}
         </div>
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-4">
@@ -296,6 +302,34 @@ export default function TeamDetailPage() {
             ))}
           </div>
 
+          {/* Skeleton placeholder while the progress aggregation is loading,
+              so the page doesn't appear frozen while Mongo is responding. */}
+          {view === 'progress' && isLead && !progress && (
+            <div className="space-y-4" aria-busy="true" aria-live="polite">
+              <Card title="Project progress">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="skeleton h-3 w-1/2" />
+                      <div className="skeleton h-2 flex-1" />
+                      <div className="skeleton h-3 w-12" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+              <Card title="Member workload">
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="skeleton h-7 w-7 rounded-full shrink-0" />
+                      <div className="skeleton h-3 flex-1" />
+                      <div className="skeleton h-3 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
           {view === 'progress' && isLead && progress && (
             <>
               <Card title="Project progress">

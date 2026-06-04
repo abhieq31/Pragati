@@ -81,6 +81,46 @@ function cellColor(n: number, dark: boolean): string {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+
+const ACTIVITY_GRAPH_CACHE_MS = 2 * 60_000;
+const activityGraphCache = new Map<string, { at: number; data: ActivityData }>();
+const activityGraphInflight = new Map<string, Promise<ActivityData>>();
+
+// One authenticated browser session = one viewer, so the cache key doesn't
+// need the viewer id baked in. (The previous design required `viewerId` —
+// which was undefined during preload — and so the cache silently never
+// populated, defeating the optimisation it was meant to power.)
+function activityKey(who: string, year: number) {
+  return `${who}:${year}`;
+}
+
+function loadActivity(who: string, year: number) {
+  const key = activityKey(who, year);
+  const cached = activityGraphCache.get(key);
+  if (cached && Date.now() - cached.at < ACTIVITY_GRAPH_CACHE_MS) return Promise.resolve(cached.data);
+  const pending = activityGraphInflight.get(key);
+  if (pending) return pending;
+  const req = api<ActivityData>(`/${who}?year=${year}`).then((data) => {
+    activityGraphCache.set(key, { at: Date.now(), data });
+    return data;
+  }).finally(() => { activityGraphInflight.delete(key); });
+  activityGraphInflight.set(key, req);
+  return req;
+}
+
+/**
+ * Warm the activity-graph cache + bundle ahead of the user opening the panel.
+ * Idempotent and silent — failures are swallowed because this runs during
+ * idle time and must never surface as a user-visible error. Imported via
+ * `next/dynamic` from the dashboard / settings so the heavy bundle itself
+ * isn't loaded until interactivity, then this primes the data right after.
+ */
+export function preloadActivityGraphData(opts: { userId?: string; year?: number } = {}): void {
+  const year = opts.year ?? new Date().getFullYear();
+  const who  = opts.userId ? `users/${opts.userId}/activity` : 'users/me/activity';
+  void loadActivity(who, year).catch(() => { /* best-effort */ });
+}
+
 type ContribItem = {
   id: string; title: string; projectName: string; projectCode: string;
   completedAt: string | null; points: number; gxpCritical: boolean; priority: string;
@@ -182,14 +222,26 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
   const who = userId ? `users/${userId}/activity` : 'users/me/activity';
 
   useEffect(() => {
-    setLoading(true);
-    api<ActivityData>(`/${who}?year=${year}`)
-      .then(setData)
-      .catch(() => setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [], achievements: [], role: 'ic' }))
-      .finally(() => setLoading(false));
+    let alive = true;
+    // Use the cache if it already has data — render immediately without a
+    // flash of skeleton. Only show the loading state if we actually need to
+    // fetch. This is what makes the preload pay off visibly.
+    const key = `${who}:${year}`;
+    const cached = activityGraphCache.get(key);
+    if (cached && Date.now() - cached.at < ACTIVITY_GRAPH_CACHE_MS) {
+      setData(cached.data);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    loadActivity(who, year)
+      .then((next) => { if (alive) { setData(next); } })
+      .catch(() => { if (alive) setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [], achievements: [], role: 'ic' }); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [who, year]);
 
-  const days = data?.days || {};
+  const days = useMemo(() => data?.days || {}, [data?.days]);
 
   // Week columns for the selected calendar year, Sunday-aligned.
   const { weeks, total } = useMemo(() => {
