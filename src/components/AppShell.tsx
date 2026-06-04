@@ -191,7 +191,7 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
 
-  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#D97706', iconBg: '#FEF3C7' };
+  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#1565C0', iconBg: '#EFF6FF' };
 
   const nav = isAdmin
     ? [...leadNav, ...adminExtra, ...masterAdminExtra]
