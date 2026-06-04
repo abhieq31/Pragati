@@ -5,7 +5,7 @@ import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { Pencil, Plus, Users as UsersIcon, X, Check, Search, Trash2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Pencil, Plus, Users as UsersIcon, X, Check, Trash2, AlertTriangle, ArrowRight, Search } from 'lucide-react';
 
 interface TeamItem {
   id: string;
@@ -65,7 +65,6 @@ export default function TeamsClient({
 }) {
   const [teams, setTeams]     = useState<TeamItem[]>(initialTeams);
   const [users]               = useState<UserItem[]>(initialUsers);
-  const [query, setQuery]     = useState('');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<TeamItem | null>(null);
   const [deleting, setDeleting] = useState<TeamItem | null>(null);
@@ -76,16 +75,7 @@ export default function TeamsClient({
 
   const canManage = (me?.role === 'lead' || me?.role === 'admin');
   const uMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
-
-  const filtered = teams.filter((t) => {
-    if (!query.trim()) return true;
-    const q = query.toLowerCase();
-    return (
-      t.name.toLowerCase().includes(q) ||
-      (t.description || '').toLowerCase().includes(q) ||
-      FUNCTION_LABEL[t.function]?.toLowerCase().includes(q)
-    );
-  });
+  const filtered = teams;
 
   return (
     <div className="space-y-6">
@@ -104,26 +94,13 @@ export default function TeamsClient({
         )}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search size={14} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
-        <input
-          className="input pl-9"
-          placeholder="Search teams…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-
       {/* Cards grid */}
       {filtered.length === 0 ? (
         <div className="card p-10 text-center">
           <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-3">
             <UsersIcon size={20} className="text-slate-400" />
           </div>
-          <div className="text-sm font-semibold text-slate-700">
-            {teams.length === 0 ? 'No teams yet' : 'No teams match your search'}
-          </div>
+          <div className="text-sm font-semibold text-slate-700">No teams yet</div>
           {teams.length === 0 && canManage && (
             <button className="btn-primary mt-3" onClick={() => setCreating(true)}>+ Create your first team</button>
           )}

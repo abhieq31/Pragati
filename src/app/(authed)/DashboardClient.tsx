@@ -693,14 +693,6 @@ function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
 
   return (
     <ul className="divide-y divide-slate-100 dark:divide-white/5">
-      {/* Header — tasks render by target date so the nearest deadline is on top
-          and how far along the project is reads at a glance. */}
-      <li aria-hidden className="px-3 pt-2 pb-1 flex items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-white/25">
-          By target date · {doneCount}/{sorted.length} done
-        </span>
-        <span className="flex-1 h-px bg-slate-100 dark:bg-white/5" />
-      </li>
       {visible.map((t) => {
         const meta   = FLOW_META[t.status] || FLOW_META.todo;
         const isDone = t.status === 'done';
@@ -911,11 +903,13 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.05] flex items-center gap-2">
-        <CheckCircle2 size={13} className="text-slate-400 dark:text-white/30" />
-        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">My tasks</h3>
-        <span className="ml-auto text-[10px] font-bold text-slate-300 dark:text-white/20">{myTasks.length} open</span>
+        <CheckCircle2 size={13} className="text-blue-500 dark:text-blue-400/70" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-600 dark:text-white/50">Assigned to me</h3>
+        {myTasks.length > 0 && (
+          <span className="ml-1 text-[10px] font-bold text-slate-400 dark:text-white/25 bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{myTasks.length}</span>
+        )}
         {myOverdue > 0 && (
-          <span className="text-[10px] font-bold text-red-400">{myOverdue} overdue</span>
+          <span className="ml-auto text-[10px] font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">{myOverdue} overdue</span>
         )}
       </div>
       {myTasks.length === 0 ? (
@@ -1043,11 +1037,17 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
           baseline and the dashboard reads as a single inline strip. */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <TrendingUp size={14} className="text-slate-400 shrink-0" />
-          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
-            Up Next
+          <TrendingUp size={14} className="text-blue-500 dark:text-blue-400/70 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-600 dark:text-white/50 truncate">
+            Due &amp; Overdue
           </h2>
-          <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
+          {totalCount > 0 && (
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+              overdue.length > 0
+                ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
+                : 'text-slate-400 dark:text-white/25 bg-slate-100 dark:bg-white/[0.06]'
+            }`}>{totalCount}</span>
+          )}
         </div>
         {!expanded && <ExpandButton onClick={() => setExpanded(true)} />}
       </div>
@@ -1128,7 +1128,6 @@ function ActionGroup({
         <div className="flex items-center gap-1.5">
           {icon}
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
-          {count > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
         </div>
         <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
       </div>

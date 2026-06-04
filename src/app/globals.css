@@ -818,3 +818,9 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
     box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.12);
   }
 }
+
+/* Hide browser-native password reveal button (Edge/Chrome/Safari) to prevent
+   a second "eye" icon appearing alongside our custom toggle. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
+input::-webkit-credentials-auto-fill-button { display: none !important; }
