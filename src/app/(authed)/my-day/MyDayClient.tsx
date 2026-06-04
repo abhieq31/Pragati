@@ -193,10 +193,13 @@ export default function MyDayClient({ initialData }: {
                 </span>
               )}
             </div>
-            <h1 className="text-[1.75rem] font-black tracking-tight leading-tight">
-              <span className="brand-shimmer-text" suppressHydrationWarning>
-                {encouragement()}{firstName ? `, ${firstName}` : ''}.
-              </span>
+            <h1 className="text-[1.7rem] font-black tracking-tight leading-tight text-slate-800 dark:text-white/90">
+              <span suppressHydrationWarning>{encouragement()}{firstName ? ', ' : '.'}</span>
+              {firstName && (
+                <span className="text-blue-700 dark:text-blue-400" suppressHydrationWarning>
+                  {firstName}.
+                </span>
+              )}
             </h1>
             {dateLabel && (
               <div className="flex items-center gap-1.5 mt-1.5">
@@ -208,9 +211,12 @@ export default function MyDayClient({ initialData }: {
             )}
           </div>
 
-          {/* Right: circular progress ring */}
-          <div className="shrink-0 mt-0.5">
+          {/* Right: circular progress ring + label */}
+          <div className="shrink-0 flex flex-col items-center gap-1 mt-0.5">
             <ProgressRing done={done.length} total={total} />
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/25">
+              {done.length === total && total > 0 ? 'Done' : 'Today'}
+            </span>
           </div>
         </div>
 
@@ -232,14 +238,14 @@ export default function MyDayClient({ initialData }: {
 
       {/* ── Capture — the heart of My Day: get it out of your head first ── */}
       <form onSubmit={add} className="mb-6">
-        <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm focus-within:border-blue-400/70 dark:focus-within:border-blue-500/40 focus-within:shadow-md transition-all">
+        <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm hover:border-slate-300/80 hover:shadow-sm focus-within:border-blue-500/60 dark:focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.10)] transition-all">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/15 dark:to-indigo-500/15 flex items-center justify-center shrink-0">
               <BrainCircuit size={17} className="text-blue-500 dark:text-blue-400" />
             </div>
             <input
               ref={inputRef}
-              className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-400 dark:placeholder-white/30 border-0 outline-none py-1 min-w-0"
+              className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-500 dark:placeholder-white/35 border-0 outline-none py-1 min-w-0"
               placeholder="Empty your mind — what’s on it right now?"
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -252,7 +258,7 @@ export default function MyDayClient({ initialData }: {
                 Capture ↵
               </button>
             ) : (
-              <span className="shrink-0 hidden sm:inline text-[11px] text-slate-300 dark:text-white/20 font-medium pr-1">Press Enter</span>
+              <span className="shrink-0 hidden sm:inline text-[11px] text-slate-400 dark:text-white/25 font-medium pr-1">Enter ↵</span>
             )}
           </div>
         </div>
@@ -262,35 +268,41 @@ export default function MyDayClient({ initialData }: {
           board, not a mind-map: drag-to-draw, switch tools, erase, start
           over. Forces real thinking rather than the pre-formatted polish of
           a node graph. */}
-      <div className="mb-5">
-        <button type="button"
-          onClick={() => setMindMapOpen((v) => !v)}
-          className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 transition-colors text-left ${
-            mindMapOpen
-              ? 'border-blue-300 bg-blue-50/60 dark:bg-blue-500/10 dark:border-blue-500/30'
-              : 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.025] hover:border-slate-300'
-          }`}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+      {/* Whiteboard — a tiny side affordance, NOT a full-width banner. Sits to
+          the right of the capture row above (when closed) so the focused
+          "what's on your mind" capture stays the page's centre of gravity.
+          When opened, the canvas expands beneath. */}
+      {mindMapOpen ? (
+        <div className="mb-5 fade-in-soft">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">Whiteboard</div>
+            <button
+              type="button"
+              onClick={() => setMindMapOpen(false)}
+              className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:text-white/40 dark:hover:text-white/70 inline-flex items-center gap-1"
+            >
+              Close <ChevronUp size={11} />
+            </button>
+          </div>
+          <Whiteboard />
+        </div>
+      ) : (
+        <div className="mb-5 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setMindMapOpen(true)}
+            title="Open whiteboard — draw, erase, start over"
+            aria-label="Open whiteboard"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-white/35 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+          >
+            <span className="w-5 h-5 rounded-md flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #1565C0, #22C55E)' }}>
-              <BrainCircuit size={15} className="text-white" />
-            </div>
-            <div>
-              <div className="text-[12px] font-black text-slate-700 dark:text-white/80">Whiteboard</div>
-              <div className="text-[10px] text-slate-400 dark:text-white/35">Marker on board — draw, erase, start over. Nothing precious.</div>
-            </div>
-          </div>
-          <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
-            {mindMapOpen ? 'Hide' : 'Open canvas'}
-            {mindMapOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-          </span>
-        </button>
-        {mindMapOpen && (
-          <div className="mt-3 fade-in-soft">
-            <Whiteboard />
-          </div>
-        )}
-      </div>
+              <BrainCircuit size={11} className="text-white" />
+            </span>
+            Whiteboard
+          </button>
+        </div>
+      )}
 
       {/* ── Empty state ──────────────────────────────────────────────── */}
       {open.length === 0 && done.length === 0 && (
@@ -307,14 +319,14 @@ export default function MyDayClient({ initialData }: {
 
       {/* ── Open notes list ──────────────────────────────────────────── */}
       {open.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           {open.map((n) => {
             const isChecking = justDone === n.id;
             return (
               <div
                 key={n.id}
                 className={`
-                  group flex items-start min-w-0 gap-3 rounded-xl px-3.5 py-3 border
+                  group flex items-center min-w-0 gap-3 rounded-xl px-3.5 py-2.5 border
                   transition-all duration-200
                   ${isChecking
                     ? 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/80 dark:bg-emerald-500/[0.08] scale-[0.995]'
@@ -328,7 +340,7 @@ export default function MyDayClient({ initialData }: {
                   aria-label="Mark done"
                   className={`
                     w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0
-                    transition-all duration-200 mt-[3px]
+                    transition-all duration-200
                     ${isChecking
                       ? 'border-emerald-500 bg-emerald-500'
                       : 'border-slate-300 dark:border-white/20 hover:border-emerald-400 dark:hover:border-emerald-400/50 hover:bg-emerald-50 dark:hover:bg-emerald-400/[0.08]'
@@ -375,7 +387,7 @@ export default function MyDayClient({ initialData }: {
                 )}
 
                 {/* Hover actions */}
-                <div className="shrink-0 flex items-center gap-1.5 mt-[3px] opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   {n.promotedTaskId ? (
                     <a href={`/tasks/${n.promotedTaskId}`}
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
@@ -403,23 +415,26 @@ export default function MyDayClient({ initialData }: {
 
       {/* ── Done section ─────────────────────────────────────────────── */}
       {done.length > 0 && (
-        <div className="mt-6">
+        <div className="mt-5">
           <button
             onClick={() => setShowDone((s) => !s)}
-            className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/25 hover:text-slate-600 dark:hover:text-white/45 transition-colors"
+            className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.07] text-[12px] font-semibold text-slate-500 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/55 hover:bg-slate-100/50 dark:hover:bg-white/[0.04] transition-colors"
           >
             <div className="w-[18px] h-[18px] rounded-[5px] bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
               <Check size={10} className="text-emerald-600 dark:text-emerald-400" strokeWidth={3} />
             </div>
             <span>Done · {done.length}</span>
-            {showDone ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+            <span className="ml-auto">
+              {showDone ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </span>
           </button>
+          <div className="mt-1.5 border-t border-slate-100 dark:border-white/[0.05]" />
 
           {showDone && (
-            <div className="space-y-0.5 mt-2.5 fade-in-soft">
+            <div className="space-y-0.5 mt-1.5 fade-in-soft">
               {done.map((n) => (
                 <div key={n.id}
-                  className="group flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors">
+                  className="group flex items-center gap-3 px-3.5 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors">
                   <button
                     onClick={() => toggle(n)}
                     aria-label="Reopen"

@@ -6,6 +6,7 @@ import { User } from '@/models/User';
 import { Invite } from '@/models/Invite';
 import { normalizeRole, signToken, setAuthCookie, configuredAdminEmail } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
+import { rateLimit } from '@/lib/rateLimit';
 import { u } from '@/lib/serialize';
 
 export const runtime = 'nodejs';
@@ -23,6 +24,17 @@ const Body = z.object({
 // on the same token will fail at the second consumer.
 export async function POST(req: NextRequest) {
   try {
+    // Per-IP throttle. The invite token is unguessable, but without a cap a
+    // bot could still hammer this endpoint trying to brute-force or replay
+    // tokens; bound it the same way login is bounded.
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anon';
+    if (!rateLimit(`signup:${ip}`, 10, 60_000)) {
+      return NextResponse.json(
+        { error: 'Too many attempts. Wait a minute and try again.' },
+        { status: 429 },
+      );
+    }
+
     await connectDB();
     const body = await readBody(req, Body);
 

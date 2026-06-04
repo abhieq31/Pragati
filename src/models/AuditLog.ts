@@ -27,6 +27,12 @@ const AuditLogSchema = new Schema(
 
 AuditLogSchema.index({ createdAt: -1 });
 AuditLogSchema.index({ category: 1, createdAt: -1 });
+// Drill-down by record — the audit page filters AuditLog.find({ targetId })
+// (see /api/audit/route.ts). Without this, a per-project/per-task audit view
+// is a full collection scan, which degrades as the trail grows (and a GxP
+// audit trail only ever grows — it's never pruned). Compound with createdAt
+// so the common "this record's history, newest first" query is fully indexed.
+AuditLogSchema.index({ targetId: 1, createdAt: -1 });
 
 export type AuditLogDoc = InferSchemaType<typeof AuditLogSchema> & { _id: mongoose.Types.ObjectId };
 

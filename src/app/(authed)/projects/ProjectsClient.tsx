@@ -69,12 +69,12 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
   };
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5 max-w-[1120px]">
       {/* Header */}
       <div className="flex items-start justify-between pt-1">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Projects</h1>
-          <p className="text-xs text-slate-400 mt-1">All quality projects across teams &amp; lifecycles.</p>
+          <h1 className="text-[1.75rem] font-black text-slate-900 tracking-tight leading-tight">Projects</h1>
+          <p className="text-sm text-slate-500 mt-1">All quality projects across teams &amp; lifecycles.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {/* Single create flow for every user — the form on /projects/new
@@ -104,8 +104,8 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       </div>
 
       {/* Filters */}
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="card p-4 min-h-[72px] flex items-center">
+        <div className="flex flex-wrap items-center gap-3 w-full">
           <div className="relative flex-1 min-w-[180px]">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none" />
             <input
@@ -149,7 +149,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Loading skeleton */}
       {!loaded && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3" aria-busy="true" aria-live="polite">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }} aria-busy="true" aria-live="polite">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="card p-5 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -172,7 +172,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Grid */}
       {loaded && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
         {projects.map((p) => {
           const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
           const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
