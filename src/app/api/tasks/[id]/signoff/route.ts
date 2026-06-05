@@ -5,7 +5,7 @@ import { requireRole } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import { task as taskS } from '@/lib/serialize';
 import { logOperation } from '@/lib/audit';
-import { recordTaskFlowEvent } from '@/lib/flowSignal';
+import { recordTaskFlowEvent } from '@/lib/flow/events';
 
 export const runtime = 'nodejs';
 
@@ -28,8 +28,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const signedAt = new Date();
     t.qaSignoffUserId = user.sub as any;
     t.qaSignoffAt = signedAt;
-    (t as any).lastActivityAt = signedAt;
     await t.save();
+
+    void recordTaskFlowEvent({
+      taskId: params.id,
+      projectId: String((t as any).projectId || ''),
+      eventType: 'signoff_completed',
+      actorId: user.sub,
+      occurredAt: signedAt,
+      taskType: (t as any)?.taskType || undefined,
+    });
 
     // §11.10(e): the act of signing a GxP record MUST produce an immutable,
     // attributable audit entry (who / what / when / meaning). Fire-and-forget.
@@ -45,14 +53,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         before: { signed: false },
         after:  { signed: true, qaSignoffUserId: String(user.sub) },
       },
-    });
-
-    void recordTaskFlowEvent({
-      taskId:    params.id,
-      projectId: String((t as any).projectId || ''),
-      userId:    user.sub,
-      eventType: 'qa_signoff',
-      payload:   { signedBy: user.name || user.sub, gxpCritical: !!(t as any).gxpCritical },
     });
 
     return NextResponse.json(taskS(t));

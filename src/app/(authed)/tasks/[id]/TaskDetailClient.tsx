@@ -11,7 +11,8 @@ import { Select } from '@/components/Select';
 import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText, Check, Bell, TrendingUp, AlertTriangle, Pause } from 'lucide-react';
+import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
+import { FlowSignalTaskStrip } from '@/components/FlowSignalTaskStrip';
 
 // TaskCompletePop is only shown on task completion — off the critical render
 // path so deferring it improves FCP/LCP.
@@ -58,14 +59,11 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const [newSub, setNewSub] = useState('');
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState(false);
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
   // Mini-celebration shown when the task moves to "done". A small bottom-right
   // toast — not a confetti overlay — that recognises the *type* of task that
   // was finished. Stays null until the user actually closes the task.
   const [celebrate, setCelebrate] = useState<any | null>(null);
   const { showToast, ToastEl } = useToast();
-
-  function markSaved() { setSavedAt(new Date()); }
 
   async function load() {
     try {
@@ -160,7 +158,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     if (opts?.optimistic) setTask((t: any) => ({ ...t, ...opts.optimistic }));
     try {
       await api(`/tasks/${id}`, { method: 'PATCH', body: patch });
-      markSaved();
       load();
     } catch (e: any) {
       showToast(e.message || 'Save failed', 'err');
@@ -225,38 +222,18 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const canSignoff = task.requiresQaSignoff && !task.qaSignoffAt && (me?.role === 'lead' || me?.role === 'admin');
   const hasReferenceData = task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
 
-  // IC edit contract: a contributor assigned to a task may edit the task's
-  // description, due date, status, and add subtasks/comments. Compliance fields
-  // (assignee, priority, reference numbers, CC TCD) remain lead-only since they
-  // affect scheduling and regulatory traceability. Unassigned tasks or tasks
-  // belonging to someone else remain fully read-only for ICs.
+  // IC edit contract: a contributor may edit ONLY the description and due date,
+  // and ONLY on a task assigned to them. Everything else — status, assignee,
+  // priority, reference/compliance fields — is lead-owned. A task assigned to
+  // someone else (or unassigned) is fully read-only for an IC, and the inputs
+  // are disabled so no save is even attempted. Leads/admins keep full control.
   const isAssignee  = !!(me && task.assigneeId && String(task.assigneeId) === String(me.id));
   // Description + due date: editable by leads or the assignee.
   const canEditBasics = isLead || isAssignee;
-  // Reference/tracking/compliance fields and assignee/priority: leads only.
+  // Reference/tracking fields, status, assignee, priority, etc.: leads only.
   const canEditAll = isLead;
-  // Status: leads and the assignee (they're the ones doing the work).
-  const canEditStatus = isLead || isAssignee;
   const canComment = isLead || isAssignee;
-
-  const fs = task?.flowSignal;
-  const showFlowStrip = fs && fs.signal !== 'on_track' && fs.signal !== 'done';
-
-  async function sendNudge() {
-    try {
-      await api(`/tasks/${id}/flow-check`, { method: 'POST', body: { nudge: true } });
-      showToast('Nudge sent to assignee', 'ok');
-      load();
-    } catch (e: any) {
-      showToast(e?.message || 'Failed to send nudge', 'err');
-    }
-  }
-
-  const FLOW_STRIP_META: Record<string, { label: string; bg: string; border: string; text: string; icon: any }> = {
-    slow:    { label: 'Slowing down',  bg: 'bg-amber-50  dark:bg-amber-500/10',  border: 'border-amber-200  dark:border-amber-500/25',  text: 'text-amber-700  dark:text-amber-300',  icon: TrendingUp    },
-    stalled: { label: 'Stalled',       bg: 'bg-red-50    dark:bg-red-500/10',    border: 'border-red-200    dark:border-red-500/25',    text: 'text-red-700    dark:text-red-300',    icon: AlertTriangle },
-    blocked: { label: 'Blocked',       bg: 'bg-orange-50 dark:bg-orange-500/10', border: 'border-orange-200 dark:border-orange-500/25', text: 'text-orange-700 dark:text-orange-300', icon: Pause         },
-  };
+  const canEditStatus = isLead;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl page-enter">
@@ -284,17 +261,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               </Link>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 leading-snug flex-1">{task.title}</h1>
-            {savedAt && (
-              <span key={savedAt.getTime()}
-                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400/80 fade-in-soft"
-                title={`Saved at ${savedAt.toLocaleTimeString()}`}
-              >
-                <Check size={10} strokeWidth={3} /> Saved
-              </span>
-            )}
-          </div>
+          <h1 className="text-xl font-bold text-slate-900 leading-snug">{task.title}</h1>
           <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
@@ -315,40 +282,20 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               </span>
             )}
           </div>
-        </div>
 
-        {/* ── FLOW SIGNAL strip ─────────────────────────────────────── */}
-        {showFlowStrip && (() => {
-          const meta = FLOW_STRIP_META[fs.signal] ?? FLOW_STRIP_META.stalled;
-          const Icon = meta.icon;
-          return (
-            <div className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border ${meta.bg} ${meta.border}`}>
-              <Icon size={14} className={meta.text} />
-              <div className="flex-1 min-w-0">
-                <span className={`text-[12px] font-bold ${meta.text}`}>{meta.label}</span>
-                {fs.daysSinceActivity > 0 && (
-                  <span className="text-[11px] text-slate-500 dark:text-white/40 ml-2">
-                    {fs.daysSinceActivity}d since last activity
-                  </span>
-                )}
-                {task.pendingWith && (
-                  <span className="text-[11px] text-slate-500 dark:text-white/40 ml-2">
-                    · waiting on <span className="font-semibold">{task.pendingWith}</span>
-                  </span>
-                )}
-              </div>
-              {isLead && task.assigneeId && task.status !== 'done' && (
-                <button
-                  onClick={sendNudge}
-                  className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-colors"
-                  title="Send a nudge notification to the assignee"
-                >
-                  <Bell size={11} /> Nudge
-                </button>
-              )}
-            </div>
-          );
-        })()}
+          {/* Quiet "Waiting on …" strip — only renders when the assignee or
+              a lead has confirmed a waiting/decision/help state. Same source
+              of truth as the dashboard strip (Task.flowPending*). */}
+          <FlowSignalTaskStrip
+            taskId={task.id}
+            pendingType={task.flowPendingType}
+            detail={task.flowPendingDetail}
+            confirmedAt={task.flowPendingConfirmedAt}
+            confirmedByName={task.flowPendingConfirmedByName}
+            canResolve={isLead || isAdmin || (me && task.flowPendingConfirmedByUserId === me.id)}
+            onChanged={load}
+          />
+        </div>
 
         {/* Description */}
         <Card title="Description">
@@ -364,7 +311,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
         {!isLead && (
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
             {canEditBasics
-              ? 'You can update the description, due date, status, and subtasks on this task. Assignee, priority, and compliance fields are lead-owned.'
+              ? 'You can edit the description and due date of this task. Status, assignee and other fields are lead-owned.'
               : 'Read-only: only the assignee and team leads can edit this task.'}
           </div>
         )}
@@ -484,14 +431,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               <div className="text-xs text-slate-400 py-1">No subtasks yet.</div>
             )}
           </div>
-          {canComment && (
-            <div className="flex gap-2 mt-3">
-              <input className="input text-sm" placeholder="Add a subtask…"
-                value={newSub} onChange={(e) => setNewSub(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addSubtask()} />
-              <button className="btn-primary text-sm" onClick={addSubtask}>Add</button>
-            </div>
-          )}
+          <div className="flex gap-2 mt-3">
+            <input className="input text-sm" placeholder="Add a subtask…"
+              value={newSub} onChange={(e) => setNewSub(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addSubtask()} />
+            <button className="btn-primary text-sm" onClick={addSubtask}>Add</button>
+          </div>
         </Card>
 
         {/* Comments */}
@@ -590,11 +535,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 excludeAdmin
                 onChange={(v) => isLead && update({ assigneeId: v || null })}
               />
-              {task.assigneeId && task.assigneeActive === false && (
-                <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
-                  <span aria-hidden="true">⚠</span> Assignee account deactivated — consider reassigning
-                </div>
-              )}
             </div>
             {/* Waiting on — who the task is stuck/pending with (QA, a person,
                a department). Editable by the assignee or a lead. */}

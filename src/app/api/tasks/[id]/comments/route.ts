@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { Task } from '@/models/Task';
 import { User } from '@/models/User';
-import { requireUser } from '@/lib/auth';
+import { isContributor, requireUser } from '@/lib/auth';
 import { getTaskAccess, canActOnOwnTask } from '@/lib/taskAccess';
 import { handleError, readBody } from '@/lib/http';
-import { recordTaskFlowEvent } from '@/lib/flowSignal';
+import { recordTaskFlowEvent } from '@/lib/flow/events';
 import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
@@ -23,17 +23,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await connectDB();
     const body = await readBody(req, Body);
 
-    // Visible + (lead OR main-assignee OR subtask-assignee). Contributors may
-    // comment on any task they own at the task or subtask level. Anyone with
-    // mere visibility (e.g. a team member not assigned) cannot.
+    // Visible + (lead OR assignee). A contributor can comment on a task
+    // assigned to them; anyone else with mere visibility cannot.
     const access = await getTaskAccess(params.id, user.sub, user.role);
     if (!access.task || !access.visible) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    const isSubtaskAssignee = !!(access.task as any)?.subtasks?.some(
-      (s: any) => String(s.assigneeId) === user.sub,
-    );
-    if (!access.isLead && !access.isAssignee && !isSubtaskAssignee) {
+    if (!canActOnOwnTask(access)) {
       return NextResponse.json(
         { error: 'You can only comment on tasks assigned to you.' },
         { status: 403 },
@@ -42,6 +38,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const t = await Task.findById(params.id);
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (isContributor(user.role) && String(t.assigneeId) !== user.sub && !(t as any).subtasks?.some((s: any) => String(s.assigneeId) === user.sub))
+      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     const c = {
       _id: new mongoose.Types.ObjectId(),
       userId: new mongoose.Types.ObjectId(user.sub),
@@ -52,12 +50,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     (t as any).lastActivityAt = new Date();
     await t.save();
 
+    // Flow Signal: comment is meaningful activity. Metadata stays bounded —
+    // we record the count and authorship, NEVER the comment body (the
+    // canonical text already lives on the Task document).
     void recordTaskFlowEvent({
-      taskId:    params.id,
+      taskId: params.id,
       projectId: String((t as any).projectId || ''),
-      userId:    user.sub,
       eventType: 'comment_added',
-      payload:   { commentId: String(c._id), bodyLength: body.body.length },
+      actorId: user.sub,
+      taskType: (t as any)?.taskType || undefined,
+      metadata: { commentCount: ((t as any).comments || []).length },
     });
 
     const author = await User.findById(user.sub).lean();

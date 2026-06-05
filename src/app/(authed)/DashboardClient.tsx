@@ -22,9 +22,8 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3, Bell, Zap, ChevronRight,
+  Maximize2, X, BarChart3,
 } from 'lucide-react';
-import { computeFlowSignal } from '@/lib/flowSignal.compute';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
 // visits won't open it. Keep it out of the dashboard's first paint.
 const BirdsEyeView = dynamic(
@@ -33,6 +32,7 @@ const BirdsEyeView = dynamic(
 );
 import type { BirdsEyeData } from '@/components/BirdsEyeView';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
+import { FlowSignalStrip, type FlowSignalPayload } from '@/components/FlowSignalStrip';
 
 /* ── Types matching /api/lead-dashboard ──────────────────────────────────── */
 interface TeamTask {
@@ -53,8 +53,6 @@ interface TeamTask {
   subtasksDone: number;
   subtaskTitles?: string[];
   gxpCritical?: boolean;
-  lastActivityAt?: string | null;
-  pendingWith?: string;
 }
 
 interface DashProject {
@@ -83,6 +81,7 @@ interface DashResp {
   teamTasks: TeamTask[];
   people: DashPerson[];
   teamCount: number;
+  flowSignal?: FlowSignalPayload | null;
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -318,6 +317,11 @@ export default function DashboardClient({
         <FirstRunGuide hasTeam={dash.people.length > 0} />
       ) : (
         <>
+          {/* ── Quick check / Needs attention strip ────────────────────────
+              Renders nothing when there's nothing to surface — silence is
+              the correct product state. */}
+          <FlowSignalStrip data={dash.flowSignal} />
+
           {/* ── Summary strip ──────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2 mb-5">
             <SummaryChip label="Ongoing projects" value={ongoingProjects.length} accent="blue"  href="/projects" />
@@ -335,11 +339,6 @@ export default function DashboardClient({
             />
           )}
         </>
-      )}
-
-      {/* ── FLOW SIGNAL strip — stalled / slow tasks across visible projects ── */}
-      {!isFirstRun && isLead && (
-        <FlowSignalStrip tasks={visibleTasks} />
       )}
 
       {/* ── Main layout: Projects (left) · Due Center (right, same row) ───── */}
@@ -610,128 +609,6 @@ function FirstRunGuide({ hasTeam }: { hasTeam: boolean }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
-/*  FLOW SIGNAL STRIP — fact-based motion health across the lead's tasks       */
-/*  Shows only when there are slow/stalled tasks; silent when all is moving.   */
-/* ────────────────────────────────────────────────────────────────────────── */
-function FlowSignalStrip({ tasks }: { tasks: TeamTask[] }) {
-  const [open, setOpen] = useState(false);
-
-  const flagged = useMemo(() => {
-    return tasks
-      .filter(t => t.status !== 'done')
-      .map(t => ({
-        task: t,
-        fs: computeFlowSignal({
-          status:         t.status,
-          priority:       t.priority,
-          pendingWith:    t.pendingWith,
-          lastActivityAt: t.lastActivityAt,
-        }),
-      }))
-      .filter(({ fs }) => fs.signal === 'stalled' || fs.signal === 'slow' || fs.signal === 'blocked')
-      .sort((a, b) => {
-        // stalled first, then slow, then blocked
-        const order: Record<string, number> = { stalled: 0, slow: 1, blocked: 2 };
-        return (order[a.fs.signal] ?? 9) - (order[b.fs.signal] ?? 9);
-      });
-  }, [tasks]);
-
-  if (flagged.length === 0) return null;
-
-  const stalledCount = flagged.filter(f => f.fs.signal === 'stalled').length;
-  const slowCount    = flagged.filter(f => f.fs.signal === 'slow').length;
-  const blockedCount = flagged.filter(f => f.fs.signal === 'blocked').length;
-
-  return (
-    <div className="mb-5">
-      {/* Compact trigger bar */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-colors text-left
-          ${stalledCount > 0
-            ? 'bg-red-50 dark:bg-red-500/[0.07] border-red-200 dark:border-red-500/20'
-            : 'bg-amber-50 dark:bg-amber-500/[0.07] border-amber-200 dark:border-amber-500/20'
-          }`}
-      >
-        <Zap size={13} className={stalledCount > 0 ? 'text-red-500 shrink-0' : 'text-amber-500 shrink-0'} />
-        <span className={`text-[12px] font-bold ${stalledCount > 0 ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-          Flow Signal
-        </span>
-        <div className="flex items-center gap-1.5 ml-1">
-          {stalledCount > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300">
-              {stalledCount} stalled
-            </span>
-          )}
-          {slowCount > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300">
-              {slowCount} slowing
-            </span>
-          )}
-          {blockedCount > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300">
-              {blockedCount} blocked
-            </span>
-          )}
-        </div>
-        <ChevronRight
-          size={12}
-          className={`ml-auto text-slate-400 dark:text-white/30 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-        />
-      </button>
-
-      {/* Expanded task list */}
-      {open && (
-        <div className="mt-1.5 bg-white dark:bg-[#262624] rounded-xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden fade-in-soft"
-          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-          <ul className="divide-y divide-slate-50 dark:divide-white/[0.04]">
-            {flagged.slice(0, 8).map(({ task: t, fs }) => {
-              const SIGNAL_META: Record<string, { label: string; dot: string; text: string }> = {
-                stalled: { label: 'Stalled',  dot: 'bg-red-400',    text: 'text-red-600 dark:text-red-400' },
-                slow:    { label: 'Slowing',  dot: 'bg-amber-400',  text: 'text-amber-600 dark:text-amber-400' },
-                blocked: { label: 'Blocked',  dot: 'bg-orange-400', text: 'text-orange-600 dark:text-orange-400' },
-              };
-              const signalMeta = SIGNAL_META[fs.signal] ?? { label: fs.signal, dot: 'bg-slate-300', text: 'text-slate-500' };
-
-              return (
-                <li key={t.id}>
-                  <Link href={`/tasks/${t.id}`}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 dark:hover:bg-white/[0.025] transition-colors group">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${signalMeta.dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/80 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">
-                        {t.title}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30">
-                        <span className="font-mono font-bold">{t.projectCode}</span>
-                        {t.assigneeName && <><span>·</span><span>{t.assigneeName}</span></>}
-                        {t.pendingWith && <><span>·</span><span className="font-medium">waiting on {t.pendingWith}</span></>}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className={`text-[10px] font-bold ${signalMeta.text}`}>{signalMeta.label}</span>
-                      {fs.daysSinceActivity > 0 && (
-                        <div className="text-[10px] text-slate-400 dark:text-white/25 tabular-nums">{fs.daysSinceActivity}d idle</div>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-            {flagged.length > 8 && (
-              <li className="px-4 py-2 text-[10px] text-slate-400 dark:text-white/30">
-                +{flagged.length - 8} more — open each task to send a nudge
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
 /*  PROJECTS COLUMN — left side, expandable project rows with tasks inside    */
 /* ────────────────────────────────────────────────────────────────────────── */
 function ProjectsColumn({
@@ -812,7 +689,20 @@ function DashboardTaskFlow({ tasks }: { tasks: TeamTask[] }) {
   const doneCount = sorted.filter((t) => t.status === 'done').length;
 
   return (
-    <ul className="divide-y divide-slate-100 dark:divide-white/5">
+    <ul>
+      {/* ── Section divider ─────────────────────────────────────────── */}
+      <li aria-hidden className="px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-white/35">
+            Tasks by target date
+          </span>
+          <span className="text-[9px] font-bold text-slate-400 dark:text-white/25 tabular-nums">
+            {doneCount} / {sorted.length} done
+          </span>
+        </div>
+        <div className="mt-1.5 h-px bg-slate-100 dark:bg-white/[0.06]" />
+      </li>
+
       {visible.map((t) => {
         const isDone    = t.status === 'done';
         const due       = t.ccTcd || t.dueDate;
@@ -1101,19 +991,12 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
   return (
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      <div className="px-4 py-3.5 border-b border-slate-100 dark:border-white/[0.05] flex items-center gap-2.5"
-        style={{ background: 'linear-gradient(to right, rgba(59,130,246,0.06), transparent)' }}>
-        <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-500/15 flex items-center justify-center shrink-0">
-          <CheckCircle2 size={13} className="text-blue-600 dark:text-blue-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-white/70">My Tasks</h3>
-        </div>
-        {myTasks.length > 0 && (
-          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15 px-1.5 py-0.5 rounded-full">{myTasks.length}</span>
-        )}
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.05] flex items-center gap-2">
+        <CheckCircle2 size={13} className="text-slate-400 dark:text-white/30" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">My tasks</h3>
+        <span className="ml-auto text-[10px] font-bold text-slate-300 dark:text-white/20">{myTasks.length} open</span>
         {myOverdue > 0 && (
-          <span className="text-[10px] font-bold text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">{myOverdue} overdue</span>
+          <span className="text-[10px] font-bold text-red-400">{myOverdue} overdue</span>
         )}
       </div>
       {myTasks.length === 0 ? (
@@ -1241,17 +1124,11 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
           baseline and the dashboard reads as a single inline strip. */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <Bell size={13} className="text-blue-500 dark:text-blue-400/70 shrink-0" />
-          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-600 dark:text-white/50 truncate">
-            Actions
+          <TrendingUp size={14} className="text-slate-400 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
+            Up Next
           </h2>
-          {totalCount > 0 && (
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-              overdue.length > 0
-                ? 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
-                : 'text-slate-400 dark:text-white/25 bg-slate-100 dark:bg-white/[0.06]'
-            }`}>{totalCount}</span>
-          )}
+          <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
         </div>
         {!expanded && <ExpandButton onClick={() => setExpanded(true)} />}
       </div>
@@ -1280,6 +1157,7 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
             <div className="flex items-center gap-1.5">
               <Clock size={11} className="text-blue-500" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">Due</span>
+              {due.length > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
             </div>
             <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{due.length}</span>
           </div>
@@ -1326,7 +1204,7 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
   );
 
   return expanded
-    ? <FullScreenOverlay title="Actions" icon={<Bell size={14} className="text-blue-500" />}
+    ? <FullScreenOverlay title="Up Next" icon={<TrendingUp size={14} className="text-blue-500" />}
         onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
     : inner;
 }
@@ -1349,6 +1227,7 @@ function ActionGroup({
           <div className="flex items-center gap-1.5">
             {icon}
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
+            {count > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
           </div>
           <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
         </div>
@@ -1466,22 +1345,17 @@ function ContributorsPanel({
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
-        className="px-4 py-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
-        style={{ background: 'linear-gradient(to right, rgba(139,92,246,0.05), transparent)' }}
+        className={`px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
         onClick={() => setPanelOpen(o => !o)}
       >
-        <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-500/15 flex items-center justify-center shrink-0">
-          <UsersIcon size={13} className="text-violet-600 dark:text-violet-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-white/70">
-            Individual Contributors
-          </h3>
-        </div>
-        <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{people.length}</span>
+        <UsersIcon size={13} className="text-slate-400 dark:text-white/30" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">
+          Individual Contributors
+        </h3>
+        <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{people.length}</span>
         <ChevronDown
           size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
+          className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full"
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
@@ -1557,20 +1431,15 @@ function MyFocusPanel({
     <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       <div
-        className="px-4 py-3.5 flex items-center gap-2.5 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
-        style={{ background: 'linear-gradient(to right, rgba(139,92,246,0.05), transparent)' }}
+        className={`px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
         onClick={() => setPanelOpen((o) => !o)}
       >
-        <div className="w-7 h-7 rounded-lg bg-violet-50 dark:bg-violet-500/15 flex items-center justify-center shrink-0">
-          <FolderKanban size={13} className="text-violet-600 dark:text-violet-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-700 dark:text-white/70">Focus by project</h3>
-        </div>
-        <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{rows.length}</span>
+        <FolderKanban size={13} className="text-slate-400 dark:text-white/30" />
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">Focus by project</h3>
+        <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{rows.length}</span>
         <ChevronDown
           size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
+          className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full"
           style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
         />
       </div>
