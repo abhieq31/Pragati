@@ -543,20 +543,24 @@ body {
   to   { transform: scaleX(0); }
 }
 
-/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
+/* ── LinkedIn-style skeleton shimmer ───────────────────────────────────────
+   Quiet layout placeholders beat spinners: users see the future shape of the
+   page immediately, perceived progress starts sooner, and content can hydrate
+   without a layout jump. */
 @keyframes shimmer {
   from { background-position: 200% center; }
   to   { background-position: -200% center; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #e8edf4 25%, #f3f6fa 50%, #e8edf4 75%);
-  background-size: 200% auto;
-  animation: shimmer 1.6s linear infinite;
+  background: linear-gradient(90deg, #eef3f8 0%, #f7f9fb 42%, #eef3f8 84%);
+  background-size: 220% auto;
+  animation: shimmer 1.45s ease-in-out infinite;
   border-radius: 6px;
+  color: transparent;
 }
 .dark .skeleton {
-  background: linear-gradient(90deg, #2a2927 25%, #34332f 50%, #2a2927 75%);
-  background-size: 200% auto;
+  background: linear-gradient(90deg, #2a2927 0%, #363530 42%, #2a2927 84%);
+  background-size: 220% auto;
 }
 
 /* ── Smooth link transitions ─────────────────────────────────────────────── */

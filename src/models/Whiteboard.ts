@@ -11,7 +11,7 @@ const StrokePointSchema = new Schema({
 }, { _id: false });
 
 const StrokeSchema = new Schema({
-  tool:   { type: String, enum: ['pen', 'highlighter', 'eraser', 'text'], default: 'pen' },
+  tool:   { type: String, enum: ['pen', 'highlighter', 'eraser', 'text', 'rect', 'ellipse', 'arrow'], default: 'pen' },
   color:  { type: String, default: '#0f172a' },
   size:   { type: Number, default: 2.5 },
   points: { type: [StrokePointSchema], default: [] },
@@ -22,8 +22,6 @@ const WhiteboardSchema = new Schema({
   userId:  { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
   strokes: { type: [StrokeSchema], default: [] },
 }, { timestamps: true });
-
-WhiteboardSchema.index({ userId: 1 }, { unique: true });
 
 export type WhiteboardDoc = InferSchemaType<typeof WhiteboardSchema>;
 export const Whiteboard = (mongoose.models.Whiteboard as mongoose.Model<WhiteboardDoc>) ||

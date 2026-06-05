@@ -1,22 +1,6 @@
-// Server-rendered skeleton — paints instantly while the teams list streams in.
-// Matches the live page shell: 1120px container, header + subtitle, `card p-4`
-// toolbar, auto-fill card grid.
-import { PragatiMark } from '@/components/PragatiMark';
+import { TeamsListSkeleton } from '@/components/SkeletonScreens';
 
-export default function Loading() {
-  return (
-    <div className="pb-12 max-w-[1120px] space-y-5">
-      <div className="flex items-start justify-between pt-1 gap-3 flex-wrap">
-        <div className="space-y-2">
-          <div className="skeleton h-8 w-32 rounded" />
-          <div className="skeleton h-3.5 w-72 max-w-full rounded" />
-        </div>
-        <div className="skeleton h-9 w-28 rounded-lg" />
-      </div>
-
-      <div className="card p-4 min-h-[72px] flex items-center">
-        <div className="skeleton h-9 w-full rounded-lg" />
-      </div>
+const teams = ['RTB operations', 'CTB delivery', 'Validation squad', 'Quality review'];
 
       <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))' }}>
         {Array.from({ length: 4 }).map((_, i) => (

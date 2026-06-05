@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Pen, Eraser, Undo2, Redo2, Save, RotateCcw, Highlighter, Type as TypeIcon, Square, Circle, ArrowRight as ArrowIcon, Download } from 'lucide-react';
 import { api } from '@/lib/client/api';
 // onSaveToNotes removed — whiteboard is a scratch surface; notes are independent
@@ -13,7 +13,7 @@ import { api } from '@/lib/client/api';
  * idea, not the polished node-link diagrams a mind-map app produces.
  *
  * Implementation notes:
- *   - One <canvas> with mouse + touch handlers. No SVG, no React-DOM
+ *   - One <canvas> with unified pointer handlers. No SVG, no React-DOM
  *     redraws on every stroke — we paint directly with the 2D context so
  *     a busy session stays at 60fps.
  *   - Strokes are stored as polylines (array of points + color + width)
@@ -60,6 +60,7 @@ export function Whiteboard() {
   // commit — cheap and intuitive for a single-user scratch pad.
   const [pointer, setPointer] = useState(0);
   const drawing = useRef(false);
+  const activePointerId = useRef<number | null>(null);
   const currentStroke = useRef<Stroke | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
@@ -216,35 +217,37 @@ export function Whiteboard() {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  function pointFromEvent(e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) {
+  function pointFromPointer(e: ReactPointerEvent<HTMLCanvasElement>) {
     const cv = canvasRef.current;
     if (!cv) return null;
     const r = cv.getBoundingClientRect();
-    if ('touches' in e && e.touches[0]) {
-      return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
-    }
-    const me = e as MouseEvent;
-    return { x: me.clientX - r.left, y: me.clientY - r.top };
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
   const SHAPE_TOOLS: Tool[] = ['rect', 'ellipse', 'arrow'];
 
-  function startStroke(e: React.MouseEvent | React.TouchEvent) {
-    const p = pointFromEvent(e);
+  function startStroke(e: ReactPointerEvent<HTMLCanvasElement>) {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    const p = pointFromPointer(e);
     if (!p) return;
+    e.preventDefault();
     if (tool === 'text') {
       setEditingText({ x: p.x, y: p.y, value: '' });
       return;
     }
     drawing.current = true;
+    activePointerId.current = e.pointerId;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     currentStroke.current = { tool, color, size: penSize, points: [p] };
     paintLive();
   }
 
-  function continueStroke(e: React.MouseEvent | React.TouchEvent) {
+  function continueStroke(e: ReactPointerEvent<HTMLCanvasElement>) {
     if (!drawing.current || !currentStroke.current) return;
-    const p = pointFromEvent(e);
+    if (activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
+    const p = pointFromPointer(e);
     if (!p) return;
+    e.preventDefault();
     if (SHAPE_TOOLS.includes(currentStroke.current.tool)) {
       // For shapes keep only start + current end — avoids storing every mousemove
       currentStroke.current.points = [currentStroke.current.points[0], p];
@@ -258,9 +261,12 @@ export function Whiteboard() {
     paintLive();
   }
 
-  function endStroke() {
+  function endStroke(e?: ReactPointerEvent<HTMLCanvasElement>) {
+    if (e && activePointerId.current !== null && e.pointerId !== activePointerId.current) return;
     if (!drawing.current || !currentStroke.current) return;
+    if (e) e.currentTarget.releasePointerCapture?.(e.pointerId);
     drawing.current = false;
+    activePointerId.current = null;
     const s = currentStroke.current;
     currentStroke.current = null;
     if (s.points.length < 2 && s.tool !== 'text') return; // ignore stray taps
@@ -394,13 +400,10 @@ export function Whiteboard() {
       <div ref={containerRef} className="flex-1 relative" style={{ cursor: tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
         <canvas
           ref={canvasRef}
-          onMouseDown={startStroke}
-          onMouseMove={continueStroke}
-          onMouseUp={endStroke}
-          onMouseLeave={endStroke}
-          onTouchStart={startStroke}
-          onTouchMove={(e) => { e.preventDefault(); continueStroke(e); }}
-          onTouchEnd={endStroke}
+          onPointerDown={startStroke}
+          onPointerMove={continueStroke}
+          onPointerUp={endStroke}
+          onPointerCancel={endStroke}
           style={{ display: 'block', touchAction: 'none' }}
         />
 

@@ -369,7 +369,7 @@ interface AvatarProps {
   bg?: string | null;
   /** Index into AVATAR_FONTS. */
   font?: number | null;
-  /** Render a subtle white ring border around the avatar. */
+  /** Render a subtle white ring border around the circular avatar. */
   ring?: boolean;
 }
 

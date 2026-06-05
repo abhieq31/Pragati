@@ -679,6 +679,7 @@ export function BirdsEyeView({ data, onClose, onChange }: {
       forceLive((n) => n + 1);
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
       e.preventDefault();
+      e.stopPropagation();
       return;
     }
     const target = e.target as HTMLElement;
@@ -708,6 +709,8 @@ export function BirdsEyeView({ data, onClose, onChange }: {
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (liveStroke.current) {
+      e.preventDefault();
+      e.stopPropagation();
       const p = toSvgPoint(e.clientX, e.clientY);
       if (!p) return;
       const last = liveStroke.current.points[liveStroke.current.points.length - 1];
@@ -868,8 +871,8 @@ export function BirdsEyeView({ data, onClose, onChange }: {
             narrower than the viewport is centred; a wider one scrolls to both
             edges without clipping. */}
         <div ref={scrollRef}
-          className={`flex-1 overflow-auto bg-[radial-gradient(circle_at_1px_1px,#e2e8f0_1px,transparent_0)] [background-size:22px_22px] bg-slate-50 ${
-            brushOn ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'
+          className={`flex-1 overflow-auto select-none bg-[radial-gradient(circle_at_1px_1px,#e2e8f0_1px,transparent_0)] [background-size:22px_22px] bg-slate-50 dark:bg-[#1f1e1d] ${
+            brushOn ? 'cursor-crosshair touch-none' : 'cursor-grab active:cursor-grabbing'
           }`}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointer} onPointerLeave={endPointer}>
           <div className="inline-block min-w-full">
@@ -877,7 +880,7 @@ export function BirdsEyeView({ data, onClose, onChange }: {
               <div style={{ width: width * zoom, height: height * zoom }}>
                 <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`}
                   xmlns="http://www.w3.org/2000/svg"
-                  style={{ display: 'block', width: width * zoom, height: height * zoom }}>
+                  style={{ display: 'block', width: width * zoom, height: height * zoom, touchAction: brushOn ? 'none' : 'auto' }}>
                   <defs>
                     <linearGradient id="beRootGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%"  stopColor="#1565C0" />
