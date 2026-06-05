@@ -1300,11 +1300,20 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                           their own row on mobile so the title doesn't shrink. */}
                       <div className="flex items-center flex-wrap gap-1.5 sm:shrink-0 sm:justify-end pl-9 sm:pl-0">
                         {t.pendingWith && t.status !== 'done' && (
-                          <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
+                          <span className="tag bg-slate-50 text-slate-500 border border-slate-200 dark:bg-white/[0.03] dark:text-white/40 dark:border-white/[0.06]"
                                 title={`Waiting on ${t.pendingWith}`}>
-                            ⏳ {t.pendingWith}
+                            waiting on {t.pendingWith}
                           </span>
                         )}
+                        {!t.pendingWith && t.status !== 'done' && t.lastActivityAt && (() => {
+                          const days = Math.floor((Date.now() - new Date(t.lastActivityAt).getTime()) / 86_400_000);
+                          return days >= 7 ? (
+                            <span className="tag bg-slate-50 text-slate-400 border border-slate-200 dark:bg-white/[0.03] dark:text-white/30 dark:border-white/[0.06]"
+                                  title="No activity recorded recently">
+                              {days}d idle
+                            </span>
+                          ) : null;
+                        })()}
                         {t.requiresQaSignoff && (t.qaSignoffAt
                           ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">Approved ✓</span>
                           : <span className="tag bg-purple-50 text-purple-700 border border-purple-200">Approval</span>
@@ -1354,11 +1363,20 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                   </div>
                   <div className="flex items-center flex-wrap gap-1.5 sm:shrink-0 sm:justify-end pl-9 sm:pl-0">
                     {t.pendingWith && t.status !== 'done' && (
-                      <span className="tag bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1"
+                      <span className="tag bg-slate-50 text-slate-500 border border-slate-200 dark:bg-white/[0.03] dark:text-white/40 dark:border-white/[0.06]"
                             title={`Waiting on ${t.pendingWith}`}>
-                        ⏳ {t.pendingWith}
+                        waiting on {t.pendingWith}
                       </span>
                     )}
+                    {!t.pendingWith && t.status !== 'done' && t.lastActivityAt && (() => {
+                      const days = Math.floor((Date.now() - new Date(t.lastActivityAt).getTime()) / 86_400_000);
+                      return days >= 7 ? (
+                        <span className="tag bg-slate-50 text-slate-400 border border-slate-200 dark:bg-white/[0.03] dark:text-white/30 dark:border-white/[0.06]"
+                              title="No activity recorded recently">
+                          {days}d idle
+                        </span>
+                      ) : null;
+                    })()}
                     {t.gxpCritical && <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>}
                     {t.requiresQaSignoff && (t.qaSignoffAt
                       ? <span className="tag bg-emerald-50 text-emerald-700 border border-emerald-200">QA ✓</span>

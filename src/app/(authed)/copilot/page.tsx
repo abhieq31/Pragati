@@ -456,13 +456,8 @@ function CopilotInner() {
           <div>
             <div className="flex items-center gap-1.5">
               <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">QA Copilot</h1>
-              {mode === 'llm' && (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-forest-700 bg-forest-50 border border-forest-200 px-1.5 py-0.5 rounded-full">
-                  Live AI
-                </span>
-              )}
               {mode === 'kb' && (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded-full">
                   KB mode
                 </span>
               )}

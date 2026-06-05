@@ -32,6 +32,7 @@ function taskForProjectBoard(t: any, extras: any = {}) {
     deployStage: t.deployStage || 'na',
     remarks: t.remarks || '',
     pendingWith: t.pendingWith || '',
+    lastActivityAt: toIso((t as any).lastActivityAt || t.updatedAt || t.createdAt),
     position: t.position ?? 0,
     createdAt: toIso(t.createdAt),
     updatedAt: toIso(t.updatedAt),

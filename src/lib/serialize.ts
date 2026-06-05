@@ -1,7 +1,5 @@
 // helpers to turn Mongoose docs into plain JSON-safe shapes
 
-import { computeFlowSignal } from './flowSignal.compute';
-
 type Any = Record<string, any>;
 
 function id(v: any): string | undefined {
@@ -196,12 +194,6 @@ export function task(t: any, extras: Any = {}) {
     position: t.position ?? 0,
     createdAt: date(t.createdAt),
     updatedAt: date(t.updatedAt),
-    flowSignal: computeFlowSignal({
-      status:         t.status,
-      priority:       t.priority,
-      pendingWith:    t.pendingWith,
-      lastActivityAt: t.lastActivityAt || t.updatedAt || t.createdAt,
-    }),
     ...extras
   };
 }

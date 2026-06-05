@@ -22,9 +22,8 @@ function warmActivityGraph(userId?: string) {
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
   ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3, Bell, Zap, ChevronRight,
+  Maximize2, X, BarChart3, Bell,
 } from 'lucide-react';
-import { computeFlowSignal } from '@/lib/flowSignal.compute';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
 // visits won't open it. Keep it out of the dashboard's first paint.
 const BirdsEyeView = dynamic(
@@ -337,11 +336,6 @@ export default function DashboardClient({
         </>
       )}
 
-      {/* ── FLOW SIGNAL strip — stalled / slow tasks across visible projects ── */}
-      {!isFirstRun && isLead && (
-        <FlowSignalStrip tasks={visibleTasks} />
-      )}
-
       {/* ── Main layout: Projects (left) · Due Center (right, same row) ───── */}
       {!isFirstRun && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
@@ -605,128 +599,6 @@ function FirstRunGuide({ hasTeam }: { hasTeam: boolean }) {
       <p className="text-xs text-slate-400 dark:text-white/25 mt-3 text-center">
         Your dashboard fills in automatically as you create projects and assign tasks.
       </p>
-    </div>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
-/*  FLOW SIGNAL STRIP — fact-based motion health across the lead's tasks       */
-/*  Shows only when there are slow/stalled tasks; silent when all is moving.   */
-/* ────────────────────────────────────────────────────────────────────────── */
-function FlowSignalStrip({ tasks }: { tasks: TeamTask[] }) {
-  const [open, setOpen] = useState(false);
-
-  const flagged = useMemo(() => {
-    return tasks
-      .filter(t => t.status !== 'done')
-      .map(t => ({
-        task: t,
-        fs: computeFlowSignal({
-          status:         t.status,
-          priority:       t.priority,
-          pendingWith:    t.pendingWith,
-          lastActivityAt: t.lastActivityAt,
-        }),
-      }))
-      .filter(({ fs }) => fs.signal === 'stalled' || fs.signal === 'slow' || fs.signal === 'blocked')
-      .sort((a, b) => {
-        // stalled first, then slow, then blocked
-        const order: Record<string, number> = { stalled: 0, slow: 1, blocked: 2 };
-        return (order[a.fs.signal] ?? 9) - (order[b.fs.signal] ?? 9);
-      });
-  }, [tasks]);
-
-  if (flagged.length === 0) return null;
-
-  const stalledCount = flagged.filter(f => f.fs.signal === 'stalled').length;
-  const slowCount    = flagged.filter(f => f.fs.signal === 'slow').length;
-  const blockedCount = flagged.filter(f => f.fs.signal === 'blocked').length;
-
-  return (
-    <div className="mb-5">
-      {/* Compact trigger bar */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-colors text-left
-          ${stalledCount > 0
-            ? 'bg-red-50 dark:bg-red-500/[0.07] border-red-200 dark:border-red-500/20'
-            : 'bg-amber-50 dark:bg-amber-500/[0.07] border-amber-200 dark:border-amber-500/20'
-          }`}
-      >
-        <Zap size={13} className={stalledCount > 0 ? 'text-red-500 shrink-0' : 'text-amber-500 shrink-0'} />
-        <span className={`text-[12px] font-bold ${stalledCount > 0 ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-          Flow Signal
-        </span>
-        <div className="flex items-center gap-1.5 ml-1">
-          {stalledCount > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300">
-              {stalledCount} stalled
-            </span>
-          )}
-          {slowCount > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300">
-              {slowCount} slowing
-            </span>
-          )}
-          {blockedCount > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300">
-              {blockedCount} blocked
-            </span>
-          )}
-        </div>
-        <ChevronRight
-          size={12}
-          className={`ml-auto text-slate-400 dark:text-white/30 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
-        />
-      </button>
-
-      {/* Expanded task list */}
-      {open && (
-        <div className="mt-1.5 bg-white dark:bg-[#262624] rounded-xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden fade-in-soft"
-          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-          <ul className="divide-y divide-slate-50 dark:divide-white/[0.04]">
-            {flagged.slice(0, 8).map(({ task: t, fs }) => {
-              const SIGNAL_META: Record<string, { label: string; dot: string; text: string }> = {
-                stalled: { label: 'Stalled',  dot: 'bg-red-400',    text: 'text-red-600 dark:text-red-400' },
-                slow:    { label: 'Slowing',  dot: 'bg-amber-400',  text: 'text-amber-600 dark:text-amber-400' },
-                blocked: { label: 'Blocked',  dot: 'bg-orange-400', text: 'text-orange-600 dark:text-orange-400' },
-              };
-              const signalMeta = SIGNAL_META[fs.signal] ?? { label: fs.signal, dot: 'bg-slate-300', text: 'text-slate-500' };
-
-              return (
-                <li key={t.id}>
-                  <Link href={`/tasks/${t.id}`}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 dark:hover:bg-white/[0.025] transition-colors group">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${signalMeta.dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/80 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">
-                        {t.title}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30">
-                        <span className="font-mono font-bold">{t.projectCode}</span>
-                        {t.assigneeName && <><span>·</span><span>{t.assigneeName}</span></>}
-                        {t.pendingWith && <><span>·</span><span className="font-medium">waiting on {t.pendingWith}</span></>}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className={`text-[10px] font-bold ${signalMeta.text}`}>{signalMeta.label}</span>
-                      {fs.daysSinceActivity > 0 && (
-                        <div className="text-[10px] text-slate-400 dark:text-white/25 tabular-nums">{fs.daysSinceActivity}d idle</div>
-                      )}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-            {flagged.length > 8 && (
-              <li className="px-4 py-2 text-[10px] text-slate-400 dark:text-white/30">
-                +{flagged.length - 8} more — open each task to send a nudge
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
