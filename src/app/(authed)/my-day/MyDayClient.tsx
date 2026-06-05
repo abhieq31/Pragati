@@ -5,13 +5,13 @@ import { api } from '@/lib/client/api';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
-  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit, Network,
+  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit,
+  Pencil, Pin, PinOff, FileText, Layers,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import dynamicImport from 'next/dynamic';
-// The whiteboard is an interactive canvas with autosave; keep it out of the
-// My Day first paint unless the user opens it.
+
 const Whiteboard = dynamicImport(
   () => import('@/components/Whiteboard').then((m) => m.Whiteboard),
   { ssr: false, loading: () => (
@@ -22,13 +22,19 @@ const Whiteboard = dynamicImport(
 );
 
 interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
+interface UserNote {
+  id: string;
+  title: string | null;
+  content: string;
+  type: 'text' | 'whiteboard';
+  whiteboardData: any;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-/* The home page already shows the time-of-day greeting; My Day opens with an
-   encouraging line instead, so the page feels like a fresh start each day. The
-   line is keyed to the day-of-year so it's stable through the day (no flicker)
-   yet rotates over time. */
 const ENCOURAGEMENTS = [
-  'Let’s make today count',
+  "Let's make today count",
   'One clear thought at a time',
   'Small steps, real progress',
   'Capture it, then conquer it',
@@ -43,7 +49,6 @@ function encouragement() {
   return ENCOURAGEMENTS[dayOfYear % ENCOURAGEMENTS.length];
 }
 
-/* Live clock day/date — suppresses hydration mismatch via suppressHydrationWarning */
 function useDateLabel() {
   const [label, setLabel] = useState('');
   useEffect(() => {
@@ -60,7 +65,6 @@ function useDateLabel() {
   return label;
 }
 
-/* Circular SVG ring that fills as notes are checked off */
 function ProgressRing({ done, total }: { done: number; total: number }) {
   const r = 22;
   const circ = 2 * Math.PI * r;
@@ -96,6 +100,267 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
   );
 }
 
+/* ── Notes panel (right column) ──────────────────────────────────────────── */
+function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () => void }) {
+  const [notes, setNotes]       = useState<UserNote[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [text, setText]         = useState('');
+  const [title, setTitle]       = useState('');
+  const [showTitle, setShowTitle] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText]   = useState('');
+  const [editTitle, setEditTitle] = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api<UserNote[]>('/scratch/notes');
+      setNotes(data);
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function addNote(e: React.FormEvent) {
+    e.preventDefault();
+    const content = text.trim();
+    if (!content) return;
+    try {
+      const note = await api<UserNote>('/scratch/notes', {
+        method: 'POST',
+        body: { content, title: title.trim() || undefined, type: 'text' },
+      });
+      setNotes((n) => [note, ...n]);
+      setText(''); setTitle(''); setShowTitle(false);
+    } catch {}
+  }
+
+  async function removeNote(id: string) {
+    setNotes((n) => n.filter((x) => x.id !== id));
+    try { await api(`/scratch/notes/${id}`, { method: 'DELETE' }); } catch {}
+  }
+
+  async function togglePin(note: UserNote) {
+    const updated = { ...note, pinned: !note.pinned };
+    setNotes((n) => n.map((x) => x.id === note.id ? updated : x).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)));
+    try { await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { pinned: !note.pinned } }); } catch {}
+  }
+
+  function startEdit(note: UserNote) {
+    setEditingId(note.id);
+    setEditText(note.content);
+    setEditTitle(note.title || '');
+  }
+
+  async function saveEdit(note: UserNote) {
+    const content = editText.trim();
+    if (!content) { setEditingId(null); return; }
+    const updated = { ...note, content, title: editTitle.trim() || null };
+    setNotes((n) => n.map((x) => x.id === note.id ? updated : x));
+    setEditingId(null);
+    try { await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { content, title: editTitle.trim() || undefined } }); } catch {}
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-500/15 flex items-center justify-center">
+          <FileText size={13} className="text-amber-600 dark:text-amber-400" />
+        </div>
+        <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600 dark:text-white/50">Notes</h2>
+        <span className="text-[9px] font-bold text-slate-300 dark:text-white/20 ml-1">permanent</span>
+      </div>
+
+      {/* Add note form */}
+      <form onSubmit={addNote} className="mb-4">
+        <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] overflow-hidden focus-within:border-amber-400/60 dark:focus-within:border-amber-500/40 focus-within:shadow-[0_0_0_3px_rgba(245,158,11,0.08)] transition-all">
+          {showTitle && (
+            <input
+              className="w-full bg-transparent text-[13px] font-semibold text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/25 border-0 border-b border-slate-100 dark:border-white/[0.06] outline-none px-3 py-2"
+              placeholder="Title (optional)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+            />
+          )}
+          <textarea
+            className="w-full bg-transparent text-[13px] text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/25 border-0 outline-none resize-none px-3 py-2.5 leading-relaxed"
+            placeholder="Jot a permanent note — ideas, links, decisions…"
+            rows={3}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={50000}
+          />
+          <div className="flex items-center gap-1 px-2 pb-2">
+            <button type="button"
+              onClick={() => setShowTitle((v) => !v)}
+              className="text-[10px] font-semibold text-slate-400 dark:text-white/25 hover:text-slate-600 dark:hover:text-white/50 px-1.5 py-1 rounded transition-colors">
+              {showTitle ? '− title' : '+ title'}
+            </button>
+            <span className="flex-1" />
+            {text.trim() && (
+              <button type="submit"
+                className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold px-2.5 py-1.5 transition-colors fade-in-soft">
+                Save note
+              </button>
+            )}
+          </div>
+        </div>
+      </form>
+
+      {/* Notes list */}
+      {loading && (
+        <div className="space-y-2">
+          {[1,2,3].map((i) => (
+            <div key={i} className="rounded-xl border border-slate-100 dark:border-white/[0.06] p-3 space-y-1.5">
+              <div className="skeleton h-3 w-2/3" />
+              <div className="skeleton h-2.5 w-full" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && notes.length === 0 && (
+        <div className="rounded-xl border border-dashed border-slate-200 dark:border-white/[0.07] p-6 text-center">
+          <FileText size={16} className="mx-auto mb-2 text-slate-300 dark:text-white/15" />
+          <div className="text-[11px] text-slate-400 dark:text-white/25">No notes yet. Save anything you want to keep.</div>
+        </div>
+      )}
+
+      <div className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-0.5">
+        {notes.map((note) => (
+          <div key={note.id}
+            className={`group rounded-xl border transition-all ${
+              note.pinned
+                ? 'border-amber-200/80 dark:border-amber-500/25 bg-amber-50/60 dark:bg-amber-500/[0.06]'
+                : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12'
+            }`}>
+            {editingId === note.id ? (
+              <div className="p-3 space-y-1.5">
+                <input
+                  className="w-full bg-transparent text-[12px] font-semibold text-slate-600 dark:text-white/70 placeholder-slate-300 border-b border-slate-100 dark:border-white/[0.07] outline-none pb-1.5"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Title (optional)"
+                />
+                <textarea
+                  autoFocus
+                  className="w-full bg-transparent text-[13px] text-slate-700 dark:text-white/80 border-0 outline-none resize-none leading-relaxed"
+                  rows={3}
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') { setEditingId(null); }
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { void saveEdit(note); }
+                  }}
+                />
+                <div className="flex gap-1.5">
+                  <button onClick={() => setEditingId(null)}
+                    className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={() => void saveEdit(note)}
+                    className="text-[10px] font-semibold text-amber-600 hover:text-amber-700 transition-colors">
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="px-3 py-2.5">
+                {note.type === 'whiteboard' && (
+                  <div className="flex items-center gap-1 mb-1">
+                    <Layers size={10} className="text-blue-400" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">Whiteboard</span>
+                  </div>
+                )}
+                {note.title && (
+                  <div className="text-[12px] font-bold text-slate-700 dark:text-white/75 mb-0.5 line-clamp-1">{note.title}</div>
+                )}
+                <p className="text-[12px] text-slate-600 dark:text-white/60 leading-relaxed line-clamp-4 whitespace-pre-wrap break-words">
+                  {note.content}
+                </p>
+                <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="flex-1 text-[9px] text-slate-300 dark:text-white/20">
+                    {new Date(note.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  </span>
+                  <button onClick={() => startEdit(note)} title="Edit"
+                    className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-slate-600 dark:hover:text-white/60 transition-colors">
+                    <Pencil size={11} />
+                  </button>
+                  <button onClick={() => void togglePin(note)} title={note.pinned ? 'Unpin' : 'Pin'}
+                    className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-amber-500 dark:hover:text-amber-400 transition-colors">
+                    {note.pinned ? <PinOff size={11} /> : <Pin size={11} />}
+                  </button>
+                  <button onClick={() => void removeNote(note.id)} title="Delete"
+                    className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Whiteboard FAB & drawer ────────────────────────────────────────────── */
+function WhiteboardFAB() {
+  const [open, setOpen] = useState(false);
+  const [blink, setBlink] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setBlink(false), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <>
+      {/* FAB button */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Open whiteboard"
+        aria-label="Open whiteboard"
+        className={`fixed bottom-6 right-6 z-40 rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 ${blink ? 'my-day-fab-blink' : ''}`}
+        style={{
+          width: 52, height: 52,
+          background: 'linear-gradient(135deg, #1565C0 0%, #22C55E 100%)',
+          boxShadow: '0 4px 16px rgba(21,101,192,0.35)',
+        }}
+      >
+        <BrainCircuit size={22} className="text-white" />
+      </button>
+
+      {/* Whiteboard drawer */}
+      {open && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
+          <div className="relative ml-auto w-full max-w-4xl h-full bg-white dark:bg-[#1e1e1c] shadow-2xl flex flex-col fade-in-soft">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-white/[0.07] shrink-0"
+              style={{ background: 'linear-gradient(to right, rgba(21,101,192,0.06), transparent)' }}>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
+                <BrainCircuit size={16} className="text-white" />
+              </div>
+              <div>
+                <div className="text-sm font-black text-slate-800 dark:text-white/90">Whiteboard</div>
+                <div className="text-[10px] text-slate-400 dark:text-white/30">Drag to draw · shapes · text · export PNG</div>
+              </div>
+              <button onClick={() => setOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden p-4">
+              <Whiteboard />
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function MyDayClient({ initialData }: {
   initialData: { open: Note[]; done: Note[] };
 }) {
@@ -113,13 +378,9 @@ export default function MyDayClient({ initialData }: {
   const [editText,  setEditText]    = useState('');
   const [savedAt,   setSavedAt]     = useState<Date | null>(null);
   const [justDone,  setJustDone]    = useState<string | null>(null);
-  // Mind map panel — collapsed by default so the focused "what's on" view
-  // stays the My Day landing experience.
-  const [mindMapOpen, setMindMapOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const total   = open.length + done.length;
-  const allDone = total > 0 && done.length === total;
+  const total = open.length + done.length;
 
   function markSaved() { setSavedAt(new Date()); }
   function startEdit(n: Note) { setEditingId(n.id); setEditText(n.text); }
@@ -173,12 +434,11 @@ export default function MyDayClient({ initialData }: {
   }
 
   return (
-    <div className="max-w-2xl mx-auto pb-14">
+    <div className="max-w-6xl mx-auto pb-14">
 
       {/* ── Hero header ──────────────────────────────────────────────── */}
       <div className="mb-7 pt-1">
         <div className="flex items-start justify-between gap-4">
-          {/* Left: greeting + date */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 dark:text-white/30">
@@ -211,7 +471,6 @@ export default function MyDayClient({ initialData }: {
             )}
           </div>
 
-          {/* Right: circular progress ring + label */}
           <div className="shrink-0 flex flex-col items-center gap-1 mt-0.5">
             <ProgressRing done={done.length} total={total} />
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/25">
@@ -219,242 +478,202 @@ export default function MyDayClient({ initialData }: {
             </span>
           </div>
         </div>
-
-        {/* All-done celebration banner */}
-        {allDone && (
-          <div className="mt-4 rounded-xl border border-emerald-200/80 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/[0.08] px-4 py-3 flex items-center gap-3 fade-in-soft">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
-              <Sparkles size={14} className="text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-emerald-800 dark:text-emerald-300">All done for today.</div>
-              <div className="text-[11px] text-emerald-700/70 dark:text-emerald-400/60 mt-0.5">
-                You cleared everything. Come back tomorrow or add more below.
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* ── Capture — the heart of My Day: get it out of your head first ── */}
-      <form onSubmit={add} className="mb-6">
-        <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm hover:border-slate-300/80 hover:shadow-sm focus-within:border-blue-500/60 dark:focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.10)] transition-all">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/15 dark:to-indigo-500/15 flex items-center justify-center shrink-0">
-              <BrainCircuit size={17} className="text-blue-500 dark:text-blue-400" />
-            </div>
-            <input
-              ref={inputRef}
-              className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-500 dark:placeholder-white/35 border-0 outline-none py-1 min-w-0"
-              placeholder="Empty your mind — what’s on it right now?"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              autoFocus
-              maxLength={2000}
-            />
-            {text.trim() ? (
-              <button type="submit"
-                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors">
-                Capture ↵
-              </button>
-            ) : (
-              <span className="shrink-0 hidden sm:inline text-[11px] text-slate-400 dark:text-white/25 font-medium pr-1">Enter ↵</span>
-            )}
-          </div>
-        </div>
-      </form>
+      {/* ── 2-column layout: tasks (left) + notes (right) ────────────── */}
+      <div className="lg:grid lg:gap-6" style={{ gridTemplateColumns: '1fr 300px' }}>
 
-      {/* Whiteboard toggle — opens a free-form drawing surface below. A
-          board, not a mind-map: drag-to-draw, switch tools, erase, start
-          over. Forces real thinking rather than the pre-formatted polish of
-          a node graph. */}
-      {/* Whiteboard — a tiny side affordance, NOT a full-width banner. Sits to
-          the right of the capture row above (when closed) so the focused
-          "what's on your mind" capture stays the page's centre of gravity.
-          When opened, the canvas expands beneath. */}
-      {mindMapOpen ? (
-        <div className="mb-5 fade-in-soft">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/40">Whiteboard</div>
-            <button
-              type="button"
-              onClick={() => setMindMapOpen(false)}
-              className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:text-white/40 dark:hover:text-white/70 inline-flex items-center gap-1"
-            >
-              Close <ChevronUp size={11} />
-            </button>
-          </div>
-          <Whiteboard />
-        </div>
-      ) : (
-        <div className="mb-5 flex justify-end">
-          <button
-            type="button"
-            onClick={() => setMindMapOpen(true)}
-            title="Open whiteboard — draw, erase, start over"
-            aria-label="Open whiteboard"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-white/35 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
-          >
-            <span className="w-5 h-5 rounded-md flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #1565C0, #22C55E)' }}>
-              <BrainCircuit size={11} className="text-white" />
-            </span>
-            Whiteboard
-          </button>
-        </div>
-      )}
+        {/* ── Left: capture + todo list ────────────────────────────── */}
+        <div className="min-w-0">
 
-      {/* ── Empty state ──────────────────────────────────────────────── */}
-      {open.length === 0 && done.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/[0.08] p-12 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mx-auto mb-3">
-            <Sparkles size={22} className="text-blue-400 dark:text-blue-400/70" />
-          </div>
-          <div className="text-sm font-bold text-slate-700 dark:text-white/60 mb-1">A clear head starts here</div>
-          <div className="text-xs text-slate-400 dark:text-white/25 max-w-xs mx-auto leading-relaxed">
-            Jot anything — ideas, blockers, follow-ups. Unfinished notes carry over automatically.
-          </div>
-        </div>
-      )}
-
-      {/* ── Open notes list ──────────────────────────────────────────── */}
-      {open.length > 0 && (
-        <div className="space-y-1">
-          {open.map((n) => {
-            const isChecking = justDone === n.id;
-            return (
-              <div
-                key={n.id}
-                className={`
-                  group flex items-center min-w-0 gap-3 rounded-xl px-3.5 py-2.5 border
-                  transition-all duration-200
-                  ${isChecking
-                    ? 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/80 dark:bg-emerald-500/[0.08] scale-[0.995]'
-                    : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12 hover:shadow-sm dark:hover:bg-white/[0.045]'
-                  }
-                `}
-              >
-                {/* Checkbox */}
-                <button
-                  onClick={() => toggle(n)}
-                  aria-label="Mark done"
-                  className={`
-                    w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0
-                    transition-all duration-200
-                    ${isChecking
-                      ? 'border-emerald-500 bg-emerald-500'
-                      : 'border-slate-300 dark:border-white/20 hover:border-emerald-400 dark:hover:border-emerald-400/50 hover:bg-emerald-50 dark:hover:bg-emerald-400/[0.08]'
-                    }
-                  `}
-                  style={isChecking ? { transform: 'scale(1.15)' } : {}}
-                >
-                  {isChecking && <Check size={11} className="text-white" strokeWidth={3} />}
-                </button>
-
-                {/* Note text / inline editor */}
-                {editingId === n.id ? (
-                  <textarea
-                    autoFocus
-                    rows={1}
-                    className="input min-w-0 flex-1 text-sm py-1 resize-none leading-relaxed whitespace-pre-wrap break-words overflow-hidden"
-                    value={editText}
-                    maxLength={2000}
-                    onFocus={(e) => {
-                      e.currentTarget.style.height = 'auto';
-                      e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
-                      const len = e.currentTarget.value.length;
-                      e.currentTarget.setSelectionRange(len, len);
-                    }}
-                    onChange={(e) => {
-                      setEditText(e.target.value);
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(n); }
-                      if (e.key === 'Escape') cancelEdit();
-                    }}
-                    onBlur={() => saveEdit(n)}
-                  />
+          {/* ── Capture bar ────────────────────────────────────────── */}
+          <form onSubmit={add} className="mb-6">
+            <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm hover:border-slate-300/80 focus-within:border-blue-500/60 dark:focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.10)] transition-all">
+              <div className="flex items-center gap-3">
+                {/* Enhanced BrainCircuit icon */}
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'linear-gradient(135deg, rgba(21,101,192,0.15) 0%, rgba(34,197,94,0.12) 100%)', boxShadow: '0 0 0 1px rgba(21,101,192,0.12)' }}>
+                  <BrainCircuit size={18} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <input
+                  ref={inputRef}
+                  className="flex-1 bg-transparent text-[15px] text-slate-800 dark:text-white/90 placeholder-slate-400 dark:placeholder-white/30 border-0 outline-none py-1 min-w-0"
+                  placeholder="Empty your mind — what do you want to get done today?"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  autoFocus
+                  maxLength={2000}
+                />
+                {text.trim() ? (
+                  <button type="submit"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors">
+                    <Plus size={13} /> Add ↵
+                  </button>
                 ) : (
-                  <span
-                    className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-700 dark:text-white/80 cursor-text hover:text-slate-900 dark:hover:text-white leading-relaxed"
-                    onClick={() => startEdit(n)}
-                    title="Click to edit"
-                  >
-                    {n.text}
-                  </span>
+                  <span className="shrink-0 hidden sm:inline text-[11px] text-slate-400 dark:text-white/25 font-medium pr-1">Enter ↵</span>
                 )}
-
-                {/* Hover actions */}
-                <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {n.promotedTaskId ? (
-                    <a href={`/tasks/${n.promotedTaskId}`}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
-                      <BookmarkCheck size={12} strokeWidth={2.5} /> tracked
-                    </a>
-                  ) : editingId !== n.id ? (
-                    <button
-                      onClick={() => setPromote(n)}
-                      title="Promote to tracked task"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                    >
-                      <Zap size={11} strokeWidth={2.5} /> track
-                    </button>
-                  ) : null}
-                  <button onClick={() => remove(n)} aria-label="Delete"
-                    className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Done section ─────────────────────────────────────────────── */}
-      {done.length > 0 && (
-        <div className="mt-5">
-          <button
-            onClick={() => setShowDone((s) => !s)}
-            className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.07] text-[12px] font-semibold text-slate-500 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/55 hover:bg-slate-100/50 dark:hover:bg-white/[0.04] transition-colors"
-          >
-            <div className="w-[18px] h-[18px] rounded-[5px] bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
-              <Check size={10} className="text-emerald-600 dark:text-emerald-400" strokeWidth={3} />
             </div>
-            <span>Done · {done.length}</span>
-            <span className="ml-auto">
-              {showDone ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            </span>
-          </button>
-          <div className="mt-1.5 border-t border-slate-100 dark:border-white/[0.05]" />
+          </form>
 
-          {showDone && (
-            <div className="space-y-0.5 mt-1.5 fade-in-soft">
-              {done.map((n) => (
-                <div key={n.id}
-                  className="group flex items-center gap-3 px-3.5 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors">
-                  <button
-                    onClick={() => toggle(n)}
-                    aria-label="Reopen"
-                    className="w-[18px] h-[18px] rounded-[5px] bg-emerald-500 border border-emerald-500 flex items-center justify-center shrink-0 hover:bg-emerald-400 transition-colors"
+          {/* ── Empty state ──────────────────────────────────────── */}
+          {open.length === 0 && done.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/[0.08] p-12 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mx-auto mb-3">
+                <Sparkles size={22} className="text-blue-400 dark:text-blue-400/70" />
+              </div>
+              <div className="text-sm font-bold text-slate-700 dark:text-white/60 mb-1">A clear head starts here</div>
+              <div className="text-xs text-slate-400 dark:text-white/25 max-w-xs mx-auto leading-relaxed">
+                Jot anything — ideas, blockers, follow-ups. Unfinished notes carry over automatically.
+              </div>
+            </div>
+          )}
+
+          {/* ── Open notes list ──────────────────────────────────── */}
+          {open.length > 0 && (
+            <div className="space-y-1">
+              {open.map((n) => {
+                const isChecking = justDone === n.id;
+                return (
+                  <div
+                    key={n.id}
+                    className={`
+                      group flex items-center min-w-0 gap-3 rounded-xl px-3.5 py-2.5 border
+                      transition-all duration-200
+                      ${isChecking
+                        ? 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/80 dark:bg-emerald-500/[0.08] scale-[0.995]'
+                        : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12 hover:shadow-sm dark:hover:bg-white/[0.045]'
+                      }
+                    `}
                   >
-                    <Check size={11} className="text-white" strokeWidth={3} />
-                  </button>
-                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-400 dark:text-white/25 line-through leading-relaxed">
-                    {n.text}
-                  </span>
-                  <button onClick={() => remove(n)} aria-label="Delete"
-                    className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 size={13} />
-                  </button>
+                    <button
+                      onClick={() => toggle(n)}
+                      aria-label="Mark done"
+                      className={`
+                        w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0
+                        transition-all duration-200
+                        ${isChecking
+                          ? 'border-emerald-500 bg-emerald-500'
+                          : 'border-slate-300 dark:border-white/20 hover:border-emerald-400 dark:hover:border-emerald-400/50 hover:bg-emerald-50 dark:hover:bg-emerald-400/[0.08]'
+                        }
+                      `}
+                      style={isChecking ? { transform: 'scale(1.15)' } : {}}
+                    >
+                      {isChecking && <Check size={11} className="text-white" strokeWidth={3} />}
+                    </button>
+
+                    {editingId === n.id ? (
+                      <textarea
+                        autoFocus
+                        rows={1}
+                        className="input min-w-0 flex-1 text-sm py-1 resize-none leading-relaxed whitespace-pre-wrap break-words overflow-hidden"
+                        value={editText}
+                        maxLength={2000}
+                        onFocus={(e) => {
+                          e.currentTarget.style.height = 'auto';
+                          e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                          const len = e.currentTarget.value.length;
+                          e.currentTarget.setSelectionRange(len, len);
+                        }}
+                        onChange={(e) => {
+                          setEditText(e.target.value);
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(n); }
+                          if (e.key === 'Escape') cancelEdit();
+                        }}
+                        onBlur={() => saveEdit(n)}
+                      />
+                    ) : (
+                      <span
+                        className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-700 dark:text-white/80 cursor-text hover:text-slate-900 dark:hover:text-white leading-relaxed"
+                        onClick={() => startEdit(n)}
+                        title="Click to edit"
+                      >
+                        {n.text}
+                      </span>
+                    )}
+
+                    <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {n.promotedTaskId ? (
+                        <a href={`/tasks/${n.promotedTaskId}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
+                          <BookmarkCheck size={12} strokeWidth={2.5} /> tracked
+                        </a>
+                      ) : editingId !== n.id ? (
+                        <button
+                          onClick={() => setPromote(n)}
+                          title="Promote to tracked task"
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        >
+                          <Zap size={11} strokeWidth={2.5} /> track
+                        </button>
+                      ) : null}
+                      <button onClick={() => remove(n)} aria-label="Delete"
+                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── Done section ─────────────────────────────────────── */}
+          {done.length > 0 && (
+            <div className="mt-5">
+              <button
+                onClick={() => setShowDone((s) => !s)}
+                className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.07] text-[12px] font-semibold text-slate-500 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/55 hover:bg-slate-100/50 dark:hover:bg-white/[0.04] transition-colors"
+              >
+                <div className="w-[18px] h-[18px] rounded-[5px] bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <Check size={10} className="text-emerald-600 dark:text-emerald-400" strokeWidth={3} />
                 </div>
-              ))}
+                <span>Done · {done.length}</span>
+                <span className="ml-auto">
+                  {showDone ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                </span>
+              </button>
+              <div className="mt-1.5 border-t border-slate-100 dark:border-white/[0.05]" />
+
+              {showDone && (
+                <div className="space-y-0.5 mt-1.5 fade-in-soft">
+                  {done.map((n) => (
+                    <div key={n.id}
+                      className="group flex items-center gap-3 px-3.5 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors">
+                      <button
+                        onClick={() => toggle(n)}
+                        aria-label="Reopen"
+                        className="w-[18px] h-[18px] rounded-[5px] bg-emerald-500 border border-emerald-500 flex items-center justify-center shrink-0 hover:bg-emerald-400 transition-colors"
+                      >
+                        <Check size={11} className="text-white" strokeWidth={3} />
+                      </button>
+                      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-400 dark:text-white/25 line-through leading-relaxed">
+                        {n.text}
+                      </span>
+                      <button onClick={() => remove(n)} aria-label="Delete"
+                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+
+        {/* ── Right: permanent notes panel ─────────────────────── */}
+        <div className="hidden lg:flex flex-col min-h-[500px] pt-0">
+          <NotesPanel />
+        </div>
+      </div>
+
+      {/* Whiteboard FAB — floating bottom-right, blinks on first open */}
+      <WhiteboardFAB />
 
       {/* Promote modal */}
       {promote && (
@@ -525,12 +744,9 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
       <div className="flex min-h-full items-center justify-center p-4">
         <div
           className="w-full max-w-sm modal-in rounded-2xl border p-6 shadow-2xl"
-          style={{
-            background: 'var(--bg-page) ',
-          }}
+          style={{ background: 'var(--bg-page) ' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="flex items-center gap-2 mb-0.5">
@@ -547,7 +763,6 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
             </button>
           </div>
 
-          {/* Note preview */}
           <div className="rounded-lg border-l-4 border-blue-300 dark:border-blue-500/50 bg-blue-50/70 dark:bg-blue-500/[0.08] px-3 py-2.5 mb-4">
             <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400/70 mb-0.5">Note</div>
             <p className="text-sm text-slate-700 dark:text-white/75 leading-relaxed">{note.text}</p>
@@ -610,7 +825,7 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
             </div>
           </div>
 
-          <div className={`grid gap-3 mb-4 ${privateToMe ? 'grid-cols-1' : 'grid-cols-2'}`}> 
+          <div className={`grid gap-3 mb-4 ${privateToMe ? 'grid-cols-1' : 'grid-cols-2'}`}>
             <div className={privateToMe ? 'hidden' : ''}>
               <label className="label">Assign to</label>
               <Select
