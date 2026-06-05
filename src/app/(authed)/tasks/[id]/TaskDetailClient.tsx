@@ -11,7 +11,8 @@ import { Select } from '@/components/Select';
 import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText, Check, Bell } from 'lucide-react';
+import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText, Check, Bell, BookOpen } from 'lucide-react';
+import { QA_TASK_TYPES } from '@/lib/qualitySignals';
 
 // TaskCompletePop is only shown on task completion — off the critical render
 // path so deferring it improves FCP/LCP.
@@ -64,6 +65,8 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   // was finished. Stays null until the user actually closes the task.
   const [celebrate, setCelebrate] = useState<any | null>(null);
   const { showToast, ToastEl } = useToast();
+  const [pastCases, setPastCases] = useState<any[] | null>(null);
+  const [effectiveness, setEffectiveness] = useState<any | null>(null);
 
   function markSaved() { setSavedAt(new Date()); }
 
@@ -101,6 +104,17 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Quietly load past cases after task data arrives. Only for QA task types.
+  // Fails silently — missing data means the card just doesn't render.
+  useEffect(() => {
+    if (!task?.id || !QA_TASK_TYPES.has(task.taskType)) return;
+    setPastCases(null); setEffectiveness(null);
+    api<any>(`/tasks/${id}/similar`)
+      .then(r => { setPastCases(r.pastCases ?? []); setEffectiveness(r.effectiveness ?? null); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, task?.taskType]);
 
   if (loadErr) {
     return (
@@ -705,6 +719,56 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               Approve & Sign off
             </button>
           </Card>
+        )}
+
+        {/* ── Past Cases — institutional memory surface ─────────────── */}
+        {pastCases && pastCases.length > 0 && (
+          <div className="card overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+              <BookOpen size={13} className="text-slate-400" />
+              <h3 className="text-sm font-semibold text-slate-600">Past cases like this</h3>
+            </div>
+            <div className="p-3 space-y-2.5">
+              {pastCases.map((c: any) => (
+                <Link key={c.id} href={`/tasks/${c.id}`} className="block group">
+                  <div className="text-[12.5px] text-slate-700 dark:text-white/70 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate transition-colors leading-snug">
+                    {c.title}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30">
+                    {c.projectCode && <span className="font-mono font-bold">{c.projectCode}</span>}
+                    {c.projectCode && <span>·</span>}
+                    {c.daysToClose !== null && <span>{c.daysToClose}d to close</span>}
+                    {c.daysToClose !== null && c.completedAt && <span>·</span>}
+                    {c.completedAt && (
+                      <span>{new Date(c.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── CAPA Effectiveness Signal ──────────────────────────────── */}
+        {effectiveness && effectiveness.count > 0
+          && task?.taskType === 'capa'
+          && task?.status === 'done' && (
+          <div className="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/[0.07] px-3.5 py-3">
+            <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 mb-0.5">
+              {effectiveness.count} similar issue{effectiveness.count > 1 ? 's' : ''} filed after closure
+            </div>
+            <div className="text-[10px] text-amber-600/70 dark:text-amber-400/50 mb-2">
+              Effectiveness review may be warranted
+            </div>
+            <div className="space-y-1">
+              {effectiveness.taskTitles.slice(0, 3).map((title: string, i: number) => (
+                <Link key={effectiveness.taskIds[i]} href={`/tasks/${effectiveness.taskIds[i]}`}
+                  className="block text-[10.5px] text-amber-700 dark:text-amber-300/70 hover:text-amber-900 dark:hover:text-amber-200 hover:underline truncate transition-colors">
+                  {title}
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
 
       </div>

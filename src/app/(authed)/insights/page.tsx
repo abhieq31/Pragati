@@ -41,6 +41,15 @@ interface TopAction {
   kind: 'gxp' | 'stuck' | 'overload' | 'critical' | 'atrisk';
 }
 
+interface PatternCluster {
+  taskType: string;
+  taskIds: string[];
+  taskTitles: string[];
+  commonTerms: string[];
+  count: number;
+  riskLevel: 'emerging' | 'moderate' | 'high';
+}
+
 interface InsightsData {
   brief: string[];
   topActions: TopAction[];
@@ -51,6 +60,7 @@ interface InsightsData {
   stuckTasks: StuckTask[];
   velocity: { label: string; completed: number }[];
   archive: ArchiveProject[];
+  patternClusters?: PatternCluster[];
 }
 
 const LOAD_CONFIG = {
@@ -206,6 +216,56 @@ export default function InsightsPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* Quality Signals — pattern clusters across open QA tasks */}
+      {(data.patternClusters?.length ?? 0) > 0 && (
+        <Card title="Quality signals">
+          <div className="space-y-3">
+            {data.patternClusters!.map((cluster, i) => {
+              const TASK_TYPE_LABEL: Record<string, string> = {
+                deviation: 'deviation', capa: 'CAPA', audit_finding: 'audit finding',
+                data_review: 'data review', test: 'test', review: 'review',
+              };
+              const typeLabel = TASK_TYPE_LABEL[cluster.taskType] ?? cluster.taskType.replace(/_/g, ' ');
+              return (
+                <div key={i} className={`rounded-lg border px-3.5 py-3 ${
+                  cluster.riskLevel === 'high'
+                    ? 'bg-red-50/60 border-red-200 dark:bg-red-500/[0.07] dark:border-red-500/20'
+                    : cluster.riskLevel === 'moderate'
+                    ? 'bg-amber-50/60 border-amber-200 dark:bg-amber-500/[0.07] dark:border-amber-500/20'
+                    : 'bg-slate-50 border-slate-200 dark:bg-white/[0.03] dark:border-white/[0.06]'
+                }`}>
+                  <div className="text-[12px] font-semibold text-slate-700 dark:text-white/80 mb-1.5">
+                    {cluster.count} open {typeLabel}s may share a root cause
+                  </div>
+                  {cluster.commonTerms.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {cluster.commonTerms.map(term => (
+                        <span key={term} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/70 dark:bg-white/[0.06] text-slate-500 dark:text-white/40 border border-slate-200 dark:border-white/[0.08]">
+                          {term}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="space-y-0.5">
+                    {cluster.taskTitles.slice(0, 3).map((title, j) => (
+                      <Link key={cluster.taskIds[j]} href={`/tasks/${cluster.taskIds[j]}`}
+                        className="block text-[11px] text-slate-500 dark:text-white/40 hover:text-blue-600 dark:hover:text-blue-400 truncate transition-colors">
+                        {title}
+                      </Link>
+                    ))}
+                    {cluster.count > 3 && (
+                      <div className="text-[10px] text-slate-400 dark:text-white/25 mt-0.5">
+                        +{cluster.count - 3} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
       )}
 
       {/* Team pulse */}

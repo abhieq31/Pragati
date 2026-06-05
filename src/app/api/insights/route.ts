@@ -6,6 +6,7 @@ import { Task } from '@/models/Task';
 import { requireRole } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import { NOT_PERSONAL } from '@/lib/leadScope';
+import { detectPatternClusters } from '@/lib/qualitySignals';
 
 export const runtime = 'nodejs';
 
@@ -285,6 +286,11 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => b.stagnantDays - a.stagnantDays)
       .slice(0, 3);
 
+    // ── Quality Signals — pattern clusters across open QA tasks ──────────
+    // Run after all other aggregations so the main dashboard data is never
+    // delayed by the clustering computation.
+    const patternClusters = await detectPatternClusters(projectIds);
+
     return NextResponse.json({
       brief: briefLines,
       topActions: actions,
@@ -295,6 +301,7 @@ export async function GET(req: NextRequest) {
       stuckTasks,
       velocity,
       archive,
+      patternClusters,
     });
   } catch (e) {
     return handleError(e);
