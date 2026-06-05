@@ -348,7 +348,7 @@ export default function DashboardClient({
 
       {/* ── Main layout: Projects (left) · Due Center (right, same row) ───── */}
       {!isFirstRun && (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
 
           {/* Left column — Projects */}
           <ProjectsColumn
@@ -357,15 +357,11 @@ export default function DashboardClient({
           />
 
           {/* Right column — Due Center + "My tasks" (for leads: also Contributors).
-             Headers in both columns share the same vertical baseline so the
-             dashboard reads as a single inline strip rather than two stacked
-             layouts. The Due Center header carries the same uppercase tracking
-             treatment as "Your team's projects" on the left.
-             Flows with the page (no sticky/own-scroll): the previous
-             sticky+max-height+overflow combo clipped the Individual
-             Contributors list and made it feel like it "broke" mid-scroll
-             when the column was taller than the viewport. */}
-          <div className="space-y-4 pr-1">
+             On desktop, pad the rail so the Up Next card starts on the same
+             horizontal line as the project cards (the inline composition shown
+             in the production screenshot). It still flows with the page — no
+             sticky/own-scroll — so taller contributor lists never clip. */}
+          <div className="space-y-4 pr-1 min-w-0 lg:pt-[31px]">
             <UpNextPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Leads see workload across their ICs. Contributors don't need a
@@ -675,7 +671,7 @@ function ProjectsColumn({
     return () => window.clearTimeout(t);
   }, []);
   return (
-    <section>
+    <section className="min-w-0">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <FolderKanban size={14} className="text-slate-400 shrink-0" />
@@ -887,7 +883,7 @@ function ProjectRow({
   const dueUrgent = dueIn !== null && (dueIn < 0 || dueIn === 0);
 
   return (
-    <article className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all"
+    <article className="min-w-0 bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all"
       style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
       {/* Collapsed-state header — two readable rows, never a 5-piece chip strip.
           Row 1: title + identity badges (code, lifecycle, health). Row 2: the

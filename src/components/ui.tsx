@@ -339,7 +339,7 @@ interface AvatarProps {
   bg?: string | null;
   /** Index into AVATAR_FONTS. */
   font?: number | null;
-  /** Render a subtle white ring border around the avatar. */
+  /** Render a subtle white ring border around the circular avatar. */
   ring?: boolean;
 }
 
@@ -377,10 +377,9 @@ export function Avatar({ name, size = 28, letter, bg, font, ring }: AvatarProps)
         letterSpacing: '0.02em',
         background,
         color,
-        // Squircle — a rounded-square that echoes the Pragati logo tile,
-        // instead of a plain circle. Proportional radius so it reads the same
-        // at every size (matches PragatiMark's ~0.26–0.28 factor).
-        borderRadius: Math.max(4, Math.round(size * 0.28)),
+        // Circular profile photo shape, matching familiar messaging apps such
+        // as WhatsApp. Keep every user avatar round across the product.
+        borderRadius: '50%',
         boxShadow: ring
           ? '0 0 0 2px rgba(255,255,255,0.9), 0 1px 3px rgba(15,23,42,0.15)'
           : useMonogram
