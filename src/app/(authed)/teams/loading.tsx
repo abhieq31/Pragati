@@ -18,24 +18,27 @@ export default function Loading() {
         <div className="skeleton h-9 w-full rounded-lg" />
       </div>
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
+      <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))' }}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="card p-5 space-y-3">
+          <div key={i} className="card p-5 space-y-3.5 flex flex-col" style={{ minHeight: 220 }}>
             <div className="flex items-start gap-3">
-              <div className="skeleton w-10 h-10 rounded-lg" />
-              <div className="flex-1 space-y-1.5">
-                <div className="skeleton h-4 w-3/4 rounded" />
-                <div className="skeleton h-4 w-20 rounded-full" />
+              <div className="skeleton w-12 h-12 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-[18px] w-3/4 rounded" />
+                <div className="skeleton h-4 w-24 rounded-full" />
               </div>
             </div>
-            <div className="skeleton h-3 w-2/3 rounded" />
-            <div className="flex -space-x-2">
-              {[0, 1, 2, 3].map((j) => (
-                <div key={j} className="skeleton w-7 h-7 rounded-full ring-2 ring-white" />
+            <div className="space-y-1.5">
+              <div className="skeleton h-3 w-full rounded" />
+              <div className="skeleton h-3 w-2/3 rounded" />
+            </div>
+            <div className="flex -space-x-2 pt-1">
+              {[0, 1, 2, 3, 4].map((j) => (
+                <div key={j} className="skeleton w-8 h-8 rounded-full ring-2 ring-white" />
               ))}
             </div>
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-              <div className="skeleton h-3 w-32 rounded" />
+            <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="skeleton h-3 w-36 rounded" />
               <div className="skeleton h-3 w-20 rounded" />
             </div>
           </div>
