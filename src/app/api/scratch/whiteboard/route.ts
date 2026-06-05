@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
 
 const Body = z.object({
   strokes: z.array(z.object({
-    tool:   z.enum(['pen', 'highlighter', 'eraser', 'text']),
+    tool:   z.enum(['pen', 'highlighter', 'eraser', 'text', 'rect', 'ellipse', 'arrow']),
     color:  z.string().max(20),
     size:   z.number().finite().min(0.1).max(40),
     points: z.array(z.object({ x: z.number().finite(), y: z.number().finite() })).max(2500),
