@@ -346,20 +346,30 @@ export function Whiteboard() {
           <textarea
             autoFocus
             value={editingText.value}
-            onChange={(e) => setEditingText({ ...editingText, value: e.target.value })}
+            onChange={(e) => {
+              const v = e.target.value;
+              setEditingText(prev => prev ? { ...prev, value: v } : prev);
+            }}
             onBlur={commitText}
             onKeyDown={(e) => {
               if (e.key === 'Escape') { setEditingText(null); }
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { commitText(); }
             }}
-            className="absolute outline-none border-2 border-dashed border-slate-300 bg-white/90 rounded-md p-1 text-sm"
+            className="absolute outline-none border-2 border-dashed border-blue-400 bg-white shadow-lg rounded-md px-2 py-1 text-sm resize"
             style={{
               left: editingText.x, top: editingText.y - 2,
-              minWidth: 80, minHeight: 24,
+              minWidth: 140, minHeight: 32, zIndex: 10,
               color, font: `${Math.round(penSize * 6)}px ui-sans-serif, system-ui, sans-serif`,
             }}
-            placeholder="type & blur to drop"
+            placeholder="Type text — click outside or press ⌘↵ to drop"
           />
+        )}
+
+        {/* Text-tool hint banner — only when text tool is active and not typing */}
+        {tool === 'text' && !editingText && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[11px] font-semibold px-3 py-1 rounded-full shadow-md pointer-events-none fade-in-soft">
+            Click anywhere to place text
+          </div>
         )}
 
         {visibleStrokes.length === 0 && !editingText && (

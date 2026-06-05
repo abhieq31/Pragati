@@ -214,31 +214,52 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
                 </div>
               </div>
 
-              {/* Progress bar */}
-              <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: '#f1f5f9' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${pct}%`,
-                    background: pct >= 90 ? '#22c55e' : pct >= 60 ? '#1769C8' : pct >= 30 ? '#f59e0b' : '#94a3b8',
-                  }}
-                />
+              {/* Progress — modern segmented bar with gradient + inline label */}
+              <div className="mt-4 mb-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Progress
+                  </span>
+                  <span className={`text-[12px] font-black tabular-nums ${pct >= 90 ? 'text-emerald-600' : pct >= 60 ? 'text-blue-600' : pct >= 30 ? 'text-amber-600' : 'text-slate-500'}`}>
+                    {pct}%
+                  </span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden relative" style={{ background: '#f1f5f9' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={{
+                      width: `${pct}%`,
+                      background: pct >= 90
+                        ? 'linear-gradient(90deg, #10b981, #22c55e)'
+                        : pct >= 60
+                        ? 'linear-gradient(90deg, #1565C0, #3b82f6)'
+                        : pct >= 30
+                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                        : 'linear-gradient(90deg, #94a3b8, #cbd5e1)',
+                      boxShadow: pct > 0 ? 'inset 0 1px 0 rgba(255,255,255,0.25)' : undefined,
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Bottom meta */}
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-slate-400">
-                  {p.tasksDone}/{p.taskCount} tasks
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                <span className="text-[12px] text-slate-500">
+                  <strong className="text-slate-700 font-semibold">{p.tasksDone}</strong>
+                  <span className="text-slate-400">/{p.taskCount}</span>
+                  <span className="text-slate-400 ml-1">tasks</span>
                   {p.tasksOverdue > 0 && (
-                    <span className="ml-1.5 text-red-500 font-semibold">· {p.tasksOverdue} late</span>
+                    <span className="ml-2 text-red-500 font-semibold">· {p.tasksOverdue} late</span>
                   )}
                 </span>
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  {p.teamName && <span className="truncate max-w-[90px]">{p.teamName}</span>}
-                  {p.dueDate && <span>{formatDate(p.dueDate)}</span>}
-                  <span className={`font-bold text-sm ${pct >= 90 ? 'text-green-600' : pct >= 60 ? 'text-blue-600' : 'text-slate-500'}`}>
-                    {pct}%
-                  </span>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                  {p.teamName && <span className="truncate max-w-[100px]">{p.teamName}</span>}
+                  {p.dueDate && (
+                    <>
+                      {p.teamName && <span className="text-slate-300">·</span>}
+                      <span>{formatDate(p.dueDate)}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </Link>

@@ -6,6 +6,7 @@ import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
   Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
   ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit, Network,
+  PenLine, Presentation,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
@@ -241,7 +242,7 @@ export default function MyDayClient({ initialData }: {
         <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm hover:border-slate-300/80 hover:shadow-sm focus-within:border-blue-500/60 dark:focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.10)] transition-all">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 dark:from-blue-500/15 dark:to-indigo-500/15 flex items-center justify-center shrink-0">
-              <BrainCircuit size={17} className="text-blue-500 dark:text-blue-400" />
+              <PenLine size={17} className="text-blue-500 dark:text-blue-400" />
             </div>
             <input
               ref={inputRef}
@@ -297,7 +298,7 @@ export default function MyDayClient({ initialData }: {
           >
             <span className="w-5 h-5 rounded-md flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #1565C0, #22C55E)' }}>
-              <BrainCircuit size={11} className="text-white" />
+              <Presentation size={11} className="text-white" />
             </span>
             Whiteboard
           </button>
