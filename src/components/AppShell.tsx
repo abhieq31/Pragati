@@ -22,12 +22,6 @@ const SetPinModal = dynamic(
   () => import('./SetPinModal').then(m => m.SetPinModal),
   { ssr: false, loading: () => null },
 );
-// Spotlight onboarding tour — mounted at the shell level so contributors,
-// leads, and admins all get it on whichever page they land on.
-const FirstTimeTour = dynamic(
-  () => import('./FirstTimeTour').then(m => m.FirstTimeTour),
-  { ssr: false, loading: () => null },
-);
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
@@ -557,15 +551,6 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
 
       {mustChangePw && (
         <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
-      )}
-
-      {/* Spotlight onboarding tour — runs once per user (server-tracked via
-          hasSeenTour). Mounted here so every role sees it regardless of
-          which page they land on after login, and so it doesn't clash with
-          the password / PIN gates above (it's lazy and exits cleanly when
-          alreadySeen). */}
-      {!mustChangePw && !needsPin && (
-        <FirstTimeTour alreadySeen={user.hasSeenTour !== false} />
       )}
 
       {/* Quick-PIN prompt — only after the password step (if any) is cleared,

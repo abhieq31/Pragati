@@ -129,23 +129,6 @@ function greeting(now = new Date()): string {
   if (h < 21) return 'Good evening';
   return 'Good evening';
 }
-// The tiny emoji that trails the greeting line (festival icon, or a subtle
-// time-of-day cue) so the header feels crafted, not generic.
-function greetingEmoji(now = new Date()): string {
-  const fest = festivalFor(now);
-  if (fest) return fest.emoji;
-  const h = now.getHours();
-  const day = now.getDay();
-  if (h < 5)  return '🌃';
-  if (h < 7)  return '🌅';
-  if (h < 12) return day === 1 ? '🚀' : day === 5 ? '⚡' : '🌤️';
-  if (h < 14) return '☀️';
-  if (h < 17) return day === 5 ? '🎯' : '🛫';
-  if (h < 19) return '🌇';
-  if (h < 22) return '🌆';
-  return '🌃';
-}
-
 // A meaningful one-liner driven by the user's actual state — not filler. On a
 // festival day we lead with the festive note before nudging toward the work.
 function greetingSubline({ open, overdue, dueToday, now = new Date() }: { open: number; overdue: number; dueToday: number; now?: Date }) {
@@ -287,22 +270,16 @@ export default function DashboardClient({
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap text-slate-800 dark:text-white/90">
+          <h1 className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-tight text-slate-800 dark:text-white/90">
             <span suppressHydrationWarning>
               {greeting()},{' '}
               <span className="text-blue-700 dark:text-blue-400">{firstName}.</span>
             </span>
-            <span className="text-[0.7em] translate-y-[0.05em] opacity-80" suppressHydrationWarning>{greetingEmoji()}</span>
           </h1>
         </div>
-        {/* Bird's-eye view trigger — custom icon, blinks once per session.
-            Wrapped in a tour tooltip that appears once-ever (localStorage),
-            and only when the workspace has at least one active project so
-            empty-state users aren't introduced to a feature they can't use. */}
+        {/* Bird's-eye view trigger. */}
         {!isFirstRun && (
-          <BirdEyeTourWrapper hasActiveProjects={dash.projects.some(p => p.status !== 'completed' && p.status !== 'cancelled')}>
-            <BirdEyeButton scopeKey="dashboard" onClick={() => setBirdsEyeOpen(true)} className="shrink-0" />
-          </BirdEyeTourWrapper>
+          <BirdEyeButton scopeKey="dashboard" onClick={() => setBirdsEyeOpen(true)} className="shrink-0" />
         )}
       </div>
       {/* Subline removed. The summary chips below (Ongoing / Open / Overdue
@@ -414,54 +391,6 @@ function ExpandButton({ onClick }: { onClick: () => void }) {
       className="p-1 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors">
       <Maximize2 size={12} />
     </button>
-  );
-}
-
-/* ── Bird's-Eye first-login tour ───────────────────────────────────────────
-   Small spotlight tooltip next to the Bird's-Eye trigger, shown ONCE per
-   workspace (keyed in localStorage) and only when at least one active
-   project exists — so the cue introduces the feature on a workspace where
-   it'll actually surface something useful. */
-function BirdEyeTourWrapper({ children, hasActiveProjects }: { children: React.ReactNode; hasActiveProjects: boolean }) {
-  const [show, setShow] = useState(false);
-
-  useEffect(() => {
-    if (!hasActiveProjects) return;
-    if (typeof window === 'undefined') return;
-    const K = 'pragati-bve-tour-v1';
-    if (localStorage.getItem(K)) return;
-    // Defer slightly so it fades in after the page paints rather than during it.
-    const t = window.setTimeout(() => setShow(true), 800);
-    return () => window.clearTimeout(t);
-  }, [hasActiveProjects]);
-
-  function dismiss() {
-    setShow(false);
-    try { localStorage.setItem('pragati-bve-tour-v1', '1'); } catch {}
-  }
-
-  return (
-    <div className="relative shrink-0">
-      {children}
-      {show && (
-        <div
-          className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-blue-200 bg-white shadow-xl p-3 z-30 fade-in-soft"
-          role="tooltip"
-        >
-          <div className="absolute -top-1.5 right-3 w-3 h-3 rotate-45 bg-white border-l border-t border-blue-200" />
-          <div className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-1">New · Bird&apos;s-eye</div>
-          <div className="text-[12px] text-slate-700 leading-snug">
-            See your whole workspace as one map — teams, projects, tasks. Click here any time.
-          </div>
-          <button
-            onClick={dismiss}
-            className="mt-2 text-[11px] font-bold text-blue-600 hover:text-blue-800"
-          >
-            Got it
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
 

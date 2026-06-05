@@ -362,11 +362,6 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
 /* ── Whiteboard FAB & drawer ────────────────────────────────────────────── */
 function WhiteboardFAB() {
   const [open, setOpen] = useState(false);
-  const [blink, setBlink] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => setBlink(false), 3000);
-    return () => clearTimeout(t);
-  }, []);
 
   return (
     <>
@@ -376,7 +371,7 @@ function WhiteboardFAB() {
         onClick={() => setOpen(true)}
         title="Open whiteboard"
         aria-label="Open whiteboard"
-        className={`fixed bottom-6 right-6 z-40 rounded-full shadow-xl flex items-center gap-2 pl-3.5 pr-4 h-12 text-white text-[13px] font-bold transition-transform hover:scale-105 active:scale-95 ${blink ? 'my-day-fab-blink' : ''}`}
+        className="fixed bottom-6 right-6 z-40 rounded-full shadow-xl flex items-center gap-2 pl-3.5 pr-4 h-12 text-white text-[13px] font-bold transition-transform hover:scale-105 active:scale-95"
         style={{
           background: 'linear-gradient(135deg, #1565C0 0%, #22C55E 100%)',
           boxShadow: '0 4px 16px rgba(21,101,192,0.35)',
