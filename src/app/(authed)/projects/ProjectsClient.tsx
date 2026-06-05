@@ -107,7 +107,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       <div className="card p-4 min-h-[72px] flex items-center">
         <div className="flex flex-wrap items-center gap-3 w-full">
           <div className="relative flex-1 min-w-[180px]">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 pointer-events-none" />
             <input
               className="input pl-8 text-sm"
               placeholder="Search projects…"
@@ -118,7 +118,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
           {/* Filters stack full-width on mobile (so a long team name never
               overflows the card) and sit inline from sm: up. */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-            <SlidersHorizontal size={13} className="text-slate-400 shrink-0 hidden sm:block" />
+            <SlidersHorizontal size={13} className="text-slate-400 dark:text-white/40 shrink-0 hidden sm:block" />
             <Select
               className="w-full sm:w-44" value={team} onChange={setTeam} ariaLabel="Filter by team"
               placeholder="All teams"
@@ -149,20 +149,23 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Loading skeleton */}
       {!loaded && (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }} aria-busy="true" aria-live="polite">
+        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }} aria-busy="true" aria-live="polite">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5 flex-1">
-                  <div className="skeleton h-3 w-24" />
-                  <div className="skeleton h-5 w-3/4" />
+            <div key={i} className="card overflow-hidden">
+              <div className="skeleton h-1 w-full rounded-none" />
+              <div className="p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="skeleton h-5 w-16 rounded-full" />
+                  <div className="skeleton h-5 w-20 rounded-full" />
                 </div>
-                <div className="skeleton h-5 w-20 rounded-full" />
-              </div>
-              <div className="skeleton h-1.5 w-full" />
-              <div className="flex justify-between">
-                <div className="skeleton h-3 w-20" />
-                <div className="skeleton h-3 w-12" />
+                <div className="skeleton h-5 w-3/4" />
+                <div className="skeleton h-3.5 w-full" />
+                <div className="skeleton h-3.5 w-2/3" />
+                <div className="skeleton h-2 w-full rounded-full" />
+                <div className="flex justify-between pt-2 border-t border-slate-100">
+                  <div className="skeleton h-3 w-24" />
+                  <div className="skeleton h-3 w-16" />
+                </div>
               </div>
             </div>
           ))}
@@ -172,93 +175,101 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Grid */}
       {loaded && (
-      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
+      <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
         {projects.map((p) => {
           const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
           const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
-          const healthColor = overdueRatio > 0.3 ? HEALTH_COLORS.critical : overdueRatio > 0 ? HEALTH_COLORS.at_risk : HEALTH_COLORS.good;
+          const health = overdueRatio > 0.3 ? 'critical' : overdueRatio > 0 ? 'at_risk' : 'good';
+          const healthColor = HEALTH_COLORS[health];
+          const healthLabel = health === 'critical' ? 'Critical' : health === 'at_risk' ? 'At risk' : 'Healthy';
           const statusInfo = STATUS_COLORS[p.status] || { dot: '#94a3b8', label: p.status };
+          const progressColor = pct >= 90 ? '#22c55e' : pct >= 60 ? '#1769C8' : pct >= 30 ? '#f59e0b' : '#94a3b8';
           return (
             <Link
               href={`/projects/${p.id}`}
               key={p.id}
-              className="card-hover p-5 block group"
+              className="card-hover block group overflow-hidden"
             >
-              {/* Top row */}
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    {p.isPersonal ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                        <Lock size={9} /> Private
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">{p.code}</span>
-                    )}
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: healthColor }}
-                      title={overdueRatio > 0.3 ? 'Critical' : overdueRatio > 0 ? 'At risk' : 'Healthy'} />
-                  </div>
-                  <div className="font-bold text-slate-900 line-clamp-2 group-hover:text-blue-700 transition-colors leading-tight">
-                    {p.name}
-                  </div>
-                  {p.description && (
-                    <p className="text-xs text-slate-400 line-clamp-1 mt-0.5 leading-relaxed">{p.description}</p>
+              {/* Accent strip at top */}
+              <div className="h-1" style={{ background: progressColor }} />
+
+              <div className="p-5">
+                {/* Header row: code + health + status */}
+                <div className="flex items-center gap-2 mb-3">
+                  {p.isPersonal ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-600 bg-violet-50 dark:bg-violet-500/15 dark:text-violet-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      <Lock size={9} /> Private
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.05] px-2 py-0.5 rounded">
+                      {p.code}
+                    </span>
                   )}
-                </div>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <LifecycleTag lifecycle={p.lifecycle} />
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: health === 'good' ? 'rgba(34,197,94,0.1)' : health === 'at_risk' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
+                      color: healthColor,
+                    }}
+                    title={healthLabel}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: healthColor }} />
+                    {healthLabel}
+                  </span>
+                  <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-white/35">
                     <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: statusInfo.dot }} />
                     {statusInfo.label}
                   </span>
                 </div>
-              </div>
 
-              {/* Progress — modern segmented bar with gradient + inline label */}
-              <div className="mt-4 mb-1">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Progress
-                  </span>
-                  <span className={`text-[12px] font-black tabular-nums ${pct >= 90 ? 'text-emerald-600' : pct >= 60 ? 'text-blue-600' : pct >= 30 ? 'text-amber-600' : 'text-slate-500'}`}>
-                    {pct}%
-                  </span>
-                </div>
-                <div className="h-2 rounded-full overflow-hidden relative" style={{ background: '#f1f5f9' }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-700 ease-out"
-                    style={{
-                      width: `${pct}%`,
-                      background: pct >= 90
-                        ? 'linear-gradient(90deg, #10b981, #22c55e)'
-                        : pct >= 60
-                        ? 'linear-gradient(90deg, #1565C0, #3b82f6)'
-                        : pct >= 30
-                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                        : 'linear-gradient(90deg, #94a3b8, #cbd5e1)',
-                      boxShadow: pct > 0 ? 'inset 0 1px 0 rgba(255,255,255,0.25)' : undefined,
-                    }}
-                  />
-                </div>
-              </div>
+                {/* Project name */}
+                <h3 className="font-black text-[15px] text-slate-900 dark:text-white/90 line-clamp-2 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors leading-snug mb-1.5">
+                  {p.name}
+                </h3>
 
-              {/* Bottom meta */}
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                <span className="text-[12px] text-slate-500">
-                  <strong className="text-slate-700 font-semibold">{p.tasksDone}</strong>
-                  <span className="text-slate-400">/{p.taskCount}</span>
-                  <span className="text-slate-400 ml-1">tasks</span>
-                  {p.tasksOverdue > 0 && (
-                    <span className="ml-2 text-red-500 font-semibold">· {p.tasksOverdue} late</span>
+                {/* Description */}
+                {p.description && (
+                  <p className="text-[12px] text-slate-400 dark:text-white/35 line-clamp-2 leading-relaxed mb-3">{p.description}</p>
+                )}
+                {!p.description && <div className="mb-3" />}
+
+                {/* Lifecycle + tags row */}
+                <div className="flex items-center gap-2 mb-4">
+                  <LifecycleTag lifecycle={p.lifecycle} />
+                  {p.teamName && (
+                    <span className="text-[10px] text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.04] px-2 py-0.5 rounded-full truncate max-w-[120px]">
+                      {p.teamName}
+                    </span>
                   )}
-                </span>
-                <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                  {p.teamName && <span className="truncate max-w-[100px]">{p.teamName}</span>}
+                </div>
+
+                {/* Progress section */}
+                <div className="space-y-1.5 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-white/40">Progress</span>
+                    <span className="text-[13px] font-black tabular-nums" style={{ color: progressColor }}>{pct}%</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-white/[0.08]">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, background: progressColor }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats row */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/[0.06]">
+                  <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-white/30">
+                    <span className="font-semibold">
+                      <span className="text-slate-700 dark:text-white/70 font-black">{p.tasksDone}</span>
+                      /{p.taskCount} done
+                    </span>
+                    {p.tasksOverdue > 0 && (
+                      <span className="text-red-500 font-bold">{p.tasksOverdue} overdue</span>
+                    )}
+                  </div>
                   {p.dueDate && (
-                    <>
-                      {p.teamName && <span className="text-slate-300">·</span>}
-                      <span>{formatDate(p.dueDate)}</span>
-                    </>
+                    <span className="text-[11px] text-slate-400 dark:text-white/30 font-medium">
+                      Due {formatDate(p.dueDate)}
+                    </span>
                   )}
                 </div>
               </div>
