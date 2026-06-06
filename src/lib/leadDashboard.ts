@@ -7,8 +7,31 @@ import { project as projectS, task as taskS, date as toIso } from '@/lib/seriali
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStrip';
 import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
+import { cached, cacheBust } from '@/lib/cache';
+import { normalizeRole } from '@/lib/auth';
 
 const STATUS_ORDER: Record<string, number> = { in_progress: 0, review: 1, blocked: 2, todo: 3, done: 4 };
+
+// How long a per-user dashboard rollup may be served from cache. The dashboard
+// is an operational "what's on" view, not a record — a brief staleness window
+// is an acceptable trade for skipping ~9 DB queries on rapid re-navigation
+// (dashboard → project → back) and multi-tab use. Lower = fresher.
+const DASHBOARD_TTL_SECONDS = 15;
+
+/** Cache key for a viewer's dashboard rollup — scoped by user + effective role
+ *  (role changes the visibility scope, so it must be part of the key). */
+function dashboardCacheKey(sub: string, role: string): string {
+  return `dash:${sub}:${normalizeRole(role)}`;
+}
+
+/**
+ * Bust a viewer's cached dashboard so their next load recomputes from MongoDB.
+ * Called by mutation routes for zero staleness after a write (task move,
+ * project change, etc.). Safe to call when the cache is disabled — it no-ops.
+ */
+export async function bustDashboardCache(sub: string, role: string): Promise<void> {
+  await cacheBust(dashboardCacheKey(sub, role));
+}
 
 export interface LeadDashboardData {
   user:      { id: string; name: string; email: string; role: string };
@@ -22,10 +45,26 @@ export interface LeadDashboardData {
   flowSignal?: FlowSignalPayload | null;
 }
 
-// Pure data fetcher — used by both the API route and the server-rendered
-// dashboard page. Centralising it lets the App Router stream the initial HTML
-// without a client-side round-trip.
+/**
+ * Public entry point — used by both the API route and the server-rendered
+ * dashboard page. Read-through cached per viewer (see DASHBOARD_TTL_SECONDS):
+ * a hit returns the rollup without touching MongoDB; a miss (or a disabled /
+ * unreachable cache) computes fresh via the pure fetcher below. Fully
+ * transparent — when Upstash isn't configured this is just a direct call.
+ */
 export async function getLeadDashboardData(
+  jwtUser: { sub: string; name: string; email: string; role: string },
+): Promise<LeadDashboardData> {
+  return cached(
+    dashboardCacheKey(jwtUser.sub, jwtUser.role),
+    DASHBOARD_TTL_SECONDS,
+    () => computeLeadDashboardData(jwtUser),
+  );
+}
+
+// Pure data fetcher — the actual MongoDB work. Centralising it lets the App
+// Router stream the initial HTML without a client-side round-trip.
+async function computeLeadDashboardData(
   jwtUser: { sub: string; name: string; email: string; role: string },
 ): Promise<LeadDashboardData> {
   await connectDB();
@@ -58,6 +97,7 @@ export async function getLeadDashboardData(
     User.find({ _id: { $in: projects.map(p => p.ownerId).filter(Boolean) } }, '_id name').lean(),
     Task.aggregate([
       { $match: { projectId: { $in: visibleProjectIds }, ...visibleTaskPrivacyFilter } },
+      { $project: { projectId: 1, status: 1, dueDate: 1, completedAt: 1 } },
       {
         $group: {
           _id: '$projectId',
@@ -76,6 +116,7 @@ export async function getLeadDashboardData(
     ]),
     Task.aggregate([
       { $match: { projectId: { $in: visibleProjectIds }, assigneeId: { $in: scope.memberOids }, ...visibleTaskPrivacyFilter } },
+      { $project: { assigneeId: 1, status: 1, dueDate: 1, completedAt: 1 } },
       {
         $facet: {
           open:     [{ $match: { status: { $ne: 'done' } } }, { $group: { _id: '$assigneeId', c: { $sum: 1 } } }],
@@ -86,7 +127,9 @@ export async function getLeadDashboardData(
     ]),
     // Exclude the admin — they own the workspace, not assignable work, so
     // they never belong in the contributor-workload list.
-    User.find({ _id: { $in: scope.memberOids }, role: { $ne: 'admin' } }).lean(),
+    User.find({ _id: { $in: scope.memberOids }, role: { $ne: 'admin' } })
+      .select('_id name title')
+      .lean(),
   ]);
 
   const assigneeIds = [...new Set(teamTasksRaw.map(t => t.assigneeId).filter(Boolean).map(String))];

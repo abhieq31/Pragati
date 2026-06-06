@@ -32,6 +32,7 @@ function taskForProjectBoard(t: any, extras: any = {}) {
     deployStage: t.deployStage || 'na',
     remarks: t.remarks || '',
     pendingWith: t.pendingWith || '',
+    lastActivityAt: toIso((t as any).lastActivityAt || t.updatedAt || t.createdAt),
     position: t.position ?? 0,
     createdAt: toIso(t.createdAt),
     updatedAt: toIso(t.updatedAt),
@@ -63,7 +64,7 @@ export async function getProjectDetail(id: string, userId: string, role?: string
     ]);
     const assignees = await User.find({
       _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) },
-    }).lean();
+    }).select('_id name').lean();
     const uMap = new Map(assignees.map((u) => [String(u._id), u.name]));
     const lc = LIFECYCLES[(p.lifecycle || 'generic') as keyof typeof LIFECYCLES];
 

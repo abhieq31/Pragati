@@ -408,7 +408,7 @@ function NodeShape({ n }: { n: PositionedNode }) {
       <g>
         <title>{fullTitle}</title>
         <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={16}
-          fill="url(#beRootGrad)" stroke="#0f5db5" strokeWidth={1.5} />
+          fill="url(#beRootGrad)" stroke="#0f5db5" strokeWidth={1.5} filter="url(#beNodeShadow)" />
         <text textAnchor="middle" y={n.y + (n.sub ? 28 : 34)}>
           <MultiText x={cx} lines={lines} fontSize={15} lineHeight={17} fill="#ffffff" weight={800} anchor="middle" />
         </text>
@@ -423,7 +423,7 @@ function NodeShape({ n }: { n: PositionedNode }) {
       <g>
         <title>{fullTitle}</title>
         <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={12}
-          fill="#eef2ff" stroke="#4f46e5" strokeWidth={1.25} />
+          fill="#eef2ff" stroke="#4f46e5" strokeWidth={1.25} filter="url(#beNodeShadow)" />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill="#4f46e5" />
         <text x={n.x + 14} y={n.y + 22}>
           <MultiText x={n.x + 14} lines={lines} fontSize={13} lineHeight={15} fill="#312e81" weight={700} />
@@ -438,7 +438,7 @@ function NodeShape({ n }: { n: PositionedNode }) {
       <g>
         <title>{fullTitle}</title>
         <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={11}
-          fill="#f1f5f9" stroke="#64748b" strokeWidth={1.1} />
+          fill="#f1f5f9" stroke="#64748b" strokeWidth={1.1} filter="url(#beNodeShadow)" />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill="#64748b" />
         <text x={n.x + 13} y={n.y + 19}>
           <MultiText x={n.x + 13} lines={lines} fontSize={12} lineHeight={14} fill="#0f172a" weight={700} />
@@ -456,7 +456,7 @@ function NodeShape({ n }: { n: PositionedNode }) {
       <g>
         <title>{fullTitle}</title>
         <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={12}
-          fill={fill} stroke={stroke} strokeWidth={1.4} />
+          fill={fill} stroke={stroke} strokeWidth={1.4} filter="url(#beNodeShadow)" />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill={stroke} />
         <text x={n.x + 14} y={n.y + 22}>
           <MultiText x={n.x + 14} lines={lines} fontSize={13} lineHeight={15} fill="#0f172a" weight={700} />
@@ -476,7 +476,7 @@ function NodeShape({ n }: { n: PositionedNode }) {
       <g>
         <title>{fullTitle}</title>
         <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={10}
-          fill={fill} stroke={stroke} strokeWidth={1} />
+          fill={fill} stroke={stroke} strokeWidth={1} filter="url(#beNodeShadow)" />
         <circle cx={n.x + 13} cy={n.y + 16} r={3.5} fill={dot} />
         <text x={n.x + 24} y={n.y + 19}>
           <MultiText x={n.x + 24} lines={lines} fontSize={11.5} lineHeight={14} fill="#0f172a" weight={600} />
@@ -882,15 +882,24 @@ export function BirdsEyeView({ data, onClose, onChange }: {
                   xmlns="http://www.w3.org/2000/svg"
                   style={{ display: 'block', width: width * zoom, height: height * zoom, touchAction: brushOn ? 'none' : 'auto' }}>
                   <defs>
+                    {/* Match the app's 3-stop brand gradient so the workspace
+                        root reads as the same identity as the sidebar wordmark. */}
                     <linearGradient id="beRootGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%"  stopColor="#1565C0" />
+                      <stop offset="0%"   stopColor="#1565C0" />
+                      <stop offset="50%"  stopColor="#1976D2" />
                       <stop offset="100%" stopColor="#2E7D32" />
                     </linearGradient>
+                    {/* Soft drop shadow lifts every card off the dotted canvas
+                        so the tree reads with depth instead of as flat stickers. */}
+                    <filter id="beNodeShadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodColor="#1e293b" floodOpacity="0.10" />
+                    </filter>
                   </defs>
                   {edges.map((e, i) => {
                     const a = nodeIndex.get(e.from); const b = nodeIndex.get(e.to);
                     if (!a || !b) return null;
-                    return <path key={i} d={edgePath(a, b)} fill="none" stroke="#b6c2d4" strokeWidth={1.5} />;
+                    // Softer, thinner connectors — calmer than a hard slate line.
+                    return <path key={i} d={edgePath(a, b)} fill="none" stroke="#cbd6e4" strokeWidth={1.25} strokeOpacity={0.85} />;
                   })}
                   <g pointerEvents={brushOn ? 'none' : undefined}>
                   {nodes.map((n) => {

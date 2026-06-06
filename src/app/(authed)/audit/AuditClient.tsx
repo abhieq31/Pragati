@@ -131,24 +131,29 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
 
   return (
     <div className="max-w-5xl space-y-5 pb-12">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-            <ScrollText size={20} className="text-blue-500" /> Operation logs
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            An immutable record of operational activity — who did what, and when.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/audit/changelog"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg transition-colors">
-            <Sparkles size={13} /> Changelog
-          </Link>
-          <button onClick={load} disabled={busy}
-            className="btn-secondary flex items-center gap-1.5 text-xs">
-            <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Refresh
-          </button>
+      <div className="pb-5 mb-1 border-b border-slate-100 dark:border-white/[0.06]">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 page-icon-box bg-blue-50 dark:bg-blue-500/10 shrink-0">
+              <ScrollText size={19} className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="page-title">Operation logs</h1>
+              <p className="text-sm text-slate-500 dark:text-white/45 mt-1 leading-snug">
+                An immutable record of operational activity — who did what, and when.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <Link href="/audit/changelog"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg transition-colors">
+              <Sparkles size={13} /> Changelog
+            </Link>
+            <button onClick={load} disabled={busy}
+              className="btn-secondary flex items-center gap-1.5 text-xs">
+              <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -165,7 +170,7 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
           ))}
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
+          <div className="relative flex-1 min-w-0 w-full max-w-md">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={q} onChange={(e) => setQ(e.target.value)}
@@ -191,8 +196,8 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
         {rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-400">No activity recorded yet.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto -mx-px">
+            <table className="w-full text-sm table-mobile-cards">
               <thead>
                 <tr className="bg-slate-50/60 border-b border-slate-100 text-left">
                   <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-4 py-2.5">When</th>
@@ -212,7 +217,7 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                         onClick={() => hasDetail && setExpanded(isOpen ? null : r.id)}
                         className={`hover:bg-slate-50/70 transition-colors ${hasDetail ? 'cursor-pointer' : ''}`}
                       >
-                        <td className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">
+                        <td data-label="When" className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">
                           <div className="flex items-center gap-1.5">
                             {hasDetail && (
                               <ChevronRight size={11}
@@ -222,13 +227,13 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                             {fmt(r.createdAt)}
                           </div>
                         </td>
-                        <td className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
-                        <td className="px-2 py-2.5">
+                        <td data-label="Who" className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
+                        <td data-label="Area" className="px-2 py-2.5">
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[r.category] || CATEGORY_TONE.general}`}>
                             {r.category}
                           </span>
                         </td>
-                        <td className="px-2 py-2.5 text-xs text-slate-700">
+                        <td data-label="Activity" className="px-2 py-2.5 text-xs text-slate-700">
                           {r.summary}
                           {r.targetLabel && href && (
                             <> · <Link onClick={(e) => e.stopPropagation()} href={href} className="text-blue-600 hover:underline font-medium">{r.targetLabel}</Link></>

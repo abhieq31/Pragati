@@ -10,7 +10,7 @@ const ActivityGraph = dynamic(
   () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
   { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
 );
-import { UserPlus, Upload, Copy, Check, X, Shield, User, AlertTriangle, Pencil, Trash2, BarChart3, Search, UserX, RotateCcw, ScrollText, CheckSquare, Square, MinusSquare } from 'lucide-react';
+import { UserPlus, Upload, Copy, Check, X, Shield, User, Users, AlertTriangle, Pencil, Trash2, BarChart3, Search, UserX, RotateCcw, ScrollText, CheckSquare, Square, MinusSquare } from 'lucide-react';
 
 /* ── Activity peek modal — team leaders click a teammate to see how they're
    tracking: contribution graph, streak and badges (read-only, no private
@@ -73,7 +73,7 @@ function CredentialsModal({ name, email, tempPassword, onClose }: {
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Account created</div>
@@ -160,7 +160,7 @@ function AddMemberModal({ onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[400px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Add team member</div>
@@ -288,7 +288,7 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[520px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="text-base font-bold text-slate-900">Import contributors</div>
@@ -379,7 +379,7 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${promote ? 'bg-blue-50' : 'bg-amber-50'}`}>
@@ -486,7 +486,7 @@ function EditUserModal({ user, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Edit profile</div>
@@ -600,7 +600,7 @@ function RemoveConfirmDialog({ user, onConfirm, onCancel, saving }: {
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[380px] modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center text-center gap-4">
           <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
             <Trash2 size={22} className="text-red-600" />
@@ -641,7 +641,7 @@ function DeactivateDialog({ user, onConfirm, onCancel, saving }: {
   const [password, setPassword] = useState('');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
@@ -709,7 +709,7 @@ function BulkActionDialog({ action, count, onConfirm, onCancel, saving }: {
   const m = BULK_META[action];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[440px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col gap-4">
           <div>
             <div className="text-base font-black text-slate-900 tracking-tight">
@@ -1083,20 +1083,27 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 pt-1">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">People</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Workspace user management — add people, promote contributors to leads, reset passwords, and unlock accounts.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => setShowImport(true)} className="btn-secondary gap-2">
-            <Upload size={14} /> Import
-          </button>
-          <button onClick={() => setShowAdd(true)} className="btn-primary gap-2">
-            <UserPlus size={14} /> Add member
-          </button>
+      <div className="pb-5 mb-1 border-b border-slate-100 dark:border-white/[0.06]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 page-icon-box bg-indigo-50 dark:bg-indigo-500/10 shrink-0">
+              <Users size={19} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <h1 className="page-title">People</h1>
+              <p className="text-sm text-slate-500 dark:text-white/45 mt-1 leading-snug">
+                Workspace user management — add people, promote contributors to leads, reset passwords, and unlock accounts.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 mt-0.5">
+            <button onClick={() => setShowImport(true)} className="btn-secondary gap-2">
+              <Upload size={14} /> Import
+            </button>
+            <button onClick={() => setShowAdd(true)} className="btn-primary gap-2">
+              <UserPlus size={14} /> Add member
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1127,7 +1134,7 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
               <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 <Icon size={12} className={s.color} /> {s.label}
               </div>
-              <div className={`mt-1 text-2xl font-black ${s.color}`}>{s.value}</div>
+              <div className={`tnum mt-1 text-2xl font-black ${s.color}`}>{s.value}</div>
             </div>
           );
         })}

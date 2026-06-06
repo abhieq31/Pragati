@@ -9,6 +9,7 @@ import { requireRole, isAdmin, isLead } from '@/lib/auth';
 import { u } from '@/lib/serialize';
 import { handleError, readBody } from '@/lib/http';
 import { logOperation } from '@/lib/audit';
+import { bustPeopleDirectoryCache } from '@/lib/peopleDirectory';
 
 export const runtime = 'nodejs';
 
@@ -227,6 +228,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       },
     });
 
+    void bustPeopleDirectoryCache();
     return NextResponse.json(u(updated));
   } catch (e) {
     return handleError(e);
@@ -276,6 +278,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       summary: `Removed user ${(target as any)?.name || ''}`.trim(),
     });
 
+    void bustPeopleDirectoryCache();
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);

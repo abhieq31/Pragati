@@ -135,8 +135,8 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Quick-PIN unlock: shown when this device previously completed a full
-  // sign-in and the user has a PIN set.
+  // Quick-PIN unlock: auto-redirected to PIN pad for trusted devices that have
+  // a PIN set — so returning users land directly on the PIN screen.
   const [deviceName, setDeviceName] = useState('');
   // Monogram avatar for the trusted device, so the greeting matches the
   // avatar the user picked in settings rather than plain initials.
@@ -148,8 +148,7 @@ export default function LoginPage() {
     api<{ initialized: boolean }>('/system/status').then(d => {
       if (!d.initialized) setIsFirstRun(true);
     }).catch(() => {});
-    // If this is a trusted device with a PIN, greet the user and offer the
-    // PIN pad instead of the full form.
+    // Auto-switch to PIN pad for trusted devices — no opt-in button needed.
     api<{ trusted: boolean; name?: string; hasPin?: boolean; locked?: boolean; avatarLetter?: string; avatarBg?: string; avatarFont?: number }>('/auth/device')
       .then(d => {
         if (d.trusted && d.hasPin && !d.locked) {

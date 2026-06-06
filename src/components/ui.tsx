@@ -189,8 +189,8 @@ export function ProgressBar({ value, className = '' }: { value: number; classNam
         // linear crawl — reads as "progress made", not a loading bar.
         style={{ width: `${pct}%`, transition: 'width 900ms cubic-bezier(0.22, 1, 0.36, 1)' }}
       >
-        {/* Travelling sheen — only while there's something to show. */}
-        {pct > 0 && pct < 100 && <span aria-hidden className="progress-bar-sheen" />}
+        {/* Travelling sheen — active whenever the bar has any fill. */}
+        {pct > 0 && <span aria-hidden className="progress-bar-sheen" />}
       </div>
     </div>
   );

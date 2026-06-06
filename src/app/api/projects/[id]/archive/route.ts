@@ -6,6 +6,8 @@ import { Project } from '@/models/Project';
 import { requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { project as projectS } from '@/lib/serialize';
+import { bustDashboardCache } from '@/lib/leadDashboard';
+import { bustProjectsPageCache } from '@/lib/projectList';
 
 export const runtime = 'nodejs';
 
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
     if (!updated) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
 
+    void bustDashboardCache(user!.sub, user!.role);
+    void bustProjectsPageCache(user!.sub, user!.role);
     return NextResponse.json({ ok: true, project: projectS(updated) });
   } catch (e) {
     return handleError(e);

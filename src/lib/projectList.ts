@@ -11,6 +11,8 @@ import { Team } from '@/models/Team';
 import { User } from '@/models/User';
 import { project as projectS } from '@/lib/serialize';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { cached, cacheBust } from '@/lib/cache';
+import { normalizeRole } from '@/lib/auth';
 
 export interface ProjectListItem {
   id: string;
@@ -129,6 +131,56 @@ export async function listProjectsForUser(
       tasksOverdue: t.tasksOverdue,
     } as ProjectListItem;
   });
+}
+
+// ── Cached projects-page payload ────────────────────────────────────────────
+// The /projects page always SSR-loads the same shape: the viewer's active
+// projects (default status filter), their team-filter options, and the
+// templates they actually use. That triple is recomputed on every navigation
+// to the page, so it's a strong read-through cache candidate. Filtered/searched
+// loads still go through the API route uncached (those keys would explode), and
+// the cache only ever holds this one default view per viewer.
+const PROJECTS_PAGE_TTL_SECONDS = 15;
+
+export interface ProjectsPagePayload {
+  projects:   ProjectListItem[];
+  teams:      Array<{ id: string; name: string }>;
+  lifecycles: Array<{ key: string; label: string }>;
+}
+
+/** Cache key for a viewer's default projects-page payload — scoped by user +
+ *  effective role, since role drives the visibility scope. */
+function projectsPageCacheKey(sub: string, role: string | undefined): string {
+  return `projlist:${sub}:${normalizeRole(role || '')}`;
+}
+
+/**
+ * Read-through cached payload for the server-rendered /projects page. On a hit
+ * it skips all three queries; on a miss (or when the cache is disabled) it
+ * computes fresh exactly as the page did before. Transparent when Upstash is
+ * not configured.
+ */
+export async function getProjectsPageData(
+  sub: string,
+  role: string | undefined,
+): Promise<ProjectsPagePayload> {
+  return cached(projectsPageCacheKey(sub, role), PROJECTS_PAGE_TTL_SECONDS, async () => {
+    const [projects, teams, lifecycles] = await Promise.all([
+      listProjectsForUser(sub, role, { statuses: ['planning', 'in_progress', 'on_hold'] }),
+      listTeamsForFilter(sub, role),
+      listTemplatesInUse(sub, role),
+    ]);
+    return { projects, teams, lifecycles };
+  });
+}
+
+/**
+ * Bust a viewer's cached projects-page payload after a write that changes what
+ * they'd see (project create/update/delete/archive, or a task change that moves
+ * a project's counts). Safe to call when the cache is disabled — it no-ops.
+ */
+export async function bustProjectsPageCache(sub: string, role: string | undefined): Promise<void> {
+  await cacheBust(projectsPageCacheKey(sub, role));
 }
 
 /**

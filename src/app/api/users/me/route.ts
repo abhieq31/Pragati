@@ -5,6 +5,7 @@ import { User } from '@/models/User';
 import { requireUser } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
+import { bustPeopleDirectoryCache } from '@/lib/peopleDirectory';
 
 export const runtime = 'nodejs';
 
@@ -88,6 +89,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     await user.save();
+    // Profile edits (name/title/department/avatar) change how this user is
+    // rendered in the admin People directory, so drop its cached copy.
+    void bustPeopleDirectoryCache();
     return NextResponse.json({ user: u(user) });
   } catch (e) {
     return handleError(e);

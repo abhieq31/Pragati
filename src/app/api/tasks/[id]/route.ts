@@ -13,6 +13,8 @@ import { getTaskDetail } from '@/lib/taskDetail';
 import { notify } from '@/lib/notify';
 import { logOperation } from '@/lib/audit';
 import { recordTaskFlowEvent } from '@/lib/flow/events';
+import { bustDashboardCache } from '@/lib/leadDashboard';
+import { bustProjectsPageCache } from '@/lib/projectList';
 
 export const runtime = 'nodejs';
 
@@ -180,6 +182,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       });
     }
 
+    void bustDashboardCache(user!.sub, user!.role);
+    void bustProjectsPageCache(user!.sub, user!.role);
     return NextResponse.json(taskS(fresh));
   } catch (e) {
     return handleError(e);
@@ -218,6 +222,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       });
     }
 
+    void bustDashboardCache(user!.sub, user!.role);
+    void bustProjectsPageCache(user!.sub, user!.role);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return handleError(e);
