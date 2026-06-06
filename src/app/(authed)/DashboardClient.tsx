@@ -129,22 +129,6 @@ function greeting(now = new Date()): string {
   if (h < 21) return 'Good evening';
   return 'Good evening';
 }
-// The tiny emoji that trails the greeting line (festival icon, or a subtle
-// time-of-day cue) so the header feels crafted, not generic.
-function greetingEmoji(now = new Date()): string {
-  const fest = festivalFor(now);
-  if (fest) return fest.emoji;
-  const h = now.getHours();
-  const day = now.getDay();
-  if (h < 5)  return '🌃';
-  if (h < 7)  return '🌅';
-  if (h < 12) return day === 1 ? '🚀' : day === 5 ? '⚡' : '🌤️';
-  if (h < 14) return '☀️';
-  if (h < 17) return day === 5 ? '🎯' : '🛫';
-  if (h < 19) return '🌇';
-  if (h < 22) return '🌆';
-  return '🌃';
-}
 
 // A meaningful one-liner driven by the user's actual state — not filler. On a
 // festival day we lead with the festive note before nudging toward the work.
@@ -287,12 +271,12 @@ export default function DashboardClient({
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-tight inline-flex items-baseline gap-2 flex-wrap text-slate-800 dark:text-white/90">
-            <span suppressHydrationWarning>
-              {greeting()},{' '}
-              <span className="text-blue-700 dark:text-blue-400">{firstName}.</span>
-            </span>
-            <span className="text-[0.7em] translate-y-[0.05em] opacity-80" suppressHydrationWarning>{greetingEmoji()}</span>
+          <h1
+            className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-none"
+            suppressHydrationWarning
+          >
+            <span className="hero-greeting">{greeting()},&thinsp;</span>
+            <span className="text-slate-800 dark:text-white/90">{firstName}.</span>
           </h1>
         </div>
         {/* Bird's-eye view trigger — custom icon, blinks once per session. */}

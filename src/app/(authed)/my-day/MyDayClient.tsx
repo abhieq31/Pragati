@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/client/api';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
-  Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
+  Plus, Check, Trash2, ArrowRight, X, Sparkles, Zap,
   ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, BrainCircuit,
   Pencil, Pin, PinOff, FileText, Layers,
 } from 'lucide-react';
@@ -440,33 +440,30 @@ export default function MyDayClient({ initialData }: {
       <div className="mb-7 pt-1">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 dark:text-white/30">
-                My Day
-              </span>
-              {savedAt && (
-                <span key={savedAt.getTime()}
-                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400/80 fade-in-soft"
-                  title={`Last saved ${savedAt.toLocaleTimeString()}`}
-                >
-                  <Check size={10} strokeWidth={3} /> Saved
-                </span>
-              )}
-            </div>
-            <h1 className="text-[1.7rem] font-black tracking-tight leading-tight text-slate-800 dark:text-white/90">
-              <span suppressHydrationWarning>{encouragement()}{firstName ? ', ' : '.'}</span>
+            <h1
+              className="text-[1.7rem] font-black tracking-tight leading-none"
+              suppressHydrationWarning
+            >
+              <span className="hero-greeting">{encouragement()}{firstName ? ', ' : '.'}</span>
               {firstName && (
-                <span className="text-blue-700 dark:text-blue-400" suppressHydrationWarning>
+                <span className="text-slate-800 dark:text-white/90" suppressHydrationWarning>
                   {firstName}.
                 </span>
               )}
             </h1>
             {dateLabel && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <Calendar size={11} className="text-slate-400 dark:text-white/25 shrink-0" />
-                <span className="text-[12px] text-slate-500 dark:text-white/40 font-medium">
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-[12px] text-slate-400 dark:text-white/30 font-medium" suppressHydrationWarning>
                   {dateLabel}
                 </span>
+                {savedAt && (
+                  <span key={savedAt.getTime()}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500 dark:text-emerald-400/70 fade-in-soft"
+                    title={`Last saved ${savedAt.toLocaleTimeString()}`}
+                  >
+                    <Check size={9} strokeWidth={3} /> saved
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -620,6 +620,10 @@ body {
     -webkit-text-fill-color: #0f172a;
     color: #0f172a;
   }
+  .dark .hero-greeting {
+    -webkit-text-fill-color: #faf9f5;
+    color: #faf9f5;
+  }
 }
 
 /* ── Command palette / modal ─────────────────────────────────────────────── */
