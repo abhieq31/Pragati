@@ -93,6 +93,7 @@ async function computeLeadDashboardData(
     User.find({ _id: { $in: projects.map(p => p.ownerId).filter(Boolean) } }, '_id name').lean(),
     Task.aggregate([
       { $match: { projectId: { $in: visibleProjectIds }, ...visibleTaskPrivacyFilter } },
+      { $project: { projectId: 1, status: 1, dueDate: 1, completedAt: 1 } },
       {
         $group: {
           _id: '$projectId',
@@ -111,6 +112,7 @@ async function computeLeadDashboardData(
     ]),
     Task.aggregate([
       { $match: { projectId: { $in: visibleProjectIds }, assigneeId: { $in: scope.memberOids }, ...visibleTaskPrivacyFilter } },
+      { $project: { assigneeId: 1, status: 1, dueDate: 1, completedAt: 1 } },
       {
         $facet: {
           open:     [{ $match: { status: { $ne: 'done' } } }, { $group: { _id: '$assigneeId', c: { $sum: 1 } } }],
@@ -121,7 +123,9 @@ async function computeLeadDashboardData(
     ]),
     // Exclude the admin — they own the workspace, not assignable work, so
     // they never belong in the contributor-workload list.
-    User.find({ _id: { $in: scope.memberOids }, role: { $ne: 'admin' } }).lean(),
+    User.find({ _id: { $in: scope.memberOids }, role: { $ne: 'admin' } })
+      .select('_id name title')
+      .lean(),
   ]);
 
   const assigneeIds = [...new Set(teamTasksRaw.map(t => t.assigneeId).filter(Boolean).map(String))];

@@ -64,7 +64,7 @@ export async function getProjectDetail(id: string, userId: string, role?: string
     ]);
     const assignees = await User.find({
       _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) },
-    }).lean();
+    }).select('_id name').lean();
     const uMap = new Map(assignees.map((u) => [String(u._id), u.name]));
     const lc = LIFECYCLES[(p.lifecycle || 'generic') as keyof typeof LIFECYCLES];
 
