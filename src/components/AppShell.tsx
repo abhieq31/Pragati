@@ -322,7 +322,6 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
   // behind a disclosure, Security / Quick PIN / admin tools). Notifications and
   // their preferences live in the bell. Dark mode + Sign out follow below.
   const accountItems = [
-    ...(user.username ? [{ href: `/${user.username}`, label: 'View public profile', icon: ExternalLink }] : []),
     { href: '/settings', label: 'Profile & activity', icon: UserCircle },
   ];
 
@@ -614,24 +613,36 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         {SidebarInner}
 
         {/* Drag-to-resize handle — shown on expanded desktop sidebar only.
-            A 4px strip on the right edge; a thin blue highlight appears on hover
-            to signal the resize affordance. */}
+            Split into top/bottom halves to leave a gap at the vertical midpoint
+            where the collapse button sits, so the two never conflict. */}
         {!showCollapsed && (
-          <div
-            className="hidden lg:block absolute right-0 top-0 bottom-0 w-1 group/drag cursor-col-resize z-20"
-            onMouseDown={onDragHandleMouseDown}
-            aria-hidden="true"
-          >
+          <>
             <div
-              className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag:opacity-100"
-              style={{ background: '#3b82f6', margin: '8px 0' }}
-            />
-          </div>
+              className="hidden lg:block absolute right-0 top-0 w-1 group/drag cursor-col-resize z-20"
+              style={{ bottom: 'calc(50% + 22px)' }}
+              onMouseDown={onDragHandleMouseDown}
+              aria-hidden="true"
+            >
+              <div className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag:opacity-100"
+                style={{ background: '#3b82f6', margin: '8px 0' }} />
+            </div>
+            <div
+              className="hidden lg:block absolute right-0 bottom-0 w-1 group/drag2 cursor-col-resize z-20"
+              style={{ top: 'calc(50% + 22px)' }}
+              onMouseDown={onDragHandleMouseDown}
+              aria-hidden="true"
+            >
+              <div className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag2:opacity-100"
+                style={{ background: '#3b82f6', margin: '8px 0' }} />
+            </div>
+          </>
         )}
 
-        {/* Collapse/expand ribbon — desktop only, on the right edge of sidebar */}
+        {/* Collapse/expand ribbon — desktop only, on the right edge of sidebar.
+            z-[25] sits above the drag handle (z-20) so hovering the button
+            never activates the resize cursor behind it. */}
         <button
-          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-5 h-10 items-center justify-center rounded-full transition-colors"
+          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[25] w-5 h-10 items-center justify-center rounded-full transition-colors cursor-pointer"
           style={{
             background: dark ? '#30302e' : '#ffffff',
             border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #dde3ec',

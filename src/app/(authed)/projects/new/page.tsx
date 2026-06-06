@@ -53,6 +53,7 @@ const LIFECYCLE_GROUPS = [
       { value: 'vendor_qualification',       label: 'Vendor Qualification',  hint: 'Audit → gap assessment → ASL' },
       { value: 'training_program',           label: 'Training Program',      hint: 'Needs assessment → rollout → review' },
       { value: 'product_recall',             label: 'Product Recall',        hint: 'Alert → notification → prevention' },
+      { value: 'discrepancy_qi',             label: 'Discrepancy – QI',      hint: 'Detection → RCA → CAPA → GxP closure' },
     ]
   },
   {
@@ -783,11 +784,6 @@ export default function NewProjectPage() {
                     </span>
                   ))}
                 </div>
-                {templateInfo.regulatoryRefs && (
-                  <div className="mt-2 text-[11px] text-slate-400">
-                    Regulatory refs: <span className="font-semibold text-slate-500">{templateInfo.regulatoryRefs}</span>
-                  </div>
-                )}
               </div>
             )}
 

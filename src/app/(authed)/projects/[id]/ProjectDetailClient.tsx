@@ -917,6 +917,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // is the whole point of a private workspace. Everywhere we'd gate on isLead
   // for task management, we gate on canManage instead.
   const canManage = isLead || !!(project?.isPersonal && me && project?.ownerId === me.id);
+  // Only the project owner (the person who created/owns the project) may edit
+  // the title, description, due date, and reference number.
+  const isOwner = !!(me && project && String(project.ownerId) === String(me.id));
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen]           = useState(false);
   const [blockCompleteOpen, setBlockComplete] = useState(false);
@@ -926,15 +929,22 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // The status the user picked that's awaiting an e-signature (password +
   // reason). Null when no sign-off is in flight.
   const [pendingStatus, setPendingStatus]     = useState<string | null>(null);
-  // Toggles the inline due-date editor in the header (leads only).
+  // Toggles the inline due-date editor (owner only).
   const [editingDue, setEditingDue]           = useState(false);
   const [savingDue, setSavingDue]             = useState(false);
   const [pendingTaskIds, setPendingTaskIds]   = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
   const [showBirdEye, setShowBirdEye] = useState(false);
-  // Inline ccNo editor
+  // Inline ccNo editor (owner only)
   const [editingCcNo, setEditingCcNo]         = useState(false);
   const [ccNoDraft, setCcNoDraft]             = useState('');
+  // Hover-to-edit title and description (owner only)
+  const [editingTitle, setEditingTitle]       = useState(false);
+  const [titleDraft, setTitleDraft]           = useState('');
+  const [savingTitle, setSavingTitle]         = useState(false);
+  const [editingDesc, setEditingDesc]         = useState(false);
+  const [descDraft, setDescDraft]             = useState('');
+  const [savingDesc, setSavingDesc]           = useState(false);
   // Milestone celebration — set when finishing a task closes out its phase or
   // the whole project. The Celebration overlay fires a fanfare + confetti.
   const [celebration, setCelebration] = useState<{ title: string; subtitle?: string; emoji?: string } | null>(null);
@@ -1087,6 +1097,36 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       load();
     } catch (e: any) {
       showToast(e.message || 'Failed to update CC#', 'err');
+    }
+  }
+
+  async function saveTitle(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) { setEditingTitle(false); return; }
+    setSavingTitle(true);
+    try {
+      await api(`/projects/${id}`, { method: 'PATCH', body: { name: trimmed } });
+      setEditingTitle(false);
+      showToast('Project name updated');
+      load();
+    } catch (e: any) {
+      showToast(e.message || 'Failed to update name', 'err');
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
+  async function saveDesc(value: string) {
+    setSavingDesc(true);
+    try {
+      await api(`/projects/${id}`, { method: 'PATCH', body: { description: value.trim() } });
+      setEditingDesc(false);
+      showToast('Description updated');
+      load();
+    } catch (e: any) {
+      showToast(e.message || 'Failed to update description', 'err');
+    } finally {
+      setSavingDesc(false);
     }
   }
 
@@ -1273,7 +1313,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               ) : (
                 <>
                   <span className="text-[11px] font-mono text-slate-600">{project.ccNo || '—'}</span>
-                  {isLead && (
+                  {isOwner && (
                     <button
                       onClick={() => { setCcNoDraft(project.ccNo || ''); setEditingCcNo(true); }}
                       className="ml-1 text-slate-300 hover:text-blue-500 transition-colors"
@@ -1286,7 +1326,32 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               )}
             </div>
           )}
-          <h1 className="text-xl sm:text-2xl font-bold mt-0.5 leading-tight break-words">{project.name}</h1>
+          {/* Title — owner sees a hover-to-edit affordance; everyone else sees plain text */}
+          {editingTitle ? (
+            <input
+              autoFocus
+              className="text-xl sm:text-2xl font-bold mt-0.5 leading-tight border-b-2 border-blue-400 outline-none bg-transparent w-full max-w-xl"
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); saveTitle(titleDraft); }
+                if (e.key === 'Escape') { setEditingTitle(false); }
+              }}
+              onBlur={() => saveTitle(titleDraft)}
+              disabled={savingTitle}
+              maxLength={120}
+            />
+          ) : (
+            <div
+              className={`group/title flex items-center gap-1.5 mt-0.5 ${isOwner ? 'cursor-text' : ''}`}
+              onClick={isOwner ? () => { setTitleDraft(project.name || ''); setEditingTitle(true); } : undefined}
+            >
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight break-words">{project.name}</h1>
+              {isOwner && (
+                <Pencil size={13} className="opacity-0 group-hover/title:opacity-40 transition-opacity text-slate-500 shrink-0 mt-0.5" />
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap gap-1.5 mt-2">
             {project.isPersonal && (
               <span className="tag border border-violet-200 bg-violet-50 text-violet-700 font-semibold inline-flex items-center gap-1.5">
@@ -1302,7 +1367,43 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             {!project.isPersonal && <LifecycleTag lifecycle={project.lifecycle} />}
             <PriorityTag priority={project.priority} />
           </div>
-          {project.description && <p className="mt-2 text-sm text-slate-600 max-w-3xl">{project.description}</p>}
+          {/* Description — owner can hover to reveal edit affordance, click to edit inline */}
+          {editingDesc ? (
+            <div className="mt-2 max-w-3xl">
+              <textarea
+                autoFocus
+                rows={3}
+                className="w-full text-sm text-slate-700 border border-blue-300 rounded-lg p-2 outline-none resize-none bg-white"
+                value={descDraft}
+                onChange={e => setDescDraft(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setEditingDesc(false);
+                  if (e.key === 'Enter' && e.metaKey) saveDesc(descDraft);
+                }}
+                onBlur={() => saveDesc(descDraft)}
+                disabled={savingDesc}
+                maxLength={1000}
+                placeholder="Add a project description…"
+              />
+              <div className="text-[10px] text-slate-400 mt-0.5">⌘↵ to save · Esc to cancel</div>
+            </div>
+          ) : (
+            <div
+              className={`group/desc mt-2 ${isOwner ? 'cursor-text' : ''}`}
+              onClick={isOwner ? () => { setDescDraft(project.description || ''); setEditingDesc(true); } : undefined}
+            >
+              {project.description ? (
+                <div className="flex items-start gap-1.5">
+                  <p className="text-sm text-slate-600 max-w-3xl">{project.description}</p>
+                  {isOwner && (
+                    <Pencil size={12} className="opacity-0 group-hover/desc:opacity-40 transition-opacity text-slate-400 shrink-0 mt-1" />
+                  )}
+                </div>
+              ) : isOwner ? (
+                <span className="text-sm text-slate-300 italic hover:text-slate-400 transition-colors">Add a description…</span>
+              ) : null}
+            </div>
+          )}
 
           {/* Status — directly under the description */}
           <div className="flex items-center flex-wrap gap-2 mt-3">
@@ -1332,9 +1433,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             <div>Team: {project.teamId
               ? <Link href={`/teams/${project.teamId}`} className="text-blue-600 hover:underline">{project.teamName || '—'}</Link>
               : '—'}</div>
-            {/* Due date — leads can re-schedule inline; everyone else sees it
-                read-only. */}
-            {isLead ? (
+            {/* Due date — only the project owner can re-schedule inline. */}
+            {isOwner ? (
               editingDue ? (
                 <div className="flex items-center md:justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                   <span>Due:</span>

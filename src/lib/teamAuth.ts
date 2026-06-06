@@ -2,18 +2,17 @@ import { NextResponse } from 'next/server';
 import { Team } from '@/models/Team';
 import { isAdmin } from '@/lib/auth';
 
-// A team may only be modified (renamed, members changed, deleted) by the
-// workspace admin or the team's own lead (its "owner"). Any other lead — even
-// though they can lead their own teams — must not touch a team they don't own.
+// A team may be modified (renamed, members changed, deleted) by any workspace
+// lead or admin — not only the team's own lead. This gives team leaders the
+// flexibility to manage cross-team collaboration without needing admin access.
 // Returns null when allowed, or a 403/404 NextResponse when not. Callers must
 // have already connected to the DB.
 export async function guardTeamOwner(teamId: string, userId: string, role: string) {
   const t = await Team.findById(teamId).select('leadId').lean();
   if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  const ownerId = (t as any).leadId ? String((t as any).leadId) : null;
-  if (isAdmin(role) || (ownerId && ownerId === userId)) return null;
+  if (isAdmin(role) || role === 'lead') return null;
   return NextResponse.json(
-    { error: 'Only the team owner or an admin can change this team.' },
+    { error: 'Only a team lead or admin can change this team.' },
     { status: 403 },
   );
 }
