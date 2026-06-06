@@ -523,13 +523,13 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
 
-        {/* Mobile-only slim top strip — soft shadow so it lifts off the page as
-            content scrolls under it, instead of exposing a hard white edge. */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-11"
+        {/* Mobile-only slim top strip — inset-top handles the iPhone notch /
+            Dynamic Island so the strip never hides behind the status bar. */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-12 safe-top"
           style={{
-            background: dark ? 'rgba(38,38,36,0.85)' : 'rgba(255,255,255,0.85)',
-            backdropFilter: 'saturate(180%) blur(8px)',
-            WebkitBackdropFilter: 'saturate(180%) blur(8px)',
+            background: dark ? 'rgba(38,38,36,0.92)' : 'rgba(255,255,255,0.92)',
+            backdropFilter: 'saturate(180%) blur(10px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(10px)',
             borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
             boxShadow: dark ? '0 2px 12px rgba(0,0,0,0.4)' : '0 2px 10px rgba(15,23,42,0.08)',
           }}>
@@ -558,7 +558,7 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
               }}
             />
           )}
-          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 relative overflow-x-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 pb-safe relative overflow-x-hidden">
             {children}
           </div>
         </main>

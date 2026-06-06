@@ -170,7 +170,7 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
           ))}
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
+          <div className="relative flex-1 min-w-0 w-full max-w-md">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               value={q} onChange={(e) => setQ(e.target.value)}
@@ -196,8 +196,8 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
         {rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-400">No activity recorded yet.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto -mx-px">
+            <table className="w-full text-sm table-mobile-cards">
               <thead>
                 <tr className="bg-slate-50/60 border-b border-slate-100 text-left">
                   <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-4 py-2.5">When</th>
@@ -217,7 +217,7 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                         onClick={() => hasDetail && setExpanded(isOpen ? null : r.id)}
                         className={`hover:bg-slate-50/70 transition-colors ${hasDetail ? 'cursor-pointer' : ''}`}
                       >
-                        <td className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">
+                        <td data-label="When" className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">
                           <div className="flex items-center gap-1.5">
                             {hasDetail && (
                               <ChevronRight size={11}
@@ -227,13 +227,13 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                             {fmt(r.createdAt)}
                           </div>
                         </td>
-                        <td className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
-                        <td className="px-2 py-2.5">
+                        <td data-label="Who" className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
+                        <td data-label="Area" className="px-2 py-2.5">
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[r.category] || CATEGORY_TONE.general}`}>
                             {r.category}
                           </span>
                         </td>
-                        <td className="px-2 py-2.5 text-xs text-slate-700">
+                        <td data-label="Activity" className="px-2 py-2.5 text-xs text-slate-700">
                           {r.summary}
                           {r.targetLabel && href && (
                             <> · <Link onClick={(e) => e.stopPropagation()} href={href} className="text-blue-600 hover:underline font-medium">{r.targetLabel}</Link></>

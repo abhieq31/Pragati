@@ -168,7 +168,7 @@ function DeleteProjectModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-white dark:bg-[#1a1a18] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-modal bg-white dark:bg-[#1a1a18] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/[0.06] flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

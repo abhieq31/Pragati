@@ -183,24 +183,24 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
         <div style={{ width: totalWidth, height: 1 }} />
       </div>
 
-      {/* Left arrow */}
+      {/* Left arrow — shown on all viewports (mobile needs it too) */}
       <button
         type="button"
         aria-label="Scroll left"
         onClick={() => scrollByCols(-1)}
-        className={`hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 shadow-md transition-all ${
+        className={`flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 shadow-md transition-all ${
           canLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
         <ChevronLeft size={16} />
       </button>
 
-      {/* Right arrow */}
+      {/* Right arrow — shown on all viewports */}
       <button
         type="button"
         aria-label="Scroll right"
         onClick={() => scrollByCols(1)}
-        className={`hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 shadow-md transition-all ${
+        className={`flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-20 w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 shadow-md transition-all ${
           canRight ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -218,7 +218,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
         const isOver = dragOver?.col === col;
         const isDragging = !!draggingId;
         return (
-          <div key={col} className="shrink-0 flex flex-col rounded-xl transition-all duration-150"
+          <div key={col} className="kanban-col shrink-0 flex flex-col rounded-xl transition-all duration-150"
             style={{
               width: COLUMN_WIDTH,
               scrollSnapAlign: 'start',
@@ -267,7 +267,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                         onClick={e => { e.stopPropagation(); e.preventDefault(); onDelete(t.id); }}
                         draggable={false}
                         aria-label="Delete task"
-                        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="absolute top-1 right-1 z-10 sm:opacity-0 sm:group-hover:opacity-100 p-2 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
                       >
                         <Trash2 size={11} />
                       </button>
@@ -650,7 +650,7 @@ function StatusSignoffModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div role="dialog" aria-modal className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[440px] modal-in"
+      <div role="dialog" aria-modal className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal modal-in"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
@@ -728,7 +728,7 @@ function DeleteProjectModal({ projectName, projectId, onClose, onDeleted }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div role="dialog" aria-modal className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[400px] modal-in"
+      <div role="dialog" aria-modal className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm modal-in"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center shrink-0">

@@ -357,7 +357,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
           <div className="p-4 space-y-4">
 
             {/* Ref No. + Target Date */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="label">Reference Number</label>
                 <input
@@ -592,7 +592,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="label">Priority</label>
                 <Select
@@ -614,7 +614,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="label">Start date</label>
                 <div>

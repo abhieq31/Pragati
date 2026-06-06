@@ -477,8 +477,8 @@ export default function MyDayClient({ initialData }: {
         </div>
       </div>
 
-      {/* ── 2-column layout: tasks (left) + notes (right) ────────────── */}
-      <div className="lg:grid lg:gap-6" style={{ gridTemplateColumns: '1fr 300px' }}>
+      {/* ── 2-column layout: tasks (left) + notes (right, desktop only stacked) ────────────── */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-[1fr_300px]">
 
         {/* ── Left: capture + todo list ────────────────────────────── */}
         <div className="min-w-0">
@@ -652,7 +652,7 @@ export default function MyDayClient({ initialData }: {
                         {n.text}
                       </span>
                       <button onClick={() => remove(n)} aria-label="Delete"
-                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        className="touch-target rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -663,8 +663,8 @@ export default function MyDayClient({ initialData }: {
           )}
         </div>
 
-        {/* ── Right: permanent notes panel ─────────────────────── */}
-        <div className="hidden lg:flex flex-col min-h-[500px] pt-0">
+        {/* ── Right: permanent notes panel — full on desktop, collapsible section on mobile ─── */}
+        <div className="flex flex-col min-h-0 pt-0">
           <NotesPanel />
         </div>
       </div>

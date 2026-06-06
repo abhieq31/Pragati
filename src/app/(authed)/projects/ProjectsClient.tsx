@@ -149,7 +149,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Loading skeleton */}
       {!loaded && (
-        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }} aria-busy="true" aria-live="polite">
+        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))' }} aria-busy="true" aria-live="polite">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="card overflow-hidden">
               <div className="skeleton h-1 w-full rounded-none" />
@@ -175,7 +175,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Grid */}
       {loaded && (
-      <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
+      <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))' }}>
         {projects.map((p) => {
           const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
           const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
