@@ -5,8 +5,31 @@ import { User } from '@/models/User';
 import { Team } from '@/models/Team';
 import { project as projectS, task as taskS, date as toIso } from '@/lib/serialize';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { cached, cacheBust } from '@/lib/cache';
+import { normalizeRole } from '@/lib/auth';
 
 const STATUS_ORDER: Record<string, number> = { in_progress: 0, review: 1, blocked: 2, todo: 3, done: 4 };
+
+// How long a per-user dashboard rollup may be served from cache. The dashboard
+// is an operational "what's on" view, not a record — a brief staleness window
+// is an acceptable trade for skipping 9 DB queries on rapid re-navigation
+// (dashboard → project → back) and multi-tab use. Tune freely; lower = fresher.
+const DASHBOARD_TTL_SECONDS = 15;
+
+/** Cache key for a viewer's dashboard rollup — scoped by user + effective role
+ *  (role changes the visibility scope, so it must be part of the key). */
+function dashboardCacheKey(sub: string, role: string): string {
+  return `dash:${sub}:${normalizeRole(role)}`;
+}
+
+/**
+ * Bust a viewer's cached dashboard so their next load recomputes from MongoDB.
+ * Optional helper for mutation routes that want zero staleness after a write
+ * (e.g. a task move). Safe to call even when the cache is disabled — it no-ops.
+ */
+export async function bustDashboardCache(sub: string, role: string): Promise<void> {
+  await cacheBust(dashboardCacheKey(sub, role));
+}
 
 export interface LeadDashboardData {
   user:      { id: string; name: string; email: string; role: string };
@@ -17,10 +40,27 @@ export interface LeadDashboardData {
   teamCount: number;
 }
 
-// Pure data fetcher — used by both the API route and the server-rendered
-// dashboard page. Centralising it lets the App Router stream the initial HTML
-// without a client-side round-trip.
+/**
+ * Public entry point — used by both the API route and the server-rendered
+ * dashboard page. Read-through cached per viewer (see DASHBOARD_TTL_SECONDS):
+ * on a hit it returns the rollup without touching MongoDB; on a miss (or when
+ * the cache is disabled / unreachable) it computes fresh via the pure fetcher
+ * below. Caching is fully transparent — when Upstash isn't configured this is
+ * just a direct call to computeLeadDashboardData().
+ */
 export async function getLeadDashboardData(
+  jwtUser: { sub: string; name: string; email: string; role: string },
+): Promise<LeadDashboardData> {
+  return cached(
+    dashboardCacheKey(jwtUser.sub, jwtUser.role),
+    DASHBOARD_TTL_SECONDS,
+    () => computeLeadDashboardData(jwtUser),
+  );
+}
+
+// Pure data fetcher — the actual MongoDB work. Centralising it lets the App
+// Router stream the initial HTML without a client-side round-trip.
+async function computeLeadDashboardData(
   jwtUser: { sub: string; name: string; email: string; role: string },
 ): Promise<LeadDashboardData> {
   await connectDB();
