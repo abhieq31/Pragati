@@ -84,7 +84,7 @@ export default function ProfileView({
         name={profile.name}
         username={profile.username}
         roleText={roleText}
-        employeeId={profile.employeeId}
+        showMemberId={false}
         title={profile.title}
         department={profile.department}
         location={profile.location}

@@ -129,6 +129,4 @@ Pragati ships with a scaffolded master-admin / database-per-tenant runtime, curr
 
 The `/master-admin` console renders a status board explaining the steps until the runtime is active.
 
-## License
 
-Private. Internal QA-IT use only.
