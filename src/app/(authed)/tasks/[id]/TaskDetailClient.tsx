@@ -12,7 +12,7 @@ import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
 import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText, Check, Bell, BookOpen } from 'lucide-react';
-import { QA_TASK_TYPES } from '@/lib/qualitySignals';
+import { QA_TASK_TYPES } from '@/lib/qaTaskTypes';
 
 // TaskCompletePop is only shown on task completion — off the critical render
 // path so deferring it improves FCP/LCP.

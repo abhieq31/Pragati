@@ -24,11 +24,9 @@
 import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import { tokenize, bagOfWords, cosine } from '@/lib/ai/triage';
+import { QA_TASK_TYPES } from '@/lib/qaTaskTypes';
 
-// ── Task types where quality-pattern analysis is meaningful ───────────────────
-export const QA_TASK_TYPES = new Set([
-  'deviation', 'capa', 'audit_finding', 'data_review', 'test', 'review',
-]);
+export { QA_TASK_TYPES };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
