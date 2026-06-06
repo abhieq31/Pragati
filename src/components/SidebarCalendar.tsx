@@ -36,6 +36,13 @@ function dayKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// First name only — keeps the hover-card meta line compact when a task is
+// assigned to a colleague. Returns '' for an empty/unassigned name.
+function firstName(name: string | null | undefined): string {
+  if (!name) return '';
+  return String(name).trim().split(/\s+/)[0] || '';
+}
+
 // Per-range cache shared across mounts so the hover-expand sidebar is instant.
 const rangeCache = new Map<string, CalTask[]>();
 
