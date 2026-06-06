@@ -917,6 +917,33 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   animation: pragati-row-expand-blink 1200ms ease-out 2;
 }
 
+/* ── Water-drop ring for expand button ─────────────────────────────────────
+   A light-green pulsing ring that ripples outward from the expand button's
+   surrounding circle — the "water drop" effect. The button is wrapped in a
+   relative div; this pseudo-element expands and fades outward, teaching the
+   user that the row is expandable. Loops 3 times then stops. */
+@keyframes expand-water-drop {
+  0%   { transform: scale(1);    opacity: 0.80; }
+  65%  { opacity: 0.12; }
+  100% { transform: scale(2.6);  opacity: 0; }
+}
+.expand-ring-nudge {
+  position: relative;
+}
+.expand-ring-nudge::before,
+.expand-ring-nudge::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid #4ade80;
+  pointer-events: none;
+  animation: expand-water-drop 1.8s ease-out 3 both;
+}
+.expand-ring-nudge::after {
+  animation-delay: 0.65s;
+}
+
 /* ── Bird's-Eye trigger blink ──────────────────────────────────────────────
    A soft brand-blue ring pulses twice on first paint to draw the eye to the
    custom Bird's-Eye icon — gives the affordance a moment of presence without
@@ -939,7 +966,9 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 @media (prefers-reduced-motion: reduce) {
   .dashboard-expand-nudge,
   .pragati-row-expand-blink,
-  .pragati-birdeye-blink {
+  .pragati-birdeye-blink,
+  .expand-ring-nudge::before,
+  .expand-ring-nudge::after {
     animation: none;
   }
 }

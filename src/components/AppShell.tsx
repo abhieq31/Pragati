@@ -94,7 +94,7 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     !user.hasPin &&
     (user.loginCount ?? 0) >= 2 &&
     !user.pinPromptDismissedAt;
-  const [needsPin, setNeedsPin] = useState(shouldOfferPin);
+  const [needsPin, setNeedsPin] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const lastActivityRef = useRef(Date.now());
   const accountMenuRef = useRef<HTMLDivElement>(null);

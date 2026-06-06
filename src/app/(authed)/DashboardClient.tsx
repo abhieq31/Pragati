@@ -21,7 +21,7 @@ function warmActivityGraph(userId?: string) {
 }
 import {
   AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
-  ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
+  ChevronDown, ChevronRight, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
   Maximize2, X, BarChart3, Bell,
 } from 'lucide-react';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
@@ -809,13 +809,14 @@ function ProjectRow({
         onClick={() => setOpen(o => !o)}
         className={`px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none ${nudgeExpand && !open ? 'pragati-row-expand-blink' : ''}`}
       >
-        <button
-          className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform rounded-full shrink-0"
-          aria-label={open ? 'Collapse project tasks' : 'Expand project tasks'}
-          style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-        >
-          <ChevronDown size={14} />
-        </button>
+        <div className={`relative shrink-0 ${nudgeExpand && !open ? 'expand-ring-nudge' : ''}`}>
+          <button
+            className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-colors rounded-full"
+            aria-label={open ? 'Collapse project tasks' : 'Expand project tasks'}
+          >
+            {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </div>
 
         {/* Three-level hierarchy:
              1. Title (largest, dark)
@@ -1335,11 +1336,11 @@ function ContributorsPanel({
           </h3>
         </div>
         <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold bg-slate-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded-full">{people.length}</span>
-        <ChevronDown
-          size={12}
-          className={`text-slate-400 dark:text-white/30 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'dashboard-expand-nudge' : ''}`}
-          style={{ transform: panelOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}
-        />
+        <div className={`relative ${showExpandNudge && !panelOpen ? 'expand-ring-nudge' : ''}`}>
+          {panelOpen
+            ? <ChevronDown size={12} className="text-slate-400 dark:text-white/30" />
+            : <ChevronRight size={12} className="text-slate-400 dark:text-white/30" />}
+        </div>
       </div>
 
       {panelOpen && (
@@ -1513,9 +1514,8 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${loadBadge}`}>
             {loadLabel}
           </span>
-          <button className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform"
-            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <ChevronDown size={12} />
+          <button className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-colors rounded-full">
+            {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
         </div>
       </div>

@@ -43,6 +43,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [tasks, setTasks] = useState<CalTask[]>([]);
   const [hover, setHover] = useState<{ key: string; x: number; y: number } | null>(null);
+  const [headerHovered, setHeaderHovered] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The 6-week (42-cell) grid that covers the visible month, including the
@@ -113,18 +114,25 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
 
   return (
     <div className="mt-2 pt-2.5 border-t" style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}>
-      {/* Header — month + nav */}
-      <div className="flex items-center justify-between px-1 mb-1.5">
+      {/* Header — month + nav arrows (arrows reveal only on header hover) */}
+      <div
+        className="flex items-center justify-between px-1 mb-1.5"
+        onMouseEnter={() => setHeaderHovered(true)}
+        onMouseLeave={() => setHeaderHovered(false)}
+      >
         <button
           onClick={() => !isCurrentMonth && setCursor(new Date(today.getFullYear(), today.getMonth(), 1))}
-          className={`text-[11px] font-bold tracking-tight truncate ${
+          className={`text-[11px] font-bold tracking-tight truncate transition-colors ${
             dark ? 'text-white/70' : 'text-slate-600'
           } ${isCurrentMonth ? 'cursor-default' : 'hover:text-blue-500 cursor-pointer'}`}
           title={isCurrentMonth ? undefined : 'Back to this month'}
         >
           {monthLabel}
         </button>
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div
+          className="flex items-center gap-0.5 shrink-0 transition-all duration-150"
+          style={{ opacity: headerHovered ? 1 : 0, pointerEvents: headerHovered ? 'auto' : 'none' }}
+        >
           <button
             onClick={() => setCursor(c => new Date(c.getFullYear(), c.getMonth() - 1, 1))}
             className={`p-0.5 rounded transition-colors ${dark ? 'text-white/35 hover:text-white/70 hover:bg-white/5' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}

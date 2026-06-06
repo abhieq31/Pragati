@@ -135,11 +135,8 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Quick-PIN unlock: offered (not forced) when this device previously
-  // completed a full sign-in and the user has a PIN set. We keep the password
-  // form as the default view and surface PIN as an explicit choice, so signing
-  // in with username + password is never interrupted by a surprise PIN screen.
-  const [canUsePin, setCanUsePin] = useState(false);
+  // Quick-PIN unlock: auto-redirected to PIN pad for trusted devices that have
+  // a PIN set — so returning users land directly on the PIN screen.
   const [deviceName, setDeviceName] = useState('');
   // Monogram avatar for the trusted device, so the greeting matches the
   // avatar the user picked in settings rather than plain initials.
@@ -151,15 +148,13 @@ export default function LoginPage() {
     api<{ initialized: boolean }>('/system/status').then(d => {
       if (!d.initialized) setIsFirstRun(true);
     }).catch(() => {});
-    // If this is a trusted device with a PIN, remember the device identity and
-    // expose the Quick-PIN option — but stay on the password form. The user
-    // opts into the PIN pad with a tap; we no longer hijack the screen.
+    // Auto-switch to PIN pad for trusted devices — no opt-in button needed.
     api<{ trusted: boolean; name?: string; hasPin?: boolean; locked?: boolean; avatarLetter?: string; avatarBg?: string; avatarFont?: number }>('/auth/device')
       .then(d => {
         if (d.trusted && d.hasPin && !d.locked) {
           setDeviceName(d.name || '');
           setDeviceAvatar({ letter: d.avatarLetter || '', bg: d.avatarBg || '', font: d.avatarFont ?? 0 });
-          setCanUsePin(true);
+          setMode('unlock');
         }
       })
       .catch(() => {});
@@ -686,19 +681,6 @@ export default function LoginPage() {
                 </p>
               ) : (
                 <>
-                  {/* Quick-PIN is offered, never forced. Trusted devices with a
-                      PIN get a one-tap shortcut here without losing the
-                      username + password path above. */}
-                  {canUsePin && (
-                    <button
-                      type="button"
-                      onClick={() => { setMode('unlock'); setErr(''); }}
-                      className="mb-3 w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-blue-200 bg-blue-50/60 text-sm font-semibold text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-colors fade-in-soft"
-                    >
-                      <Sparkles size={14} className="text-blue-500" />
-                      Unlock with Quick PIN
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={() => setShowForgot((v) => !v)}
