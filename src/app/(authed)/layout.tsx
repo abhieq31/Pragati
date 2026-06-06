@@ -17,7 +17,7 @@ export default async function AuthedLayout({ children }: { children: React.React
   // components (AvatarRegistry, NotificationBell) and don't need to block SSR.
   await connectDB();
   const dbUser = await User.findById(user.sub)
-    .select('avatarLetter avatarBg avatarFont soundDropEnabled hasSeenTour')
+    .select('avatarLetter avatarBg avatarFont soundDropEnabled hasSeenTour username')
     .lean();
 
   // Seed only the current user's own avatar so the sidebar self-portrait is
@@ -36,10 +36,6 @@ export default async function AuthedLayout({ children }: { children: React.React
   // that previously appeared on every navigation when the localStorage
   // useEffect kicked in after hydration.
   const initialDark = cookies().get('theme')?.value === 'dark';
-  // Sidebar collapse state: cookie-backed so the server knows the initial
-  // value and AppShell renders the correct width without a post-hydration
-  // layout shift (previously read from localStorage in a useEffect).
-  const initialSidebarCollapsed = cookies().get('sidebar_collapsed')?.value === '1';
 
   return (
     <AppShell
@@ -47,6 +43,7 @@ export default async function AuthedLayout({ children }: { children: React.React
         id: user.sub,
         name: user.name,
         email: user.email,
+        username: (dbUser as any)?.username || null,
         role: normalizeRole(user.role),
         title: user.title || '',
         mustChangePassword: user.mustChangePassword,
@@ -60,7 +57,6 @@ export default async function AuthedLayout({ children }: { children: React.React
         hasSeenTour:      (dbUser as any)?.hasSeenTour !== false,
       }}
       initialDark={initialDark}
-      initialSidebarCollapsed={initialSidebarCollapsed}
       initialAvatars={initialAvatars}
     >
       {children}

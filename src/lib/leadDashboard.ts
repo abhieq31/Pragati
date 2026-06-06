@@ -5,6 +5,8 @@ import { User } from '@/models/User';
 import { Team } from '@/models/Team';
 import { project as projectS, task as taskS, date as toIso } from '@/lib/serialize';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
+import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStrip';
+import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
 import { cached, cacheBust } from '@/lib/cache';
 import { normalizeRole } from '@/lib/auth';
 
@@ -12,8 +14,8 @@ const STATUS_ORDER: Record<string, number> = { in_progress: 0, review: 1, blocke
 
 // How long a per-user dashboard rollup may be served from cache. The dashboard
 // is an operational "what's on" view, not a record — a brief staleness window
-// is an acceptable trade for skipping 9 DB queries on rapid re-navigation
-// (dashboard → project → back) and multi-tab use. Tune freely; lower = fresher.
+// is an acceptable trade for skipping ~9 DB queries on rapid re-navigation
+// (dashboard → project → back) and multi-tab use. Lower = fresher.
 const DASHBOARD_TTL_SECONDS = 15;
 
 /** Cache key for a viewer's dashboard rollup — scoped by user + effective role
@@ -24,8 +26,8 @@ function dashboardCacheKey(sub: string, role: string): string {
 
 /**
  * Bust a viewer's cached dashboard so their next load recomputes from MongoDB.
- * Optional helper for mutation routes that want zero staleness after a write
- * (e.g. a task move). Safe to call even when the cache is disabled — it no-ops.
+ * Called by mutation routes for zero staleness after a write (task move,
+ * project change, etc.). Safe to call when the cache is disabled — it no-ops.
  */
 export async function bustDashboardCache(sub: string, role: string): Promise<void> {
   await cacheBust(dashboardCacheKey(sub, role));
@@ -38,15 +40,17 @@ export interface LeadDashboardData {
   teamTasks: any[];
   people:    any[];
   teamCount: number;
+  /** Bounded fact-based "Needs attention" strip payload — server-computed so
+   *  the browser never sees raw signals. Null when nothing surfaces. */
+  flowSignal?: FlowSignalPayload | null;
 }
 
 /**
  * Public entry point — used by both the API route and the server-rendered
  * dashboard page. Read-through cached per viewer (see DASHBOARD_TTL_SECONDS):
- * on a hit it returns the rollup without touching MongoDB; on a miss (or when
- * the cache is disabled / unreachable) it computes fresh via the pure fetcher
- * below. Caching is fully transparent — when Upstash isn't configured this is
- * just a direct call to computeLeadDashboardData().
+ * a hit returns the rollup without touching MongoDB; a miss (or a disabled /
+ * unreachable cache) computes fresh via the pure fetcher below. Fully
+ * transparent — when Upstash isn't configured this is just a direct call.
  */
 export async function getLeadDashboardData(
   jwtUser: { sub: string; name: string; email: string; role: string },
@@ -254,8 +258,6 @@ async function computeLeadDashboardData(
       subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
       subtaskTitles: ((t as any).subtasks || []).slice(0, 3).map((s: any) => s.title),
       gxpCritical:  !!(t as any).gxpCritical,
-      lastActivityAt: toIso((t as any).lastActivityAt || t.updatedAt || t.createdAt),
-      pendingWith:  (t as any).pendingWith || '',
     };
   });
 
@@ -275,6 +277,38 @@ async function computeLeadDashboardData(
     return { id: uid, name: u.name, title: u.title || '', openTasks, overdueCount, completedThisWeek, loadScore, loadLevel };
   }).sort((a, b) => b.loadScore - a.loadScore);
 
+  // ── Flow Signal strip ──────────────────────────────────────────────
+  // Bounded, fact-only computation done on the SAME data we already loaded
+  // — no extra DB calls. Returns null when nothing surfaces, when the
+  // feature is off, or when the viewer's teams aren't in the pilot
+  // allowlist. The browser will simply render nothing in that case.
+  const cfg = getFlowConfig();
+  let flowSignal: FlowSignalPayload | null = null;
+  if (isUiEnabled(cfg)) {
+    const teamIdsForViewer = scope.teamOids.map((o) => String(o));
+    if (isPilotTeamVisible(teamIdsForViewer, cfg)) {
+      // Build a small id→name map from the data we already loaded; falling
+      // back to the assignee map for "Confirmed today by X" copy when the
+      // confirmer happens to be a teammate already in scope.
+      const userNameById = new Map<string, string>();
+      for (const u of assigneeUsers) userNameById.set(String(u._id), u.name);
+      for (const u of users)         userNameById.set(String(u._id), u.name);
+      // The viewer might confirm their own task — make sure their name is
+      // resolvable for the "by you" headline.
+      userNameById.set(jwtUser.sub, jwtUser.name);
+
+      flowSignal = computeFlowStrip({
+        viewer: { id: jwtUser.sub, role: jwtUser.role },
+        // teamTasksRaw is already privacy-filtered by visibleTaskPrivacyFilter
+        // and scoped to projects the viewer can see.
+        tasks: teamTasksRaw as any,
+        projects,
+        userNameById,
+        cfg,
+      });
+    }
+  }
+
   return {
     user:     { id: jwtUser.sub, name: jwtUser.name, email: jwtUser.email, role: jwtUser.role },
     projects: projectList,
@@ -283,5 +317,6 @@ async function computeLeadDashboardData(
     people,
     // Number of teams the viewer belongs to (or all teams, for admin).
     teamCount: scope.teamOids.length,
+    flowSignal,
   };
 }

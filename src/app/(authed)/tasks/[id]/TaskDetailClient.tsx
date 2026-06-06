@@ -11,8 +11,8 @@ import { Select } from '@/components/Select';
 import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText, Check, Bell, BookOpen } from 'lucide-react';
-import { QA_TASK_TYPES } from '@/lib/qaTaskTypes';
+import { ChevronRight, Shield, FileText, MessageSquare, Timer, Activity, Clock, Trash2, ScrollText } from 'lucide-react';
+import { FlowSignalTaskStrip } from '@/components/FlowSignalTaskStrip';
 
 // TaskCompletePop is only shown on task completion — off the critical render
 // path so deferring it improves FCP/LCP.
@@ -59,16 +59,11 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const [newSub, setNewSub] = useState('');
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState(false);
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
   // Mini-celebration shown when the task moves to "done". A small bottom-right
   // toast — not a confetti overlay — that recognises the *type* of task that
   // was finished. Stays null until the user actually closes the task.
   const [celebrate, setCelebrate] = useState<any | null>(null);
   const { showToast, ToastEl } = useToast();
-  const [pastCases, setPastCases] = useState<any[] | null>(null);
-  const [effectiveness, setEffectiveness] = useState<any | null>(null);
-
-  function markSaved() { setSavedAt(new Date()); }
 
   async function load() {
     try {
@@ -104,17 +99,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  // Quietly load past cases after task data arrives. Only for QA task types.
-  // Fails silently — missing data means the card just doesn't render.
-  useEffect(() => {
-    if (!task?.id || !QA_TASK_TYPES.has(task.taskType)) return;
-    setPastCases(null); setEffectiveness(null);
-    api<any>(`/tasks/${id}/similar`)
-      .then(r => { setPastCases(r.pastCases ?? []); setEffectiveness(r.effectiveness ?? null); })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task?.id, task?.taskType]);
 
   if (loadErr) {
     return (
@@ -174,7 +158,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     if (opts?.optimistic) setTask((t: any) => ({ ...t, ...opts.optimistic }));
     try {
       await api(`/tasks/${id}`, { method: 'PATCH', body: patch });
-      markSaved();
       load();
     } catch (e: any) {
       showToast(e.message || 'Save failed', 'err');
@@ -239,23 +222,18 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   const canSignoff = task.requiresQaSignoff && !task.qaSignoffAt && (me?.role === 'lead' || me?.role === 'admin');
   const hasReferenceData = task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
 
-  // IC edit contract: a contributor assigned to a task may edit the task's
-  // description, due date, status, and add subtasks/comments. Compliance fields
-  // (assignee, priority, reference numbers, CC TCD) remain lead-only since they
-  // affect scheduling and regulatory traceability. Unassigned tasks or tasks
-  // belonging to someone else remain fully read-only for ICs.
+  // IC edit contract: a contributor may edit ONLY the description and due date,
+  // and ONLY on a task assigned to them. Everything else — status, assignee,
+  // priority, reference/compliance fields — is lead-owned. A task assigned to
+  // someone else (or unassigned) is fully read-only for an IC, and the inputs
+  // are disabled so no save is even attempted. Leads/admins keep full control.
   const isAssignee  = !!(me && task.assigneeId && String(task.assigneeId) === String(me.id));
   // Description + due date: editable by leads or the assignee.
   const canEditBasics = isLead || isAssignee;
-  // Reference/tracking/compliance fields and assignee/priority: leads only.
+  // Reference/tracking fields, status, assignee, priority, etc.: leads only.
   const canEditAll = isLead;
-  // Status: leads and the assignee (they're the ones doing the work).
-  const canEditStatus = isLead || isAssignee;
   const canComment = isLead || isAssignee;
-
-  const daysSinceActivity = task?.lastActivityAt
-    ? Math.floor((Date.now() - new Date(task.lastActivityAt).getTime()) / 86_400_000)
-    : null;
+  const canEditStatus = isLead;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl page-enter">
@@ -283,17 +261,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               </Link>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 leading-snug flex-1">{task.title}</h1>
-            {savedAt && (
-              <span key={savedAt.getTime()}
-                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400/80 fade-in-soft"
-                title={`Saved at ${savedAt.toLocaleTimeString()}`}
-              >
-                <Check size={10} strokeWidth={3} /> Saved
-              </span>
-            )}
-          </div>
+          <h1 className="text-xl font-bold text-slate-900 leading-snug">{task.title}</h1>
           <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
@@ -313,17 +281,20 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 {TASK_TYPE_LABELS[task.taskType] ?? task.taskType.replace(/_/g, ' ')}
               </span>
             )}
-            {task.pendingWith && task.status !== 'done' && (
-              <span className="text-xs text-slate-500 dark:text-white/40 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 px-2 py-0.5 rounded" title={`Waiting on ${task.pendingWith}`}>
-                waiting on {task.pendingWith}
-              </span>
-            )}
-            {!task.pendingWith && task.status !== 'done' && daysSinceActivity !== null && daysSinceActivity >= 7 && (
-              <span className="text-xs text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] px-2 py-0.5 rounded" title="No activity recorded recently">
-                {daysSinceActivity}d no activity
-              </span>
-            )}
           </div>
+
+          {/* Quiet "Waiting on …" strip — only renders when the assignee or
+              a lead has confirmed a waiting/decision/help state. Same source
+              of truth as the dashboard strip (Task.flowPending*). */}
+          <FlowSignalTaskStrip
+            taskId={task.id}
+            pendingType={task.flowPendingType}
+            detail={task.flowPendingDetail}
+            confirmedAt={task.flowPendingConfirmedAt}
+            confirmedByName={task.flowPendingConfirmedByName}
+            canResolve={isLead || isAdmin || (me && task.flowPendingConfirmedByUserId === me.id)}
+            onChanged={load}
+          />
         </div>
 
         {/* Description */}
@@ -340,24 +311,24 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
         {!isLead && (
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
             {canEditBasics
-              ? 'You can update the description, due date, status, and subtasks on this task. Assignee, priority, and compliance fields are lead-owned.'
+              ? 'You can edit the description and due date of this task. Status, assignee and other fields are lead-owned.'
               : 'Read-only: only the assignee and team leads can edit this task.'}
           </div>
         )}
 
         {/* ── Reference & Tracking details ─────────────────────────────── */}
         <div className="card overflow-hidden">
-          <div className="panel-header">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
             <FileText size={14} className="text-blue-500" />
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-white/70">Reference & Tracking</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Reference & Tracking</h3>
             {hasReferenceData && (
-              <span className="ml-auto text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-400 px-1.5 py-0.5 rounded">Filled</span>
+              <span className="ml-auto text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Filled</span>
             )}
           </div>
           <div className="p-4 space-y-4">
 
             {/* Ref No. + Target Date */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Reference Number</label>
                 <input
@@ -460,14 +431,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               <div className="text-xs text-slate-400 py-1">No subtasks yet.</div>
             )}
           </div>
-          {canComment && (
-            <div className="flex gap-2 mt-3">
-              <input className="input text-sm" placeholder="Add a subtask…"
-                value={newSub} onChange={(e) => setNewSub(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addSubtask()} />
-              <button className="btn-primary text-sm" onClick={addSubtask}>Add</button>
-            </div>
-          )}
+          <div className="flex gap-2 mt-3">
+            <input className="input text-sm" placeholder="Add a subtask…"
+              value={newSub} onChange={(e) => setNewSub(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addSubtask()} />
+            <button className="btn-primary text-sm" onClick={addSubtask}>Add</button>
+          </div>
         </Card>
 
         {/* Comments */}
@@ -564,13 +533,8 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 ariaLabel="Assignee"
                 teamId={teamId}
                 excludeAdmin
-                onChange={(v) => isLead && update({ assigneeId: v || null })}
+                onChange={(v: string) => isLead && update({ assigneeId: v || null })}
               />
-              {task.assigneeId && task.assigneeActive === false && (
-                <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
-                  <span aria-hidden="true">⚠</span> Assignee account deactivated — consider reassigning
-                </div>
-              )}
             </div>
             {/* Waiting on — who the task is stuck/pending with (QA, a person,
                a department). Editable by the assignee or a lead. */}
@@ -592,7 +556,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="label">Priority</label>
                 <Select
@@ -614,7 +578,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="label">Start date</label>
                 <div>
@@ -719,56 +683,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               Approve & Sign off
             </button>
           </Card>
-        )}
-
-        {/* ── Past Cases — institutional memory surface ─────────────── */}
-        {pastCases && pastCases.length > 0 && (
-          <div className="card overflow-hidden">
-            <div className="panel-header">
-              <BookOpen size={13} className="text-slate-400 dark:text-white/30" />
-              <h3 className="text-sm font-semibold text-slate-600 dark:text-white/60">Past cases like this</h3>
-            </div>
-            <div className="p-3 space-y-2.5">
-              {pastCases.map((c: any) => (
-                <Link key={c.id} href={`/tasks/${c.id}`} className="block group">
-                  <div className="text-[12.5px] text-slate-700 dark:text-white/70 font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate transition-colors leading-snug">
-                    {c.title}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30">
-                    {c.projectCode && <span className="font-mono font-bold">{c.projectCode}</span>}
-                    {c.projectCode && <span>·</span>}
-                    {c.daysToClose !== null && <span>{c.daysToClose}d to close</span>}
-                    {c.daysToClose !== null && c.completedAt && <span>·</span>}
-                    {c.completedAt && (
-                      <span>{new Date(c.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── CAPA Effectiveness Signal ──────────────────────────────── */}
-        {effectiveness && effectiveness.count > 0
-          && task?.taskType === 'capa'
-          && task?.status === 'done' && (
-          <div className="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/[0.07] px-3.5 py-3">
-            <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 mb-0.5">
-              {effectiveness.count} similar issue{effectiveness.count > 1 ? 's' : ''} filed after closure
-            </div>
-            <div className="text-[10px] text-amber-600/70 dark:text-amber-400/50 mb-2">
-              Effectiveness review may be warranted
-            </div>
-            <div className="space-y-1">
-              {effectiveness.taskTitles.slice(0, 3).map((title: string, i: number) => (
-                <Link key={effectiveness.taskIds[i]} href={`/tasks/${effectiveness.taskIds[i]}`}
-                  className="block text-[10.5px] text-amber-700 dark:text-amber-300/70 hover:text-amber-900 dark:hover:text-amber-200 hover:underline truncate transition-colors">
-                  {title}
-                </Link>
-              ))}
-            </div>
-          </div>
         )}
 
       </div>

@@ -55,7 +55,6 @@ const TenantSchema = new Schema({
   notes:        { type: String, default: '' },
 }, { timestamps: true });
 
-TenantSchema.index({ slug: 1 }, { unique: true });
 TenantSchema.index({ customDomain: 1 });
 TenantSchema.index({ active: 1 });
 

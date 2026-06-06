@@ -8,26 +8,32 @@ import { PragatiMark } from './PragatiMark';
 import { CurrentUserProvider } from './CurrentUserContext';
 import { AvatarRegistryProvider } from './AvatarRegistry';
 import { NotificationBell } from './NotificationBell';
-import { SidebarCalendar } from './SidebarCalendar';
 import { api } from '@/lib/client/api';
 
-// Shell side-effects (idle auto-logout, onboarding gates, session warning)
-// loaded after the shell itself has hydrated so heavy event listeners don't
-// run during the critical hydration pass. Falls back to null on server.
-const ShellEffects = dynamic(
-  () => import('./ShellEffects').then(m => m.ShellEffects),
+// Force-password modal — only ships when a user has mustChangePassword set.
+// Keeps the long form code (strength meter, validators) out of the main bundle.
+const ForcePasswordModal = dynamic(
+  () => import('./ForcePasswordModal').then(m => m.ForcePasswordModal),
+  { ssr: false, loading: () => null },
+);
+// Mandatory Quick-PIN setup on first login — lazy so it stays out of the bundle
+// for everyone who already has a PIN.
+const SetPinModal = dynamic(
+  () => import('./SetPinModal').then(m => m.SetPinModal),
   { ssr: false, loading: () => null },
 );
 import {
-  LayoutDashboard, FolderKanban, Users, UsersRound, CalendarHeart,
+  LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
-  UserCircle, Layers,
+  UserCircle, Layers, Globe, ExternalLink,
 } from 'lucide-react';
 
 export interface CurrentUser {
   id: string;
   name: string;
   email: string;
+  /** Login handle — also the path to the user's public profile (/<username>). */
+  username?: string | null;
   role: 'contributor' | 'lead' | 'admin' | 'master_admin';
   title?: string;
   mustChangePassword?: boolean;
@@ -71,8 +77,21 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
 
   const [open, setOpen]               = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [idleWarning, setIdleWarning] = useState(false);
   const [dark, toggleDark]            = useDarkMode(initialDark);
+  const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
+  // Show the PIN modal only when ALL of these hold:
+  //  • the user doesn't already have a PIN
+  //  • they've completed at least 2 full logins (first visit is busy with
+  //    password change + onboarding tour)
+  //  • they haven't dismissed the prompt this session with "Maybe later"
+  const shouldOfferPin =
+    !user.hasPin &&
+    (user.loginCount ?? 0) >= 2 &&
+    !user.pinPromptDismissedAt;
+  const [needsPin, setNeedsPin] = useState(shouldOfferPin);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const lastActivityRef = useRef(Date.now());
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
   // Desktop "distraction-free" collapse: shrinks the sidebar to an icon rail
@@ -106,10 +125,38 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     };
   }, [accountMenuOpen]);
 
+  // ── Idle auto-logout ────────────────────────────────────────────────
+  // 21 CFR Part 11 §11.10(d): unattended sessions must not stay open.
+  // At 25 min idle we show a "Still there?" modal; at 30 min we force log out.
+  useEffect(() => {
+    const WARN_MS = 25 * 60 * 1000;
+    const IDLE_MS = 30 * 60 * 1000;
+    const mark = () => { lastActivityRef.current = Date.now(); setIdleWarning(false); };
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
+    const iv = setInterval(() => {
+      const idle = Date.now() - lastActivityRef.current;
+      if (idle >= IDLE_MS) {
+        clearInterval(iv);
+        setIdleWarning(false);
+        api('/auth/logout', { method: 'POST' }).finally(() => {
+          router.replace('/login');
+          router.refresh();
+        });
+      } else if (idle >= WARN_MS) {
+        setIdleWarning(true);
+      }
+    }, 30_000);
+    return () => {
+      clearInterval(iv);
+      events.forEach((e) => window.removeEventListener(e, mark));
+    };
+  }, [router]);
 
   type NavItem = { href: string; label: string; icon: any; iconColor: string; iconBg: string };
 
   const isAdmin       = user.role === 'admin' || user.role === 'master_admin';
+  const isMasterAdmin = user.role === 'master_admin';
   const isLeadOrAdmin = user.role === 'lead' || isAdmin;
 
   // Team-lead nav: run teams, projects and tasks. NOT People — workspace
@@ -123,10 +170,15 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
   const adminExtra: NavItem[] = [
-    { href: '/admin',    label: 'Console',   icon: Layers,          iconColor: '#4F46E5', iconBg: '#EEF2FF' },
     { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
     { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF' },
   ];
+  // The master-admin item is only added when the signed-in user actually holds
+  // that role. In the current single-tenant deploy no one does, so the link
+  // never appears — the route itself also redirects non-master-admins.
+  const masterAdminExtra: NavItem[] = isMasterAdmin
+    ? [{ href: '/master-admin', label: 'Platform', icon: Globe, iconColor: '#9333EA', iconBg: '#F3E8FF' }]
+    : [];
 
   const contributorNav: NavItem[] = [
     { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
@@ -134,10 +186,10 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
 
-  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: CalendarHeart, iconColor: '#1565C0', iconBg: '#EFF6FF' };
+  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#1565C0', iconBg: '#EFF6FF' };
 
   const nav = isAdmin
-    ? [...leadNav, ...adminExtra]
+    ? [...leadNav, ...adminExtra, ...masterAdminExtra]
     : isLeadOrAdmin ? leadNav : contributorNav;
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname?.startsWith(href);
 
@@ -155,6 +207,7 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
   // behind a disclosure, Security / Quick PIN / admin tools). Notifications and
   // their preferences live in the bell. Dark mode + Sign out follow below.
   const accountItems = [
+    ...(user.username ? [{ href: `/${user.username}`, label: 'View public profile', icon: ExternalLink }] : []),
     { href: '/settings', label: 'Profile & activity', icon: UserCircle },
   ];
 
@@ -173,7 +226,9 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         <Avatar name={user.name} size={38} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
         <div className="min-w-0">
           <div className={`text-sm font-black truncate ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
-          <div className={`text-[11px] truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>{roleText}</div>
+          <div className={`text-[11px] truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>
+            {user.username ? `@${user.username}` : roleText}
+          </div>
         </div>
       </div>
 
@@ -183,7 +238,6 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
           <Link
             key={item.href}
             href={item.href}
-            prefetch
             className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
               dark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
@@ -273,23 +327,18 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
                     : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
                 }`}
                 style={active ? (showCollapsed ? {
-                  background: dark ? 'rgba(255,255,255,0.09)' : n.iconBg,
-                  boxShadow: dark ? 'none' : `inset 0 0 0 1px ${n.iconColor}18`,
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
                 } : {
-                  background: dark
-                    ? `linear-gradient(to right, ${n.iconColor}28, rgba(255,255,255,0.03))`
-                    : `linear-gradient(to right, ${n.iconBg} 0%, transparent 100%)`,
-                  borderLeft: `2.5px solid ${n.iconColor}`,
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                  borderLeft: `3px solid ${n.iconColor}`,
                   paddingLeft: '9px',
-                  boxShadow: dark ? 'none' : `inset 0 0 0 1px ${n.iconColor}10`,
                 }) : {}}
               >
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
                   style={{
                     background: active
-                      ? (dark ? `${n.iconColor}35` : n.iconBg)
+                      ? (dark ? `${n.iconColor}30` : n.iconBg)
                       : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
-                    boxShadow: active ? (dark ? 'none' : `0 0 0 1px ${n.iconColor}20`) : 'none',
                   }}>
                   <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
                 </div>
@@ -298,11 +347,6 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
             );
           })}
         </div>
-
-        {/* Mini-calendar — a quick "what's due" glance for my own + my teams'
-            work. Hidden on the collapsed rail (too narrow); the hover-expand
-            flyout brings it back. */}
-        {!showCollapsed && <SidebarCalendar dark={dark} />}
 
         {/* My Day — pinned just above the footer so it's always reachable */}
         <div className="mt-2 pt-2 border-t" style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}>
@@ -319,23 +363,18 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
                     : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
                 }`}
                 style={active ? (showCollapsed ? {
-                  background: dark ? 'rgba(255,255,255,0.09)' : n.iconBg,
-                  boxShadow: dark ? 'none' : `inset 0 0 0 1px ${n.iconColor}18`,
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
                 } : {
-                  background: dark
-                    ? `linear-gradient(to right, ${n.iconColor}28, rgba(255,255,255,0.03))`
-                    : `linear-gradient(to right, ${n.iconBg} 0%, transparent 100%)`,
-                  borderLeft: `2.5px solid ${n.iconColor}`,
+                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                  borderLeft: `3px solid ${n.iconColor}`,
                   paddingLeft: '9px',
-                  boxShadow: dark ? 'none' : `inset 0 0 0 1px ${n.iconColor}10`,
                 }) : {}}
               >
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
                   style={{
                     background: active
-                      ? (dark ? `${n.iconColor}35` : n.iconBg)
+                      ? (dark ? `${n.iconColor}30` : n.iconBg)
                       : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
-                    boxShadow: active ? (dark ? 'none' : `0 0 0 1px ${n.iconColor}20`) : 'none',
                   }}>
                   <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
                 </div>
@@ -473,13 +512,13 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
 
-        {/* Mobile-only slim top strip — inset-top handles the iPhone notch /
-            Dynamic Island so the strip never hides behind the status bar. */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-12 safe-top"
+        {/* Mobile-only slim top strip — soft shadow so it lifts off the page as
+            content scrolls under it, instead of exposing a hard white edge. */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-11"
           style={{
-            background: dark ? 'rgba(38,38,36,0.92)' : 'rgba(255,255,255,0.92)',
-            backdropFilter: 'saturate(180%) blur(10px)',
-            WebkitBackdropFilter: 'saturate(180%) blur(10px)',
+            background: dark ? 'rgba(38,38,36,0.85)' : 'rgba(255,255,255,0.85)',
+            backdropFilter: 'saturate(180%) blur(8px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(8px)',
             borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
             boxShadow: dark ? '0 2px 12px rgba(0,0,0,0.4)' : '0 2px 10px rgba(15,23,42,0.08)',
           }}>
@@ -508,16 +547,29 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
               }}
             />
           )}
-          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 pb-safe relative overflow-x-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 relative overflow-x-hidden">
             {children}
           </div>
         </main>
       </div>
 
-      {/* Deferred shell effects — idle auto-logout, onboarding gates, and
-          session warning. Loaded after the shell hydrates so the 6 window
-          event listeners and the 30s interval don't block the hydration pass. */}
-      <ShellEffects user={user} dark={dark} />
+      {mustChangePw && (
+        <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
+      )}
+
+      {/* Quick-PIN prompt — only after the password step (if any) is cleared,
+          and from the user's second login onward (see shouldOfferPin above).
+          Dismissable: "Maybe later" records pinPromptDismissedAt so we stop
+          blocking and re-offer gently next session. */}
+      {!mustChangePw && needsPin && (
+        <SetPinModal
+          onDone={() => { setNeedsPin(false); router.refresh(); }}
+          onDismiss={async () => {
+            setNeedsPin(false);
+            try { await api('/me/pin-prompt-dismissed', { method: 'POST' }); } catch { /* best-effort */ }
+          }}
+        />
+      )}
 
       {/* Sign-out confirmation — fixed centered modal, works in both expanded and collapsed sidebar */}
       {confirmLogout && (
@@ -552,6 +604,38 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         </div>
       )}
 
+      {/* Idle session warning — 5 min before automatic sign-out */}
+      {idleWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-[320px] rounded-2xl p-6 flex flex-col gap-4 text-center shadow-2xl"
+            style={{ background: dark ? '#262624' : '#ffffff', border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0' }}>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+              style={{ background: dark ? 'rgba(245,158,11,0.12)' : '#FEF3C7' }}>
+              <AlertTriangle size={22} className="text-amber-500" />
+            </div>
+            <div>
+              <div className={`text-base font-bold ${dark ? 'text-white/90' : 'text-slate-800'}`}>Still there?</div>
+              <div className={`text-xs mt-1 leading-snug ${dark ? 'text-white/45' : 'text-slate-500'}`}>
+                You'll be signed out in 5 minutes due to inactivity.
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => {
+                lastActivityRef.current = Date.now();
+                setIdleWarning(false);
+              }} className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors"
+                style={dark ? { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)' } : { background: '#F1F5F9', color: '#475569' }}>
+                Continue
+              </button>
+              <button onClick={logout}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-red-500 transition-colors"
+                style={dark ? { background: 'rgba(239,68,68,0.18)' } : { background: '#FEF2F2' }}>
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </AvatarRegistryProvider>
     </CurrentUserProvider>

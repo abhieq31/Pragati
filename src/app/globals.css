@@ -112,10 +112,7 @@
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
-html {
-  scroll-behavior: smooth;
-  background: var(--bg-page);
-}
+html { scroll-behavior: smooth; }
 
 body {
   @apply text-slate-800 antialiased;
@@ -124,6 +121,7 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* ── Selection ────────────────────────────────────────────────────────────── */
@@ -134,12 +132,7 @@ body {
      BUTTONS
   ════════════════════════════════════════════════════════════════════ */
   .btn {
-    @apply inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold cursor-pointer select-none;
-    /* Animate only the properties that actually change on hover/active instead
-       of `transition-all`, so the browser doesn't re-evaluate unrelated props
-       (layout, opacity, etc) on every interaction — crisper, cheaper. */
-    transition: background 150ms ease, box-shadow 150ms ease,
-                transform 150ms ease, color 150ms ease, border-color 150ms ease;
+    @apply inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-150 cursor-pointer select-none;
   }
 
   .btn-primary {
@@ -152,11 +145,7 @@ body {
     box-shadow: 0 4px 14px rgba(21,101,192,0.30), 0 2px 6px rgba(46,125,50,0.22);
     transform: translateY(-0.5px);
   }
-  .btn-primary:active:not(:disabled) {
-    transform: translateY(0) scale(0.97);
-    /* Shadow collapses on press so the button reads as pushed into the surface */
-    box-shadow: 0 1px 2px rgba(21,101,192,0.22), 0 0 0 0 transparent;
-  }
+  .btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.97); }
 
   .btn-secondary {
     @apply btn bg-white border border-slate-200 text-slate-700;
@@ -168,15 +157,11 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.07);
     transform: translateY(-0.5px);
   }
-  .btn-secondary:active {
-    transform: translateY(0) scale(0.97);
-    box-shadow: 0 0 0 0 transparent;
-  }
+  .btn-secondary:active { transform: translateY(0) scale(0.97); }
 
   .btn-ghost {
     @apply btn text-slate-500 hover:bg-slate-100/80 hover:text-slate-700;
   }
-  .btn-ghost:active { transform: scale(0.97); }
 
   .btn-success {
     @apply btn text-white;
@@ -187,34 +172,11 @@ body {
     background: linear-gradient(135deg, #237021 0%, #388E3C 100%);
     transform: translateY(-0.5px);
   }
-  .btn-success:active { transform: translateY(0) scale(0.97); box-shadow: 0 0 0 0 transparent; }
 
   .btn-danger {
     @apply btn text-white;
     background: linear-gradient(135deg, #c62828 0%, #e53935 100%);
     box-shadow: 0 1px 3px rgba(198,40,40,0.3);
-  }
-  .btn-danger:hover {
-    background: linear-gradient(135deg, #b71c1c 0%, #d32f2f 100%);
-    box-shadow: 0 4px 14px rgba(198,40,40,0.30);
-    transform: translateY(-0.5px);
-  }
-  .btn-danger:active { transform: translateY(0) scale(0.97); box-shadow: 0 0 0 0 transparent; }
-
-  /* ── Keyboard focus rings ──────────────────────────────────────────────
-     A single, consistent brand ring on :focus-visible only, so mouse clicks
-     stay clean while keyboard navigation gets a clear, intentional affordance.
-     Offset keeps the ring off the button edge so gradients read crisply. */
-  .btn-primary:focus-visible,
-  .btn-success:focus-visible,
-  .btn-danger:focus-visible {
-    outline: 2px solid var(--brand);
-    outline-offset: 2px;
-  }
-  .btn-secondary:focus-visible,
-  .btn-ghost:focus-visible {
-    outline: 2px solid rgba(21,101,192,0.55);
-    outline-offset: 2px;
   }
 
   /* ════════════════════════════════════════════════════════════════════
@@ -268,11 +230,7 @@ body {
       0 12px 28px rgba(21,101,192,0.10),
       0 6px 14px rgba(46,125,50,0.08);
     border-color: rgba(21,101,192,0.25);
-    /* Whisper-faint brand wash layers a second cue on top of the lift so the
-       card feels like it's coming alive rather than just translating. */
-    background-color: rgba(21,101,192,0.018);
   }
-  .dark .fluid-card:hover { background-color: rgba(255,255,255,0.02); }
   /* Active sidebar pill */
   .nav-active {
     background: var(--brand-gradient-soft);
@@ -285,8 +243,7 @@ body {
      INPUTS
   ════════════════════════════════════════════════════════════════════ */
   .input, .select, .textarea {
-    @apply w-full border rounded-lg px-3 py-2.5 text-sm bg-white text-slate-800;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    @apply w-full border rounded-lg px-3 py-2.5 text-sm transition-all duration-150 bg-white text-slate-800;
     border-color: #dde3ec;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04), inset 0 1px 2px rgba(0,0,0,0.02);
     outline: none;
@@ -301,13 +258,7 @@ body {
   .input:hover:not(:focus), .select:hover:not(:focus), .textarea:hover:not(:focus) {
     border-color: #c5cdd8;
   }
-  .input::placeholder, .textarea::placeholder {
-    @apply text-slate-400;
-    transition: opacity 0.2s ease;
-  }
-  /* On focus the placeholder dims but stays as a faint hint rather than
-     vanishing — a small touch that makes the field feel considered. */
-  .input:focus::placeholder, .textarea:focus::placeholder { opacity: 0.55; }
+  .input::placeholder, .textarea::placeholder { @apply text-slate-400; }
   /* Custom chevron + extra right-padding so the native dropdown arrow doesn't
      read as generic / fighting the rest of the design system. The SVG is
      inlined to avoid an extra request and so the colour matches `text-slate-400`
@@ -351,8 +302,7 @@ body {
 
   .card-header {
     @apply text-white rounded-t-xl px-4 py-3;
-    background: linear-gradient(135deg, #0B3D9E 0%, #1256B0 35%, #1769C8 70%, #1976D2 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    background: linear-gradient(135deg, #1256B0 0%, #1769C8 100%);
   }
 
   /* ════════════════════════════════════════════════════════════════════
@@ -370,15 +320,6 @@ body {
     @apply text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-2;
   }
 
-  /* Numeric display — tabular figures so digits line up in columns/metrics and
-     a hair of negative tracking so big numbers read as a tight, deliberate unit
-     rather than loose body text. Use on stat values, counts, percentages. */
-  .tnum {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: 'tnum' 1, 'cv01' 1;
-    letter-spacing: -0.01em;
-  }
-
   /* ════════════════════════════════════════════════════════════════════
      PAGE HEADER
   ════════════════════════════════════════════════════════════════════ */
@@ -386,31 +327,17 @@ body {
     @apply flex items-end justify-between pt-1 mb-5;
   }
   .page-title {
-    font-family: 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-    @apply text-2xl font-black text-slate-900;
-    letter-spacing: -0.025em;
-    line-height: 1.2;
+    @apply text-2xl font-bold text-slate-900 tracking-tight;
   }
   .page-subtitle {
-    @apply text-sm text-slate-500 mt-1 leading-snug;
-  }
-  /* Icon box used in page headers — tinted pill that holds the page's icon */
-  .page-icon-box {
-    @apply w-10 h-10 rounded-xl flex items-center justify-center shrink-0;
-  }
-  /* Internal card section header (icon + title bar) */
-  .panel-header {
-    @apply px-4 py-3 border-b border-slate-100 flex items-center gap-2;
-    background: linear-gradient(to right, rgba(248,250,252,1) 0%, rgba(255,255,255,0.3) 100%);
+    @apply text-xs text-slate-400 mt-0.5;
   }
 
   /* ════════════════════════════════════════════════════════════════════
      DIVIDER
   ════════════════════════════════════════════════════════════════════ */
   .divider {
-    @apply my-4;
-    height: 1px;
-    background: linear-gradient(to right, transparent 0%, rgba(210,218,228,0.9) 20%, rgba(210,218,228,0.9) 80%, transparent 100%);
+    @apply h-px bg-slate-100 my-4;
   }
 }
 
@@ -452,18 +379,10 @@ body {
   55%  { transform: scaleX(1);   opacity: 0.5; }
   100% { transform: scaleX(0.85); opacity: 0.35; }
 }
-/* A soft ring that expands once at the moment of touchdown — delayed to sync
-   with the mark settling (~0.4s into the landing) so it reads as ground contact. */
-@keyframes bird-ripple {
-  0%   { transform: translate(-50%, 0) scale(0.3); opacity: 0; }
-  40%  { opacity: 0.5; }
-  100% { transform: translate(-50%, 0) scale(1.7); opacity: 0; }
-}
 .bird-land    { animation: bird-land 0.85s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .bird-shadow  { animation: land-shadow 0.85s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.bird-ripple  { animation: bird-ripple 1.1s ease-out 0.38s both; }
 @media (prefers-reduced-motion: reduce) {
-  .bird-land, .bird-shadow, .bird-ripple { animation: none; }
+  .bird-land, .bird-shadow { animation: none; }
 }
 
 /* ── Celebration animations ───────────────────────────────────────────────── */
@@ -545,27 +464,29 @@ body {
 
 /* ── Page transition ─────────────────────────────────────────────────────── */
 @keyframes page-enter {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-/* Pure opacity fade — no translateY so the wrapper never creates a new
-   stacking context that would break position:fixed modals, and no layout
-   shift is introduced (CLS fix). */
-.page-enter { animation: page-enter 0.15s ease-out; will-change: opacity; }
+/* `backwards` (not `both`): keep the entrance slide, but DON'T retain
+   transform:translateY(0) after it ends — a lingering transform turns this
+   wrapper into the containing block for position:fixed, which made modals
+   (e.g. "Can't mark completed") center relative to the scrolled page
+   instead of the viewport. */
+.page-enter { animation: page-enter 0.18s cubic-bezier(0.22,1,0.36,1) backwards; }
 
 /* ── Stat-card stagger ───────────────────────────────────────────────────── */
 @keyframes fade-up-stagger {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
-.fade-up-stagger { animation: fade-up-stagger 0.4s ease-out; }
+.fade-up-stagger { animation: fade-up-stagger 0.55s cubic-bezier(0.22,1,0.36,1) both; }
 
 /* ── Late-arriving footer fade (daily quote) ─────────────────────────────── */
 @keyframes fade-in-late {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.fade-in-late { animation: fade-in-late 0.4s 0.5s ease-out both; }
+.fade-in-late { animation: fade-in-late 0.5s 0.7s ease-out both; }
 
 /* ── Hero greeting — gradient sweep, alive feel ──────────────────────────── */
 @keyframes hero-shine {
@@ -588,21 +509,6 @@ body {
   background-clip: text;
 }
 
-/* ── Soft pulse used behind the "All clear!" hero ────────────────────────── */
-@keyframes pulse-slow {
-  0%, 100% { opacity: 0.45; transform: scale(1); }
-  50%      { opacity: 0.75; transform: scale(1.08); }
-}
-.animate-pulse-slow { animation: pulse-slow 2.8s ease-in-out infinite; }
-
-/* ── Living-pulse dot — used on Project Health panel ──────────────────────── */
-@keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
-  70%  { box-shadow: 0 0 0 5px transparent; opacity: 0.85; }
-  100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
-}
-.pulse-dot { animation: pulse-ring 1.8s cubic-bezier(0.66,0,0,1) infinite; }
-
 /* ── Generic small fade-in (used by inline forms) ────────────────────────── */
 @keyframes fade-in-soft-2 {
   from { opacity: 0; transform: translateY(-2px); }
@@ -613,16 +519,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .fade-up-stagger,
   .fade-in-late,
-  .animate-pulse-slow,
   .hero-greeting { animation: none !important; }
   .hero-greeting {
     background: none;
     -webkit-text-fill-color: #0f172a;
     color: #0f172a;
-  }
-  .dark .hero-greeting {
-    -webkit-text-fill-color: #faf9f5;
-    color: #faf9f5;
   }
 }
 
@@ -642,33 +543,24 @@ body {
   to   { transform: scaleX(0); }
 }
 
-/* ── Popover / dropdown entry ────────────────────────────────────────────────
-   A quick scale+fade so menus, selects and floating panels grow out of their
-   trigger instead of snapping into existence. Transform origin is set by the
-   call site (e.g. `origin-top`) so the panel expands from the correct anchor. */
-@keyframes popover-in {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to   { opacity: 1; transform: scale(1)    translateY(0); }
-}
-.popover-in { animation: popover-in 0.14s cubic-bezier(0.22,1,0.36,1) both; }
-@media (prefers-reduced-motion: reduce) {
-  .popover-in { animation: none; }
-}
-
-/* ── Skeleton shimmer ────────────────────────────────────────────────────── */
+/* ── LinkedIn-style skeleton shimmer ───────────────────────────────────────
+   Quiet layout placeholders beat spinners: users see the future shape of the
+   page immediately, perceived progress starts sooner, and content can hydrate
+   without a layout jump. */
 @keyframes shimmer {
   from { background-position: 200% center; }
   to   { background-position: -200% center; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #e8edf4 25%, #f3f6fa 50%, #e8edf4 75%);
-  background-size: 200% auto;
-  animation: shimmer 1.6s linear infinite;
+  background: linear-gradient(90deg, #eef3f8 0%, #f7f9fb 42%, #eef3f8 84%);
+  background-size: 220% auto;
+  animation: shimmer 1.45s ease-in-out infinite;
   border-radius: 6px;
+  color: transparent;
 }
 .dark .skeleton {
-  background: linear-gradient(90deg, #2a2927 25%, #34332f 50%, #2a2927 75%);
-  background-size: 200% auto;
+  background: linear-gradient(90deg, #2a2927 0%, #363530 42%, #2a2927 84%);
+  background-size: 220% auto;
 }
 
 /* ── Smooth link transitions ─────────────────────────────────────────────── */
@@ -687,13 +579,6 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 .dark [class*="bg-slate-100"] {
   background-color: var(--bg-subtle) !important;
 }
-.dark .bg-slate-200,
-.dark .bg-slate-300 {
-  background-color: #3a3935 !important;
-}
-/* Filter/tab chips */
-.dark .hover\:bg-slate-200:hover { background-color: #3a3935 !important; }
-.dark .hover\:bg-slate-100:hover { background-color: var(--bg-subtle) !important; }
 
 /* Section header bar — class-based so it can theme in dark mode (inline
    background styles can't be overridden by .dark rules). */
@@ -705,15 +590,6 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   background: #262624 !important;
   border-color: rgba(255,255,255,0.07) !important;
 }
-
-/* Panel header (card internal section divider) */
-.dark .panel-header {
-  background: linear-gradient(to right, rgba(255,255,255,0.035) 0%, transparent 100%) !important;
-  border-color: rgba(255,255,255,0.07) !important;
-}
-
-/* Page title dark mode */
-.dark .page-title { color: #faf9f5 !important; }
 
 /* Warm off-white text scale */
 .dark .text-slate-900 { color: #faf9f5 !important; }
@@ -736,16 +612,13 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 .dark .input,
 .dark .select,
 .dark .textarea {
-  /* background-color (not shorthand) so it doesn't reset background-image */
-  background-color: #30302e !important;
+  background: #30302e !important;
   border-color: rgba(255,255,255,0.10) !important;
   color: #faf9f5 !important;
 }
 .dark .select {
-  /* Lighter chevron for native <select> elements. No !important so that
-     elements with inline style="background-image:none" (e.g. custom Select
-     component) can suppress this — preventing the double-arrow bug. */
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a8a09a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  /* Lighter chevron so it stays visible on the dark surface. */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.45)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
 }
 .dark .input:focus,
 .dark .select:focus,
@@ -784,49 +657,6 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 .dark .border-blue-100,
 .dark .border-blue-200 { border-color: rgba(217,119,87,0.22) !important; }
 
-/* Semantic status colours — keep red=danger, green=success, amber=warning */
-.dark .bg-red-50   { background-color: rgba(239,68,68,0.10)  !important; }
-.dark .bg-red-100  { background-color: rgba(239,68,68,0.16)  !important; }
-.dark .text-red-500 { color: #fca5a5 !important; }
-.dark .text-red-600 { color: #f87171 !important; }
-.dark .text-red-700 { color: #fca5a5 !important; }
-.dark .text-red-800 { color: #fecaca !important; }
-.dark .border-red-100,
-.dark .border-red-200 { border-color: rgba(239,68,68,0.22) !important; }
-
-.dark .bg-emerald-50,
-.dark .bg-green-50  { background-color: rgba(34,197,94,0.09)  !important; }
-.dark .bg-emerald-100,
-.dark .bg-green-100 { background-color: rgba(34,197,94,0.15)  !important; }
-.dark .text-emerald-600,
-.dark .text-green-600 { color: #6ee7b7 !important; }
-.dark .text-emerald-700,
-.dark .text-green-700 { color: #a7f3d0 !important; }
-.dark .text-emerald-800,
-.dark .text-green-800 { color: #bbf7d0 !important; }
-.dark .border-emerald-100,
-.dark .border-green-100,
-.dark .border-emerald-200,
-.dark .border-green-200 { border-color: rgba(34,197,94,0.20) !important; }
-
-.dark .bg-amber-50  { background-color: rgba(245,158,11,0.10) !important; }
-.dark .bg-amber-100 { background-color: rgba(245,158,11,0.16) !important; }
-.dark .text-amber-600 { color: #fcd34d !important; }
-.dark .text-amber-700 { color: #fde68a !important; }
-.dark .text-amber-800 { color: #fef3c7 !important; }
-.dark .border-amber-100,
-.dark .border-amber-200 { border-color: rgba(245,158,11,0.22) !important; }
-
-.dark .bg-purple-50  { background-color: rgba(168,85,247,0.10) !important; }
-.dark .bg-violet-50  { background-color: rgba(139,92,246,0.10) !important; }
-.dark .text-purple-600,
-.dark .text-violet-600 { color: #c4b5fd !important; }
-.dark .text-purple-700,
-.dark .text-violet-700 { color: #ddd6fe !important; }
-.dark .bg-indigo-50  { background-color: rgba(99,102,241,0.10) !important; }
-.dark .bg-teal-50    { background-color: rgba(20,184,166,0.10) !important; }
-.dark .bg-cyan-50    { background-color: rgba(6,182,212,0.10)  !important; }
-
 /* Kanban horizontal scroller — slim track so the slider doesn't add visual weight. */
 .kanban-scroll::-webkit-scrollbar         { height: 8px; }
 .kanban-scroll::-webkit-scrollbar-track   { background: transparent; }
@@ -841,41 +671,6 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   border-color: rgba(255,255,255,0.10) !important;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4) !important;
 }
-
-/* Modal sheets — hardcoded bg-white in older components goes dark.
-   .modal-in is the class we use on every modal content panel. */
-.dark .modal-in {
-  background: #262624 !important;
-  border-color: rgba(255,255,255,0.10) !important;
-  color: #faf9f5 !important;
-}
-/* Ensure nested text elements inherit the dark modal colour */
-.dark .modal-in .text-slate-900 { color: #faf9f5 !important; }
-.dark .modal-in .text-slate-800 { color: rgba(250,249,245,0.90) !important; }
-.dark .modal-in .text-slate-700 { color: rgba(250,249,245,0.80) !important; }
-.dark .modal-in .text-slate-600 { color: rgba(250,249,245,0.65) !important; }
-.dark .modal-in .text-slate-500 { color: rgba(250,249,245,0.50) !important; }
-.dark .modal-in .text-slate-400 { color: rgba(250,249,245,0.35) !important; }
-.dark .modal-in .text-slate-300 { color: rgba(250,249,245,0.25) !important; }
-/* Nested containers that are bg-white/bg-slate-50 inside a dark modal */
-.dark .modal-in .bg-white          { background: rgba(255,255,255,0.05) !important; }
-.dark .modal-in .bg-slate-50       { background: rgba(255,255,255,0.04) !important; }
-.dark .modal-in .bg-slate-100      { background: rgba(255,255,255,0.07) !important; }
-.dark .modal-in .border-slate-100,
-.dark .modal-in .border-slate-200  { border-color: rgba(255,255,255,0.08) !important; }
-/* Info/status panels inside modals */
-.dark .modal-in .bg-blue-50   { background: rgba(59,130,246,0.12) !important; }
-.dark .modal-in .bg-amber-50  { background: rgba(245,158,11,0.12) !important; }
-.dark .modal-in .bg-red-50    { background: rgba(239,68,68,0.12)  !important; }
-.dark .modal-in .bg-green-50,
-.dark .modal-in .bg-emerald-50 { background: rgba(34,197,94,0.10) !important; }
-.dark .modal-in .border-blue-200  { border-color: rgba(59,130,246,0.25) !important; }
-.dark .modal-in .border-amber-200 { border-color: rgba(245,158,11,0.25) !important; }
-.dark .modal-in .border-red-200   { border-color: rgba(239,68,68,0.25)  !important; }
-.dark .modal-in .text-blue-700    { color: #93c5fd !important; }
-.dark .modal-in .text-blue-500    { color: #60a5fa !important; }
-.dark .modal-in .text-amber-800   { color: #fcd34d !important; }
-.dark .modal-in .text-red-700     { color: #fca5a5 !important; }
 
 /* Selection */
 .dark ::selection { background: rgba(217,119,87,0.35); color: #faf9f5; }
@@ -899,93 +694,30 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
   animation: dashboard-expand-nudge 1s ease-out 3;
 }
 
-/* ── Project-card green expand-pulse ───────────────────────────────────────
-   A soft green ring + tint that ripples behind the *whole* project-card
-   header (not just the chevron) on first paint, so the user notices the
-   row is interactive. Pulses twice then settles silent. */
+/* ── Expand-chevron green pulse ────────────────────────────────────────────
+   A soft green pulse on JUST the expand chevron (not the whole header)
+   so the row's interactivity reads without flooding the entire card.
+   Pulses twice then settles silent. */
 @keyframes pragati-row-expand-blink {
   0%, 100% {
-    box-shadow: inset 0 0 0 0 rgba(34, 197, 94, 0);
-    background-color: transparent;
+    color: rgb(16 185 129);
+    transform: scale(1);
   }
   40% {
-    box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.30);
-    background-color: rgba(34, 197, 94, 0.06);
+    color: rgb(5 150 105);
+    transform: scale(1.35);
   }
 }
 .pragati-row-expand-blink {
-  animation: pragati-row-expand-blink 1200ms ease-out 2;
-}
-
-/* ── Water-drop ring for expand button ─────────────────────────────────────
-   A light-green pulsing ring that ripples outward from the expand button's
-   surrounding circle — the "water drop" effect. The button is wrapped in a
-   relative div; this pseudo-element expands and fades outward, teaching the
-   user that the row is expandable. Loops 3 times then stops. */
-@keyframes expand-water-drop {
-  0%   { transform: scale(1);    opacity: 0.80; }
-  65%  { opacity: 0.12; }
-  100% { transform: scale(2.6);  opacity: 0; }
-}
-.expand-ring-nudge {
-  position: relative;
-}
-.expand-ring-nudge::before,
-.expand-ring-nudge::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 1.5px solid #4ade80;
-  pointer-events: none;
-  animation: expand-water-drop 1.8s ease-out 3 both;
-}
-.expand-ring-nudge::after {
-  animation-delay: 0.65s;
-}
-
-/* ── Bird's-Eye trigger blink ──────────────────────────────────────────────
-   A soft brand-blue ring pulses twice on first paint to draw the eye to the
-   custom Bird's-Eye icon — gives the affordance a moment of presence without
-   a tour modal. */
-@keyframes pragati-birdeye-blink {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(21, 101, 192, 0);
-    color: rgb(100 116 139);
-  }
-  40% {
-    box-shadow: 0 0 0 6px rgba(21, 101, 192, 0.14);
-    color: rgb(21 101 192);
-  }
-}
-.pragati-birdeye-blink {
-  animation: pragati-birdeye-blink 1100ms ease-out 2;
-  border-radius: 9999px;
+  animation: pragati-row-expand-blink 1000ms ease-in-out 2;
+  transform-origin: center;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-expand-nudge,
-  .pragati-row-expand-blink,
-  .pragati-birdeye-blink,
-  .expand-ring-nudge::before,
-  .expand-ring-nudge::after {
+  .pragati-row-expand-blink {
     animation: none;
   }
-}
-
-/* ── My Day whiteboard FAB entrance blink ──────────────────────────────────
-   Pulses a soft ring 3 times then stops — draws the eye to the FAB without
-   being loud. The FAB's resting shadow is brand-blue; the blink ring is
-   emerald so it reads as a distinct "new feature" affordance. */
-@keyframes my-day-fab-blink {
-  0%, 100% { box-shadow: 0 4px 16px rgba(21,101,192,0.35), 0 0 0 0 rgba(34,197,94,0); }
-  50%      { box-shadow: 0 4px 16px rgba(21,101,192,0.35), 0 0 0 10px rgba(34,197,94,0.25); }
-}
-.my-day-fab-blink {
-  animation: my-day-fab-blink 900ms ease-out 3;
-}
-@media (prefers-reduced-motion: reduce) {
-  .my-day-fab-blink { animation: none; }
 }
 
 /* Hide browser-native password reveal button (Edge/Chrome/Safari) to prevent
@@ -993,88 +725,3 @@ a { transition: color 0.15s ease, opacity 0.15s ease; }
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear { display: none; }
 input::-webkit-credentials-auto-fill-button { display: none !important; }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   MOBILE / RESPONSIVE UTILITIES
-   Added for the responsive web app pass. These do not change any existing
-   desktop layout — they only activate at ≤ 640px (sm breakpoint and below).
-   ════════════════════════════════════════════════════════════════════════════ */
-
-/* Safe-area insets — applied to the mobile top strip and any fixed bottom
-   elements so they sit inside the notch / home-bar on iOS / Android. */
-.safe-top    { padding-top:    env(safe-area-inset-top,    0px); }
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.safe-left   { padding-left:   env(safe-area-inset-left,   0px); }
-.safe-right  { padding-right:  env(safe-area-inset-right,  0px); }
-
-/* Modal width guard — ensures modals never overflow the viewport on phones.
-   Combine with max-w-[Xpx]: max-w-modal wins when the viewport is narrow. */
-.max-w-modal {
-  max-width: min(100vw - 1.5rem, 520px);
-}
-.max-w-modal-sm {
-  max-width: min(100vw - 1.5rem, 400px);
-}
-
-/* Minimum touch-target helper — wraps small icons so they have at least a
-   44 × 44px tap zone without enlarging the visual indicator itself.  */
-.touch-target {
-  min-width:  44px;
-  min-height: 44px;
-  display:    inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Kanban: on very small viewports snap each column to nearly-full-width so
-   the board is readable and one column scrolls into view at a time. */
-@media (max-width: 639px) {
-  .kanban-scroll > .kanban-col {
-    width: calc(100vw - 56px) !important;
-    min-width: calc(100vw - 56px) !important;
-  }
-}
-
-/* Table → card reflow: hide the desktop <thead> and make each <tr> render as
-   a stacked card on mobile. Apply class `table-mobile-cards` to the <table>. */
-@media (max-width: 639px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr {
-    display: block;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    padding: 10px 12px;
-    background: var(--bg-card, #ffffff);
-    border: 1px solid var(--border-card, #e2e8f0);
-  }
-  .dark .table-mobile-cards tbody tr {
-    background: rgba(255,255,255,0.035);
-    border-color: rgba(255,255,255,0.08);
-  }
-  .table-mobile-cards tbody td {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding: 3px 0;
-    font-size: 12px;
-    border: none;
-  }
-  .table-mobile-cards tbody td[data-label]::before {
-    content: attr(data-label);
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #94a3b8;
-    min-width: 80px;
-    flex-shrink: 0;
-  }
-  .table-mobile-cards tbody td:empty,
-  .table-mobile-cards tbody td.hide-mobile { display: none; }
-}
-
-/* Bottom padding that includes the iOS home-bar safe-area inset.
-   Adds the env() value on top of any existing bottom padding. */
-.pb-safe {
-  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
-}

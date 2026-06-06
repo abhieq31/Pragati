@@ -438,40 +438,26 @@ export default function NewProjectPage() {
       )}
 
       {/* Header */}
-      <div className="pb-5 mb-6 border-b border-slate-100 dark:border-white/[0.06] pt-1">
-        <div className="flex items-center gap-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="mt-0.5 page-icon-box bg-emerald-50 dark:bg-emerald-500/10 shrink-0">
-              <Plus size={19} className="text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <h1 className="page-title">New project</h1>
-              <p className="text-sm text-slate-500 dark:text-white/45 mt-1 leading-snug">
-                Step {step} of 2 — {step === 1 ? 'Project details' : 'Stages & workflow'}
-              </p>
-            </div>
-          </div>
-          {/* Step pills */}
-          <div className="flex items-center gap-2 shrink-0">
-            {[1, 2].map(s => {
-              const isCurrent = step === s;
-              const isDone    = step > s;
-              return (
-                <button key={s}
-                  onClick={() => isDone && setStep(s as 1 | 2)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    isCurrent
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : isDone
-                        ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 cursor-pointer hover:bg-emerald-200 dark:hover:bg-emerald-500/30'
-                        : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-white/30 cursor-default'
-                  }`}
-                >
-                  {isDone ? '✓' : s} {s === 1 ? 'Details' : 'Stages'}
-                </button>
-              );
-            })}
-          </div>
+      <div className="flex items-center gap-3 mb-6 pt-1">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">New project</h1>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Step {step} of 2 — {step === 1 ? 'Project details' : 'Stages & workflow'}
+          </p>
+        </div>
+        {/* Step pills */}
+        <div className="ml-auto flex items-center gap-2">
+          {[1, 2].map(s => (
+            <button key={s} onClick={() => step > s && setStep(s as 1 | 2)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+              style={{
+                background: step === s ? '#1565C0' : step > s ? '#dcfce7' : '#f1f5f9',
+                color:      step === s ? '#fff'     : step > s ? '#15803d' : '#94a3b8',
+                cursor:     step > s ? 'pointer' : 'default',
+              }}>
+              {step > s ? '✓' : s} {s === 1 ? 'Details' : 'Stages'}
+            </button>
+          ))}
         </div>
       </div>
 
