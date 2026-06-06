@@ -575,11 +575,11 @@ export default function LoginPage() {
             {mode !== 'unlock' && (
             <div className="mb-7 form-swap" key={mode + '-h'}>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                {mode === 'login' ? 'Welcome back' : 'Set up workspace'}
+                {mode === 'login' ? 'Sign in' : 'Set up workspace'}
               </h2>
               <p className="text-sm text-slate-400 mt-1 leading-snug">
                 {mode === 'login'
-                  ? 'Sign in to continue.'
+                  ? 'Welcome to Pragati — sign in to continue.'
                   : 'Create the first lead account.'}
               </p>
             </div>
