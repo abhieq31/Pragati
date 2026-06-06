@@ -91,6 +91,40 @@ Server-rendered detail pages with streaming Suspense skeletons; an Edge middlewa
 
 Architecture deep-dive: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
+## Project structure
+
+```
+src/
+├── app/                      # Next.js App Router
+│   ├── (authed)/             # authenticated surfaces (shared AppShell layout)
+│   │   ├── page.tsx          # dashboard
+│   │   ├── projects/         # list · new · [id] detail
+│   │   ├── teams/            # list · [id] detail
+│   │   ├── people/           # admin-only user directory
+│   │   ├── my-day/           # personal tasks + mind map
+│   │   ├── settings/         # profile, security, preferences
+│   │   ├── audit/            # immutable operations log
+│   │   └── [username]/       # public-within-workspace profile
+│   ├── api/                  # route handlers (auth, projects, tasks, teams, users…)
+│   ├── login/                # unauthenticated entry
+│   └── globals.css           # Tailwind layer + design tokens
+├── components/               # UI — AppShell, SidebarCalendar, SkeletonScreens, ProfileView…
+├── lib/                      # server + client logic
+│   ├── ai/                   # rule-based triage + KB (never an LLM on the scoring path)
+│   ├── flow/                 # Flow Signal meaningful-activity engine
+│   ├── client/               # browser-only helpers (api client, hooks)
+│   ├── auth.ts               # JWT sign/verify, sessions, bcrypt, RBAC helpers
+│   ├── validations.ts        # central Zod schemas — the API boundary contract
+│   ├── cache.ts              # optional Upstash read-through cache
+│   └── serialize.ts          # Mongoose doc → JSON-safe shapes
+├── models/                   # Mongoose schemas (User, Team, Project, Task, AuditLog…)
+└── middleware.ts             # Edge cookie pre-filter for authed routes
+
+docs/                         # ARCHITECTURE · PERFORMANCE · LAUNCH_CHECKLIST · E2E · ROLLOUT…
+scripts/                      # operator + seed CLIs (tsx)
+tests/                        # unit (node:test) + e2e (Playwright)
+```
+
 ## Architectural invariants
 
 The constraints in [`CLAUDE.md`](./CLAUDE.md) are not suggestions:
