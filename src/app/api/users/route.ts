@@ -9,6 +9,7 @@ import { u } from '@/lib/serialize';
 import { handleError, readBody } from '@/lib/http';
 import { UsernameSchema } from '@/lib/validations';
 import { logOperation } from '@/lib/audit';
+import { bustPeopleDirectoryCache } from '@/lib/peopleDirectory';
 
 export const runtime = 'nodejs';
 
@@ -191,6 +192,7 @@ export async function POST(req: NextRequest) {
       summary: `Created contributor ${body.name}`,
     });
 
+    void bustPeopleDirectoryCache();
     // Deliberately does NOT return the password — the UI never displays it.
     return NextResponse.json({ user: u(user) });
   } catch (e) {

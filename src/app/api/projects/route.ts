@@ -12,6 +12,7 @@ import { ProjectCreateSchema } from '@/lib/validations';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { logOperation } from '@/lib/audit';
 import { bustDashboardCache } from '@/lib/leadDashboard';
+import { bustProjectsPageCache } from '@/lib/projectList';
 import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
@@ -183,6 +184,7 @@ export async function POST(req: NextRequest) {
     }
 
     void bustDashboardCache(user!.sub, user!.role);
+    void bustProjectsPageCache(user!.sub, user!.role);
     return NextResponse.json(projectS(project));
   } catch (e) {
     return handleError(e);
