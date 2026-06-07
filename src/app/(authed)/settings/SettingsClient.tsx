@@ -564,17 +564,6 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         }
         actions={
           <div className="flex items-center gap-1.5">
-            {user.username && (
-              <a
-                href={`/${user.username}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur transition hover:bg-white/25"
-                title="Open your public profile"
-              >
-                <ExternalLink size={12} /> View
-              </a>
-            )}
             <button
               type="button"
               onClick={() => setEditingProfile((v) => !v)}
@@ -739,6 +728,19 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
       {generatedKey && (
         <RecoveryKeyModal keyValue={generatedKey} onClose={() => setGeneratedKey(null)} />
+      )}
+
+      {/* View public profile — floating bottom-right anchor */}
+      {user.username && (
+        <a
+          href={`/${user.username}`}
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 shadow-lg px-4 py-2.5 text-[12px] font-bold text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:shadow-xl transition-all duration-150"
+          title="Open your public profile"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <ExternalLink size={13} /> View public profile
+        </a>
       )}
     </div>
   );

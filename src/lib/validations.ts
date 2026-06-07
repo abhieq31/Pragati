@@ -62,6 +62,7 @@ export const ProjectLifecycleEnum = z.enum([
   'vendor_qualification',
   'training_program',
   'product_recall',
+  'discrepancy_qi',
 ]);
 
 export const GxpImpactEnum = z.enum(['none', 'low', 'medium', 'high']);

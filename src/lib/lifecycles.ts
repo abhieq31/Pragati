@@ -39,6 +39,7 @@ export type LifecycleKey =
   | 'vendor_qualification'
   | 'training_program'
   | 'product_recall'
+  | 'discrepancy_qi'
   ;
 
 export type LifecycleGroup = 'General' | 'Life Sciences' | 'Personal';
@@ -1365,6 +1366,69 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
           { title: 'Submit final recall effectiveness report to authority', type: 'task', qa: true, gxp: true },
           { title: 'QA closure sign-off & archive recall file', type: 'approval', qa: true, gxp: true },
           { title: 'Lessons-learned briefing to leadership', type: 'review', qa: true },
+        ]
+      },
+    ]
+  },
+
+  discrepancy_qi: {
+    label: 'Discrepancy – Quality Informatics',
+    description:
+      'End-to-end handling of a Quality Informatics discrepancy — from detection and root cause through CAPA, remediation, and GxP closure.',
+    regulatoryRefs: '21 CFR Part 11, GAMP 5, ALCOA+',
+    group: 'Life Sciences',
+    phases: [
+      {
+        name: 'Detection & Logging',
+        tasks: [
+          { title: 'Log discrepancy with system, date, and observed vs expected behaviour', type: 'deviation', qa: true, gxp: true },
+          { title: 'Assign severity (critical / major / minor) and initial risk score', type: 'task', qa: true, gxp: true },
+          { title: 'Notify QA and system owner within SLA', type: 'task', qa: true, gxp: true },
+          { title: 'Preserve system state — screenshots, log extracts, audit trail export', type: 'data_review', qa: true, gxp: true },
+        ]
+      },
+      {
+        name: 'Containment',
+        tasks: [
+          { title: 'Assess whether affected records are reliable or must be quarantined', type: 'review', qa: true, gxp: true },
+          { title: 'Quarantine or flag impacted data / transactions if required', type: 'task', qa: true, gxp: true },
+          { title: 'Determine if regulatory reporting is triggered', type: 'task', qa: true, gxp: true },
+        ]
+      },
+      {
+        name: 'Root Cause Investigation',
+        tasks: [
+          { title: 'Reproduce issue in non-production environment', type: 'test', qa: true, gxp: true },
+          { title: 'Root cause analysis (5-Why / Ishikawa)', type: 'review', qa: true, gxp: true },
+          { title: 'Review validation documentation for gap (URS / FRS / test scripts)', type: 'data_review', qa: true, gxp: true },
+          { title: 'Determine if other systems or modules are affected', type: 'task', qa: true, gxp: true },
+        ]
+      },
+      {
+        name: 'CAPA Definition',
+        tasks: [
+          { title: 'Define corrective action (fix the root cause)', type: 'capa', qa: true, gxp: true },
+          { title: 'Define preventive action (stop recurrence)', type: 'capa', qa: true, gxp: true },
+          { title: 'Update risk register and control measures', type: 'task', qa: true, gxp: true },
+          { title: 'QA review and approval of CAPA plan', type: 'approval', qa: true, gxp: true },
+        ]
+      },
+      {
+        name: 'Remediation & Testing',
+        tasks: [
+          { title: 'Implement fix / configuration change in dev / staging', type: 'task', gxp: true },
+          { title: 'Execute regression test scripts covering affected functionality', type: 'test', qa: true, gxp: true },
+          { title: 'Re-test discrepancy scenario to confirm resolution', type: 'test', qa: true, gxp: true },
+          { title: 'Update validation documentation (test summary, traceability matrix)', type: 'task', qa: true, gxp: true },
+        ]
+      },
+      {
+        name: 'GxP Closure',
+        tasks: [
+          { title: 'Verify corrected data integrity in production audit trail', type: 'data_review', qa: true, gxp: true },
+          { title: 'QA sign-off with e-signature and justification', type: 'approval', qa: true, gxp: true },
+          { title: 'Close discrepancy record with final disposition statement', type: 'task', qa: true, gxp: true },
+          { title: 'File in controlled document system; notify stakeholders', type: 'task', qa: true, gxp: true },
         ]
       },
     ]

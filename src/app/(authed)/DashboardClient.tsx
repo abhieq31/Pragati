@@ -338,7 +338,7 @@ export default function DashboardClient({
              horizontal line as the project cards (the inline composition shown
              in the production screenshot). It still flows with the page — no
              sticky/own-scroll — so taller contributor lists never clip. */}
-          <div className="space-y-4 pr-1 min-w-0 lg:pt-[31px]">
+          <div className="space-y-4 pr-1 min-w-0">
             <UpNextPanel tasks={visibleTasks} />
             <MyTasksPanel tasks={visibleTasks} myId={myId} />
             {/* Leads see workload across their ICs. Contributors don't need a
