@@ -13,6 +13,7 @@
     "cleanup-users": "tsx scripts/cleanup-users.ts",
     "keep-mes-only": "tsx scripts/keep-mes-only.ts",
     "set-admin": "tsx scripts/set-admin.ts",
+    "reset-tour": "tsx scripts/reset-tour.ts",
     "set-password": "tsx scripts/set-password.ts",
     "backfill-usernames": "tsx scripts/backfill-usernames.ts",
     "migrate-roles": "tsx scripts/migrate-roles.ts",

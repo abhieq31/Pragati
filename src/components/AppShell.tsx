@@ -33,6 +33,12 @@ const SetPinModal = dynamic(
   () => import('./SetPinModal').then(m => m.SetPinModal),
   { ssr: false, loading: () => null },
 );
+// Guided "spotlight" product tour for first-time users — lazy so its portal,
+// rect-tracking, and step data stay out of the bundle for returning users.
+const FirstTimeTour = dynamic(
+  () => import('./FirstTimeTour').then(m => m.FirstTimeTour),
+  { ssr: false, loading: () => null },
+);
 import {
   LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
   LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
@@ -729,6 +735,15 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
             try { await api('/me/pin-prompt-dismissed', { method: 'POST' }); } catch { /* best-effort */ }
           }}
         />
+      )}
+
+      {/* Guided product tour — gated behind the forced-password step so the
+          two full-screen overlays never stack on a brand-new account. The
+          component is itself the source of truth on whether to open: it
+          checks `alreadySeen` (server) and a localStorage fast-path, and
+          POSTs /api/me/tour-seen on dismissal so it never reappears. */}
+      {!mustChangePw && (
+        <FirstTimeTour alreadySeen={!!user.hasSeenTour} />
       )}
 
       {/* Sign-out confirmation — fixed centered modal, works in both expanded and collapsed sidebar */}
