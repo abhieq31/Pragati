@@ -315,9 +315,6 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
                 </div>
               )}
             </div>
-            <div className={`mt-2 pt-1.5 border-t text-[9px] font-medium ${dark ? 'text-white/25 border-white/5' : 'text-slate-300 border-slate-100'}`}>
-              Click any task to open
-            </div>
           </div>
         </div>,
         document.body,
