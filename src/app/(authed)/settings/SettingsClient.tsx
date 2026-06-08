@@ -13,6 +13,7 @@ const ActivityGraph = dynamic(
 import {
   User, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
   AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil, ExternalLink,
+  Mail, Send,
 } from 'lucide-react';
 
 
@@ -330,6 +331,218 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+/* ── Daily-digest shared bits (module scope so inputs never lose focus) ─────── */
+function DigestSwitch({ on, onClick, disabled }: { on: boolean; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button" role="switch" aria-checked={on} disabled={disabled} onClick={onClick}
+      className={`mt-0.5 relative rounded-full shrink-0 transition-colors ${on ? 'bg-blue-600' : 'bg-slate-300 dark:bg-white/15'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      style={{ width: 36, height: 20 }}
+    >
+      <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: on ? 18 : 2 }} />
+    </button>
+  );
+}
+
+function DigestRow({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-100 last:border-0">
+      <div className="min-w-0">
+        <div className="text-sm font-semibold text-slate-700 dark:text-white/80">{label}</div>
+        {desc && <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{desc}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ChecklistItem({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
+  return (
+    <li className="flex items-start gap-2 text-xs">
+      {ok ? <Check size={14} className="text-green-600 mt-0.5 shrink-0" /> : <X size={14} className="text-amber-500 mt-0.5 shrink-0" />}
+      <span className={ok ? 'text-slate-600' : 'text-slate-500'}>
+        <span className="font-semibold">{label}</span>
+        {hint && !ok ? <span className="text-slate-400"> — {hint}</span> : null}
+      </span>
+    </li>
+  );
+}
+
+/* ── Daily task email — personal opt-in (all users) ─────────────────────────
+   The destination address is admin-managed (notifyEmail, or a real login
+   email); the user only controls whether the 08:30 digest is sent. */
+function DailyDigestToggle({ initialUser }: { initialUser: any }) {
+  const loginEmail = initialUser.email || '';
+  const effectiveEmail =
+    (initialUser.notifyEmail || '').trim() ||
+    (loginEmail && !loginEmail.endsWith('@pragati.local') ? loginEmail : '');
+  const canEnable = !!effectiveEmail;
+  const [enabled, setEnabled] = useState<boolean>(!!initialUser.notifDailyDigest);
+  const [saving, setSaving] = useState(false);
+
+  async function toggle() {
+    if (!canEnable) return;
+    const next = !enabled;
+    setEnabled(next);
+    setSaving(true);
+    try {
+      await api('/users/me', { method: 'PATCH', body: { notifDailyDigest: next } });
+    } catch {
+      setEnabled(!next);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div id="daily-email" className="scroll-mt-6">
+      <Section icon={Mail} title="Daily task email" subtitle="A morning email of the tasks you have due that day.">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 text-sm text-slate-600 dark:text-white/60 leading-relaxed">
+            <p>Sent every day at <strong>8:30 AM (IST)</strong> with the tasks assigned to you that are due that day.</p>
+            {canEnable ? (
+              <p className="mt-1.5 text-[12px] text-slate-400">
+                Delivered to <span className="font-semibold text-slate-600 dark:text-white/70">{effectiveEmail}</span>
+              </p>
+            ) : (
+              <p className="mt-1.5 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 inline-block">
+                No email on file yet — ask your administrator to add one to enable this.
+              </p>
+            )}
+          </div>
+          <DigestSwitch on={enabled && canEnable} onClick={toggle} disabled={saving || !canEnable} />
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+/* ── Daily email — workspace settings (admin only) ──────────────────────────
+   Lets the admin tune what every user's digest contains and verify delivery
+   end-to-end with a test send, all without leaving the page. */
+function AdminDigestSettings() {
+  const [cfg, setCfg] = useState<any | null>(null);
+  const [status, setStatus] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState('');
+
+  useEffect(() => {
+    api('/admin/digest-settings')
+      .then((d: any) => { setCfg(d.settings); setStatus(d.status); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function set(key: string, value: any) {
+    setCfg((c: any) => ({ ...c, [key]: value }));
+  }
+
+  async function save() {
+    if (!cfg) return;
+    setSaving(true); setMsg('');
+    try {
+      const d: any = await api('/admin/digest-settings', {
+        method: 'PATCH',
+        body: {
+          enabled: cfg.enabled, dueToday: cfg.dueToday, overdue: cfg.overdue,
+          dueSoonDays: Number(cfg.dueSoonDays) || 0, projectUpdates: cfg.projectUpdates,
+          sendWhenEmpty: cfg.sendWhenEmpty, introNote: cfg.introNote || '',
+        },
+      });
+      setCfg(d.settings); setStatus(d.status);
+      setMsg('Saved'); setTimeout(() => setMsg(''), 2500);
+    } catch (e: any) { setMsg(e.message || 'Save failed.'); }
+    finally { setSaving(false); }
+  }
+
+  async function sendTest() {
+    setTesting(true); setTestMsg('');
+    try {
+      const r: any = await api('/cron/daily-digest?test=1');
+      if (r.sent > 0) setTestMsg('Test sent — check your inbox.');
+      else if (!r.mailerConfigured) setTestMsg('Email isn’t configured yet — set BREVO_API_KEY and BREVO_SENDER_EMAIL.');
+      else if (r.skippedNoEmail > 0) setTestMsg('No deliverable email on your own account.');
+      else setTestMsg('Nothing was sent.');
+    } catch (e: any) { setTestMsg(e.message || 'Test failed.'); }
+    finally { setTesting(false); }
+  }
+
+  if (loading) {
+    return (
+      <Section icon={Mail} title="Daily email — workspace settings" subtitle="Admin · controls every user's 8:30 AM digest.">
+        <div className="text-xs text-slate-400 py-4 text-center">Loading…</div>
+      </Section>
+    );
+  }
+  if (!cfg) return null;
+
+  return (
+    <div id="digest-admin" className="scroll-mt-6">
+      <Section icon={Mail} title="Daily email — workspace settings" subtitle="Admin · controls what every user's 8:30 AM digest contains.">
+        {status && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 mb-4">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Delivery setup</div>
+            <ul className="space-y-1.5">
+              <ChecklistItem ok={status.mailerConfigured} label="Email provider (Brevo)" hint="set BREVO_API_KEY + BREVO_SENDER_EMAIL" />
+              <ChecklistItem ok={status.cronSecretSet} label="Scheduled send (CRON_SECRET)" hint="set CRON_SECRET in Vercel" />
+              <ChecklistItem ok={status.appUrlConfigured} label="In-email links (APP_URL)" hint="set APP_URL for clickable links" />
+            </ul>
+            <div className="text-[11px] text-slate-400 mt-2">
+              Sends daily at {status.sendTimeLocal} · {status.timeZone}{status.senderEmail ? ` · from ${status.senderEmail}` : ''}
+            </div>
+          </div>
+        )}
+
+        <DigestRow label="Send daily digests" desc="Master switch for the whole workspace.">
+          <DigestSwitch on={!!cfg.enabled} onClick={() => set('enabled', !cfg.enabled)} />
+        </DigestRow>
+        <DigestRow label="Tasks due today">
+          <DigestSwitch on={!!cfg.dueToday} onClick={() => set('dueToday', !cfg.dueToday)} />
+        </DigestRow>
+        <DigestRow label="Overdue tasks">
+          <DigestSwitch on={!!cfg.overdue} onClick={() => set('overdue', !cfg.overdue)} />
+        </DigestRow>
+        <DigestRow label="Tasks due soon" desc="Days to look ahead (0 = off, max 14).">
+          <input
+            type="number" min={0} max={14}
+            className="input w-20 text-center"
+            value={cfg.dueSoonDays}
+            onChange={(e) => set('dueSoonDays', Math.max(0, Math.min(14, parseInt(e.target.value, 10) || 0)))}
+          />
+        </DigestRow>
+        <DigestRow label="Project updates" desc="Projects with work completed in the last 24h.">
+          <DigestSwitch on={!!cfg.projectUpdates} onClick={() => set('projectUpdates', !cfg.projectUpdates)} />
+        </DigestRow>
+        <DigestRow label="Send when nothing's due" desc="Off = skip people with an empty day.">
+          <DigestSwitch on={!!cfg.sendWhenEmpty} onClick={() => set('sendWhenEmpty', !cfg.sendWhenEmpty)} />
+        </DigestRow>
+
+        <div className="mt-3.5">
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Intro note (optional)</label>
+          <textarea
+            className="textarea text-sm" rows={2} maxLength={500}
+            placeholder="A short line shown at the top of every digest."
+            value={cfg.introNote || ''}
+            onChange={(e) => set('introNote', e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center flex-wrap gap-3 mt-4">
+          <button onClick={save} disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save settings'}</button>
+          <button onClick={sendTest} disabled={testing} className="btn-secondary gap-1.5">
+            <Send size={13} /> {testing ? 'Sending…' : 'Send test to my email'}
+          </button>
+          {msg && <span className="text-xs text-green-600 font-medium">✓ {msg}</span>}
+          {testMsg && <span className="text-xs text-slate-500">{testMsg}</span>}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
 
 /* ── Password strength ────────────────────────────────────────────────────── */
 function StrengthMeter({ password }: { password: string }) {
@@ -627,6 +840,10 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
           <ActivityGraph />
         </Section>
       </div>
+
+      {/* ── Daily task email — personal opt-in, then (admin) workspace config ── */}
+      <DailyDigestToggle initialUser={initialUser} />
+      {user.role === 'admin' && <AdminDigestSettings />}
 
       {/* ── Account & security — tucked behind a disclosure so the day-to-day
           view stays focused on Profile + Activity. ───────────────────────── */}

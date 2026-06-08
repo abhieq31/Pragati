@@ -21,6 +21,10 @@ const EditableBody = z.object({
   notifTaskDueSoon:   z.boolean().optional(),
   notifTaskOverdue:   z.boolean().optional(),
   notifProjectUpdate: z.boolean().optional(),
+  // Opt-in for the daily 08:30 task-due email. The destination address
+  // (notifyEmail) stays admin-managed and is intentionally NOT self-editable
+  // here — the user only controls whether the digest is sent.
+  notifDailyDigest:   z.boolean().optional(),
   // Monogram avatar (validated tightly so an attacker can't squirrel
   // unbounded HTML/CSS into another user's view via the avatar fields).
   avatarLetter: z.string().max(2).regex(/^[A-Za-z0-9]{0,2}$/, 'Use 1–2 letters or digits').optional(),
@@ -74,6 +78,7 @@ export async function PATCH(req: NextRequest) {
     if (d.notifTaskDueSoon   !== undefined) user.notifTaskDueSoon   = d.notifTaskDueSoon  as any;
     if (d.notifTaskOverdue   !== undefined) user.notifTaskOverdue   = d.notifTaskOverdue  as any;
     if (d.notifProjectUpdate !== undefined) user.notifProjectUpdate = d.notifProjectUpdate as any;
+    if (d.notifDailyDigest   !== undefined) (user as any).notifDailyDigest = d.notifDailyDigest;
     if (d.avatarLetter       !== undefined) (user as any).avatarLetter = d.avatarLetter.toUpperCase();
     if (d.avatarBg           !== undefined) (user as any).avatarBg     = d.avatarBg;
     if (d.avatarFont         !== undefined) (user as any).avatarFont   = d.avatarFont;

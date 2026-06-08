@@ -129,6 +129,21 @@ const UserSchema = new Schema(
     notifTaskOverdue:   { type: Boolean, default: true  },
     notifProjectUpdate: { type: Boolean, default: false },
 
+    // ── Daily task-due email digest ─────────────────────────────────────
+    // notifyEmail is a REAL, deliverable address. It is distinct from the login
+    // `email` above, which for admin-created contributors is a synthetic
+    // `username@pragati.local` placeholder (they sign in by username — see
+    // /api/users). The admin collects notifyEmail when the account is created
+    // and can edit it from People → Edit; users do not self-set it, so the
+    // address of record stays admin-controlled and attributable
+    // (21 CFR Part 11 §11.10(d)). Contact metadata only — never part of a GxP
+    // record or the deterministic triage path.
+    notifyEmail: { type: String, default: '', lowercase: true, trim: true },
+    // Opt-in switch for the 08:30 (IST) "tasks due today" email. Defaults OFF
+    // so no one is emailed until they enable it in their profile — a personal
+    // notification preference (like soundDropEnabled), not a controlled record.
+    notifDailyDigest: { type: Boolean, default: false },
+
     // ── Monogram avatar ─────────────────────────────────────────────────
     // A user-customised letter-on-a-coloured-circle avatar (Google-style),
     // persisted server-side so it propagates everywhere the user's Avatar

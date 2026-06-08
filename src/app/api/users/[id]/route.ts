@@ -28,6 +28,10 @@ const Body = z.object({
   username:   z.string().min(3).max(80).regex(/^[a-z0-9._-]+$/, 'lowercase letters, digits, dot, dash, underscore').optional(),
   email:      z.string().email().max(200).optional(),
   employeeId: z.string().max(80).optional(),
+  // Real notification address (distinct from the login `email`). Admin-managed
+  // contact metadata — editable here to backfill existing accounts. Not an
+  // identity key, so it does NOT require the e-signature gate; empty clears it.
+  notifyEmail: z.union([z.string().trim().toLowerCase().email().max(200), z.literal('')]).optional(),
   department: z.string().max(120).optional(),
   // Soft organisational grouping (business unit, plant, sub-company). Used by
   // people-pickers to group/filter at scale; not a tenant boundary.
@@ -199,7 +203,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Build a before/after diff of just the fields the admin actually changed
     // — the audit row's `meta` is what a reviewer scans to answer "what
     // exactly did they change?" without trawling through the user document.
-    const AUDIT_FIELDS = ['name', 'username', 'email', 'employeeId', 'title',
+    const AUDIT_FIELDS = ['name', 'username', 'email', 'notifyEmail', 'employeeId', 'title',
       'department', 'organisation', 'phone', 'location', 'role', 'active',
       'locked', 'mustChangePassword'] as const;
     const diff: Record<string, { before: any; after: any }> = {};

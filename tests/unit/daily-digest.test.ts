@@ -1,0 +1,149 @@
+/**
+ * Unit tests for the daily task-due digest — the PURE layer only (timezone
+ * windowing, effective-due resolution, bucketing, recipient-address resolution
+ * and rendering). No database is touched, mirroring the other tests/unit specs.
+ */
+
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import {
+  dayWindowInTz,
+  effectiveDue,
+  bucketTasks,
+  digestHasContent,
+  resolveDigestEmail,
+  renderDigestEmail,
+  type DigestTask,
+} from '../../src/lib/digest';
+
+const IST = 'Asia/Kolkata';
+
+// ── dayWindowInTz ─────────────────────────────────────────────────────────────
+
+describe('dayWindowInTz', () => {
+  it('floors to IST midnight (08:30 IST → window starts the previous 18:30Z)', () => {
+    // 2026-06-08T03:00:00Z is 08:30 on 8 June in IST (UTC+5:30).
+    const { start, end } = dayWindowInTz(new Date('2026-06-08T03:00:00Z'), IST);
+    assert.equal(start.toISOString(), '2026-06-07T18:30:00.000Z'); // 00:00 IST, 8 June
+    assert.equal(end.toISOString(), '2026-06-08T18:30:00.000Z');   // 00:00 IST, 9 June
+  });
+
+  it('keeps the same window late in the IST day', () => {
+    // 23:30 IST on 8 June is still inside the 8-June window.
+    const { start } = dayWindowInTz(new Date('2026-06-08T18:00:00Z'), IST);
+    assert.equal(start.toISOString(), '2026-06-07T18:30:00.000Z');
+  });
+});
+
+// ── effectiveDue ──────────────────────────────────────────────────────────────
+
+describe('effectiveDue', () => {
+  it('prefers the Change-Control target date over a plain due date', () => {
+    const d = effectiveDue({ dueDate: '2026-06-10T00:00:00Z', ccTcd: '2026-06-08T00:00:00Z' });
+    assert.equal(d?.toISOString(), '2026-06-08T00:00:00.000Z');
+  });
+  it('returns null when there is no date at all', () => {
+    assert.equal(effectiveDue({}), null);
+  });
+});
+
+// ── bucketTasks ───────────────────────────────────────────────────────────────
+
+describe('bucketTasks', () => {
+  const window = dayWindowInTz(new Date('2026-06-08T03:00:00Z'), IST);
+  const tasks = [
+    { _id: 'a', title: 'overdue one', dueDate: '2026-06-05T10:00:00Z' },
+    { _id: 'b', title: 'due today', dueDate: '2026-06-08T05:00:00Z' },
+    { _id: 'c', title: 'due tomorrow', dueDate: '2026-06-09T06:00:00Z' },
+    { _id: 'd', title: 'far away', dueDate: '2026-06-20T06:00:00Z' },
+    { _id: 'e', title: 'no date' },
+  ];
+
+  it('splits into overdue / today / soon and ignores undated + far tasks', () => {
+    const out = bucketTasks(tasks, window, 3);
+    assert.equal(out.overdue.length, 1);
+    assert.equal(out.today.length, 1);
+    assert.equal(out.soon.length, 1);
+    assert.equal(out.today[0].label, 'Today');
+    assert.equal(out.soon[0].label, 'Tomorrow');
+    assert.match(out.overdue[0].label, /^Overdue \d+d$/);
+  });
+
+  it('drops the look-ahead section when dueSoonDays is 0', () => {
+    const out = bucketTasks(tasks, window, 0);
+    assert.equal(out.soon.length, 0);
+    assert.equal(out.today.length, 1);
+  });
+
+  it('sorts due-today by priority (critical first)', () => {
+    const t = [
+      { _id: '1', title: 'low', priority: 'low', dueDate: '2026-06-08T05:00:00Z' },
+      { _id: '2', title: 'crit', priority: 'critical', dueDate: '2026-06-08T05:00:00Z' },
+    ];
+    const out = bucketTasks(t, window, 0);
+    assert.equal(out.today[0].title, 'crit');
+  });
+});
+
+// ── digestHasContent ──────────────────────────────────────────────────────────
+
+describe('digestHasContent', () => {
+  it('is false only when every section is empty', () => {
+    assert.equal(digestHasContent({ overdue: [], today: [], soon: [], projectUpdates: [] }), false);
+    assert.equal(
+      digestHasContent({ overdue: [], today: [], soon: [], projectUpdates: [{ name: 'P', count: 1 }] }),
+      true,
+    );
+  });
+});
+
+// ── resolveDigestEmail ────────────────────────────────────────────────────────
+
+describe('resolveDigestEmail', () => {
+  it('prefers notifyEmail', () => {
+    assert.equal(resolveDigestEmail({ notifyEmail: 'a@b.com', email: 'x@pragati.local' }), 'a@b.com');
+  });
+  it('falls back to a real login email', () => {
+    assert.equal(resolveDigestEmail({ notifyEmail: '', email: 'real@co.com' }), 'real@co.com');
+  });
+  it('never uses the synthetic placeholder address', () => {
+    assert.equal(resolveDigestEmail({ notifyEmail: '', email: 'u@pragati.local' }), '');
+  });
+});
+
+// ── renderDigestEmail ─────────────────────────────────────────────────────────
+
+describe('renderDigestEmail', () => {
+  const today: DigestTask = {
+    id: 't1', title: 'Fix <A> & B', priority: 'high', projectId: 'p1',
+    bucket: 'today', label: 'Today', effDue: new Date('2026-06-08T05:00:00Z'),
+  };
+
+  it('summarises counts in the subject and HTML-escapes the body', () => {
+    const out = renderDigestEmail({
+      name: 'Priya Sharma',
+      sections: { overdue: [], today: [today], soon: [], projectUpdates: [] },
+      projectName: () => 'Alpha',
+      appUrl: 'https://x.test',
+      dateLabel: 'Monday, 8 June',
+    });
+    assert.match(out.subject, /1 due today/);
+    assert.match(out.html, /Good morning, Priya/);
+    assert.match(out.html, /Fix &lt;A&gt; &amp; B/);   // escaped in HTML
+    assert.match(out.text, /Fix <A> & B/);             // raw in plain text
+    assert.match(out.html, /https:\/\/x\.test\/tasks\/t1/);
+  });
+
+  it('shows an all-clear message when nothing is due', () => {
+    const out = renderDigestEmail({
+      name: 'Sam',
+      sections: { overdue: [], today: [], soon: [], projectUpdates: [] },
+      projectName: () => null,
+      appUrl: '',
+      dateLabel: 'Monday, 8 June',
+    });
+    assert.match(out.subject, /nothing due today/);
+    assert.match(out.html, /all clear/i);
+  });
+});

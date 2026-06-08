@@ -124,12 +124,13 @@ function AddMemberModal({ onClose, onCreated }: {
   onClose: () => void;
   onCreated: (name: string) => void;
 }) {
-  // Two inputs only: the corporate username and the employee ID. The
-  // display name auto-derives from the username (editable if it looks
-  // wrong). No password is collected or shown — contributors sign in with
-  // the standard convention the admin communicates out-of-band.
+  // Corporate username, employee ID, and a real work email (used for the daily
+  // task-due digest). The display name auto-derives from the username (editable
+  // if it looks wrong). No password is collected or shown — contributors sign
+  // in with the standard convention the admin communicates out-of-band.
   const [username, setUsername]     = useState('');
   const [employeeId, setEmployeeId] = useState('');
+  const [email, setEmail]           = useState('');
   const [name, setName]             = useState('');
   const [nameEdited, setNameEdited] = useState(false);
   const [saving, setSaving]         = useState(false);
@@ -148,7 +149,7 @@ function AddMemberModal({ onClose, onCreated }: {
     try {
       const res = await api<{ user: any }>('/users', {
         method: 'POST',
-        body: { name: name.trim() || deriveName(username), username, employeeId },
+        body: { name: name.trim() || deriveName(username), username, employeeId, notifyEmail: email.trim() },
       });
       onCreated(res.user.name);
     } catch (e: any) {
@@ -212,6 +213,25 @@ function AddMemberModal({ onClose, onCreated }: {
           </div>
 
           <div>
+            <label className="label">Work email</label>
+            <input
+              className="input text-sm"
+              type="email"
+              placeholder="priya.sharma@company.com"
+              required
+              maxLength={200}
+              autoCapitalize="none"
+              autoComplete="off"
+              spellCheck={false}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <div className="text-[11px] text-slate-400 mt-1 leading-snug">
+              Where their daily “tasks due today” email is sent. They can turn that email on or off in their profile.
+            </div>
+          </div>
+
+          <div>
             <label className="label">Display name <span className="text-slate-300 font-normal normal-case">(auto-filled)</span></label>
             <input
               className="input"
@@ -239,7 +259,7 @@ function AddMemberModal({ onClose, onCreated }: {
    Paste a roster (one person per line: username, employee ID, name) and
    create contributor accounts in one shot. Built for onboarding a big team
    without adding people one at a time. */
-interface ParsedRow { username: string; employeeId: string; name: string; bad?: string; }
+interface ParsedRow { username: string; employeeId: string; name: string; notifyEmail: string; bad?: string; }
 
 function parseRoster(text: string): ParsedRow[] {
   return text
@@ -249,13 +269,15 @@ function parseRoster(text: string): ParsedRow[] {
     .map((line) => {
       // comma- or tab-separated (so a paste straight from Excel works)
       const parts = line.split(/[,\t]/).map((p) => p.trim());
-      const username   = (parts[0] || '').toLowerCase();
-      const employeeId = parts[1] || '';
-      const name       = parts[2] || '';
+      const username    = (parts[0] || '').toLowerCase();
+      const employeeId  = parts[1] || '';
+      const name        = parts[2] || '';
+      const notifyEmail = (parts[3] || '').toLowerCase();
       let bad: string | undefined;
       if (!/^[a-z][a-z0-9_.]{1,28}[a-z0-9_]$/.test(username)) bad = 'invalid username';
       else if (!employeeId) bad = 'missing employee ID';
-      return { username, employeeId, name, bad };
+      else if (notifyEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notifyEmail)) bad = 'invalid email';
+      return { username, employeeId, name, notifyEmail, bad };
     });
 }
 
@@ -275,7 +297,7 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
     try {
       const res = await api<{ createdCount: number; skippedCount: number; skipped: any[] }>('/users/bulk', {
         method: 'POST',
-        body: { rows: validRows.map((r) => ({ username: r.username, employeeId: r.employeeId, name: r.name || undefined })) },
+        body: { rows: validRows.map((r) => ({ username: r.username, employeeId: r.employeeId, name: r.name || undefined, notifyEmail: r.notifyEmail || undefined })) },
       });
       setResult(res);
       onDone(res.createdCount);
@@ -293,8 +315,8 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
           <div>
             <div className="text-base font-bold text-slate-900">Import contributors</div>
             <div className="text-sm text-slate-400 mt-0.5">
-              One person per line: <span className="font-mono">username, employee ID, name</span>{' '}
-              (name optional). Up to 100 at a time.
+              One person per line: <span className="font-mono">username, employee ID, name, email</span>{' '}
+              (name &amp; email optional). Up to 100 at a time.
             </div>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
@@ -319,7 +341,7 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
           <div className="space-y-3">
             <textarea
               className="textarea text-sm font-mono min-h-[180px]"
-              placeholder={'priya.sharma, 100245, Priya Sharma\narjun.mehta, 100312\nneha.r, 100410, Neha Rao'}
+              placeholder={'priya.sharma, 100245, Priya Sharma, priya.sharma@company.com\narjun.mehta, 100312\nneha.r, 100410, Neha Rao, neha.rao@company.com'}
               value={text}
               onChange={(e) => { setText(e.target.value); setErr(''); }}
               spellCheck={false}
@@ -443,6 +465,7 @@ function EditUserModal({ user, onClose, onSaved }: {
     username:     user.username     || '',
     email:        user.email        || '',
     employeeId:   user.employeeId   || '',
+    notifyEmail:  user.notifyEmail  || '',
     title:        user.title        || '',
     department:   user.department   || '',
     organisation: user.organisation || '',
@@ -534,6 +557,15 @@ function EditUserModal({ user, onClose, onSaved }: {
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Personal details</div>
             <div className="space-y-3">
+              <div>
+                <label className="label">Notification email</label>
+                <input type="email" className="input" placeholder="priya.sharma@company.com"
+                  value={form.notifyEmail}
+                  onChange={e => setForm({ ...form, notifyEmail: e.target.value })} />
+                <p className="text-[11px] text-slate-400 mt-1 leading-snug">
+                  Real address for the daily “tasks due today” email. Leave blank to disable email for this person.
+                </p>
+              </div>
               <div>
                 <label className="label">Job title</label>
                 <input className="input" placeholder="e.g. QA Validation Engineer"

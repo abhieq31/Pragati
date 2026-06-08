@@ -34,6 +34,7 @@ Roles:
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
 - **Productivity touches** — resizable sidebar (drag the edge, persisted), global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars (resized client-side), and per-page loading skeletons that mirror each real layout.
+- **Daily task email** — an opt-in 08:30 IST digest of the tasks each person has due that day. Delivered free via Brevo's transactional API (no SMTP, no extra dependency; inert until configured). A real email is collected when an admin adds a user, and the admin tunes what every digest contains (due today / overdue / due soon / project updates) from **Settings**, with a one-click test send. See [Daily email digest](#daily-email-digest).
 
 ## Security & data integrity
 
@@ -82,6 +83,30 @@ Details: [`docs/DEMO_ENVIRONMENT.md`](./docs/DEMO_ENVIRONMENT.md).
 Full launch runbook (env vars, smoke test, uptime monitor, rollback): [`docs/LAUNCH_CHECKLIST.md`](./docs/LAUNCH_CHECKLIST.md).
 
 Performance budgets and profiling guide: [`docs/PERFORMANCE.md`](./docs/PERFORMANCE.md).
+
+## Daily email digest
+
+An opt-in morning email of the tasks each user has due that day, sent at **08:30 IST**
+(`0 3 * * *` UTC — see `vercel.json`). Everything is inert until configured, so the
+app builds and runs without any of these.
+
+1. **Email provider (free).** Create a [Brevo](https://www.brevo.com) account →
+   *SMTP & API → API Keys* for `BREVO_API_KEY`, and verify a sender under *Senders*
+   for `BREVO_SENDER_EMAIL`. No SMTP, no domain DNS required to start.
+2. **Vercel env vars** (Project → Settings → Environment Variables):
+   `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` (optional),
+   `CRON_SECRET` (`openssl rand -hex 32` — required for the scheduled send to run),
+   and `APP_URL` (absolute site URL for in-email links). Redeploy.
+3. **Collect addresses.** A real email is mandatory when an admin adds a user; for
+   existing accounts, set it from **People → Edit → Notification email**.
+4. **Tune & test.** As admin, open **Settings → Daily email — workspace settings** to
+   choose what each digest contains (due today / overdue / due soon / project updates),
+   add an optional intro note, and **Send test to my email**. The panel shows a live
+   setup checklist of what's still missing.
+
+Each user controls whether they receive it from **Settings → Daily task email** (off by
+default). The digest is a read-only projection of existing task data — it creates no
+records and sits outside the 21 CFR Part 11 e-record scope.
 
 ## Stack
 
