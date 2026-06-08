@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     const [items, total, facets] = await Promise.all([
       User.find(filter)
-        .select('name username email role title department organisation location avatarLetter avatarBg avatarFont active')
+        .select('name username email notifyEmail role title department organisation location avatarLetter avatarBg avatarFont active')
         .sort({ name: 1 })
         .skip(offset)
         .limit(limit)
@@ -140,6 +140,10 @@ const CreateBody = z.object({
   // Company employee ID. Combined with the first name it forms the
   // standard default password (FirstName@employeeId).
   employeeId: z.string().trim().min(1).max(40),
+  // Real, deliverable work email — REQUIRED at creation. The login identity
+  // stays `username@pragati.local` (contributors sign in by username); this
+  // address is used only for notifications such as the daily task-due digest.
+  notifyEmail: z.string().trim().toLowerCase().email('Enter a valid email address').max(200),
   // role is intentionally excluded — all new accounts are contributors.
   // Promotion to Lead requires a separate explicit PATCH action.
   // No job title — a person is shown by their role, nothing else.
@@ -180,6 +184,7 @@ export async function POST(req: NextRequest) {
       username,
       employeeId,
       name:               body.name,
+      notifyEmail:        body.notifyEmail,
       passwordHash:       bcrypt.hashSync(password, 10),
       role:               'contributor',
       // Sign in with the standard default (FirstName@employeeId), then set

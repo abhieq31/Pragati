@@ -69,6 +69,13 @@ export function u(user: any) {
     soundDropEnabled: user.soundDropEnabled !== false,
     githubUrl: user.githubUrl || '',
     following: (user.following || []).map((id: any) => String(id)),
+    // Real notification address (distinct from the synthetic login `email`) and
+    // the per-user opt-in for the daily task-due digest. Surfaced so the
+    // profile page can show where the digest goes and the People → Edit modal
+    // can pre-fill the field. As sensitive as `email`, which is already exposed
+    // here, so no broader leak than today's directory payload.
+    notifyEmail: user.notifyEmail || '',
+    notifDailyDigest: !!user.notifDailyDigest,
   };
 }
 

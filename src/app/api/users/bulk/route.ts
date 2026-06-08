@@ -17,6 +17,10 @@ const Row = z.object({
   username:   UsernameSchema,
   employeeId: z.string().trim().min(1).max(40),
   name:       z.string().trim().max(120).optional(),
+  // Optional real email (4th column). Backward-compatible: existing 3-column
+  // pastes still import; admins can backfill the address later from People →
+  // Edit. Daily digests simply skip anyone without a deliverable address.
+  notifyEmail: z.union([z.string().trim().toLowerCase().email().max(200), z.literal('')]).optional(),
 });
 
 const Body = z.object({
@@ -90,6 +94,7 @@ export async function POST(req: NextRequest) {
           username:           r.username,
           employeeId,
           name,
+          notifyEmail:        r.notifyEmail || '',
           passwordHash:       bcrypt.hashSync(defaultPassword(name, employeeId), 10),
           role:               'contributor',
           mustChangePassword: true,
