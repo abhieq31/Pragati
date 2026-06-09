@@ -615,6 +615,9 @@ export default function TeamDetailPage() {
               status: t.status,
               assigneeName: t.assigneeName ?? null,
               dueDate: (t.ccTcd || t.dueDate) ?? null,
+              subtaskCount: t.subtaskCount,
+              subtasksDone: t.subtasksDone,
+              subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
             })),
           }}
         />
