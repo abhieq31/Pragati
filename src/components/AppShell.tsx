@@ -678,31 +678,36 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
 
-        {/* Mobile-only slim top strip — soft shadow so it lifts off the page as
-            content scrolls under it, instead of exposing a hard white edge. */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-2.5 px-3 h-11"
+        {/* Mobile-only top bar — taller for better touch targets, right side
+            shows notification bell instead of the hamburger (nav is bottom). */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14"
           style={{
-            background: dark ? 'rgba(38,38,36,0.85)' : 'rgba(255,255,255,0.85)',
-            backdropFilter: 'saturate(180%) blur(8px)',
-            WebkitBackdropFilter: 'saturate(180%) blur(8px)',
+            background: dark ? 'rgba(38,38,36,0.92)' : 'rgba(255,255,255,0.92)',
+            backdropFilter: 'saturate(180%) blur(12px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(12px)',
             borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
-            boxShadow: dark ? '0 2px 12px rgba(0,0,0,0.4)' : '0 2px 10px rgba(15,23,42,0.08)',
+            boxShadow: dark ? '0 2px 16px rgba(0,0,0,0.45)' : '0 2px 12px rgba(15,23,42,0.07)',
           }}>
-          <button
-            onClick={() => setOpen(o => !o)}
-            className={`p-1.5 rounded-md -ml-1 transition-colors ${
-              dark ? 'text-white/50 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-            }`}
-            aria-label="Open navigation">
-            <Menu size={18} />
-          </button>
-          <Link href="/" className="flex items-center gap-2">
-            <PragatiMark size={22} />
-            <span className={`brand-wordmark text-[15px] ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}>Pragati</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <PragatiMark size={26} />
+            <span className={`brand-wordmark text-[17px] ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}>Pragati</span>
           </Link>
+          <div className="flex items-center gap-2">
+            <NotificationBell dark={dark} openUp={false} initialUnread={initialUnread} />
+            <button
+              type="button"
+              onClick={() => setAccountMenuOpen(v => !v)}
+              className="relative rounded-full focus:outline-none"
+              aria-label="Account menu"
+              data-tour="account-menu"
+            >
+              <Avatar name={user.name} size={32} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
+            </button>
+          </div>
         </div>
 
-        {/* Page content */}
+        {/* Page content — on mobile, pad the bottom so content isn't hidden
+            behind the bottom tab bar (approx 64px + safe-area). */}
         <main className="flex-1 min-h-0 overflow-y-auto relative">
           {pathname === '/' && (
             <div aria-hidden
@@ -713,11 +718,108 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
               }}
             />
           )}
-          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 relative overflow-x-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 pb-24 lg:pb-7 relative overflow-x-hidden">
             {children}
           </div>
         </main>
+
+        {/* ── Mobile bottom navigation bar ──────────────────────────────── */}
+        {/* Replaces the hamburger drawer for primary navigation on touch
+            devices. The account menu is accessed via the top-bar avatar. */}
+        <nav
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 mobile-bottom-nav"
+          style={{
+            background: dark ? 'rgba(38,38,36,0.97)' : 'rgba(255,255,255,0.97)',
+            borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8edf4',
+            boxShadow: dark ? '0 -4px 20px rgba(0,0,0,0.5)' : '0 -4px 20px rgba(15,23,42,0.08)',
+            backdropFilter: 'saturate(180%) blur(12px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+            paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+          }}
+          aria-label="Main navigation"
+        >
+          <div className="flex items-center justify-around pt-2 px-2">
+            {/* Show up to 4 primary nav items + My Day = 5 tabs max. */}
+            {[...nav.slice(0, 4), myDayItem].map((n) => {
+              const Icon   = n.icon;
+              const active = isActive(n.href);
+              const tourKey = `nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`;
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  prefetch
+                  data-mobile-tour={tourKey}
+                  className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors min-w-[52px]"
+                  style={active ? {
+                    background: dark ? 'rgba(255,255,255,0.06)' : `${n.iconColor}12`,
+                  } : {}}
+                >
+                  <div
+                    className="w-6 h-6 flex items-center justify-center"
+                  >
+                    <Icon
+                      size={active ? 20 : 18}
+                      style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.4)' : '#94a3b8' }}
+                    />
+                  </div>
+                  <span
+                    className="text-[9px] font-semibold truncate max-w-full"
+                    style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.35)' : '#94a3b8' }}
+                  >
+                    {n.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
+
+      {/* Mobile account menu — slides up from the avatar button in the top bar */}
+      {accountMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[55]" onClick={() => setAccountMenuOpen(false)}>
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl shadow-2xl p-6 space-y-1"
+            style={{
+              background: dark ? '#262624' : '#ffffff',
+              border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #dbe3ef',
+              boxShadow: dark ? '0 -20px 60px rgba(0,0,0,0.6)' : '0 -20px 60px rgba(15,23,42,0.15)',
+            }}
+            onClick={e => e.stopPropagation()}
+            onMouseDown={e => e.stopPropagation()}
+          >
+            {/* Drag handle indicator */}
+            <div className="flex justify-center mb-4">
+              <div className="w-10 h-1 rounded-full"
+                style={{ background: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }} />
+            </div>
+            {/* User identity */}
+            <div className="flex items-center gap-3 pb-4 mb-2 border-b"
+              style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}>
+              <Avatar name={user.name} size={44} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
+              <div>
+                <div className={`text-sm font-black ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
+                <div className={`text-[11px] ${dark ? 'text-white/45' : 'text-slate-400'}`}>
+                  {user.username ? `@${user.username}` : roleText}
+                </div>
+              </div>
+            </div>
+            <Link href="/settings" onClick={() => setAccountMenuOpen(false)}
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
+              <UserCircle size={18} className="text-slate-400" /> Profile &amp; settings
+            </Link>
+            <button type="button" onClick={() => { toggleDark(); setAccountMenuOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
+              {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-400" />}
+              {dark ? 'Light mode' : 'Dark mode'}
+            </button>
+            <button type="button" onClick={() => { setAccountMenuOpen(false); setConfirmLogout(true); }}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-600 hover:bg-red-50'}`}>
+              <LogOut size={18} /> Sign out
+            </button>
+          </div>
+        </div>
+      )}
 
       {mustChangePw && (
         <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />

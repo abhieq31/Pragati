@@ -6,6 +6,7 @@ import { useIsLead } from '@/components/CurrentUserContext';
 import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus, Lock } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
+import { clearSidebarCalendarCache } from '@/components/SidebarCalendar';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
 interface Phase { id: string; name: string; tasks: string[] }
@@ -297,6 +298,7 @@ export default function NewProjectPage() {
     name: '', description: '', lifecycle: 'generic',
     priority: 'medium', gxpImpact: 'none',
     teamId: '', startDate: '', dueDate: '',
+    ccNo: '',
   });
   const [phases, setPhases]     = useState<Phase[]>([]);
   const [teams, setTeams]       = useState<any[]>([]);
@@ -410,10 +412,13 @@ export default function NewProjectPage() {
           teamId:      finalPersonal ? undefined : (form.teamId || undefined),
           startDate:   form.startDate || undefined,
           dueDate:     form.dueDate || undefined,
+          ccNo:        form.ccNo.trim() || undefined,
           useTemplate: false,
           customPhases: phases.map(ph => ({ name: ph.name, tasks: ph.tasks })),
         },
       });
+      // Bust the sidebar calendar cache so newly-added tasks appear immediately.
+      clearSidebarCalendarCache();
       router.push(`/projects/${p.id}`);
     } catch (e: any) {
       setErr(e.message || 'Something went wrong.');
@@ -512,6 +517,24 @@ export default function NewProjectPage() {
                   minDate={form.startDate ? new Date(form.startDate) : undefined} />
               </div>
             </div>
+            {!personal && (
+              <div>
+                <label className="label">
+                  Reference number
+                  <span className="normal-case font-normal text-slate-300 ml-1">(optional)</span>
+                </label>
+                <input
+                  className="input font-mono"
+                  placeholder="e.g. CC-2025-042"
+                  maxLength={60}
+                  value={form.ccNo}
+                  onChange={e => up('ccNo', e.target.value)}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Your own reference number (e.g. Change Control ID). Shown everywhere instead of the system-generated code.
+                </p>
+              </div>
+            )}
             {/* Personal toggle — flips the project between a private personal
                 project (no team) and a shared team project. The privacy of
                 personal projects is intentionally not advertised in the copy

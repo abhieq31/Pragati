@@ -135,9 +135,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       .select('_id name isPersonal personal ownerId').lean();
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const ownsPersonal = !!(((existing as any).isPersonal || (existing as any).personal) && String((existing as any).ownerId) === user!.sub);
-    if (!ownsPersonal && user!.role !== 'admin') {
-      return NextResponse.json({ error: 'Only an admin can delete a shared project.' }, { status: 403 });
+    const isOwner = String((existing as any).ownerId) === user!.sub;
+    const isAdminRole = user!.role === 'admin' || user!.role === 'master_admin';
+    // Admins can delete any project; project owners (including leads) can
+    // delete their own project (shared or personal) after password re-auth.
+    if (!isAdminRole && !isOwner) {
+      return NextResponse.json({ error: 'Only the project owner or an admin can delete this project.' }, { status: 403 });
     }
 
     const body = await readBody(req, DeleteProjectSchema);

@@ -209,8 +209,8 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
                       <Lock size={9} /> Private
                     </span>
                   ) : (
-                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.05] px-2 py-0.5 rounded">
-                      {p.code}
+                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.05] px-2 py-0.5 rounded" title={p.ccNo ? `System ref: ${p.code}` : undefined}>
+                      {p.ccNo || p.code}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full"

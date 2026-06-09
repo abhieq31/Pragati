@@ -1142,7 +1142,13 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
         {/* Left — identity, description, then status directly below it */}
         <div className="min-w-0 md:flex-1">
-          <div className="text-[11px] text-slate-400 font-mono break-all">{project.isPersonal ? 'Personal' : project.code}</div>
+          {/* Show the user-defined reference (ccNo) when set; otherwise show system code */}
+          <div className="text-[11px] text-slate-400 font-mono break-all">
+            {project.isPersonal ? 'Personal' : (project.ccNo || project.code)}
+            {project.ccNo && (
+              <span className="ml-1.5 opacity-50 text-[9px]">[{project.code}]</span>
+            )}
+          </div>
           {!project.isPersonal && (
             <div className="flex items-center gap-1 mt-0.5">
               <span className="text-[11px] text-slate-400 font-mono">CC#:</span>
@@ -1362,9 +1368,11 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                 <Archive size={13} /> {project.archived ? 'Restore' : 'Archive'}
               </button>
             )}
-            {(isAdmin || (project?.isPersonal && me && project.ownerId === me.id)) && (
+            {/* Delete is available to: admins, and project owners (personal or shared).
+                Kept deliberately low-contrast so it's not the first thing eyes land on. */}
+            {(isAdmin || isOwner) && (
               <button onClick={() => setDeleteOpen(true)}
-                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors">
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-red-100 text-red-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-all opacity-60 hover:opacity-100">
                 <Trash2 size={13} /> Delete
               </button>
             )}
