@@ -273,28 +273,32 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
                 </div>
 
                 {/* Footer */}
-                <div className="mt-auto pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-[11.5px] text-slate-500 dark:text-white/40">
-                    <span className="font-semibold">
-                      <span className="text-slate-800 dark:text-white/80 font-black">{p.tasksDone}</span>
-                      <span className="text-slate-300 dark:text-white/20">/</span>{p.taskCount} done
+                <div className="mt-auto pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-[11px] min-w-0">
+                    <span className="font-semibold text-slate-500 dark:text-white/40 shrink-0">
+                      <span className="text-slate-800 dark:text-white/82 font-black">{p.tasksDone}</span>
+                      <span className="text-slate-300 dark:text-white/20">/</span>
+                      <span>{p.taskCount}</span>
+                      <span className="ml-1">done</span>
                     </span>
                     {p.tasksOverdue > 0 && (
-                      <span className="text-red-500 font-bold">{p.tasksOverdue} overdue</span>
+                      <span className="text-[10.5px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                        {p.tasksOverdue} overdue
+                      </span>
                     )}
                   </div>
                   {p.dueDate && (
                     <span
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                         dueTone === 'red'
-                          ? 'text-red-600 bg-red-50 dark:bg-red-500/10'
+                          ? 'text-red-600 bg-red-50 dark:bg-red-500/10 dark:text-red-400'
                           : dueTone === 'amber'
-                            ? 'text-amber-700 bg-amber-50 dark:bg-amber-500/10'
-                            : 'text-slate-500 bg-slate-50 dark:bg-white/[0.04] dark:text-white/40'
+                            ? 'text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400'
+                            : 'text-slate-500 bg-slate-50 dark:bg-white/[0.05] dark:text-white/38'
                       }`}
                       title={dueIn !== null ? (dueIn < 0 ? `${Math.abs(dueIn)} day${Math.abs(dueIn) === 1 ? '' : 's'} overdue` : `${dueIn} day${dueIn === 1 ? '' : 's'} left`) : ''}
                     >
-                      Due {formatDate(p.dueDate)}
+                      {dueIn !== null && dueIn < 0 ? `${Math.abs(dueIn)}d overdue` : `Due ${formatDate(p.dueDate)}`}
                     </span>
                   )}
                 </div>

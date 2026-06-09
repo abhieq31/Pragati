@@ -1629,6 +1629,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               assigneeName: t.assigneeName ?? null,
               dueDate: (t.ccTcd || t.dueDate) ?? null,
               phaseName: (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.name ?? null,
+              subtaskCount: t.subtaskCount,
+              subtasksDone: t.subtasksDone,
+              subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
             })),
           }}
         />

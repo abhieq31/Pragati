@@ -59,6 +59,10 @@ export interface BirdsEyeTask {
   dueDate?: string | null;
   /** Project-scope only: groups tasks under a phase row. Ignored elsewhere. */
   phaseName?: string | null;
+  subtaskCount?: number;
+  subtasksDone?: number;
+  /** First few subtask titles for inline rendering inside the task node. */
+  subtaskTitles?: string[];
 }
 
 export interface BirdsEyeData {
@@ -114,19 +118,22 @@ interface PositionedNode {
    *  text agree on how many rows are drawn. */
   titleLines?: string[];
   data?: any;
+  /** Whether inline subtask list is visible (computed in fitTaskHeight). */
+  showSubtasks?: boolean;
 }
 
 interface Edge { from: string; to: string }
 
 // Top-down org-chart geometry. Nodes shrink at deeper levels so a wide tree
-// stays scannable from above.
-const NODE_WIDTH  = { root: 300, team: 234, project: 224, phase: 210, task: 224, count: 210 } as const;
-const NODE_HEIGHT = { root: 78,  team: 64,  project: 70,  phase: 46,  task: 54,  count: 40  } as const;
-const LEVEL_GAP_Y = 78;   // vertical distance between depth levels
-const SIBLING_GAP_X = 28; // horizontal distance between siblings of the same parent
-const SUBTREE_GAP_X = 52; // extra horizontal gap between sibling subtrees
-const TASK_STACK_GAP_Y = 10;  // vertical spacing inside a project's task stack
-const PADDING = 56;       // canvas padding around the whole tree
+// stays scannable from above. Sizes tuned to keep the default (tasks-collapsed)
+// view clean — individual projects expand to show task detail on demand.
+const NODE_WIDTH  = { root: 280, team: 218, project: 206, phase: 192, task: 202, count: 192 } as const;
+const NODE_HEIGHT = { root: 68,  team: 54,  project: 60,  phase: 38,  task: 46,  count: 32  } as const;
+const LEVEL_GAP_Y = 68;   // vertical distance between depth levels
+const SIBLING_GAP_X = 22; // horizontal distance between siblings of the same parent
+const SUBTREE_GAP_X = 40; // extra horizontal gap between sibling subtrees
+const TASK_STACK_GAP_Y = 9;   // vertical spacing inside a project's task stack
+const PADDING = 48;       // canvas padding around the whole tree
 
 function nodeKey(kind: string, id: string) { return `${kind}:${id}`; }
 
@@ -233,12 +240,24 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     return out;
   }
 
-  // Re-measure a node's height to fit its wrapped title (keeps the box from
-  // clipping a two-line task name).
+  // Re-measure a node's height to fit its wrapped title + optional inline
+  // subtask list. Subtask rows are shown when the task has subtask titles AND
+  // the node is NOT collapsed in collapsedIds.
   function fitTaskHeight(n: PositionedNode) {
+    const t = n.data as BirdsEyeTask | undefined;
     const lines = n.titleLines?.length || 1;
     const subRows = n.sub ? 1 : 0;
-    n.height = 16 + lines * 15 + subRows * 14;
+    const rawTitles = t?.subtaskTitles;
+    const hasSubData = rawTitles && rawTitles.length > 0;
+    const taskCollapsed = collapsedIds.has(n.id);
+    n.showSubtasks = hasSubData && !taskCollapsed;
+    if (n.showSubtasks) {
+      const visibleRows = Math.min(3, rawTitles!.length);
+      // title rows + assignee row + subtask rows + progress strip
+      n.height = 14 + lines * 15 + subRows * 12 + visibleRows * 12 + 10;
+    } else {
+      n.height = 14 + lines * 15 + subRows * 13;
+    }
   }
 
   const collapsedIds = opts.collapsedIds || new Set<string>();
@@ -472,16 +491,46 @@ function NodeShape({ n }: { n: PositionedNode }) {
     const fill = STATUS_FILL[t?.status || 'todo'];
     const stroke = STATUS_STROKE[t?.status || 'todo'];
     const dot = STATUS_DOT[t?.status || 'todo'];
+    const subtaskTitles = n.showSubtasks ? (t?.subtaskTitles || []).slice(0, 3) : [];
+    // Y offset where the title block ends — subtask rows start here
+    const titleEndY = n.y + 16 + (n.titleLines?.length || 1) * 15;
+    const hasProgress = n.showSubtasks && (t?.subtaskCount ?? 0) > 0;
+    const progressRatio = hasProgress
+      ? Math.max(0, Math.min(1, (t!.subtasksDone ?? 0) / (t!.subtaskCount ?? 1)))
+      : 0;
+
     return (
       <g>
         <title>{fullTitle}</title>
-        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={10}
+        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={9}
           fill={fill} stroke={stroke} strokeWidth={1} filter="url(#beNodeShadow)" />
-        <circle cx={n.x + 13} cy={n.y + 16} r={3.5} fill={dot} />
-        <text x={n.x + 24} y={n.y + 19}>
-          <MultiText x={n.x + 24} lines={lines} fontSize={11.5} lineHeight={14} fill="#0f172a" weight={600} />
+        {/* Status dot */}
+        <circle cx={n.x + 12} cy={n.y + 14} r={3.5} fill={dot} />
+        {/* Task title */}
+        <text x={n.x + 22} y={n.y + 17}>
+          <MultiText x={n.x + 22} lines={lines} fontSize={11.5} lineHeight={14} fill="#0f172a" weight={600} />
         </text>
-        {n.sub && <text x={n.x + 13} y={n.y + n.height - 9} fontSize={9.5} fill="#64748b">{n.sub}</text>}
+        {/* Assignee / date — only when there's no subtask list below */}
+        {n.sub && !n.showSubtasks && (
+          <text x={n.x + 12} y={n.y + n.height - 8} fontSize={9.5} fill="#64748b">{n.sub}</text>
+        )}
+        {/* Inline subtask list */}
+        {subtaskTitles.map((st, i) => (
+          <text key={i} x={n.x + 16} y={titleEndY + i * 12} fontSize={8.5} fill="#64748b">
+            <tspan fill={dot} fontSize={6} dy={0}>■</tspan>
+            <tspan dx={3}>{st.length > 26 ? st.slice(0, 25) + '…' : st}</tspan>
+          </text>
+        ))}
+        {/* Subtask progress bar */}
+        {hasProgress && (
+          <>
+            <rect x={n.x + 12} y={n.y + n.height - 8} width={n.width - 24} height={2.5} rx={1.25}
+              fill="#e2e8f0" />
+            <rect x={n.x + 12} y={n.y + n.height - 8}
+              width={(n.width - 24) * progressRatio} height={2.5} rx={1.25}
+              fill={dot} opacity={0.75} />
+          </>
+        )}
       </g>
     );
   }
@@ -523,7 +572,10 @@ export function BirdsEyeView({ data, onClose, onChange }: {
 }) {
   const [mounted, setMounted] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [collapseTasks, setCollapseTasks] = useState(data.tasks.length > 120);
+  // Default collapsed — shows compact count chips per project so the initial
+  // view is clean. The user can expand all tasks with "Show tasks" or collapse
+  // individual project task stacks with the − button on each project node.
+  const [collapseTasks, setCollapseTasks] = useState(true);
   const [editing, setEditing] = useState<{ node: PositionedNode; clientX: number; clientY: number } | null>(null);
   const [addingTaskFor, setAddingTaskFor] = useState<{ node: PositionedNode; clientX: number; clientY: number } | null>(null);
   // Per-node drag overrides {id → {dx,dy}} — applied on top of the computed
@@ -816,9 +868,13 @@ export function BirdsEyeView({ data, onClose, onChange }: {
           </div>
           <div className="flex items-center gap-1 flex-wrap sm:flex-nowrap sm:shrink-0">
             <button onClick={() => { userZoomed.current = false; setCollapseTasks((v) => !v); }}
-              title={collapseTasks ? 'Show every task' : 'Collapse each project to a task count'}
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
-              <Layers size={13} /> {collapseTasks ? 'Show tasks' : 'Group tasks'}
+              title={collapseTasks ? 'Expand all projects to show individual tasks' : 'Collapse each project to a task-count summary'}
+              className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors ${
+                collapseTasks
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}>
+              <Layers size={13} /> {collapseTasks ? 'Expand tasks' : 'Group tasks'}
             </button>
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
             <button onClick={() => zoomBy(-0.1)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100" title="Zoom out"><ZoomOut size={15} /></button>
@@ -907,7 +963,10 @@ export function BirdsEyeView({ data, onClose, onChange }: {
                       : n.kind === 'project' ? `/projects/${(n.data as BirdsEyeProject).id}`
                       : n.kind === 'team' ? `/teams/${(n.data as BirdsEyeTeam).id}` : null;
                     const isTask = n.kind === 'task';
-                    const canCollapse = n.kind === 'team' || n.kind === 'project' || n.kind === 'phase';
+                    // Task nodes with subtasks are also collapsible — clicking
+                    // hides/shows the inline subtask list inside the node.
+                    const canCollapse = n.kind === 'team' || n.kind === 'project' || n.kind === 'phase'
+                      || (isTask && !!((n.data as BirdsEyeTask)?.subtaskTitles?.length));
                     const canAddTask  = n.kind === 'project' || n.kind === 'phase';
                     const isCollapsed = collapsedIds.has(n.id);
                     const dragProps = {
@@ -935,25 +994,26 @@ export function BirdsEyeView({ data, onClose, onChange }: {
                       </g>
                     ) : null;
 
-                    // Collapse/expand toggle — top-right inside team/project/phase
-                    // nodes. Click hides the subtree without losing what's there.
+                    // Collapse/expand toggle — top-right for team/project/phase,
+                    // bottom-right for task nodes (which already have the edit
+                    // pencil in the top-right corner).
+                    const collapseCx = isTask ? n.x + n.width - 11 : n.x + n.width - 11;
+                    const collapseCy = isTask ? n.y + n.height - 11 : n.y + 11;
                     const collapseBtn = canCollapse ? (
                       <g
                         data-be-action="collapse"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCollapsed(n.id); }}
                         style={{ cursor: 'pointer' }}
                       >
-                        <title>{isCollapsed ? 'Expand' : 'Hide children'}</title>
-                        <circle cx={n.x + n.width - 11} cy={n.y + 11} r={8.5} fill="#ffffff" stroke="#cbd5e1" strokeWidth={0.8} />
+                        <title>{isCollapsed ? 'Expand' : 'Collapse'}</title>
+                        <circle cx={collapseCx} cy={collapseCy} r={8} fill="#ffffff" stroke="#cbd5e1" strokeWidth={0.8} />
                         {isCollapsed ? (
-                          // "+" shows when collapsed (click to expand)
                           <>
-                            <line x1={n.x + n.width - 15} y1={n.y + 11} x2={n.x + n.width - 7} y2={n.y + 11} stroke="#1565C0" strokeWidth={1.6} strokeLinecap="round" />
-                            <line x1={n.x + n.width - 11} y1={n.y + 7}  x2={n.x + n.width - 11} y2={n.y + 15} stroke="#1565C0" strokeWidth={1.6} strokeLinecap="round" />
+                            <line x1={collapseCx - 4} y1={collapseCy} x2={collapseCx + 4} y2={collapseCy} stroke="#1565C0" strokeWidth={1.6} strokeLinecap="round" />
+                            <line x1={collapseCx} y1={collapseCy - 4} x2={collapseCx} y2={collapseCy + 4} stroke="#1565C0" strokeWidth={1.6} strokeLinecap="round" />
                           </>
                         ) : (
-                          // "−" shows when expanded (click to hide)
-                          <line x1={n.x + n.width - 15} y1={n.y + 11} x2={n.x + n.width - 7} y2={n.y + 11} stroke="#475569" strokeWidth={1.6} strokeLinecap="round" />
+                          <line x1={collapseCx - 4} y1={collapseCy} x2={collapseCx + 4} y2={collapseCy} stroke="#475569" strokeWidth={1.6} strokeLinecap="round" />
                         )}
                       </g>
                     ) : null;
@@ -1036,7 +1096,7 @@ export function BirdsEyeView({ data, onClose, onChange }: {
               <span>{k.l}</span>
             </span>
           ))}
-          <span className="ml-auto text-slate-400 hidden sm:inline">Drag a node to rearrange · pencil to edit · tap to open.</span>
+          <span className="ml-auto text-slate-400 hidden sm:inline">Drag to rearrange · − to collapse · pencil to edit · tap to open.</span>
         </div>
 
         {editing && (

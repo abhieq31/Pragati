@@ -197,6 +197,9 @@ function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
       status: t.status,
       assigneeName: t.assigneeName ?? null,
       dueDate: (t.ccTcd || t.dueDate) ?? null,
+      subtaskCount: t.subtaskCount,
+      subtasksDone: t.subtasksDone,
+      subtaskTitles: t.subtaskTitles?.slice(0, 5),
     })),
   };
 }
@@ -710,159 +713,148 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
   const doneCount = sorted.filter((t) => t.status === 'done').length;
 
   return (
-    <ul>
-      {/* ── Section divider ─────────────────────────────────────────── */}
-      <li aria-hidden className="px-4 pt-3 pb-2 bg-slate-50/50 dark:bg-white/[0.02]">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-white/40">
-            Tasks by target date
+    <div className="bg-slate-50/60 dark:bg-black/[0.12]">
+      {/* Header bar — distinguishes the task panel from the project card header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200/60 dark:border-white/[0.07]">
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-white/35">
+          Tasks · target date order
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[9.5px] font-bold text-slate-400 dark:text-white/28 tabular-nums">
+            {doneCount}/{sorted.length} done
           </span>
-          <span className="text-[9.5px] font-bold text-slate-400 dark:text-white/30 tabular-nums">
-            {doneCount} / {sorted.length} done
-          </span>
+          <Link href={`/projects/${projectId}`}
+            className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+            Board →
+          </Link>
         </div>
-      </li>
+      </div>
 
-      {visible.map((t) => {
-        const isDone    = t.status === 'done';
-        const due       = t.ccTcd || t.dueDate;
-        const dueIn     = daysUntil(due);
-        const isOverdue = !isDone && !!due && dueIn !== null && dueIn < 0;
-        const isBlocked = t.status === 'blocked';
+      <ul>
+        {visible.map((t) => {
+          const isDone    = t.status === 'done';
+          const due       = t.ccTcd || t.dueDate;
+          const dueIn     = daysUntil(due);
+          const isOverdue = !isDone && !!due && dueIn !== null && dueIn < 0;
+          const isBlocked = t.status === 'blocked';
 
-        /* Dot colour — five-value system:
-           green=done (check icon), red=overdue|blocked, amber=due≤3d,
-           blue=active, grey=todo/future/undated */
-        const [dotColor, dotTitle] = ((): [string, string] => {
-          if (isBlocked) return ['#ef4444', 'Blocked'];
-          if (isOverdue) return ['#ef4444', 'Overdue'];
-          if (dueIn !== null && dueIn <= 3) return ['#d97706', 'Due soon'];
-          if (t.status === 'in_progress') return ['#1565C0', 'In progress'];
-          if (t.status === 'review')      return ['#1565C0', 'In review'];
-          return ['#94a3b8', 'To do'];
-        })();
+          const [dotColor, dotTitle] = ((): [string, string] => {
+            if (isDone)                         return ['#10b981', 'Done'];
+            if (isBlocked)                      return ['#ef4444', 'Blocked'];
+            if (isOverdue)                      return ['#ef4444', 'Overdue'];
+            if (dueIn !== null && dueIn <= 3)   return ['#d97706', 'Due soon'];
+            if (t.status === 'in_progress')     return ['#1565C0', 'In progress'];
+            if (t.status === 'review')          return ['#7c3aed', 'In review'];
+            return ['#94a3b8', 'To do'];
+          })();
 
-        /* Workflow-state chip — a always-visible, tinted label of the task's
-           own status (To do / In progress / In review / Done), distinct from
-           the urgency badges (Overdue / Blocked / Unassigned). Makes each row's
-           state legible at a glance instead of relying on the small dot. */
-        const stateMeta = ((): { label: string; fg: string; bg: string } | null => {
-          if (isDone)                     return { label: 'Done',        fg: '#059669', bg: 'rgba(16,185,129,0.12)' };
-          if (t.status === 'in_progress') return { label: 'In progress', fg: '#1565C0', bg: 'rgba(21,101,192,0.12)' };
-          if (t.status === 'review')      return { label: 'In review',   fg: '#7c3aed', bg: 'rgba(124,58,237,0.12)' };
-          if (t.status === 'todo' || !t.status) return { label: 'To do', fg: '#64748b', bg: 'rgba(100,116,139,0.12)' };
-          return null;
-        })();
+          const stateMeta = ((): { label: string; fg: string; bg: string } | null => {
+            if (isDone)                     return { label: 'Done',        fg: '#059669', bg: 'rgba(16,185,129,0.12)' };
+            if (t.status === 'in_progress') return { label: 'In progress', fg: '#1565C0', bg: 'rgba(21,101,192,0.12)' };
+            if (t.status === 'review')      return { label: 'In review',   fg: '#7c3aed', bg: 'rgba(124,58,237,0.12)' };
+            if (t.status === 'todo' || !t.status) return { label: 'To do', fg: '#64748b', bg: 'rgba(100,116,139,0.10)' };
+            return null;
+          })();
 
-        // Human-friendly date copy: stays as a short month/day for far-out
-        // dates, switches to "in Nd" within a week, "today", or "Nd over" so
-        // urgency reads at a glance without a separate badge.
-        const dateLabel = !due ? null
-          : isDone ? formatDate(due)
-          : dueIn === null ? formatDate(due)
-          : dueIn < 0 ? `${Math.abs(dueIn)}d over`
-          : dueIn === 0 ? 'Today'
-          : dueIn <= 7 ? `in ${dueIn}d`
-          : formatDate(due);
-        const dateTone = isDone
-          ? 'text-slate-300 dark:text-white/20'
-          : isOverdue
-            ? 'text-red-600 dark:text-red-400 font-bold'
-            : dueIn !== null && dueIn <= 3
-              ? 'text-amber-700 dark:text-amber-400 font-bold'
-              : 'text-slate-400 dark:text-white/28';
+          const dateLabel = !due ? null
+            : isDone ? formatDate(due)
+            : dueIn === null ? formatDate(due)
+            : dueIn < 0 ? `${Math.abs(dueIn)}d over`
+            : dueIn === 0 ? 'Today'
+            : dueIn <= 7 ? `in ${dueIn}d`
+            : formatDate(due);
+          const dateTone = isDone
+            ? 'text-slate-300 dark:text-white/20'
+            : isOverdue
+              ? 'text-red-600 dark:text-red-400 font-bold'
+              : dueIn !== null && dueIn <= 3
+                ? 'text-amber-700 dark:text-amber-400 font-bold'
+                : 'text-slate-400 dark:text-white/28';
 
-        return (
-          <li key={t.id} className="border-t border-slate-50 dark:border-white/[0.03]">
-            {/* Whole row is the link — no redundant "Open" affordance. Larger
-                tap target, less visual noise, and a clear hover affordance
-                via background + title colour change. */}
-            <Link
-              href={`/tasks/${t.id}`}
-              className="group flex items-start gap-2.5 px-4 py-2.5 hover:bg-slate-50/70 dark:hover:bg-white/[0.03] transition-colors"
-            >
-              {/* Status indicator */}
-              <div className="shrink-0 mt-[3px]">
-                {isDone ? (
-                  <CheckCircle2 size={14} className="text-emerald-500" />
-                ) : (
-                  <span
-                    title={dotTitle}
-                    aria-label={dotTitle}
-                    className="block w-2 h-2 rounded-full"
-                    style={{ background: dotColor, boxShadow: `0 0 0 2px ${dotColor}1f` }}
-                  />
-                )}
-              </div>
+          return (
+            <li key={t.id} className="border-b border-slate-100 dark:border-white/[0.05] last:border-0">
+              <Link
+                href={`/tasks/${t.id}`}
+                className="group relative flex items-start gap-3 pl-5 pr-4 py-3 hover:bg-white dark:hover:bg-white/[0.04] transition-colors"
+              >
+                {/* Left status strip — the primary visual anchor that makes each
+                    row readable at a glance; colour tracks the task's urgency/state */}
+                <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full"
+                  style={{ background: dotColor, opacity: isDone ? 0.25 : 0.75 }} />
 
-              {/* Row content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`flex-1 min-w-0 text-[13px] font-semibold line-clamp-1 leading-snug ${
-                      isDone
-                        ? 'line-through decoration-slate-300 dark:decoration-white/20 text-slate-500 dark:text-white/40'
-                        : 'text-slate-800 dark:text-white/82 group-hover:text-blue-700 dark:group-hover:text-blue-400'
-                    }`}
-                  >
-                    {t.title}
-                  </span>
-
-                  {/* Workflow-state chip — always shown so the status reads at a
-                      glance. Suppressed for blocked/overdue, which carry their
-                      own red exception badge below. */}
-                  {stateMeta && !isBlocked && !isOverdue && (
-                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                      style={{ color: stateMeta.fg, background: stateMeta.bg }}>
-                      {stateMeta.label}
-                    </span>
-                  )}
-
-                  {/* Exception badges — only when action is needed */}
-                  {isOverdue && (
-                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
-                      Overdue
-                    </span>
-                  )}
-                  {isBlocked && !isOverdue && (
-                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded">
-                      Blocked
-                    </span>
-                  )}
-                  {!t.assigneeName && !isDone && (
-                    <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded">
-                      Unassigned
-                    </span>
-                  )}
-
-                  {/* Due date */}
-                  {dateLabel && (
-                    <span className={`shrink-0 text-[10.5px] tabular-nums ${dateTone}`}>
-                      {dateLabel}
-                    </span>
+                {/* Status dot */}
+                <div className="shrink-0 mt-0.5">
+                  {isDone ? (
+                    <CheckCircle2 size={15} style={{ color: dotColor, opacity: 0.5 }} />
+                  ) : (
+                    <span
+                      title={dotTitle}
+                      aria-label={dotTitle}
+                      className="block w-2.5 h-2.5 rounded-full"
+                      style={{ background: dotColor, boxShadow: `0 0 0 3px ${dotColor}28` }}
+                    />
                   )}
                 </div>
 
-                {/* Assignee — small avatar + name. Skipped when the row is
-                    flagged "Unassigned" above, and kept compact so the
-                    metadata line doesn't compete with the title. */}
-                {t.assigneeName && (
-                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/35">
-                    <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={16} />
-                    <span className="truncate">{t.assigneeName}</span>
+                {/* Row content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`flex-1 min-w-0 text-[13px] font-semibold line-clamp-1 leading-snug ${
+                      isDone
+                        ? 'line-through decoration-slate-300/60 dark:decoration-white/20 text-slate-400 dark:text-white/35'
+                        : 'text-slate-800 dark:text-white/85 group-hover:text-blue-700 dark:group-hover:text-blue-400'
+                    }`}>
+                      {t.title}
+                    </span>
+
+                    {stateMeta && !isBlocked && !isOverdue && (
+                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                        style={{ color: stateMeta.fg, background: stateMeta.bg }}>
+                        {stateMeta.label}
+                      </span>
+                    )}
+
+                    {isOverdue && (
+                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-md">
+                        Overdue
+                      </span>
+                    )}
+                    {isBlocked && !isOverdue && (
+                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-md">
+                        Blocked
+                      </span>
+                    )}
+                    {!t.assigneeName && !isDone && (
+                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
+                        Unassigned
+                      </span>
+                    )}
+
+                    {dateLabel && (
+                      <span className={`shrink-0 text-[10.5px] tabular-nums ${dateTone}`}>
+                        {dateLabel}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            </Link>
-          </li>
-        );
-      })}
+
+                  {t.assigneeName && (
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-white/30">
+                      <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={15} />
+                      <span className="truncate">{t.assigneeName}</span>
+                    </div>
+                  )}
+                </div>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
 
       {sorted.length > 20 && (
-        <li className="border-t border-slate-50 dark:border-white/[0.03]">
+        <div className="border-t border-slate-100 dark:border-white/[0.06]">
           <Link
             href={`/projects/${projectId}`}
-            className="group flex items-center justify-between gap-3 px-4 py-2.5 text-[10.5px] hover:bg-slate-50/70 dark:hover:bg-white/[0.03] transition-colors"
+            className="group flex items-center justify-between gap-3 px-5 py-2.5 text-[10.5px] hover:bg-white dark:hover:bg-white/[0.04] transition-colors"
           >
             <span className="text-slate-400 dark:text-white/28">
               Showing 20 of {sorted.length} tasks
@@ -871,9 +863,9 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
               Open project board →
             </span>
           </Link>
-        </li>
+        </div>
       )}
-    </ul>
+    </div>
   );
 }
 
@@ -979,12 +971,12 @@ function ProjectRow({
         </div>
       </header>
 
-      {/* Tasks table */}
+      {/* Tasks panel — slightly sunken look separates it from the project header */}
       {open && (
-        <div className="border-t border-slate-100 dark:border-white/[0.05] fade-in-soft">
+        <div className="border-t-2 border-slate-100 dark:border-white/[0.08] fade-in-soft">
           {tasks.length === 0 ? (
-            <div className="py-10 text-center">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-50 dark:bg-white/[0.04] mb-2">
+            <div className="py-10 text-center bg-slate-50/60 dark:bg-black/[0.12]">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-white/[0.06] shadow-sm mb-2">
                 <CheckCircle2 size={18} className="text-slate-300 dark:text-white/25" />
               </div>
               <div className="text-[12px] font-semibold text-slate-500 dark:text-white/45">No tasks yet for this project.</div>
@@ -1089,48 +1081,50 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
           <div className="text-[11px] text-slate-400 dark:text-white/25">All caught up — {myDone} done.</div>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-50 dark:divide-white/[0.04] max-h-72 overflow-y-auto">
+        <ul className="divide-y divide-slate-100 dark:divide-white/[0.06] max-h-72 overflow-y-auto">
           {myTasks.slice(0, 15).map(t => {
             const due = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
             const overdue = due && new Date(due) < new Date() && t.status !== 'done';
+            const dotColor = t.status === 'in_progress' ? '#3B82F6'
+              : t.status === 'review' ? '#8B5CF6'
+              : t.status === 'blocked' ? '#EF4444'
+              : '#94A3B8';
             return (
               <li key={t.id}>
                 <Link href={`/tasks/${t.id}`}
-                  className={`block px-4 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/45 dark:hover:bg-red-500/[0.05]' : 'hover:bg-slate-50/60 dark:hover:bg-white/[0.025]'}`}>
-                  <div className="flex items-start gap-2">
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[t.status] ? '' : 'bg-slate-300'}`}
-                      style={{ background: t.status === 'in_progress' ? '#3B82F6' : t.status === 'review' ? '#8B5CF6' : t.status === 'blocked' ? '#EF4444' : '#94A3B8' }} />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium text-slate-700 dark:text-white/70 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-400">
-                        {t.title}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
-                        <span className="font-semibold">{t.projectCode}</span>
-                        {due && (
-                          <>
-                            <span>·</span>
-                            <span className={overdue ? 'text-red-500 font-semibold' : ''}>
-                              {dueIn === null ? formatDate(due)
-                                : dueIn < 0 ? `${Math.abs(dueIn)}d overdue`
-                                : dueIn === 0 ? 'today'
-                                : `in ${dueIn}d`}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                  className={`flex items-start gap-3 px-4 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.05]' : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.03]'}`}>
+                  <span className="mt-1.5 w-2 h-2 rounded-full shrink-0"
+                    style={{ background: dotColor, boxShadow: `0 0 0 3px ${dotColor}28` }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/75 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-400">
+                      {t.title}
                     </div>
-                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded shrink-0 opacity-80 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
-                      {STATUS_LABEL[t.status] || t.status}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
+                      <span className="font-mono font-bold text-slate-500 dark:text-white/40">{t.projectCode}</span>
+                      {due && (
+                        <>
+                          <span className="text-slate-300 dark:text-white/15">·</span>
+                          <span className={overdue ? 'text-red-500 font-bold' : ''}>
+                            {dueIn === null ? formatDate(due)
+                              : dueIn < 0 ? `${Math.abs(dueIn)}d overdue`
+                              : dueIn === 0 ? 'today'
+                              : `in ${dueIn}d`}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+                    {STATUS_LABEL[t.status] || t.status}
+                  </span>
                 </Link>
               </li>
             );
           })}
           {myTasks.length > 15 && (
-            <li className="px-4 py-2 text-[10px] text-slate-400 dark:text-white/30 border-t border-slate-50 dark:border-white/[0.04]">
-              +{myTasks.length - 15} more — <Link href="/my-day" className="text-blue-600 font-semibold">view in My Day →</Link>
+            <li className="px-4 py-2.5 text-[10px] text-slate-400 dark:text-white/30">
+              +{myTasks.length - 15} more — <Link href="/my-day" className="text-blue-600 dark:text-blue-400 font-bold">view in My Day →</Link>
             </li>
           )}
         </ul>
@@ -1332,68 +1326,60 @@ function ActionGroup({
           <div className="text-[11px] text-slate-400 dark:text-white/25">{emptyHint || 'All clear'}</div>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-50 dark:divide-white/[0.04]">
+        <ul className="divide-y divide-slate-100 dark:divide-white/[0.05]">
           {tasks.slice(0, limit).map(t => {
             const due   = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
-            // Pill summarising urgency. Overdue is red; today is amber;
-            // anything else is the neutral grey of "in the future".
             const pill = (() => {
               if (dueIn === null) return { label: due ? formatDate(due) : '—', cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
-              if (dueIn < 0)  return { label: `${Math.abs(dueIn)}d late`, cls: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300' };
+              if (dueIn < 0)   return { label: `${Math.abs(dueIn)}d late`, cls: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300' };
               if (dueIn === 0) return { label: 'Today',                    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' };
-              if (dueIn <= 2) return { label: `${dueIn}d`,                 cls: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' };
-              return                  { label: `${dueIn}d`,                 cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
+              if (dueIn <= 2)  return { label: `${dueIn}d`,                cls: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' };
+              return                   { label: `${dueIn}d`,                cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
             })();
             return (
               <li key={t.id}>
                 <Link href={`/tasks/${t.id}`}
-                  className={`block px-4 py-2.5 transition-colors group ${
+                  className={`flex items-center gap-3 px-4 py-2.5 transition-colors group ${
                     isOverdue
-                      ? 'hover:bg-red-50/45 dark:hover:bg-red-500/[0.05]'
-                      : 'hover:bg-slate-50/60 dark:hover:bg-white/[0.025]'
+                      ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.05]'
+                      : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.03]'
                   }`}>
-                  <div className="flex items-center gap-2">
-                    {/* Title + project code on row 1 — code is a chip, not a
-                        trailing word, so it reads as identity, not metadata. */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/85 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-300">
-                          {t.title}
-                        </div>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
-                        {t.projectCode && (
-                          <span className="font-mono text-[10px] font-bold text-slate-500 dark:text-white/40">
-                            {t.projectCode}
-                          </span>
-                        )}
-                        {t.assigneeName && (
-                          <>
-                            <span className="text-slate-300 dark:text-white/15">·</span>
-                            <span className="truncate max-w-[120px]">{t.assigneeName}</span>
-                          </>
-                        )}
-                        {due && (
-                          <>
-                            <span className="text-slate-300 dark:text-white/15">·</span>
-                            <span>{formatDate(due)}</span>
-                          </>
-                        )}
-                      </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/85 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                      {t.title}
                     </div>
-                    {/* Urgency pill — colour-coded so a scan picks out the
-                        red and amber rows first. */}
-                    <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${pill.cls}`}>
-                      {pill.label}
-                    </span>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
+                      {t.projectCode && (
+                        <span className="font-mono font-bold text-slate-500 dark:text-white/40">
+                          {t.projectCode}
+                        </span>
+                      )}
+                      {t.assigneeName && (
+                        <>
+                          <span className="text-slate-200 dark:text-white/15">·</span>
+                          <span className="truncate max-w-[120px]">{t.assigneeName}</span>
+                        </>
+                      )}
+                      {due && (
+                        <>
+                          <span className="text-slate-200 dark:text-white/15">·</span>
+                          <span>{formatDate(due)}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
+                  <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${pill.cls}`}>
+                    {pill.label}
+                  </span>
                 </Link>
               </li>
             );
           })}
           {tasks.length > limit && (
-            <li className="px-4 py-2 text-[10px] text-slate-400 dark:text-white/30">+{tasks.length - limit} more</li>
+            <li className="px-4 py-2.5 text-[10px] text-slate-400 dark:text-white/30">
+              +{tasks.length - limit} more
+            </li>
           )}
         </ul>
       )}
@@ -1632,46 +1618,42 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
               No open assignments — capacity available.
             </div>
           ) : (
-            <ul className="px-4 space-y-2 pb-1">
+            <ul className="mx-3 mb-2 divide-y divide-slate-100 dark:divide-white/[0.05] rounded-xl border border-slate-100 dark:border-white/[0.06] overflow-hidden bg-white dark:bg-white/[0.02]">
               {sorted.slice(0, 5).map(t => {
                 const due = t.ccTcd || t.dueDate;
                 const dueIn = daysUntil(due);
                 const overdue = due && new Date(due) < new Date();
                 return (
-                  <li key={t.id} className="text-[11px] bg-slate-50/60 dark:bg-white/[0.03] rounded-lg p-2 border border-slate-100 dark:border-white/[0.05]">
+                  <li key={t.id}>
                     <Link href={`/tasks/${t.id}`}
-                      className="font-semibold text-slate-700 dark:text-white/70 hover:text-blue-700 dark:hover:text-blue-400 line-clamp-1 block">
-                      {t.title}
-                    </Link>
-                    <div className="text-[10px] text-slate-400 dark:text-white/30 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                      <span className="font-semibold">{t.projectCode}</span>
-                      <span>·</span>
-                      <span className={`px-1 py-0 rounded ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'} text-[9px] font-bold`}>
-                        {STATUS_LABEL[t.status] || t.status}
-                      </span>
-                      {t.subtaskCount > 0 && (
-                        <>
-                          <span>·</span>
-                          <span>{t.subtasksDone}/{t.subtaskCount} subtasks</span>
-                        </>
-                      )}
-                      {due && (
-                        <>
-                          <span>·</span>
-                          <span className={overdue ? 'text-red-500 font-semibold' : ''}>
-                            {dueIn === null ? formatDate(due)
-                              : dueIn < 0 ? `${Math.abs(dueIn)}d late`
-                              : dueIn === 0 ? 'today'
-                              : `${dueIn}d`}
+                      className={`flex items-start gap-2.5 px-3 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.04]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]'}`}>
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: t.status === 'in_progress' ? '#3B82F6' : t.status === 'review' ? '#8B5CF6' : t.status === 'blocked' ? '#EF4444' : '#94A3B8' }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11.5px] font-semibold text-slate-700 dark:text-white/70 hover:text-blue-700 dark:group-hover:text-blue-400 line-clamp-1">
+                          {t.title}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-white/30 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono font-bold text-slate-500 dark:text-white/40">{t.projectCode}</span>
+                          <span className={`px-1 py-0 rounded-sm ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'} text-[9px] font-bold`}>
+                            {STATUS_LABEL[t.status] || t.status}
                           </span>
-                        </>
-                      )}
-                    </div>
+                          {t.subtaskCount > 0 && <span>{t.subtasksDone}/{t.subtaskCount} sub</span>}
+                          {due && (
+                            <span className={overdue ? 'text-red-500 font-semibold' : ''}>
+                              {dueIn === null ? formatDate(due) : dueIn < 0 ? `${Math.abs(dueIn)}d late` : dueIn === 0 ? 'today' : `${dueIn}d`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
                   </li>
                 );
               })}
               {sorted.length > 5 && (
-                <li className="text-[10px] text-slate-400 dark:text-white/30 pt-1">+{sorted.length - 5} more</li>
+                <li className="px-3 py-2 text-[10px] text-slate-400 dark:text-white/30">
+                  +{sorted.length - 5} more tasks
+                </li>
               )}
             </ul>
           )}
