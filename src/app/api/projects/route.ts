@@ -116,12 +116,21 @@ export async function POST(req: NextRequest) {
     }
 
     const lc = LIFECYCLES[body.lifecycle as LifecycleKey] || LIFECYCLES.generic;
+
+    // Generate a collision-resistant code using a timestamp+random suffix
+    // instead of countDocuments — the count approach is not race-safe and
+    // also counts cancelled/archived projects, causing duplicate-key errors.
+    function genProjectCode(lifecycle: string): string {
+      const prefix = lifecycle.toUpperCase().replace(/_/g, '').slice(0, 8);
+      const year   = new Date().getFullYear();
+      const ts     = Date.now().toString(36).slice(-4).toUpperCase();
+      const rand   = Math.random().toString(36).slice(2, 5).toUpperCase();
+      return `${prefix}-${year}-${ts}${rand}`;
+    }
+
     const code = isPersonal
       ? `PRSN-${String(user!.sub).slice(-6)}-${Date.now().toString(36).toUpperCase()}`
-      : body.code ||
-        `${(body.lifecycle || 'generic').toUpperCase()}-${new Date().getFullYear()}-${String(
-          (await Project.countDocuments({})) + 1
-        ).padStart(4, '0')}`;
+      : body.code || genProjectCode(body.lifecycle || 'generic');
 
     // Use customPhases if provided, otherwise fall back to lifecycle template.
     // Personal projects start empty — they are an unstructured private list,
@@ -140,6 +149,7 @@ export async function POST(req: NextRequest) {
 
     const project = await Project.create({
       code,
+      ccNo: body.ccNo || '',
       name: body.name,
       description: body.description || '',
       lifecycle: isPersonal ? 'generic' : body.lifecycle,

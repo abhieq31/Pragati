@@ -369,12 +369,18 @@ function ChecklistItem({ ok, label, hint }: { ok: boolean; label: string; hint?:
 }
 
 /* ── Daily task email — personal opt-in (all users) ─────────────────────────
-   The destination address is admin-managed (notifyEmail, or a real login
-   email); the user only controls whether the 08:30 digest is sent. */
+   The destination address can now be self-managed; the user also controls
+   whether the 08:30 digest is sent. */
 function DailyDigestToggle({ initialUser }: { initialUser: any }) {
   const loginEmail = initialUser.email || '';
+  const [notifyEmail, setNotifyEmail] = useState<string>(initialUser.notifyEmail || '');
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailErr, setEmailErr] = useState('');
+
   const effectiveEmail =
-    (initialUser.notifyEmail || '').trim() ||
+    notifyEmail.trim() ||
     (loginEmail && !loginEmail.endsWith('@pragati.local') ? loginEmail : '');
   const canEnable = !!effectiveEmail;
   const [enabled, setEnabled] = useState<boolean>(!!initialUser.notifDailyDigest);
@@ -394,20 +400,94 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
     }
   }
 
+  async function saveEmail() {
+    const val = emailDraft.trim();
+    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      setEmailErr('Enter a valid email address.');
+      return;
+    }
+    setSavingEmail(true); setEmailErr('');
+    try {
+      await api('/users/me', { method: 'PATCH', body: { notifyEmail: val } });
+      setNotifyEmail(val);
+      setEditingEmail(false);
+    } catch (e: any) {
+      setEmailErr(e.message || 'Could not save email.');
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
   return (
     <div id="daily-email" className="scroll-mt-6">
       <Section icon={Mail} title="Daily task email" subtitle="A morning email of the tasks you have due that day.">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 text-sm text-slate-600 dark:text-white/60 leading-relaxed">
+          <div className="min-w-0 text-sm text-slate-600 dark:text-white/60 leading-relaxed flex-1">
             <p>Sent every day at <strong>8:30 AM (IST)</strong> with the tasks assigned to you that are due that day.</p>
             {canEnable ? (
-              <p className="mt-1.5 text-[12px] text-slate-400">
-                Delivered to <span className="font-semibold text-slate-600 dark:text-white/70">{effectiveEmail}</span>
-              </p>
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                {editingEmail ? (
+                  <>
+                    <input
+                      type="email"
+                      value={emailDraft}
+                      onChange={e => { setEmailDraft(e.target.value); setEmailErr(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter') saveEmail(); if (e.key === 'Escape') setEditingEmail(false); }}
+                      className="input text-sm py-1 px-2 w-56"
+                      placeholder="your@email.com"
+                      autoFocus
+                    />
+                    <button onClick={saveEmail} disabled={savingEmail} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                      {savingEmail ? 'Saving…' : 'Save'}
+                    </button>
+                    <button onClick={() => { setEditingEmail(false); setEmailErr(''); }} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+                    {emailErr && <span className="text-xs text-red-600 w-full">{emailErr}</span>}
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[12px] text-slate-500 dark:text-white/50">
+                      Delivered to <span className="font-semibold text-slate-700 dark:text-white/70">{effectiveEmail}</span>
+                    </span>
+                    <button onClick={() => { setEmailDraft(notifyEmail); setEditingEmail(true); }}
+                      className="text-[11px] font-semibold text-blue-600 hover:underline">
+                      Change
+                    </button>
+                  </>
+                )}
+              </div>
             ) : (
-              <p className="mt-1.5 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 inline-block">
-                No email on file yet — ask your administrator to add one to enable this.
-              </p>
+              <div className="mt-2 space-y-2">
+                {editingEmail ? (
+                  <>
+                    <input
+                      type="email"
+                      value={emailDraft}
+                      onChange={e => { setEmailDraft(e.target.value); setEmailErr(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter') saveEmail(); if (e.key === 'Escape') setEditingEmail(false); }}
+                      className="input text-sm py-1 px-2 w-56"
+                      placeholder="your@email.com"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-2">
+                      <button onClick={saveEmail} disabled={savingEmail} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                        {savingEmail ? 'Saving…' : 'Save email'}
+                      </button>
+                      <button onClick={() => { setEditingEmail(false); setEmailErr(''); }} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+                    </div>
+                    {emailErr && <p className="text-xs text-red-600">{emailErr}</p>}
+                  </>
+                ) : (
+                  <div>
+                    <p className="text-[12px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-lg px-2.5 py-1.5 inline-block">
+                      No delivery email set yet.
+                    </p>
+                    <button onClick={() => { setEmailDraft(''); setEditingEmail(true); }}
+                      className="block mt-1.5 text-[12px] font-semibold text-blue-600 hover:underline">
+                      + Add your email address
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <DigestSwitch on={enabled && canEnable} onClick={toggle} disabled={saving || !canEnable} />

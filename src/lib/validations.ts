@@ -132,6 +132,9 @@ export const UsernameSchema = z
 export const ProjectCreateSchema = z.object({
   name: z.string().min(1, 'Project name is required').max(200),
   code: z.string().max(40).optional(),
+  // User-defined reference number (e.g. "CC-2025-042"). Stored as ccNo;
+  // distinct from the auto-generated `code` system identifier.
+  ccNo: z.string().max(60).optional(),
   description: z.string().max(5000).optional(),
   lifecycle: ProjectLifecycleEnum.default('generic'),
   priority: PriorityEnum.optional(),
