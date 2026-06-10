@@ -4,10 +4,14 @@
 // so content materialises in place instead of swapping out a spinner and
 // reflowing. No JS, no hydration.
 import { PragatiMark } from '@/components/PragatiMark';
+import { LoadingQuip } from '@/components/LoadingQuip';
 
 export default function Loading() {
   return (
     <div className="pb-12 max-w-[1440px]">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       {/* Greeting row */}
       <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
         <div className="space-y-2">

@@ -1,8 +1,24 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sunrise, X, CheckCircle2, ShieldCheck, AlertTriangle, Users } from 'lucide-react';
+import { Sunrise, X, CheckCircle2, ShieldCheck, AlertTriangle, Users, Bell, BellRing } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useCurrentUser } from '@/components/CurrentUserContext';
+import { QUIP_NAME_KEY } from '@/components/LoadingQuip';
+
+/* ── Web Push opt-in (zero-cost channel; hidden when not configured) ──────── */
+
+const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+
+function urlBase64ToUint8Array(base64: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const raw = atob((base64 + padding).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+function pushSupported(): boolean {
+  return !!VAPID_PUBLIC && 'serviceWorker' in navigator && 'PushManager' in window;
+}
 
 /**
  * Morning Brief card — the in-app renderer of the Daily Brief object
@@ -80,15 +96,62 @@ function TaskRow({ item, tone }: { item: BriefItem; tone: 'overdue' | 'today' | 
 }
 
 export function DailyBrief() {
+  const currentUser = useCurrentUser();
   const [brief, setBrief] = useState<Brief | null>(null);
   const [dismissed, setDismissed] = useState(true); // assume hidden until we know
+  // 'hidden' = push not configured/supported here; otherwise off/on/busy.
+  const [push, setPush] = useState<'hidden' | 'off' | 'on' | 'busy'>('hidden');
+
+  // Cache the first name so the loading screens can greet by name.
+  useEffect(() => {
+    const first = (currentUser?.name || '').trim().split(/\s+/)[0];
+    if (first) localStorage.setItem(QUIP_NAME_KEY, first);
+  }, [currentUser?.name]);
 
   useEffect(() => {
     setDismissed(!!localStorage.getItem(dismissKey()));
     api<Brief>('/me/brief')
       .then(setBrief)
       .catch(() => {});
+    if (pushSupported()) {
+      navigator.serviceWorker
+        .getRegistration()
+        .then((reg) => reg?.pushManager.getSubscription())
+        .then((sub) => setPush(sub ? 'on' : 'off'))
+        .catch(() => setPush('off'));
+    }
   }, []);
+
+  async function togglePush() {
+    if (push === 'busy' || push === 'hidden') return;
+    setPush('busy');
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        await api('/push/subscribe', { method: 'DELETE', body: { endpoint: existing.endpoint } });
+        await existing.unsubscribe();
+        setPush('off');
+        return;
+      }
+      if ((await Notification.requestPermission()) !== 'granted') {
+        setPush('off');
+        return;
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC) as BufferSource,
+      });
+      const json = sub.toJSON();
+      await api('/push/subscribe', {
+        method: 'POST',
+        body: { endpoint: sub.endpoint, keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth } },
+      });
+      setPush('on');
+    } catch {
+      setPush('off');
+    }
+  }
 
   if (dismissed || !brief || !brief.hasContent) return null;
 
@@ -117,18 +180,44 @@ export function DailyBrief() {
                 {brief.dateLabel}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                localStorage.setItem(dismissKey(), '1');
-                setDismissed(true);
-              }}
-              aria-label="Dismiss for today"
-              title="Dismiss for today"
-              className="shrink-0 p-1 rounded text-slate-300 hover:text-slate-600 dark:text-white/25 dark:hover:text-white/60 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
-            >
-              <X size={13} />
-            </button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              {push !== 'hidden' && (
+                <button
+                  type="button"
+                  onClick={togglePush}
+                  disabled={push === 'busy'}
+                  aria-label={
+                    push === 'on'
+                      ? 'Turn off morning notification'
+                      : 'Get this brief as a morning notification'
+                  }
+                  title={
+                    push === 'on'
+                      ? 'Morning notification on — click to turn off'
+                      : 'Get this brief as a morning notification (free, on this device)'
+                  }
+                  className={`p-1 rounded transition-colors ${
+                    push === 'on'
+                      ? 'text-amber-500 hover:text-amber-600'
+                      : 'text-slate-300 hover:text-slate-600 dark:text-white/25 dark:hover:text-white/60 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {push === 'on' ? <BellRing size={13} /> : <Bell size={13} />}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem(dismissKey(), '1');
+                  setDismissed(true);
+                }}
+                aria-label="Dismiss for today"
+                title="Dismiss for today"
+                className="p-1 rounded text-slate-300 hover:text-slate-600 dark:text-white/25 dark:hover:text-white/60 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+              >
+                <X size={13} />
+              </button>
+            </div>
           </div>
 
           {/* The one sentence that says where to start. */}

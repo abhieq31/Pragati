@@ -1,11 +1,14 @@
 /**
  * LinkedIn-style skeleton screens.
  *
- * These are intentionally quiet: no spinner, no brand animation, no fake copy.
+ * These are intentionally quiet: no spinner, no brand animation. The only
+ * copy is one small personalised LoadingQuip line per page.
  * The blocks mirror the page structure that is about to load, which gives the
  * eye a stable layout immediately and prevents the content from jumping when the
  * server payload arrives.
  */
+import { LoadingQuip } from '@/components/LoadingQuip';
+
 function Skel({ className = '' }: { className?: string }) {
   return <div aria-hidden className={`skeleton ${className}`} />;
 }
@@ -191,6 +194,9 @@ function SectionCard({
 export function DashboardSkeleton() {
   return (
     <div className="pb-12 max-w-[1440px] space-y-5" role="status" aria-label="Loading dashboard">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="flex items-center justify-between gap-3 mb-4">
         <Skel className="h-9 w-72 max-w-full rounded-xl" />
       </div>
@@ -261,6 +267,9 @@ export function DashboardSkeleton() {
 export function ProjectsListSkeleton() {
   return (
     <div className="pb-12 max-w-[1120px] space-y-5" role="status" aria-label="Loading projects">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="flex items-start justify-between pt-1">
         <div className="space-y-2">
           <Skel className="h-9 w-32 rounded-lg" />
@@ -288,6 +297,9 @@ export function ProjectsListSkeleton() {
 export function TeamsListSkeleton() {
   return (
     <div className="pb-12 max-w-[1120px] space-y-5" role="status" aria-label="Loading teams">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="flex items-start justify-between gap-3 flex-wrap pt-1">
         <div className="space-y-2">
           <Skel className="h-9 w-24 rounded-lg" />
@@ -303,6 +315,9 @@ export function TeamsListSkeleton() {
 export function ProjectDetailSkeleton() {
   return (
     <div className="pb-12 max-w-[1440px] space-y-5" role="status" aria-label="Loading project">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="card p-5 sm:p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="space-y-3 flex-1 min-w-0">
@@ -361,6 +376,9 @@ export function ProjectDetailSkeleton() {
 export function TeamDetailSkeleton() {
   return (
     <div className="pb-12 max-w-[1440px] space-y-6" role="status" aria-label="Loading team">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <Skel className="h-7 w-48 rounded-lg" />
@@ -419,6 +437,9 @@ export function TeamDetailSkeleton() {
 export function TaskDetailSkeleton() {
   return (
     <div className="pb-12 max-w-6xl space-y-4" role="status" aria-label="Loading task">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
           <div className="space-y-2">
@@ -508,6 +529,9 @@ export function TaskDetailSkeleton() {
 export function MyDaySkeleton() {
   return (
     <div className="pb-14 max-w-6xl" role="status" aria-label="Loading My Day">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="mb-7 pt-1">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-2">
@@ -561,6 +585,9 @@ export function MyDaySkeleton() {
 export function PeopleSkeleton() {
   return (
     <div className="pb-12 max-w-[1200px] space-y-5" role="status" aria-label="Loading people">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="flex items-start justify-between gap-3 flex-wrap pt-1">
         <div className="space-y-2">
           <Skel className="h-9 w-28 rounded-lg" />
@@ -596,6 +623,9 @@ export function PeopleSkeleton() {
 export function AuditSkeleton() {
   return (
     <div className="max-w-5xl space-y-5 pb-12" role="status" aria-label="Loading audit log">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <HeaderSkeleton action={false} />
       <div className="flex gap-1.5 flex-wrap">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -610,6 +640,9 @@ export function AuditSkeleton() {
 export function SettingsSkeleton() {
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6" role="status" aria-label="Loading settings">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="rounded-2xl overflow-hidden">
         <div className="h-32 skeleton" />
         <div className="bg-white dark:bg-[#262624] px-6 pb-5 -mt-11 relative">
@@ -652,6 +685,9 @@ export function SettingsSkeleton() {
 export function NewProjectSkeleton() {
   return (
     <div className="max-w-3xl pb-20" role="status" aria-label="Loading new project">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="flex items-center gap-3 mb-6 pt-1">
         <div className="space-y-1.5">
           <Skel className="h-7 w-32 rounded-xl" />
@@ -734,6 +770,9 @@ export function NewProjectSkeleton() {
 export function ProfileSkeleton() {
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6" role="status" aria-label="Loading profile">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       <div className="rounded-2xl overflow-hidden">
         <div className="h-32 skeleton" />
         <div className="bg-white dark:bg-[#262624] px-6 pb-5 -mt-11 relative">

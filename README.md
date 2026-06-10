@@ -34,7 +34,7 @@ A lightweight project + task tracker built for QA-IT teams in the pharmaceutical
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
 - **Productivity touches** — resizable sidebar, global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
-- **Daily task email** — an opt-in 08:30 IST digest of the tasks each person has due that day, delivered via Brevo's free transactional API (inert until configured). See [Daily email digest](#daily-email-digest).
+- **Daily rundown, four channels, free forever** — every user gets a role-aware **Morning Brief** (contributors: what's on my plate; leads: team pulse; admins: workspace rundown) rendered on the dashboard, as an optional **Web Push** notification (VAPID — no vendor, no cost), as a personal **calendar feed** (subscribe once in Outlook/Google/Apple), and as an opt-in **08:30 IST email** capped to the provider's free tier. Mail is provider-agnostic (`MAIL_PROVIDER=brevo|resend|webhook`) so an org can bring its own relay. See [Daily email digest](#daily-email-digest) and [`docs/SCALING.md`](./docs/SCALING.md).
 
 ## Security & data integrity
 
@@ -114,7 +114,7 @@ Next.js 14 (App Router) · TypeScript · MongoDB / Mongoose · Zod · Tailwind �
 
 Server-rendered detail pages with streaming Suspense skeletons; an Edge middleware cookie pre-filter for auth; an optional Upstash Redis read-through cache on hot aggregations (inert without env vars); and Vercel serverless functions pinned to `bom1` (Mumbai) to co-locate with the Atlas `ap-south-1` cluster.
 
-Architecture deep-dive: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+Architecture deep-dive: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). Growth plan to web scale: [`docs/SCALING.md`](./docs/SCALING.md).
 
 ## Project structure
 
