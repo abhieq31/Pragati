@@ -46,7 +46,7 @@ export function middleware(req: NextRequest) {
 export const config = {
   // Allow-list of authed routes only. Mirrors the folders under src/app/(authed).
   matcher: [
-    '/',                  // dashboard
+    '/', // dashboard
     '/admin/:path*',
     '/audit/:path*',
     '/copilot/:path*',

@@ -41,12 +41,24 @@ export function BirdEyeIcon({
         </radialGradient>
       </defs>
       <circle cx="12" cy="12" r="11" fill="url(#be-lens)" />
-      <circle cx="12" cy="12" r="10.5" stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.1" fill="none" />
+      <circle
+        cx="12"
+        cy="12"
+        r="10.5"
+        stroke="currentColor"
+        strokeOpacity="0.35"
+        strokeWidth="1.1"
+        fill="none"
+      />
 
       {/* Branches — drawn before nodes so node fills cover the join cleanly */}
       <path d="M12 5.5 V11" stroke="#1565C0" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M12 11 L6.5 16.2 M12 11 L17.5 16.2 M12 11 V16.2"
-            stroke="#1565C0" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M12 11 L6.5 16.2 M12 11 L17.5 16.2 M12 11 V16.2"
+        stroke="#1565C0"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
 
       {/* Root node — brand blue, prominent */}
       <circle cx="12" cy="5.5" r="2" fill="#1565C0" />
@@ -56,9 +68,9 @@ export function BirdEyeIcon({
       <circle cx="12" cy="11" r="1.2" fill="#1565C0" />
 
       {/* Three leaf nodes — emerald, slightly different sizes for life */}
-      <circle cx="6.5"  cy="17"   r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
-      <circle cx="12"   cy="17"   r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
-      <circle cx="17.5" cy="17"   r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
+      <circle cx="6.5" cy="17" r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
+      <circle cx="12" cy="17" r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
+      <circle cx="17.5" cy="17" r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
     </svg>
   );
 }

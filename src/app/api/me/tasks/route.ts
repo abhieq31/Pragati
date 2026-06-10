@@ -10,7 +10,11 @@ import { NOT_PERSONAL } from '@/lib/leadScope';
 export const runtime = 'nodejs';
 
 const STATUS_ORDER: Record<string, number> = {
-  in_progress: 0, review: 1, blocked: 2, todo: 3, done: 4
+  in_progress: 0,
+  review: 1,
+  blocked: 2,
+  todo: 3,
+  done: 4,
 };
 
 export async function GET(req: NextRequest) {
@@ -22,7 +26,9 @@ export async function GET(req: NextRequest) {
 
     const [tasks, allProjects] = await Promise.all([
       Task.find({ assigneeId: userId }).lean(),
-      Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] }).select('_id code name lifecycle').lean()
+      Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] })
+        .select('_id code name lifecycle')
+        .lean(),
     ]);
     const pMap = new Map(allProjects.map((p) => [String(p._id), p]));
 
@@ -50,7 +56,7 @@ export async function GET(req: NextRequest) {
             taskTitle: t.title,
             taskId: String(t._id),
             projectCode: p?.code,
-            projectName: p?.name
+            projectName: p?.name,
           });
         }
       }
@@ -64,10 +70,10 @@ export async function GET(req: NextRequest) {
           projectName: p?.name,
           lifecycle: p?.lifecycle,
           subtaskCount: ((t as any).subtasks || []).length,
-          subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length
+          subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
         });
       }),
-      subtasks
+      subtasks,
     });
   } catch (e) {
     return handleError(e);

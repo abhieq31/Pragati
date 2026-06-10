@@ -26,7 +26,9 @@ type Registry = Record<string, AvatarStyle>;
 const Ctx = createContext<Registry>({});
 
 export function AvatarRegistryProvider({
-  seed, initial, children,
+  seed,
+  initial,
+  children,
 }: {
   // Current user's own style, so self renders correctly before/around the fetch.
   seed?: { id: string; letter?: string; bg?: string; font?: number };
@@ -48,7 +50,10 @@ export function AvatarRegistryProvider({
   // only runs when one of them actually changes.
   useEffect(() => {
     if (!seed?.id || !seed.bg) return;
-    setRegistry((prev) => ({ ...prev, [seed.id]: { letter: seed.letter || '', bg: seed.bg!, font: seed.font ?? 0 } }));
+    setRegistry((prev) => ({
+      ...prev,
+      [seed.id]: { letter: seed.letter || '', bg: seed.bg!, font: seed.font ?? 0 },
+    }));
   }, [seed?.id, seed?.letter, seed?.bg, seed?.font]);
 
   // Refresh the rest of the map once on mount — covers avatars changed by
@@ -60,8 +65,12 @@ export function AvatarRegistryProvider({
         if (!alive) return;
         setRegistry((prev) => ({ ...prev, ...d.avatars }));
       })
-      .catch(() => { /* keep the SSR-seeded map; fall back to initials otherwise */ });
-    return () => { alive = false; };
+      .catch(() => {
+        /* keep the SSR-seeded map; fall back to initials otherwise */
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   return <Ctx.Provider value={registry}>{children}</Ctx.Provider>;
@@ -81,8 +90,14 @@ export function useAvatarStyle(userId?: string | null): AvatarStyle | undefined 
  * hydrates and resolves on the client.
  */
 export function UserAvatar({
-  userId, name, size = 28,
-}: { userId?: string | null; name?: string | null; size?: number }) {
+  userId,
+  name,
+  size = 28,
+}: {
+  userId?: string | null;
+  name?: string | null;
+  size?: number;
+}) {
   const style = useAvatarStyle(userId);
   return <Avatar name={name} size={size} letter={style?.letter} bg={style?.bg} font={style?.font} />;
 }

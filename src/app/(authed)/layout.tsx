@@ -26,8 +26,8 @@ export default async function AuthedLayout({ children }: { children: React.React
   if ((dbUser as any)?.avatarBg) {
     initialAvatars[user.sub] = {
       letter: (dbUser as any).avatarLetter || '',
-      bg:     (dbUser as any).avatarBg     || '',
-      font:   typeof (dbUser as any).avatarFont === 'number' ? (dbUser as any).avatarFont : 0,
+      bg: (dbUser as any).avatarBg || '',
+      font: typeof (dbUser as any).avatarFont === 'number' ? (dbUser as any).avatarFont : 0,
     };
   }
 
@@ -58,10 +58,10 @@ export default async function AuthedLayout({ children }: { children: React.React
         loginCount: user.loginCount,
         pinPromptDismissedAt: user.pinPromptDismissedAt,
         avatarLetter: (dbUser as any)?.avatarLetter || '',
-        avatarBg:     (dbUser as any)?.avatarBg     || '',
-        avatarFont:   (dbUser as any)?.avatarFont   ?? 0,
+        avatarBg: (dbUser as any)?.avatarBg || '',
+        avatarFont: (dbUser as any)?.avatarFont ?? 0,
         soundDropEnabled: (dbUser as any)?.soundDropEnabled !== false,
-        hasSeenTour:      (dbUser as any)?.hasSeenTour !== false,
+        hasSeenTour: (dbUser as any)?.hasSeenTour !== false,
       }}
       initialDark={initialDark}
       initialSidebarWidth={initialSidebarWidth}

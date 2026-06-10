@@ -16,13 +16,10 @@ const Patch = z.object({
   title: z.string().max(300).optional(),
   status: z.enum(['todo', 'in_progress', 'done']).optional(),
   assigneeId: z.string().nullable().optional(),
-  dueDate: z.string().nullable().optional()
+  dueDate: z.string().nullable().optional(),
 });
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string; subId: string } }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: { id: string; subId: string } }) {
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
@@ -38,7 +35,8 @@ export async function PATCH(
     }
     // Toggling a subtask's status is an assignee-level action; retitling or
     // reassigning a subtask is structural → lead-only.
-    const onlyStatus = body.title === undefined && body.assigneeId === undefined && body.dueDate === undefined;
+    const onlyStatus =
+      body.title === undefined && body.assigneeId === undefined && body.dueDate === undefined;
     const allowed = access.isLead || (canActOnOwnTask(access) && onlyStatus);
     if (!allowed) {
       return NextResponse.json(
@@ -73,8 +71,8 @@ export async function PATCH(
         eventType: 'subtask_progressed',
         actorId: user.sub,
         stateBefore: prev,
-        stateAfter:  body.status,
-        taskType:    (t as any)?.taskType || undefined,
+        stateAfter: body.status,
+        taskType: (t as any)?.taskType || undefined,
         metadata: { subtaskId: params.subId },
       });
     }
@@ -84,10 +82,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string; subId: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string; subId: string } }) {
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
@@ -113,8 +108,12 @@ export async function DELETE(
 
     // Structural change to a (possibly GxP) record → audit trail.
     await logOperation({
-      action: 'task.subtask.delete', category: 'task', actor: user,
-      targetType: 'task', targetId: params.id, targetLabel: (t as any).title || '',
+      action: 'task.subtask.delete',
+      category: 'task',
+      actor: user,
+      targetType: 'task',
+      targetId: params.id,
+      targetLabel: (t as any).title || '',
       summary: `Deleted subtask "${removedTitle}"`,
       meta: { subtaskId: params.subId, title: removedTitle, gxpCritical: !!(t as any).gxpCritical },
     });

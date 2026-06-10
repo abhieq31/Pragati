@@ -5,7 +5,17 @@ import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { UserAvatar } from '@/components/AvatarRegistry';
-import { Pencil, Plus, Users as UsersIcon, X, Check, Trash2, AlertTriangle, ArrowRight, Search } from 'lucide-react';
+import {
+  Pencil,
+  Plus,
+  Users as UsersIcon,
+  X,
+  Check,
+  Trash2,
+  AlertTriangle,
+  ArrowRight,
+  Search,
+} from 'lucide-react';
 
 interface TeamItem {
   id: string;
@@ -25,9 +35,9 @@ interface UserItem {
   title?: string;
   // Directory facets — used to group + filter the member picker so the team
   // lead can find people inside a large workspace without endless scrolling.
-  department?:   string;
+  department?: string;
   organisation?: string;
-  location?:     string;
+  location?: string;
 }
 
 const FUNCTION_LABEL: Record<string, string> = {
@@ -43,15 +53,15 @@ const FUNCTION_LABEL: Record<string, string> = {
 };
 
 const FUNCTION_TONE: Record<string, { bg: string; text: string; border: string }> = {
-  rtb:               { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200'    },
-  ctb:               { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  general:           { bg: 'bg-slate-50',   text: 'text-slate-600',   border: 'border-slate-200'   },
-  csv_validation:    { bg: 'bg-brand-50',   text: 'text-brand-700',   border: 'border-brand-200'   },
-  data_integrity:    { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200'  },
-  pharmacovigilance: { bg: 'bg-pink-50',    text: 'text-pink-700',    border: 'border-pink-200'    },
-  lab_informatics:   { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200'    },
-  audit:             { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200'   },
-  training:          { bg: 'bg-forest-50',  text: 'text-forest-700',  border: 'border-forest-200'  },
+  rtb: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  ctb: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  general: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' },
+  csv_validation: { bg: 'bg-brand-50', text: 'text-brand-700', border: 'border-brand-200' },
+  data_integrity: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+  pharmacovigilance: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' },
+  lab_informatics: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
+  audit: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  training: { bg: 'bg-forest-50', text: 'text-forest-700', border: 'border-forest-200' },
 };
 
 export default function TeamsClient({
@@ -63,17 +73,19 @@ export default function TeamsClient({
   initialUsers: UserItem[];
   me: { id: string; name: string; role: string } | null;
 }) {
-  const [teams, setTeams]     = useState<TeamItem[]>(initialTeams);
-  const [users]               = useState<UserItem[]>(initialUsers);
+  const [teams, setTeams] = useState<TeamItem[]>(initialTeams);
+  const [users] = useState<UserItem[]>(initialUsers);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<TeamItem | null>(null);
   const [deleting, setDeleting] = useState<TeamItem | null>(null);
 
   function load() {
-    api<TeamItem[]>('/teams').then(setTeams).catch(() => {});
+    api<TeamItem[]>('/teams')
+      .then(setTeams)
+      .catch(() => {});
   }
 
-  const canManage = (me?.role === 'lead' || me?.role === 'admin');
+  const canManage = me?.role === 'lead' || me?.role === 'admin';
   const uMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
   const filtered = teams;
 
@@ -82,7 +94,9 @@ export default function TeamsClient({
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap pt-1">
         <div>
-          <h1 className="text-[1.75rem] font-black text-slate-900 dark:text-white tracking-tight leading-tight">Teams</h1>
+          <h1 className="text-[1.75rem] font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+            Teams
+          </h1>
           <p className="text-sm text-slate-500 dark:text-white/40 mt-1">
             Cross-functional groups — people, projects, and shared accountability.
           </p>
@@ -133,7 +147,10 @@ export default function TeamsClient({
           mode="create"
           users={users}
           onClose={() => setCreating(false)}
-          onSaved={() => { setCreating(false); load(); }}
+          onSaved={() => {
+            setCreating(false);
+            load();
+          }}
         />
       )}
       {editing && (
@@ -142,14 +159,20 @@ export default function TeamsClient({
           team={editing}
           users={users}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); load(); }}
+          onSaved={() => {
+            setEditing(null);
+            load();
+          }}
         />
       )}
       {deleting && (
         <DeleteTeamModal
           team={deleting}
           onClose={() => setDeleting(null)}
-          onDeleted={() => { setDeleting(null); load(); }}
+          onDeleted={() => {
+            setDeleting(null);
+            load();
+          }}
         />
       )}
     </div>
@@ -160,7 +183,12 @@ export default function TeamsClient({
    Team card — name, function tag, lead avatar, member stack, counts, edit.
    ────────────────────────────────────────────────────────────────────────── */
 function TeamCard({
-  team, lead, members, canManage, onEdit, onDelete,
+  team,
+  lead,
+  members,
+  canManage,
+  onEdit,
+  onDelete,
 }: {
   team: TeamItem;
   lead?: UserItem;
@@ -179,10 +207,15 @@ function TeamCard({
       <div className="flex items-start gap-4">
         <Avatar name={team.name} size={48} />
         <div className="flex-1 min-w-0">
-          <Link href={`/teams/${team.id}`} className="font-bold text-[17px] text-slate-900 dark:text-white/90 hover:text-brand-700 dark:hover:text-blue-400 truncate block leading-snug transition-colors">
+          <Link
+            href={`/teams/${team.id}`}
+            className="font-bold text-[17px] text-slate-900 dark:text-white/90 hover:text-brand-700 dark:hover:text-blue-400 truncate block leading-snug transition-colors"
+          >
             {team.name}
           </Link>
-          <span className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${tone.bg} ${tone.text} ${tone.border}`}>
+          <span
+            className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${tone.bg} ${tone.text} ${tone.border}`}
+          >
             {FUNCTION_LABEL[team.function] || team.function}
           </span>
         </div>
@@ -209,7 +242,9 @@ function TeamCard({
       </div>
 
       {team.description && (
-        <p className="mt-3 text-[13px] text-slate-500 dark:text-white/40 line-clamp-2 leading-relaxed">{team.description}</p>
+        <p className="mt-3 text-[13px] text-slate-500 dark:text-white/40 line-clamp-2 leading-relaxed">
+          {team.description}
+        </p>
       )}
 
       <div className="mt-3 text-[11px] text-slate-400 dark:text-white/35">
@@ -242,9 +277,13 @@ function TeamCard({
       {/* Footer — same structure as project card's bottom-meta row */}
       <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/[0.05] flex items-center justify-between gap-3">
         <span className="text-[13px] text-slate-500 dark:text-white/40 tabular-nums">
-          <strong className="text-slate-700 dark:text-white/80 font-semibold">{team.memberCount}</strong> member{team.memberCount !== 1 ? 's' : ''}
+          <strong className="text-slate-700 dark:text-white/80 font-semibold">{team.memberCount}</strong>{' '}
+          member{team.memberCount !== 1 ? 's' : ''}
           <span className="text-slate-300 dark:text-white/20 mx-1.5">·</span>
-          <strong className="text-slate-700 dark:text-white/80 font-semibold">{team.projectCount}</strong> project{team.projectCount !== 1 ? 's' : ''}
+          <strong className="text-slate-700 dark:text-white/80 font-semibold">
+            {team.projectCount}
+          </strong>{' '}
+          project{team.projectCount !== 1 ? 's' : ''}
         </span>
         <Link
           href={`/teams/${team.id}`}
@@ -262,7 +301,11 @@ function TeamCard({
    Create / Edit modal — same form for both flows.
    ────────────────────────────────────────────────────────────────────────── */
 function TeamFormModal({
-  mode, team, users, onClose, onSaved,
+  mode,
+  team,
+  users,
+  onClose,
+  onSaved,
 }: {
   mode: 'create' | 'edit';
   team?: TeamItem;
@@ -270,11 +313,11 @@ function TeamFormModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [name, setName]               = useState(team?.name || '');
+  const [name, setName] = useState(team?.name || '');
   const [description, setDescription] = useState(team?.description || '');
-  const [func, setFunc]               = useState<string>(team?.function || 'general');
-  const [leadId, setLeadId]           = useState(team?.leadId || '');
-  const [memberIds, setMemberIds]     = useState<string[]>(team?.memberIds || []);
+  const [func, setFunc] = useState<string>(team?.function || 'general');
+  const [leadId, setLeadId] = useState(team?.leadId || '');
+  const [memberIds, setMemberIds] = useState<string[]>(team?.memberIds || []);
   const [memberQuery, setMemberQuery] = useState('');
   // Optional org/department filter chips so a lead can narrow a large
   // workspace before scrolling. '' means "all".
@@ -282,12 +325,12 @@ function TeamFormModal({
   // Which dimension we group by — organisation if any user has one, else
   // department, else flat. Auto-detected once on mount; admins can flip.
   const groupBy: 'organisation' | 'department' | null = useMemo(() => {
-    if (users.some(u => u.organisation)) return 'organisation';
-    if (users.some(u => u.department))   return 'department';
+    if (users.some((u) => u.organisation)) return 'organisation';
+    if (users.some((u) => u.department)) return 'department';
     return null;
   }, [users]);
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const candidateUsers = users.filter((u) => {
     if (u.role === 'admin') return false;
@@ -313,27 +356,32 @@ function TeamFormModal({
       map.get(key)!.push(u);
     }
     return Array.from(map.entries())
-      .sort(([a], [b]) => a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b))
+      .sort(([a], [b]) => (a === 'Unassigned' ? 1 : b === 'Unassigned' ? -1 : a.localeCompare(b)))
       .map(([label, us]) => ({ label, users: us }));
   }, [candidateUsers, groupBy]);
 
   // Top-level filter chips (one per distinct organisation/department).
   const facets: string[] = useMemo(() => {
     if (!groupBy) return [];
-    return Array.from(new Set(
-      users
-        .filter(u => u.role !== 'admin')
-        .map(u => ((u as any)[groupBy] || '').trim())
-        .filter(Boolean)
-    )).sort();
+    return Array.from(
+      new Set(
+        users
+          .filter((u) => u.role !== 'admin')
+          .map((u) => ((u as any)[groupBy] || '').trim())
+          .filter(Boolean),
+      ),
+    ).sort();
   }, [users, groupBy]);
 
   function toggleMember(id: string) {
-    setMemberIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+    setMemberIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   async function save() {
-    if (!name.trim()) { setError('Team name is required'); return; }
+    if (!name.trim()) {
+      setError('Team name is required');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -371,226 +419,254 @@ function TeamFormModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 overlay-in" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
-      <div
-        className="rounded-2xl shadow-2xl w-full max-w-xl modal-in overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="relative px-5 py-5 text-white overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0f4fb8 0%, #1769c8 45%, #2b8c47 100%)' }}>
-          <div aria-hidden className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
-              backgroundSize: '22px 22px',
-            }} />
-          <div className="relative flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-                <UsersIcon size={18} />
+        <div
+          className="rounded-2xl shadow-2xl w-full max-w-xl modal-in overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="relative px-5 py-5 text-white overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, #0f4fb8 0%, #1769c8 45%, #2b8c47 100%)' }}
+          >
+            <div
+              aria-hidden
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage:
+                  'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
+                backgroundSize: '22px 22px',
+              }}
+            />
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <UsersIcon size={18} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black leading-tight">
+                    {mode === 'create' ? 'Create a team' : 'Edit team'}
+                  </h2>
+                  <p className="text-xs text-white/70 mt-0.5">
+                    {mode === 'create'
+                      ? 'Name it, pick a function, add your people.'
+                      : 'Update team details and membership.'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 space-y-4">
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Team name <span className="text-red-500">*</span>
+              </label>
+              <input
+                className="input"
+                placeholder="e.g. CSV Validation Squad"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+                maxLength={120}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Description
+              </label>
+              <textarea
+                className="input"
+                rows={2}
+                placeholder="What does this team focus on?"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={2000}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Function
+                </label>
+                <Select
+                  value={func}
+                  onChange={setFunc}
+                  ariaLabel="Function"
+                  options={[
+                    { value: 'general', label: 'General' },
+                    { value: 'ctb', label: 'Change the Business' },
+                    { value: 'rtb', label: 'Run the Business' },
+                  ]}
+                />
               </div>
               <div>
-                <h2 className="text-lg font-black leading-tight">
-                  {mode === 'create' ? 'Create a team' : 'Edit team'}
-                </h2>
-                <p className="text-xs text-white/70 mt-0.5">
-                  {mode === 'create' ? 'Name it, pick a function, add your people.' : 'Update team details and membership.'}
-                </p>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Team owner
+                </label>
+                <Select
+                  value={leadId}
+                  onChange={setLeadId}
+                  ariaLabel="Team owner"
+                  placeholder="— No owner —"
+                  options={[
+                    { value: '', label: '— No owner —' },
+                    ...users.filter((u) => u.role === 'lead').map((u) => ({ value: u.id, label: u.name })),
+                  ]}
+                />
               </div>
             </div>
-            <button onClick={onClose} className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition">
-              <X size={18} />
-            </button>
-          </div>
-        </div>
 
-        <div className="bg-white p-5 space-y-4">
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-              Team name <span className="text-red-500">*</span>
-            </label>
-            <input
-              className="input"
-              placeholder="e.g. CSV Validation Squad"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-              maxLength={120}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-              Description
-            </label>
-            <textarea
-              className="input"
-              rows={2}
-              placeholder="What does this team focus on?"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={2000}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Function
-              </label>
-              <Select
-                value={func} onChange={setFunc} ariaLabel="Function"
-                options={[
-                  { value: 'general', label: 'General' },
-                  { value: 'ctb', label: 'Change the Business' },
-                  { value: 'rtb', label: 'Run the Business' },
-                ]}
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Team owner
-              </label>
-              <Select
-                value={leadId} onChange={setLeadId} ariaLabel="Team owner"
-                placeholder="— No owner —"
-                options={[
-                  { value: '', label: '— No owner —' },
-                  ...users.filter((u) => u.role === 'lead').map((u) => ({ value: u.id, label: u.name })),
-                ]}
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Members <span className="text-slate-400 normal-case font-normal">({memberIds.length} selected)</span>
-              </label>
-              {memberIds.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setMemberIds([])}
-                  className="text-[11px] text-slate-400 hover:text-slate-600"
-                >
-                  Clear all
-                </button>
-              )}
-            </div>
-            <div className="relative mb-2">
-              <Search size={13} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
-              <input
-                className="input pl-9 text-sm"
-                placeholder={`Search by name, title${groupBy ? `, ${groupBy}` : ''}…`}
-                value={memberQuery}
-                onChange={(e) => setMemberQuery(e.target.value)}
-              />
-            </div>
-            {/* Filter chips for the chosen group dimension — scales the picker
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Members{' '}
+                  <span className="text-slate-400 normal-case font-normal">
+                    ({memberIds.length} selected)
+                  </span>
+                </label>
+                {memberIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMemberIds([])}
+                    className="text-[11px] text-slate-400 hover:text-slate-600"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+              <div className="relative mb-2">
+                <Search size={13} className="absolute top-1/2 -translate-y-1/2 left-3 text-slate-400" />
+                <input
+                  className="input pl-9 text-sm"
+                  placeholder={`Search by name, title${groupBy ? `, ${groupBy}` : ''}…`}
+                  value={memberQuery}
+                  onChange={(e) => setMemberQuery(e.target.value)}
+                />
+              </div>
+              {/* Filter chips for the chosen group dimension — scales the picker
                 gracefully as the workspace grows. Hidden when there's nothing
                 to slice (single-org or no facets set). */}
-            {facets.length > 1 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                <button
-                  type="button"
-                  onClick={() => setGroupFilter('')}
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                    groupFilter === ''
-                      ? 'bg-brand-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  All {groupBy === 'organisation' ? 'orgs' : 'departments'}
-                </button>
-                {facets.map((f) => (
+              {facets.length > 1 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   <button
-                    key={f}
                     type="button"
-                    onClick={() => setGroupFilter(f === groupFilter ? '' : f)}
+                    onClick={() => setGroupFilter('')}
                     className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                      groupFilter === f
+                      groupFilter === ''
                         ? 'bg-brand-600 text-white'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    {f}
+                    All {groupBy === 'organisation' ? 'orgs' : 'departments'}
                   </button>
-                ))}
-              </div>
-            )}
-            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg">
-              {candidateUsers.length === 0 ? (
-                <div className="py-6 text-center text-xs text-slate-400">No people match.</div>
-              ) : (
-                groups.map((g) => {
-                  const visible = g.users.filter(u => u.id !== leadId);
-                  if (visible.length === 0) return null;
-                  return (
-                    <div key={g.label}>
-                      {/* Group header — only render when grouping is active and
+                  {facets.map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setGroupFilter(f === groupFilter ? '' : f)}
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                        groupFilter === f
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-lg">
+                {candidateUsers.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-slate-400">No people match.</div>
+                ) : (
+                  groups.map((g) => {
+                    const visible = g.users.filter((u) => u.id !== leadId);
+                    if (visible.length === 0) return null;
+                    return (
+                      <div key={g.label}>
+                        {/* Group header — only render when grouping is active and
                           there's more than one bucket worth showing. */}
-                      {groupBy && groups.length > 1 && (
-                        <div className="sticky top-0 z-[1] bg-slate-50 border-b border-slate-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
-                          <span className="truncate">{g.label}</span>
-                          <span className="text-slate-400 font-medium">{visible.length}</span>
+                        {groupBy && groups.length > 1 && (
+                          <div className="sticky top-0 z-[1] bg-slate-50 border-b border-slate-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+                            <span className="truncate">{g.label}</span>
+                            <span className="text-slate-400 font-medium">{visible.length}</span>
+                          </div>
+                        )}
+                        <div className="divide-y divide-slate-100">
+                          {visible.map((u) => {
+                            const selected = memberIds.includes(u.id);
+                            return (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => toggleMember(u.id)}
+                                className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                                  selected ? 'bg-brand-50/60 hover:bg-brand-50' : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <UserAvatar userId={u.id} name={u.name} size={26} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-slate-800 truncate">{u.name}</div>
+                                  <div className="text-[11px] text-slate-400 truncate">
+                                    {[
+                                      u.role === 'lead'
+                                        ? 'Team Lead'
+                                        : u.role === 'admin'
+                                          ? 'Admin'
+                                          : 'Individual Contributor',
+                                      u.title,
+                                      u.department,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </div>
+                                </div>
+                                <div
+                                  className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                                    selected ? 'bg-brand-600 text-white' : 'border border-slate-300'
+                                  }`}
+                                >
+                                  {selected && <Check size={12} />}
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
-                      )}
-                      <div className="divide-y divide-slate-100">
-                        {visible.map((u) => {
-                          const selected = memberIds.includes(u.id);
-                          return (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() => toggleMember(u.id)}
-                              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                                selected ? 'bg-brand-50/60 hover:bg-brand-50' : 'hover:bg-slate-50'
-                              }`}
-                            >
-                              <UserAvatar userId={u.id} name={u.name} size={26} />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-slate-800 truncate">
-                                  {u.name}
-                                </div>
-                                <div className="text-[11px] text-slate-400 truncate">
-                                  {[
-                                    u.role === 'lead' ? 'Team Lead' : u.role === 'admin' ? 'Admin' : 'Individual Contributor',
-                                    u.title,
-                                    u.department,
-                                  ].filter(Boolean).join(' · ')}
-                                </div>
-                              </div>
-                              <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
-                                selected ? 'bg-brand-600 text-white' : 'border border-slate-300'
-                              }`}>
-                                {selected && <Check size={12} />}
-                              </div>
-                            </button>
-                          );
-                        })}
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })
+                )}
+              </div>
+              {leadId && !memberIds.includes(leadId) && (
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  The owner is automatically added as a team member when you save.
+                </p>
               )}
             </div>
-            {leadId && !memberIds.includes(leadId) && (
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                The owner is automatically added as a team member when you save.
-              </p>
+
+            {error && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </div>
             )}
           </div>
 
-          {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
-          )}
+          <div className="sticky bottom-0 bg-white border-t border-slate-100 px-5 py-3 flex justify-end gap-2">
+            <button onClick={onClose} className="btn-ghost" disabled={saving}>
+              Cancel
+            </button>
+            <button onClick={save} className="btn-primary" disabled={saving || !name.trim()}>
+              {saving ? 'Saving…' : mode === 'create' ? 'Create team' : 'Save changes'}
+            </button>
+          </div>
         </div>
-
-        <div className="sticky bottom-0 bg-white border-t border-slate-100 px-5 py-3 flex justify-end gap-2">
-          <button onClick={onClose} className="btn-ghost" disabled={saving}>Cancel</button>
-          <button onClick={save} className="btn-primary" disabled={saving || !name.trim()}>
-            {saving ? 'Saving…' : mode === 'create' ? 'Create team' : 'Save changes'}
-          </button>
-        </div>
-      </div>
       </div>
     </div>
   );
@@ -600,18 +676,22 @@ function TeamFormModal({
    Delete confirmation — password re-entry (21 CFR 11 audit intent).
    ────────────────────────────────────────────────────────────────────────── */
 function DeleteTeamModal({
-  team, onClose, onDeleted,
+  team,
+  onClose,
+  onDeleted,
 }: {
   team: TeamItem;
   onClose: () => void;
   onDeleted: () => void;
 }) {
   const [password, setPassword] = useState('');
-  const [busy, setBusy]         = useState(false);
-  const [error, setError]       = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   async function confirm() {
     if (!password) return;
@@ -641,7 +721,10 @@ function DeleteTeamModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-in"
         onClick={(e) => e.stopPropagation()}
@@ -654,7 +737,8 @@ function DeleteTeamModal({
             <h2 className="text-lg font-black text-slate-900">Delete team?</h2>
             <p className="text-sm text-slate-500 mt-1 leading-snug">
               <span className="font-semibold text-slate-700">{team.name}</span> will be permanently removed.
-              Any projects linked to this team will be detached but their tasks and history will be kept intact.
+              Any projects linked to this team will be detached but their tasks and history will be kept
+              intact.
             </p>
           </div>
         </div>
@@ -670,18 +754,27 @@ function DeleteTeamModal({
               className="input"
               placeholder="Your account password"
               value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') confirm(); }}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirm();
+              }}
               autoComplete="current-password"
             />
           </div>
           {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </div>
           )}
         </div>
 
         <div className="border-t border-slate-100 px-5 py-3 flex justify-end gap-2">
-          <button onClick={onClose} className="btn-ghost" disabled={busy}>Cancel</button>
+          <button onClick={onClose} className="btn-ghost" disabled={busy}>
+            Cancel
+          </button>
           <button
             onClick={confirm}
             disabled={busy || !password}

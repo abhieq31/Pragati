@@ -2,28 +2,32 @@ import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 
 const UserSchema = new Schema(
   {
-    email:        { type: String, required: true, unique: true, lowercase: true },
+    email: { type: String, required: true, unique: true, lowercase: true },
     // Short login handle, à la Instagram. Required + unique for new accounts;
     // `sparse` allows the column to be added to a database that already has
     // documents without a username, so we can backfill at our leisure
     // (scripts/backfill-usernames.ts). Stored lower-cased and validated by
     // Zod in /lib/validations.ts so it stays case-insensitive and ASCII-safe.
-    username:     { type: String, unique: true, sparse: true, lowercase: true, trim: true },
-    name:         { type: String, required: true },
+    username: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    name: { type: String, required: true },
     passwordHash: { type: String, required: true },
     // Product roles are admin, lead, and contributor.
     // 'pm'/'employee' are legacy aliases accepted only until migrated.
-    role:         { type: String, enum: ['contributor', 'lead', 'admin', 'pm', 'employee', 'master_admin'], default: 'contributor' },
+    role: {
+      type: String,
+      enum: ['contributor', 'lead', 'admin', 'pm', 'employee', 'master_admin'],
+      default: 'contributor',
+    },
 
     // ── Identity fields ─────────────────────────────────────────────────
     // These can be set manually or overwritten by LDAP sync.
     // When ldapSyncedAt is present, the UI shows them as read-only.
-    title:        { type: String, default: '' },
-    department:   { type: String, default: '' },
-    employeeId:   { type: String, default: '' },   // e.g. sAMAccountName / employeeID from AD
-    phone:        { type: String, default: '' },
-    location:     { type: String, default: '' },   // office / site
-    managerName:  { type: String, default: '' },   // display name of manager from AD
+    title: { type: String, default: '' },
+    department: { type: String, default: '' },
+    employeeId: { type: String, default: '' }, // e.g. sAMAccountName / employeeID from AD
+    phone: { type: String, default: '' },
+    location: { type: String, default: '' }, // office / site
+    managerName: { type: String, default: '' }, // display name of manager from AD
     // Soft organisational grouping — used by directory pickers to group and
     // filter people (e.g. by business unit, plant, or company within the
     // group). Free-text so admins can drop people into any grouping they
@@ -44,8 +48,8 @@ const UserSchema = new Schema(
     //   l (locality)            → location
     //   manager (DN → resolved) → managerName
     //   distinguishedName       → ldapDn
-    ldapDn:         { type: String, default: '' },   // Distinguished Name
-    ldapSyncedAt:   { type: Date,   default: null },  // null = not yet synced
+    ldapDn: { type: String, default: '' }, // Distinguished Name
+    ldapSyncedAt: { type: Date, default: null }, // null = not yet synced
     ldapAttributes: { type: Schema.Types.Mixed, default: null }, // raw AD attrs for debugging
 
     // ── First-login flag ────────────────────────────────────────────────
@@ -77,7 +81,7 @@ const UserSchema = new Schema(
     // was applied — surfaced on the People page so admin can see *why*
     // a lead can't sign in.
     failedLoginAttempts: { type: Number, default: 0 },
-    lockedAt:            { type: Date,   default: null },
+    lockedAt: { type: Date, default: null },
 
     // ── Account lifecycle (soft deactivation) ───────────────────────────
     // A deactivated account is the *professional* alternative to a hard
@@ -88,11 +92,11 @@ const UserSchema = new Schema(
     // clears any brute-force lock, so "make active again" is the single
     // gesture an admin needs. Defaults to active so existing rows (which
     // predate this field) are treated as active without a migration.
-    active:             { type: Boolean, default: true },
-    deactivatedAt:      { type: Date,   default: null },
-    deactivatedBy:      { type: String, default: '' },   // actor display name
-    deactivationReason: { type: String, default: '' },   // why, for the record
-    reactivatedAt:      { type: Date,   default: null },
+    active: { type: Boolean, default: true },
+    deactivatedAt: { type: Date, default: null },
+    deactivatedBy: { type: String, default: '' }, // actor display name
+    deactivationReason: { type: String, default: '' }, // why, for the record
+    reactivatedAt: { type: Date, default: null },
 
     // ── Quick PIN (device-bound convenience unlock) ─────────────────────
     // A 4-digit PIN that re-unlocks the app on a device that has ALREADY
@@ -101,9 +105,9 @@ const UserSchema = new Schema(
     // sign-in on any device always requires the full credential, preserving
     // 21 CFR Part 11 §11.10(d) access control. The PIN is bcrypt-hashed,
     // never stored in clear, and locks after too many wrong tries.
-    pinHash:            { type: String, default: null },
-    pinSetAt:           { type: Date,   default: null },
-    pinFailedAttempts:  { type: Number, default: 0 },
+    pinHash: { type: String, default: null },
+    pinSetAt: { type: Date, default: null },
+    pinFailedAttempts: { type: Number, default: 0 },
 
     // ── Onboarding tour ─────────────────────────────────────────────────
     // Defaults to true so existing users don't see the tour on first
@@ -117,16 +121,16 @@ const UserSchema = new Schema(
     // and the tour; PIN is offered the next time they sign in, when the
     // workflow is already familiar. Counts successful full logins only
     // (PIN unlocks don't increment, by design).
-    loginCount:  { type: Number, default: 0 },
+    loginCount: { type: Number, default: 0 },
     // pinPromptDismissedAt: the user dismissed the Set-PIN prompt and we
     // should not block them with it again for some time. We re-offer it
     // gently from a settings nudge instead.
     pinPromptDismissedAt: { type: Date, default: null },
 
     // ── Notification preferences ────────────────────────────────────────
-    notifTaskAssigned:  { type: Boolean, default: true  },
-    notifTaskDueSoon:   { type: Boolean, default: true  },  // 24h before due
-    notifTaskOverdue:   { type: Boolean, default: true  },
+    notifTaskAssigned: { type: Boolean, default: true },
+    notifTaskDueSoon: { type: Boolean, default: true }, // 24h before due
+    notifTaskOverdue: { type: Boolean, default: true },
     notifProjectUpdate: { type: Boolean, default: false },
 
     // ── Daily task-due email digest ─────────────────────────────────────
@@ -150,9 +154,9 @@ const UserSchema = new Schema(
     // is rendered — sidebar, account menu, mention chips, comments, lead
     // contributor list, etc. All fields are optional; the Avatar component
     // falls back to the name-derived initials + hash colour when unset.
-    avatarLetter: { type: String, default: '' },          // 1–2 chars, uppercase
-    avatarBg:     { type: String, default: '' },          // CSS colour (hex)
-    avatarFont:   { type: Number, default: 0 },           // 0..AVATAR_FONTS.length-1
+    avatarLetter: { type: String, default: '' }, // 1–2 chars, uppercase
+    avatarBg: { type: String, default: '' }, // CSS colour (hex)
+    avatarFont: { type: Number, default: 0 }, // 0..AVATAR_FONTS.length-1
 
     // Audible drop-cue preference. Defaults to true (ships with sound).
     // Synthesised in-browser via Web Audio, so there's no asset to deliver.
@@ -171,7 +175,7 @@ const UserSchema = new Schema(
     // Same guard for Quick-PIN hashes.
     pinHistory: { type: [String], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Indexes for the cross-user listings (People directory, Teams, admin views)

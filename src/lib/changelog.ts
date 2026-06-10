@@ -12,16 +12,16 @@
  */
 
 export type ChangelogTag =
-  | 'feature'        // New capability added
-  | 'improvement'    // Refinement of existing capability
-  | 'fix'            // Bug fix
-  | 'security'       // Security or compliance change
-  | 'admin';         // Admin-only / workspace-level change
+  | 'feature' // New capability added
+  | 'improvement' // Refinement of existing capability
+  | 'fix' // Bug fix
+  | 'security' // Security or compliance change
+  | 'admin'; // Admin-only / workspace-level change
 
 export interface ChangelogEntry {
-  date: string;             // ISO date (yyyy-mm-dd)
-  title: string;            // One-line headline
-  body: string[];           // Bullets, plain text
+  date: string; // ISO date (yyyy-mm-dd)
+  title: string; // One-line headline
+  body: string[]; // Bullets, plain text
   tags: ChangelogTag[];
   // Optional highlight banner — when set, the entry renders with a colour
   // accent so the visual scanner catches it (e.g. major releases).
@@ -63,9 +63,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2026-05-28',
     title: 'Team report — branded header + CSV export',
     tags: ['feature'],
-    body: [
-      'Lead team-report exports to CSV with a branded Pragati header for sharing with management.',
-    ],
+    body: ['Lead team-report exports to CSV with a branded Pragati header for sharing with management.'],
   },
   {
     date: '2026-05-27',
@@ -88,9 +86,29 @@ export const CHANGELOG: ChangelogEntry[] = [
 // Visual metadata for the tag chips — kept beside the data so the changelog
 // page renders without prop drilling.
 export const CHANGELOG_TAG_META: Record<ChangelogTag, { label: string; bg: string; text: string }> = {
-  feature:     { label: 'New',         bg: 'bg-emerald-50 dark:bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300' },
-  improvement: { label: 'Improved',    bg: 'bg-blue-50    dark:bg-blue-500/15',    text: 'text-blue-700    dark:text-blue-300' },
-  fix:         { label: 'Fixed',       bg: 'bg-amber-50   dark:bg-amber-500/15',   text: 'text-amber-700   dark:text-amber-300' },
-  security:    { label: 'Security',    bg: 'bg-rose-50    dark:bg-rose-500/15',    text: 'text-rose-700    dark:text-rose-300' },
-  admin:       { label: 'Admin',       bg: 'bg-violet-50  dark:bg-violet-500/15',  text: 'text-violet-700  dark:text-violet-300' },
+  feature: {
+    label: 'New',
+    bg: 'bg-emerald-50 dark:bg-emerald-500/15',
+    text: 'text-emerald-700 dark:text-emerald-300',
+  },
+  improvement: {
+    label: 'Improved',
+    bg: 'bg-blue-50    dark:bg-blue-500/15',
+    text: 'text-blue-700    dark:text-blue-300',
+  },
+  fix: {
+    label: 'Fixed',
+    bg: 'bg-amber-50   dark:bg-amber-500/15',
+    text: 'text-amber-700   dark:text-amber-300',
+  },
+  security: {
+    label: 'Security',
+    bg: 'bg-rose-50    dark:bg-rose-500/15',
+    text: 'text-rose-700    dark:text-rose-300',
+  },
+  admin: {
+    label: 'Admin',
+    bg: 'bg-violet-50  dark:bg-violet-500/15',
+    text: 'text-violet-700  dark:text-violet-300',
+  },
 };

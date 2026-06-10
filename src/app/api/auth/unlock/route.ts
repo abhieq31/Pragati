@@ -4,8 +4,13 @@ import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 import {
-  normalizeRole, signToken, setAuthCookie, setDeviceCookie, clearDeviceCookie,
-  getDeviceUserId, newSessionId,
+  normalizeRole,
+  signToken,
+  setAuthCookie,
+  setDeviceCookie,
+  clearDeviceCookie,
+  getDeviceUserId,
+  newSessionId,
 } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
@@ -35,7 +40,10 @@ export async function POST(req: NextRequest) {
     // The device cookie identifies WHO may unlock here. No cookie → no PIN path.
     const userId = getDeviceUserId(req);
     if (!userId) {
-      const res = NextResponse.json({ error: 'This device isn’t recognised. Please sign in with your password.', needPassword: true }, { status: 401 });
+      const res = NextResponse.json(
+        { error: 'This device isn’t recognised. Please sign in with your password.', needPassword: true },
+        { status: 401 },
+      );
       return res;
     }
 
@@ -44,14 +52,23 @@ export async function POST(req: NextRequest) {
       'name email role title mustChangePassword sessionVersion pinHash pinFailedAttempts lockedAt',
     );
     if (!user || !(user as any).pinHash) {
-      const res = NextResponse.json({ error: 'Please sign in with your password.', needPassword: true }, { status: 401 });
+      const res = NextResponse.json(
+        { error: 'Please sign in with your password.', needPassword: true },
+        { status: 401 },
+      );
       clearDeviceCookie(res);
       return res;
     }
 
     // A locked account can't be unlocked by PIN — only an admin/lead clears it.
     if ((user as any).lockedAt) {
-      const res = NextResponse.json({ error: 'Your account is locked. Sign in with your password or contact your admin.', needPassword: true }, { status: 401 });
+      const res = NextResponse.json(
+        {
+          error: 'Your account is locked. Sign in with your password or contact your admin.',
+          needPassword: true,
+        },
+        { status: 401 },
+      );
       clearDeviceCookie(res);
       return res;
     }
@@ -73,7 +90,9 @@ export async function POST(req: NextRequest) {
       }
       await user.save();
       return NextResponse.json(
-        { error: `Incorrect PIN. ${MAX_PIN_FAILS - fails} attempt${MAX_PIN_FAILS - fails === 1 ? '' : 's'} left.` },
+        {
+          error: `Incorrect PIN. ${MAX_PIN_FAILS - fails} attempt${MAX_PIN_FAILS - fails === 1 ? '' : 's'} left.`,
+        },
         { status: 401 },
       );
     }
@@ -85,20 +104,23 @@ export async function POST(req: NextRequest) {
     await user.save();
 
     const token = signToken({
-      sub:   String(user._id),
+      sub: String(user._id),
       email: (user as any).email,
-      role:  normalizeRole((user as any).role),
-      name:  (user as any).name,
+      role: normalizeRole((user as any).role),
+      name: (user as any).name,
       title: (user as any).title || '',
       mustChangePassword: !!(user as any).mustChangePassword,
-      sv:    (user as any).sessionVersion ?? 0,
+      sv: (user as any).sessionVersion ?? 0,
       sid,
     });
 
     await logOperation({
-      action: 'auth.pin_unlock', category: 'auth',
+      action: 'auth.pin_unlock',
+      category: 'auth',
       actor: { id: String(user._id), name: (user as any).name },
-      targetType: 'user', targetId: String(user._id), targetLabel: (user as any).name,
+      targetType: 'user',
+      targetId: String(user._id),
+      targetLabel: (user as any).name,
       summary: 'Resumed session with Quick PIN',
     });
 

@@ -30,21 +30,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
     if (!canActOnOwnTask(access)) {
-      return NextResponse.json(
-        { error: 'You can only comment on tasks assigned to you.' },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: 'You can only comment on tasks assigned to you.' }, { status: 403 });
     }
 
     const t = await Task.findById(params.id);
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    if (isContributor(user.role) && String(t.assigneeId) !== user.sub && !(t as any).subtasks?.some((s: any) => String(s.assigneeId) === user.sub))
+    if (
+      isContributor(user.role) &&
+      String(t.assigneeId) !== user.sub &&
+      !(t as any).subtasks?.some((s: any) => String(s.assigneeId) === user.sub)
+    )
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     const c = {
       _id: new mongoose.Types.ObjectId(),
       userId: new mongoose.Types.ObjectId(user.sub),
       body: body.body,
-      createdAt: new Date()
+      createdAt: new Date(),
     } as any;
     (t as any).comments.push(c);
     (t as any).lastActivityAt = new Date();
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       userId: user.sub,
       userName: (author as any)?.name,
       body: c.body,
-      createdAt: c.createdAt
+      createdAt: c.createdAt,
     });
   } catch (e) {
     return handleError(e);

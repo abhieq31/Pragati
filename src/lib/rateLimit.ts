@@ -13,10 +13,12 @@
  * Redis (`@upstash/ratelimit`) without touching call sites — same signature.
  */
 
-interface Bucket { count: number; resetAt: number; }
+interface Bucket {
+  count: number;
+  resetAt: number;
+}
 
-const STATE: Map<string, Bucket> =
-  (global as any).__pragatiRateLimit ?? new Map<string, Bucket>();
+const STATE: Map<string, Bucket> = (global as any).__pragatiRateLimit ?? new Map<string, Bucket>();
 (global as any).__pragatiRateLimit = STATE;
 
 /**

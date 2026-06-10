@@ -7,7 +7,6 @@ import { project as projectS, date as toIso } from '@/lib/serialize';
 import { LIFECYCLES } from '@/lib/lifecycles';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 
-
 function taskForProjectBoard(t: any, extras: any = {}) {
   const subtasks = (t.subtasks || []) as any[];
   return {
@@ -65,14 +64,23 @@ export async function getProjectDetail(id: string, userId: string, role?: string
       // per-task detail content that can grow large; excluding them here cuts
       // the payload significantly without losing anything the board renders.
       // (Subtask *documents* stay — their count/done-state feeds the board.)
-      Task.find({ projectId: p._id, $or: [{ privateToUserId: null }, { privateToUserId: { $exists: false } }, { privateToUserId: scope.userOid }] })
+      Task.find({
+        projectId: p._id,
+        $or: [
+          { privateToUserId: null },
+          { privateToUserId: { $exists: false } },
+          { privateToUserId: scope.userOid },
+        ],
+      })
         .select('-comments -effortLog -aiTriage')
         .sort({ position: 1, createdAt: 1 })
         .lean(),
     ]);
     const assignees = await User.find({
       _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) },
-    }).select('_id name').lean();
+    })
+      .select('_id name')
+      .lean();
     const uMap = new Map(assignees.map((u) => [String(u._id), u.name]));
     const lc = LIFECYCLES[(p.lifecycle || 'generic') as keyof typeof LIFECYCLES];
 

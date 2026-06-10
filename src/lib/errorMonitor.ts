@@ -37,15 +37,15 @@ export async function captureError(input: CaptureInput): Promise<void> {
     if (existing) return;
 
     await ErrorLog.create({
-      source:     input.source || 'server',
+      source: input.source || 'server',
       message,
-      stack:      (input.stack || '').slice(0, 8000),
-      digest:     input.digest || '',
-      path:       input.path || '',
-      method:     input.method || '',
+      stack: (input.stack || '').slice(0, 8000),
+      digest: input.digest || '',
+      path: input.path || '',
+      method: input.method || '',
       statusCode: input.statusCode ?? 500,
-      userId:     input.userId || undefined,
-      userName:   input.userName || '',
+      userId: input.userId || undefined,
+      userName: input.userName || '',
       lastSeenAt: new Date(),
     });
   } catch {

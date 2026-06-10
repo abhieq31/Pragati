@@ -23,10 +23,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const target = await User.findById(params.id, '_id').lean();
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    await User.findByIdAndUpdate(
-      me!.sub,
-      { $addToSet: { following: new mongoose.Types.ObjectId(params.id) } },
-    );
+    await User.findByIdAndUpdate(me!.sub, {
+      $addToSet: { following: new mongoose.Types.ObjectId(params.id) },
+    });
     return NextResponse.json({ ok: true, following: true });
   } catch (e) {
     return handleError(e);
@@ -41,10 +40,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Invalid user id' }, { status: 400 });
     }
     await connectDB();
-    await User.findByIdAndUpdate(
-      me!.sub,
-      { $pull: { following: new mongoose.Types.ObjectId(params.id) } },
-    );
+    await User.findByIdAndUpdate(me!.sub, { $pull: { following: new mongoose.Types.ObjectId(params.id) } });
     return NextResponse.json({ ok: true, following: false });
   } catch (e) {
     return handleError(e);

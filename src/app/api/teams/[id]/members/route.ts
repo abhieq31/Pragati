@@ -22,11 +22,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const body = await readBody(req, Body);
     await Team.updateOne(
       { _id: params.id },
-      { $addToSet: { memberIds: new mongoose.Types.ObjectId(body.userId) } }
+      { $addToSet: { memberIds: new mongoose.Types.ObjectId(body.userId) } },
     );
     await logOperation({
-      action: 'team.member_add', category: 'team', actor: user,
-      targetType: 'team', targetId: params.id, summary: 'Added a team member',
+      action: 'team.member_add',
+      category: 'team',
+      actor: user,
+      targetType: 'team',
+      targetId: params.id,
+      summary: 'Added a team member',
       meta: { userId: body.userId },
     });
     return NextResponse.json({ ok: true });

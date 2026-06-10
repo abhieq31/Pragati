@@ -12,9 +12,16 @@ import { recordTaskFlowEvent } from '@/lib/flow/events';
 export const runtime = 'nodejs';
 
 const Body = z.object({
-  minutes: z.number().int().min(1).max(24 * 60 * 30),
+  minutes: z
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 60 * 30),
   note: z.string().max(500).optional().default(''),
-  onDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  onDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   source: z.enum(['manual', 'calendar']).optional().default('manual'),
 });
 

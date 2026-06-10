@@ -12,15 +12,28 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export interface MMGraphNode { id: string; text: string }
-export interface MMGraphEdge { from: string; to: string }
-export interface SuggestedTask { title: string }
-export interface ExtractResult { tasks: SuggestedTask[]; source: 'ai' | 'rule' }
+export interface MMGraphNode {
+  id: string;
+  text: string;
+}
+export interface MMGraphEdge {
+  from: string;
+  to: string;
+}
+export interface SuggestedTask {
+  title: string;
+}
+export interface ExtractResult {
+  tasks: SuggestedTask[];
+  source: 'ai' | 'rule';
+}
 
 const MODEL_ORDER = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
 function clean(s: string): string {
-  return String(s || '').replace(/\s+/g, ' ').trim();
+  return String(s || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Deterministic extraction — root nodes first (breadth-first over the edges),
@@ -34,10 +47,18 @@ export function ruleExtract(nodes: MMGraphNode[], edges: MMGraphEdge[]): Suggest
   const incoming = new Set(edges.map((e) => e.to));
   const ordered: string[] = [];
   const seen = new Set<string>();
-  const push = (id: string) => { if (!seen.has(id) && hasText(id)) { seen.add(id); ordered.push(id); } };
+  const push = (id: string) => {
+    if (!seen.has(id) && hasText(id)) {
+      seen.add(id);
+      ordered.push(id);
+    }
+  };
 
   for (const n of nodes) if (!incoming.has(n.id)) push(n.id);
-  for (const e of edges) { push(e.from); push(e.to); }
+  for (const e of edges) {
+    push(e.from);
+    push(e.to);
+  }
   for (const n of nodes) push(n.id);
 
   const out: SuggestedTask[] = [];

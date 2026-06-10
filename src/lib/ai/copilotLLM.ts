@@ -12,25 +12,27 @@ export type ChatMsg = { role: 'user' | 'assistant'; content: string };
 // Try a few model names in priority order. Validated May 2026 against
 // the Pragati App project (955403952729) — 2.0-flash variants return 404
 // for new API keys; 2.5-flash is the current GA model.
-const MODEL_ORDER = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-];
+const MODEL_ORDER = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 
 function systemInstruction(kb: KBEntry[], hasTaskContext: boolean): string {
-  const grounding = kb.length === 0
-    ? 'No tightly matching KB entry — rely on your general regulatory training, but stay conservative.'
-    : kb.map((e, i) => [
-        `── KB ENTRY ${i + 1}: ${e.title} ──`,
-        e.summary,
-        '',
-        e.detail,
-        '',
-        `Regulatory: ${e.regulatory}`,
-        '',
-        `Recommended steps:`,
-        ...e.steps.map((s, j) => `${j + 1}. ${s}`),
-      ].join('\n')).join('\n\n');
+  const grounding =
+    kb.length === 0
+      ? 'No tightly matching KB entry — rely on your general regulatory training, but stay conservative.'
+      : kb
+          .map((e, i) =>
+            [
+              `── KB ENTRY ${i + 1}: ${e.title} ──`,
+              e.summary,
+              '',
+              e.detail,
+              '',
+              `Regulatory: ${e.regulatory}`,
+              '',
+              `Recommended steps:`,
+              ...e.steps.map((s, j) => `${j + 1}. ${s}`),
+            ].join('\n'),
+          )
+          .join('\n\n');
 
   return `
 You are Pragati's QA Copilot — an expert pharmaceutical Quality Assurance assistant
@@ -46,9 +48,11 @@ regulatory answer fast. Be conversational, specific, and actionable — never ro
 - Short paragraphs. Use lists when natural; never force bullet-points if prose reads better.
 - Cite the actual regulation (e.g. "21 CFR 211.192", "EU Annex 11 §9", "GAMP 5 Cat 4").
 - Acknowledge uncertainty: "this depends on your local SOP" beats false confidence.
-- ${hasTaskContext
-    ? 'The user is working on a SPECIFIC TASK. Tailor the answer to that task — reference its title, lifecycle, status, and GxP flag where relevant.'
-    : 'The user asked a general QA question — answer at the right level of detail for a working professional.'}
+- ${
+    hasTaskContext
+      ? 'The user is working on a SPECIFIC TASK. Tailor the answer to that task — reference its title, lifecycle, status, and GxP flag where relevant.'
+      : 'The user asked a general QA question — answer at the right level of detail for a working professional.'
+  }
 
 # KNOWLEDGE BASE GROUNDING
 The block below is the curated, regulation-checked QA knowledge base. PREFER its
@@ -92,7 +96,7 @@ function buildHistory(messages: ChatMsg[]): Content[] {
   const trimmed = [...messages];
   if (trimmed.length === 0) return [];
   if (trimmed[trimmed.length - 1].role === 'user') trimmed.pop();
-  return trimmed.map(m => ({
+  return trimmed.map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
   })) as Content[];
@@ -131,10 +135,10 @@ export interface StreamMeta {
 // answered. This is what powers the honest "Live AI" / "KB mode" badge.
 export async function* streamCopilotReply(
   opts: CopilotStreamOptions,
-  meta: StreamMeta = { finalMode: 'kb', errors: [] }
+  meta: StreamMeta = { finalMode: 'kb', errors: [] },
 ): AsyncGenerator<string, void, unknown> {
   const apiKey = process.env.GEMINI_API_KEY;
-  const lastUser = [...opts.messages].reverse().find(m => m.role === 'user')?.content ?? '';
+  const lastUser = [...opts.messages].reverse().find((m) => m.role === 'user')?.content ?? '';
 
   // No key — degrade transparently to KB mode (the route header reflects this)
   if (!apiKey) {
@@ -168,14 +172,17 @@ export async function* streamCopilotReply(
       let any = false;
       for await (const chunk of result.stream) {
         const t = chunk.text();
-        if (t) { any = true; yield t; }
+        if (t) {
+          any = true;
+          yield t;
+        }
       }
       if (!any) {
         meta.errors.push(`${modelName}: empty stream`);
         continue;
       }
-      meta.finalMode  = 'llm';
-      meta.modelUsed  = modelName;
+      meta.finalMode = 'llm';
+      meta.modelUsed = modelName;
       return;
     } catch (e: any) {
       // Common reasons: 404 model name, 429 rate limit, 400 bad input,
@@ -201,6 +208,6 @@ async function* streamString(full: string): AsyncGenerator<string, void, unknown
   const CHUNK = 6;
   for (let i = 0; i < full.length; i += CHUNK) {
     yield full.slice(i, i + CHUNK);
-    if (i < 200) await new Promise(r => setTimeout(r, 6));
+    if (i < 200) await new Promise((r) => setTimeout(r, 6));
   }
 }

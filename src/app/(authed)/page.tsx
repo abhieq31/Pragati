@@ -11,10 +11,10 @@ export default async function DashboardPage() {
   if (!jwt) redirect('/login');
 
   const data = await getLeadDashboardData({
-    sub:   jwt.sub,
-    name:  jwt.name,
+    sub: jwt.sub,
+    name: jwt.name,
     email: jwt.email,
-    role:  jwt.role,
+    role: jwt.role,
   });
 
   return <DashboardClient initialData={data} />;

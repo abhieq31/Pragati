@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const invite = await Invite.findOne({ token }).lean();
-    if (!invite)          return NextResponse.json({ valid: false, reason: 'not_found' });
+    if (!invite) return NextResponse.json({ valid: false, reason: 'not_found' });
     if (invite.revokedAt) return NextResponse.json({ valid: false, reason: 'revoked' });
     if (invite.consumedAt) return NextResponse.json({ valid: false, reason: 'consumed' });
     if (new Date(invite.expiresAt) < new Date()) {
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({
-      valid:         true,
-      email:         invite.email,
+      valid: true,
+      email: invite.email,
       invitedByName: invite.invitedByName,
-      expiresAt:     invite.expiresAt,
+      expiresAt: invite.expiresAt,
     });
   } catch (e) {
     return handleError(e);

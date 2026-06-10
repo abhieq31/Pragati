@@ -14,9 +14,9 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const Row = z.object({
-  username:   UsernameSchema,
+  username: UsernameSchema,
   employeeId: z.string().trim().min(1).max(40),
-  name:       z.string().trim().max(120).optional(),
+  name: z.string().trim().max(120).optional(),
   // Optional real email (4th column). Backward-compatible: existing 3-column
   // pastes still import; admins can backfill the address later from People →
   // Edit. Daily digests simply skip anyone without a deliverable address.
@@ -36,11 +36,13 @@ function defaultPassword(name: string, employeeId: string): string {
 }
 
 function deriveName(username: string): string {
-  return username
-    .split(/[._]+/)
-    .filter(Boolean)
-    .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
-    .join(' ') || username;
+  return (
+    username
+      .split(/[._]+/)
+      .filter(Boolean)
+      .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+      .join(' ') || username
+  );
 }
 
 /**
@@ -60,8 +62,8 @@ export async function POST(req: NextRequest) {
     // One round-trip to find everything that already exists, plus in-batch
     // dedupe, so we never issue a query per row.
     const usernames = rows.map((r) => r.username);
-    const emails    = usernames.map((u) => `${u}@pragati.local`);
-    const existing  = await User.find(
+    const emails = usernames.map((u) => `${u}@pragati.local`);
+    const existing = await User.find(
       { $or: [{ username: { $in: usernames } }, { email: { $in: emails } }] },
       'username email',
     ).lean();
@@ -86,17 +88,17 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const name       = r.name?.trim() || deriveName(r.username);
+      const name = r.name?.trim() || deriveName(r.username);
       const employeeId = r.employeeId.trim();
       try {
         await User.create({
-          email:              `${r.username}@pragati.local`,
-          username:           r.username,
+          email: `${r.username}@pragati.local`,
+          username: r.username,
           employeeId,
           name,
-          notifyEmail:        r.notifyEmail || '',
-          passwordHash:       bcrypt.hashSync(defaultPassword(name, employeeId), 10),
-          role:               'contributor',
+          notifyEmail: r.notifyEmail || '',
+          passwordHash: bcrypt.hashSync(defaultPassword(name, employeeId), 10),
+          role: 'contributor',
           mustChangePassword: true,
         });
         created.push({ username: r.username, name });

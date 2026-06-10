@@ -14,7 +14,10 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const currentYear = new Date().getFullYear();
-    const year = Math.min(Math.max(parseInt(searchParams.get('year') || '') || currentYear, 2020), currentYear + 1);
+    const year = Math.min(
+      Math.max(parseInt(searchParams.get('year') || '') || currentYear, 2020),
+      currentYear + 1,
+    );
 
     const data = await buildContributions(user!.sub, year);
     return NextResponse.json(data, {

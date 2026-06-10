@@ -29,14 +29,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const completedTasksRaw = await Task.find({
       assigneeId: uid,
       status: 'done',
-      completedAt: { $gte: start, $lte: end }
+      completedAt: { $gte: start, $lte: end },
     }).lean();
 
     const rawProjectIds = [...new Set(completedTasksRaw.map((t) => String(t.projectId)))];
     const projects = await Project.find({
       _id: { $in: rawProjectIds.map((id) => new mongoose.Types.ObjectId(id)) },
       ...(viewingSelf ? {} : NOT_PERSONAL),
-    }).select('_id code name lifecycle').lean();
+    })
+      .select('_id code name lifecycle')
+      .lean();
     const pMap = new Map(projects.map((p) => [String(p._id), p]));
     const completedTasks = viewingSelf
       ? completedTasksRaw
@@ -45,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // Subtasks completed by this user within the year (look across all tasks)
     const subtaskHoldersRaw = await Task.find({
       'subtasks.assigneeId': uid,
-      'subtasks.completedAt': { $gte: start, $lte: end }
+      'subtasks.completedAt': { $gte: start, $lte: end },
     }).lean();
     const subtaskHolders = viewingSelf
       ? subtaskHoldersRaw
@@ -71,13 +73,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             dueDate: s.dueDate,
             completedAt: s.completedAt,
             daysEarly: s.dueDate
-              ? Math.round(
-                  (new Date(s.dueDate).getTime() - new Date(s.completedAt).getTime()) / 86400000
-                )
+              ? Math.round((new Date(s.dueDate).getTime() - new Date(s.completedAt).getTime()) / 86400000)
               : null,
             taskTitle: t.title,
             projectCode: p?.code,
-            projectName: p?.name
+            projectName: p?.name,
           });
         }
       }
@@ -90,9 +90,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           : null;
       const p = pMap.get(String(t.projectId));
       const isBig =
-        t.gxpCritical ||
-        t.requiresQaSignoff ||
-        ['approval', 'audit_finding'].includes(t.taskType || '');
+        t.gxpCritical || t.requiresQaSignoff || ['approval', 'audit_finding'].includes(t.taskType || '');
       return {
         id: String(t._id),
         title: t.title,
@@ -103,7 +101,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         isBig,
         projectCode: p?.code,
         projectName: p?.name,
-        lifecycle: p?.lifecycle
+        lifecycle: p?.lifecycle,
       };
     });
 
@@ -112,14 +110,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const earlySubs = completedSubtasks.filter((s) => s.daysEarly !== null && s.daysEarly! > 0);
     const early = [
       ...earlyTasks.map((t) => ({ ...t, kind: 'task' as const })),
-      ...earlySubs.map((s) => ({ ...s, kind: 'subtask' as const }))
+      ...earlySubs.map((s) => ({ ...s, kind: 'subtask' as const })),
     ].sort((a, b) => (b.daysEarly || 0) - (a.daysEarly || 0));
 
     const months = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       completed: 0,
       early: 0,
-      big: 0
+      big: 0,
     }));
     for (const t of tasksOut) {
       if (!t.completedAt) continue;
@@ -134,10 +132,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       if (s.daysEarly !== null && s.daysEarly > 0) months[m].early++;
     }
 
-    const extraEffortScore = early.reduce(
-      (a: number, x) => a + Math.min(30, x.daysEarly || 0),
-      0
-    );
+    const extraEffortScore = early.reduce((a: number, x) => a + Math.min(30, x.daysEarly || 0), 0);
 
     return NextResponse.json({
       year,
@@ -147,11 +142,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         subtasksCompleted: completedSubtasks.length,
         bigTasksCompleted: bigTasks.length,
         earlyCompletions: early.length,
-        extraEffortScore
+        extraEffortScore,
       },
       months,
       bigTasks: bigTasks.slice(0, 25),
-      earlyCompletions: early.slice(0, 25)
+      earlyCompletions: early.slice(0, 25),
     });
   } catch (e) {
     return handleError(e);

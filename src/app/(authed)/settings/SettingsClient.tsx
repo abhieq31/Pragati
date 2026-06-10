@@ -6,16 +6,29 @@ import { api } from '@/lib/client/api';
 import { Avatar } from '@/components/ui';
 // The contribution heatmap is a sizeable, below-the-fold client component —
 // lazy-load it so it never blocks first paint of the profile page.
-const ActivityGraph = dynamic(
-  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
-  { ssr: false, loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" /> },
-);
+const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
+  ssr: false,
+  loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" />,
+});
 import {
-  User, Lock, ShieldCheck, Copy, Check, RefreshCw, X, Activity, KeyRound,
-  AlertTriangle, ServerCog, MoreHorizontal, ChevronDown, Pencil, ExternalLink,
-  Mail, Send,
+  User,
+  Lock,
+  ShieldCheck,
+  Copy,
+  Check,
+  RefreshCw,
+  X,
+  Activity,
+  KeyRound,
+  AlertTriangle,
+  ServerCog,
+  MoreHorizontal,
+  ChevronDown,
+  Pencil,
+  ExternalLink,
+  Mail,
+  Send,
 } from 'lucide-react';
-
 
 import { MonogramEditor } from '@/components/MonogramEditor';
 import { ProfileHero } from '@/components/ProfileHero';
@@ -26,10 +39,18 @@ import { ProfileHero } from '@/components/ProfileHero';
    passes letter/bg/font through, so the preview here matches every other
    surface where this user is shown. */
 function ProfileAvatar({
-  name, letter, bg, font, size = 88, onClick, title,
+  name,
+  letter,
+  bg,
+  font,
+  size = 88,
+  onClick,
+  title,
 }: {
   name?: string | null;
-  letter?: string; bg?: string; font?: number;
+  letter?: string;
+  bg?: string;
+  font?: number;
   size?: number;
   onClick?: () => void;
   title?: string;
@@ -70,7 +91,7 @@ function ProfileAvatar({
    preference follows the user across devices. Default ON. */
 function DropSoundToggle({ initial }: { initial: boolean }) {
   const [enabled, setEnabled] = useState(initial);
-  const [saving, setSaving]   = useState(false);
+  const [saving, setSaving] = useState(false);
 
   async function toggle() {
     const next = !enabled;
@@ -117,16 +138,18 @@ function DropSoundToggle({ initial }: { initial: boolean }) {
 
 /* ── Quick PIN management ─────────────────────────────────────────────────── */
 function QuickPinSection() {
-  const [hasPin, setHasPin]   = useState<boolean | null>(null);
-  const [currentPin, setCur]  = useState('');
-  const [pin, setPin]         = useState('');
+  const [hasPin, setHasPin] = useState<boolean | null>(null);
+  const [currentPin, setCur] = useState('');
+  const [pin, setPin] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [saving, setSaving]   = useState(false);
-  const [msg, setMsg]         = useState('');
-  const [err, setErr]         = useState('');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
 
   useEffect(() => {
-    api<{ hasPin: boolean }>('/auth/pin').then(d => setHasPin(d.hasPin)).catch(() => setHasPin(false));
+    api<{ hasPin: boolean }>('/auth/pin')
+      .then((d) => setHasPin(d.hasPin))
+      .catch(() => setHasPin(false));
   }, []);
 
   const valid = /^\d{4}$/.test(pin);
@@ -134,47 +157,96 @@ function QuickPinSection() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    setErr(''); setMsg('');
-    if (!valid) { setErr('PIN must be exactly 4 digits.'); return; }
-    if (!matches) { setErr('The two PINs don’t match.'); return; }
+    setErr('');
+    setMsg('');
+    if (!valid) {
+      setErr('PIN must be exactly 4 digits.');
+      return;
+    }
+    if (!matches) {
+      setErr('The two PINs don’t match.');
+      return;
+    }
     setSaving(true);
     try {
       await api('/auth/pin', { method: 'POST', body: { pin, ...(hasPin ? { currentPin } : {}) } });
       setMsg('Quick PIN updated.');
-      setHasPin(true); setCur(''); setPin(''); setConfirm('');
-    } catch (e: any) { setErr(e.message || 'Could not update your PIN.'); }
-    finally { setSaving(false); }
+      setHasPin(true);
+      setCur('');
+      setPin('');
+      setConfirm('');
+    } catch (e: any) {
+      setErr(e.message || 'Could not update your PIN.');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  const box = "input text-center font-bold tracking-[0.4em]";
+  const box = 'input text-center font-bold tracking-[0.4em]';
 
   return (
     <div id="quick-pin" className="scroll-mt-6">
-      <Section icon={KeyRound} title="Quick PIN" subtitle="A 4-digit code to resume an idle session on this device.">
+      <Section
+        icon={KeyRound}
+        title="Quick PIN"
+        subtitle="A 4-digit code to resume an idle session on this device."
+      >
         <form onSubmit={save} className="space-y-3.5">
           {hasPin && (
             <Field label="Current PIN">
-              <input type="password" inputMode="numeric" maxLength={4} className={box}
-                value={currentPin} onChange={e => setCur(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="••••" />
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                className={box}
+                value={currentPin}
+                onChange={(e) => setCur(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="••••"
+              />
             </Field>
           )}
           <Field label={hasPin ? 'New PIN' : 'PIN'}>
-            <input type="password" inputMode="numeric" maxLength={4} className={box}
-              value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="••••" />
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              className={box}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="••••"
+            />
           </Field>
           <Field label="Confirm PIN">
-            <input type="password" inputMode="numeric" maxLength={4}
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
               className={`${box} ${confirm && !matches ? 'border-red-300' : ''}`}
-              value={confirm} onChange={e => setConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="••••" />
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              placeholder="••••"
+            />
           </Field>
-          {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
-          {msg && <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ {msg}</div>}
-          <button type="submit" className="btn-primary w-full justify-center" disabled={saving || !valid || !matches || (!!hasPin && currentPin.length !== 4)}>
+          {err && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {err}
+            </div>
+          )}
+          {msg && (
+            <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+              ✓ {msg}
+            </div>
+          )}
+          <button
+            type="submit"
+            className="btn-primary w-full justify-center"
+            disabled={saving || !valid || !matches || (!!hasPin && currentPin.length !== 4)}
+          >
             {saving ? 'Saving…' : hasPin ? 'Change PIN' : 'Set PIN'}
           </button>
           <p className="text-[11px] text-slate-400 leading-snug">
-            Forgot it? Just sign in with your password — it always works — then set a new PIN here.
-            Your password is always required on a new device.
+            Forgot it? Just sign in with your password — it always works — then set a new PIN here. Your
+            password is always required on a new device.
           </p>
         </form>
       </Section>
@@ -185,9 +257,9 @@ function QuickPinSection() {
 /* ── Admin: production error monitor ──────────────────────────────────────── */
 function AdminErrorMonitor() {
   const [errors, setErrors] = useState<any[]>([]);
-  const [unack, setUnack]   = useState(0);
+  const [unack, setUnack] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy]     = useState(false);
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -195,17 +267,24 @@ function AdminErrorMonitor() {
       const d: any = await api('/errors');
       setErrors(d.errors || []);
       setUnack(d.unacknowledged || 0);
-    } catch { /* admin-only; ignore for non-admins */ }
-    finally { setLoading(false); }
+    } catch {
+      /* admin-only; ignore for non-admins */
+    } finally {
+      setLoading(false);
+    }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function ack(id?: string) {
     setBusy(true);
     try {
       await api('/errors', { method: 'PATCH', body: id ? { id } : { all: true } });
       await load();
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   function fmt(iso: string | null) {
@@ -255,12 +334,16 @@ function AdminErrorMonitor() {
           ) : (
             <ul className="space-y-2">
               {errors.map((e) => (
-                <li key={e.id}
-                  className={`rounded-lg border px-3 py-2.5 text-xs ${e.acknowledged ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-red-100 bg-red-50/60'}`}>
+                <li
+                  key={e.id}
+                  className={`rounded-lg border px-3 py-2.5 text-xs ${e.acknowledged ? 'border-slate-100 bg-slate-50/60 opacity-70' : 'border-red-100 bg-red-50/60'}`}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${e.source === 'client' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${e.source === 'client' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                        >
                           {e.source}
                         </span>
                         {e.count > 1 && (
@@ -270,12 +353,18 @@ function AdminErrorMonitor() {
                       </div>
                       <div className="mt-1 font-medium text-slate-800 break-words">{e.message}</div>
                       <div className="mt-1 text-[11px] text-slate-400">
-                        {fmt(e.lastSeenAt)}{e.userName ? ` · ${e.userName}` : ''}{e.digest ? ` · ref ${e.digest}` : ''}
+                        {fmt(e.lastSeenAt)}
+                        {e.userName ? ` · ${e.userName}` : ''}
+                        {e.digest ? ` · ref ${e.digest}` : ''}
                       </div>
                     </div>
                     {!e.acknowledged && (
-                      <button onClick={() => ack(e.id)} disabled={busy}
-                        className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors" title="Dismiss">
+                      <button
+                        onClick={() => ack(e.id)}
+                        disabled={busy}
+                        className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors"
+                        title="Dismiss"
+                      >
                         <Check size={15} />
                       </button>
                     )}
@@ -291,8 +380,16 @@ function AdminErrorMonitor() {
 }
 
 /* ── Section wrapper ──────────────────────────────────────────────────────── */
-function Section({ icon: Icon, title, subtitle, children }: {
-  icon?: any; title: string; subtitle?: string; children: React.ReactNode;
+function Section({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon?: any;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="card rounded-xl border overflow-hidden">
@@ -312,7 +409,9 @@ function Section({ icon: Icon, title, subtitle, children }: {
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">{label}</label>
+      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+        {label}
+      </label>
       {children}
       {hint && <p className="text-[11px] text-slate-400 mt-1 leading-snug">{hint}</p>}
     </div>
@@ -323,7 +422,9 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function ReadonlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">{label}</label>
+      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+        {label}
+      </label>
       <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-2.5 text-sm text-slate-600 leading-none">
         {value || <span className="text-slate-300">—</span>}
       </div>
@@ -335,11 +436,18 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
 function DigestSwitch({ on, onClick, disabled }: { on: boolean; onClick: () => void; disabled?: boolean }) {
   return (
     <button
-      type="button" role="switch" aria-checked={on} disabled={disabled} onClick={onClick}
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onClick}
       className={`mt-0.5 relative rounded-full shrink-0 transition-colors ${on ? 'bg-blue-600' : 'bg-slate-300 dark:bg-white/15'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       style={{ width: 36, height: 20 }}
     >
-      <span className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all" style={{ left: on ? 18 : 2 }} />
+      <span
+        className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+        style={{ left: on ? 18 : 2 }}
+      />
     </button>
   );
 }
@@ -359,7 +467,11 @@ function DigestRow({ label, desc, children }: { label: string; desc?: string; ch
 function ChecklistItem({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
   return (
     <li className="flex items-start gap-2 text-xs">
-      {ok ? <Check size={14} className="text-green-600 mt-0.5 shrink-0" /> : <X size={14} className="text-amber-500 mt-0.5 shrink-0" />}
+      {ok ? (
+        <Check size={14} className="text-green-600 mt-0.5 shrink-0" />
+      ) : (
+        <X size={14} className="text-amber-500 mt-0.5 shrink-0" />
+      )}
       <span className={ok ? 'text-slate-600' : 'text-slate-500'}>
         <span className="font-semibold">{label}</span>
         {hint && !ok ? <span className="text-slate-400"> — {hint}</span> : null}
@@ -380,8 +492,7 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
   const [emailErr, setEmailErr] = useState('');
 
   const effectiveEmail =
-    notifyEmail.trim() ||
-    (loginEmail && !loginEmail.endsWith('@pragati.local') ? loginEmail : '');
+    notifyEmail.trim() || (loginEmail && !loginEmail.endsWith('@pragati.local') ? loginEmail : '');
   const canEnable = !!effectiveEmail;
   const [enabled, setEnabled] = useState<boolean>(!!initialUser.notifDailyDigest);
   const [saving, setSaving] = useState(false);
@@ -406,7 +517,8 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
       setEmailErr('Enter a valid email address.');
       return;
     }
-    setSavingEmail(true); setEmailErr('');
+    setSavingEmail(true);
+    setEmailErr('');
     try {
       await api('/users/me', { method: 'PATCH', body: { notifyEmail: val } });
       setNotifyEmail(val);
@@ -420,10 +532,17 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
 
   return (
     <div id="daily-email" className="scroll-mt-6">
-      <Section icon={Mail} title="Daily task email" subtitle="A morning email of the tasks you have due that day.">
+      <Section
+        icon={Mail}
+        title="Daily task email"
+        subtitle="A morning email of the tasks you have due that day."
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 text-sm text-slate-600 dark:text-white/60 leading-relaxed flex-1">
-            <p>Sent every day at <strong>8:30 AM (IST)</strong> with the tasks assigned to you that are due that day.</p>
+            <p>
+              Sent every day at <strong>8:30 AM (IST)</strong> with the tasks assigned to you that are due
+              that day.
+            </p>
             {canEnable ? (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 {editingEmail ? (
@@ -431,25 +550,51 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                     <input
                       type="email"
                       value={emailDraft}
-                      onChange={e => { setEmailDraft(e.target.value); setEmailErr(''); }}
-                      onKeyDown={e => { if (e.key === 'Enter') saveEmail(); if (e.key === 'Escape') setEditingEmail(false); }}
+                      onChange={(e) => {
+                        setEmailDraft(e.target.value);
+                        setEmailErr('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEmail();
+                        if (e.key === 'Escape') setEditingEmail(false);
+                      }}
                       className="input text-sm py-1 px-2 w-56"
                       placeholder="your@email.com"
                       autoFocus
                     />
-                    <button onClick={saveEmail} disabled={savingEmail} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                    <button
+                      onClick={saveEmail}
+                      disabled={savingEmail}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                    >
                       {savingEmail ? 'Saving…' : 'Save'}
                     </button>
-                    <button onClick={() => { setEditingEmail(false); setEmailErr(''); }} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+                    <button
+                      onClick={() => {
+                        setEditingEmail(false);
+                        setEmailErr('');
+                      }}
+                      className="text-xs text-slate-400 hover:text-slate-600"
+                    >
+                      Cancel
+                    </button>
                     {emailErr && <span className="text-xs text-red-600 w-full">{emailErr}</span>}
                   </>
                 ) : (
                   <>
                     <span className="text-[12px] text-slate-500 dark:text-white/50">
-                      Delivered to <span className="font-semibold text-slate-700 dark:text-white/70">{effectiveEmail}</span>
+                      Delivered to{' '}
+                      <span className="font-semibold text-slate-700 dark:text-white/70">
+                        {effectiveEmail}
+                      </span>
                     </span>
-                    <button onClick={() => { setEmailDraft(notifyEmail); setEditingEmail(true); }}
-                      className="text-[11px] font-semibold text-blue-600 hover:underline">
+                    <button
+                      onClick={() => {
+                        setEmailDraft(notifyEmail);
+                        setEditingEmail(true);
+                      }}
+                      className="text-[11px] font-semibold text-blue-600 hover:underline"
+                    >
                       Change
                     </button>
                   </>
@@ -462,17 +607,35 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                     <input
                       type="email"
                       value={emailDraft}
-                      onChange={e => { setEmailDraft(e.target.value); setEmailErr(''); }}
-                      onKeyDown={e => { if (e.key === 'Enter') saveEmail(); if (e.key === 'Escape') setEditingEmail(false); }}
+                      onChange={(e) => {
+                        setEmailDraft(e.target.value);
+                        setEmailErr('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEmail();
+                        if (e.key === 'Escape') setEditingEmail(false);
+                      }}
                       className="input text-sm py-1 px-2 w-56"
                       placeholder="your@email.com"
                       autoFocus
                     />
                     <div className="flex items-center gap-2">
-                      <button onClick={saveEmail} disabled={savingEmail} className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                      <button
+                        onClick={saveEmail}
+                        disabled={savingEmail}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                      >
                         {savingEmail ? 'Saving…' : 'Save email'}
                       </button>
-                      <button onClick={() => { setEditingEmail(false); setEmailErr(''); }} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+                      <button
+                        onClick={() => {
+                          setEditingEmail(false);
+                          setEmailErr('');
+                        }}
+                        className="text-xs text-slate-400 hover:text-slate-600"
+                      >
+                        Cancel
+                      </button>
                     </div>
                     {emailErr && <p className="text-xs text-red-600">{emailErr}</p>}
                   </>
@@ -481,8 +644,13 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                     <p className="text-[12px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-lg px-2.5 py-1.5 inline-block">
                       No delivery email set yet.
                     </p>
-                    <button onClick={() => { setEmailDraft(''); setEditingEmail(true); }}
-                      className="block mt-1.5 text-[12px] font-semibold text-blue-600 hover:underline">
+                    <button
+                      onClick={() => {
+                        setEmailDraft('');
+                        setEditingEmail(true);
+                      }}
+                      className="block mt-1.5 text-[12px] font-semibold text-blue-600 hover:underline"
+                    >
                       + Add your email address
                     </button>
                   </div>
@@ -511,7 +679,10 @@ function AdminDigestSettings() {
 
   useEffect(() => {
     api('/admin/digest-settings')
-      .then((d: any) => { setCfg(d.settings); setStatus(d.status); })
+      .then((d: any) => {
+        setCfg(d.settings);
+        setStatus(d.status);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -522,37 +693,56 @@ function AdminDigestSettings() {
 
   async function save() {
     if (!cfg) return;
-    setSaving(true); setMsg('');
+    setSaving(true);
+    setMsg('');
     try {
       const d: any = await api('/admin/digest-settings', {
         method: 'PATCH',
         body: {
-          enabled: cfg.enabled, dueToday: cfg.dueToday, overdue: cfg.overdue,
-          dueSoonDays: Number(cfg.dueSoonDays) || 0, projectUpdates: cfg.projectUpdates,
-          sendWhenEmpty: cfg.sendWhenEmpty, introNote: cfg.introNote || '',
+          enabled: cfg.enabled,
+          dueToday: cfg.dueToday,
+          overdue: cfg.overdue,
+          dueSoonDays: Number(cfg.dueSoonDays) || 0,
+          projectUpdates: cfg.projectUpdates,
+          sendWhenEmpty: cfg.sendWhenEmpty,
+          introNote: cfg.introNote || '',
         },
       });
-      setCfg(d.settings); setStatus(d.status);
-      setMsg('Saved'); setTimeout(() => setMsg(''), 2500);
-    } catch (e: any) { setMsg(e.message || 'Save failed.'); }
-    finally { setSaving(false); }
+      setCfg(d.settings);
+      setStatus(d.status);
+      setMsg('Saved');
+      setTimeout(() => setMsg(''), 2500);
+    } catch (e: any) {
+      setMsg(e.message || 'Save failed.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function sendTest() {
-    setTesting(true); setTestMsg('');
+    setTesting(true);
+    setTestMsg('');
     try {
       const r: any = await api('/cron/daily-digest?test=1');
       if (r.sent > 0) setTestMsg('Test sent — check your inbox.');
-      else if (!r.mailerConfigured) setTestMsg('Email isn’t configured yet — set BREVO_API_KEY and BREVO_SENDER_EMAIL.');
+      else if (!r.mailerConfigured)
+        setTestMsg('Email isn’t configured yet — set BREVO_API_KEY and BREVO_SENDER_EMAIL.');
       else if (r.skippedNoEmail > 0) setTestMsg('No deliverable email on your own account.');
       else setTestMsg('Nothing was sent.');
-    } catch (e: any) { setTestMsg(e.message || 'Test failed.'); }
-    finally { setTesting(false); }
+    } catch (e: any) {
+      setTestMsg(e.message || 'Test failed.');
+    } finally {
+      setTesting(false);
+    }
   }
 
   if (loading) {
     return (
-      <Section icon={Mail} title="Daily email — workspace settings" subtitle="Admin · controls every user's 8:30 AM digest.">
+      <Section
+        icon={Mail}
+        title="Daily email — workspace settings"
+        subtitle="Admin · controls every user's 8:30 AM digest."
+      >
         <div className="text-xs text-slate-400 py-4 text-center">Loading…</div>
       </Section>
     );
@@ -561,17 +751,36 @@ function AdminDigestSettings() {
 
   return (
     <div id="digest-admin" className="scroll-mt-6">
-      <Section icon={Mail} title="Daily email — workspace settings" subtitle="Admin · controls what every user's 8:30 AM digest contains.">
+      <Section
+        icon={Mail}
+        title="Daily email — workspace settings"
+        subtitle="Admin · controls what every user's 8:30 AM digest contains."
+      >
         {status && (
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 mb-4">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Delivery setup</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+              Delivery setup
+            </div>
             <ul className="space-y-1.5">
-              <ChecklistItem ok={status.mailerConfigured} label="Email provider (Brevo)" hint="set BREVO_API_KEY + BREVO_SENDER_EMAIL" />
-              <ChecklistItem ok={status.cronSecretSet} label="Scheduled send (CRON_SECRET)" hint="set CRON_SECRET in Vercel" />
-              <ChecklistItem ok={status.appUrlConfigured} label="In-email links (APP_URL)" hint="set APP_URL for clickable links" />
+              <ChecklistItem
+                ok={status.mailerConfigured}
+                label="Email provider (Brevo)"
+                hint="set BREVO_API_KEY + BREVO_SENDER_EMAIL"
+              />
+              <ChecklistItem
+                ok={status.cronSecretSet}
+                label="Scheduled send (CRON_SECRET)"
+                hint="set CRON_SECRET in Vercel"
+              />
+              <ChecklistItem
+                ok={status.appUrlConfigured}
+                label="In-email links (APP_URL)"
+                hint="set APP_URL for clickable links"
+              />
             </ul>
             <div className="text-[11px] text-slate-400 mt-2">
-              Sends daily at {status.sendTimeLocal} · {status.timeZone}{status.senderEmail ? ` · from ${status.senderEmail}` : ''}
+              Sends daily at {status.sendTimeLocal} · {status.timeZone}
+              {status.senderEmail ? ` · from ${status.senderEmail}` : ''}
             </div>
           </div>
         )}
@@ -587,23 +796,32 @@ function AdminDigestSettings() {
         </DigestRow>
         <DigestRow label="Tasks due soon" desc="Days to look ahead (0 = off, max 14).">
           <input
-            type="number" min={0} max={14}
+            type="number"
+            min={0}
+            max={14}
             className="input w-20 text-center"
             value={cfg.dueSoonDays}
             onChange={(e) => set('dueSoonDays', Math.max(0, Math.min(14, parseInt(e.target.value, 10) || 0)))}
           />
         </DigestRow>
         <DigestRow label="Project updates" desc="Projects with work completed in the last 24h.">
-          <DigestSwitch on={!!cfg.projectUpdates} onClick={() => set('projectUpdates', !cfg.projectUpdates)} />
+          <DigestSwitch
+            on={!!cfg.projectUpdates}
+            onClick={() => set('projectUpdates', !cfg.projectUpdates)}
+          />
         </DigestRow>
         <DigestRow label="Send when nothing's due" desc="Off = skip people with an empty day.">
           <DigestSwitch on={!!cfg.sendWhenEmpty} onClick={() => set('sendWhenEmpty', !cfg.sendWhenEmpty)} />
         </DigestRow>
 
         <div className="mt-3.5">
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Intro note (optional)</label>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+            Intro note (optional)
+          </label>
           <textarea
-            className="textarea text-sm" rows={2} maxLength={500}
+            className="textarea text-sm"
+            rows={2}
+            maxLength={500}
             placeholder="A short line shown at the top of every digest."
             value={cfg.introNote || ''}
             onChange={(e) => set('introNote', e.target.value)}
@@ -611,7 +829,9 @@ function AdminDigestSettings() {
         </div>
 
         <div className="flex items-center flex-wrap gap-3 mt-4">
-          <button onClick={save} disabled={saving} className="btn-primary">{saving ? 'Saving…' : 'Save settings'}</button>
+          <button onClick={save} disabled={saving} className="btn-primary">
+            {saving ? 'Saving…' : 'Save settings'}
+          </button>
           <button onClick={sendTest} disabled={testing} className="btn-secondary gap-1.5">
             <Send size={13} /> {testing ? 'Sending…' : 'Send test to my email'}
           </button>
@@ -623,34 +843,41 @@ function AdminDigestSettings() {
   );
 }
 
-
 /* ── Password strength ────────────────────────────────────────────────────── */
 function StrengthMeter({ password }: { password: string }) {
   const checks = [
-    { label: '8+ chars',  ok: password.length >= 8 },
-    { label: 'A–Z',       ok: /[A-Z]/.test(password) },
-    { label: 'a–z',       ok: /[a-z]/.test(password) },
-    { label: '0–9',       ok: /[0-9]/.test(password) },
-    { label: '#!@',       ok: /[^A-Za-z0-9]/.test(password) },
+    { label: '8+ chars', ok: password.length >= 8 },
+    { label: 'A–Z', ok: /[A-Z]/.test(password) },
+    { label: 'a–z', ok: /[a-z]/.test(password) },
+    { label: '0–9', ok: /[0-9]/.test(password) },
+    { label: '#!@', ok: /[^A-Za-z0-9]/.test(password) },
   ];
-  const score = checks.filter(c => c.ok).length;
+  const score = checks.filter((c) => c.ok).length;
   const barColor = score <= 2 ? '#ef4444' : score <= 3 ? '#f59e0b' : '#22c55e';
-  const label = ['','Very weak','Weak','Fair','Good','Strong'][score];
+  const label = ['', 'Very weak', 'Weak', 'Fair', 'Good', 'Strong'][score];
   if (!password) return null;
   return (
     <div className="mt-2 space-y-1.5">
       <div className="flex items-center gap-2">
         <div className="flex gap-0.5 flex-1">
-          {[1,2,3,4,5].map(i => (
-            <div key={i} className="h-1 flex-1 rounded-sm transition-all duration-300"
-              style={{ background: i <= score ? barColor : '#e2e8f0' }} />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="h-1 flex-1 rounded-sm transition-all duration-300"
+              style={{ background: i <= score ? barColor : '#e2e8f0' }}
+            />
           ))}
         </div>
-        <span className="text-[11px] font-bold transition-colors" style={{ color: barColor }}>{label}</span>
+        <span className="text-[11px] font-bold transition-colors" style={{ color: barColor }}>
+          {label}
+        </span>
       </div>
       <div className="flex gap-3 flex-wrap">
-        {checks.map(c => (
-          <span key={c.label} className={`text-[10px] transition-colors ${c.ok ? 'text-green-600 font-medium' : 'text-slate-300'}`}>
+        {checks.map((c) => (
+          <span
+            key={c.label}
+            className={`text-[10px] transition-colors ${c.ok ? 'text-green-600 font-medium' : 'text-slate-300'}`}
+          >
             {c.ok ? '✓' : '·'} {c.label}
           </span>
         ))}
@@ -669,8 +896,10 @@ function RecoveryKeyModal({ keyValue, onClose }: { keyValue: string; onClose: ()
     });
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
+    >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -683,27 +912,31 @@ function RecoveryKeyModal({ keyValue, onClose }: { keyValue: string; onClose: ()
         </div>
         <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-snug">
           <strong>Store this somewhere safe.</strong> It is shown only once and can&rsquo;t be retrieved
-          again. If you ever forget your password, type this key into the password field on the login
-          screen to sign in, then set a new password here.
+          again. If you ever forget your password, type this key into the password field on the login screen
+          to sign in, then set a new password here.
         </div>
         <div className="flex items-center gap-2">
           <div className="flex-1 font-mono text-sm bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-slate-800 select-all tracking-wider break-all">
             {keyValue}
           </div>
-          <button onClick={copy}
+          <button
+            onClick={copy}
             className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all"
             style={{
               background: copied ? '#dcfce7' : '#f1f5f9',
               color: copied ? '#166534' : '#475569',
               border: `1px solid ${copied ? '#bbf7d0' : '#e2e8f0'}`,
-            }}>
+            }}
+          >
             {copied ? <Check size={13} /> : <Copy size={13} />}
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
-        <button onClick={onClose}
+        <button
+          onClick={onClose}
           className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all"
-          style={{ background: '#1565C0' }}>
+          style={{ background: '#1565C0' }}
+        >
           I&rsquo;ve saved it — close
         </button>
       </div>
@@ -716,32 +949,31 @@ function RecoveryKeyModal({ keyValue, onClose }: { keyValue: string; onClose: ()
 ════════════════════════════════════════════════════════════════════════════ */
 export default function SettingsClient({ initialUser }: { initialUser: any }) {
   const router = useRouter();
-  const [user, setUser]   = useState<any>(initialUser);
+  const [user, setUser] = useState<any>(initialUser);
 
-  const [name, setName]           = useState(initialUser.name || '');
-  const [employeeId, setEmpId]    = useState(initialUser.employeeId || '');
+  const [name, setName] = useState(initialUser.name || '');
+  const [employeeId, setEmpId] = useState(initialUser.employeeId || '');
   const [githubUrl, setGithubUrl] = useState(initialUser.githubUrl || '');
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityMsg, setIdentityMsg] = useState('');
 
-
   const [current, setCurrent] = useState('');
-  const [next, setNext]       = useState('');
+  const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [pwSaving, setPwSaving] = useState(false);
-  const [pwMsg, setPwMsg]     = useState('');
-  const [pwErr, setPwErr]     = useState('');
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwErr, setPwErr] = useState('');
 
-  const [hasRecoveryKey, setHasRecoveryKey]   = useState<boolean | null>(null);
+  const [hasRecoveryKey, setHasRecoveryKey] = useState<boolean | null>(null);
   const [recoveryKeyBusy, setRecoveryKeyBusy] = useState(false);
-  const [generatedKey, setGeneratedKey]       = useState<string | null>(null);
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   // Monogram avatar — letter / bg / font are persisted server-side on the
   // User model, and the editor below saves through PATCH /api/users/me.
   // initialUser is the SSR-seeded user, so the avatar shows up immediately
   // (no client-side fetch flicker).
   const [avatarLetter, setAvatarLetter] = useState<string>((initialUser as any).avatarLetter || '');
-  const [avatarBg,     setAvatarBg]     = useState<string>((initialUser as any).avatarBg || '');
-  const [avatarFont,   setAvatarFont]   = useState<number>((initialUser as any).avatarFont ?? 0);
+  const [avatarBg, setAvatarBg] = useState<string>((initialUser as any).avatarBg || '');
+  const [avatarFont, setAvatarFont] = useState<number>((initialUser as any).avatarFont ?? 0);
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -750,7 +982,9 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
     // User data already seeded from SSR; only fetch the recovery-key status
     // (a separate resource that can't come from the JWT).
     if (initialUser.role === 'admin') {
-      api('/auth/security-key').then((r: any) => setHasRecoveryKey(r.hasKey)).catch(() => {});
+      api('/auth/security-key')
+        .then((r: any) => setHasRecoveryKey(r.hasKey))
+        .catch(() => {});
     }
 
     // Warm the below-the-fold activity bundle + current-year data as soon as
@@ -760,14 +994,15 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
       void import('@/components/ActivityGraph').then((m) => m.preloadActivityGraphData());
     };
     const w = window as any;
-    const id = typeof w.requestIdleCallback === 'function'
-      ? w.requestIdleCallback(warm, { timeout: 900 })
-      : window.setTimeout(warm, 250);
+    const id =
+      typeof w.requestIdleCallback === 'function'
+        ? w.requestIdleCallback(warm, { timeout: 900 })
+        : window.setTimeout(warm, 250);
     return () => {
       if (typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(id);
       else window.clearTimeout(id);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function generateRecoveryKey() {
@@ -790,11 +1025,14 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
     setAvatarLetter(next.letter);
     setAvatarBg(next.bg);
     setAvatarFont(next.font);
-    await api('/users/me', { method: 'PATCH', body: {
-      avatarLetter: next.letter,
-      avatarBg:     next.bg,
-      avatarFont:   next.font,
-    } });
+    await api('/users/me', {
+      method: 'PATCH',
+      body: {
+        avatarLetter: next.letter,
+        avatarBg: next.bg,
+        avatarFont: next.font,
+      },
+    });
     // Re-fetch the SSR layout so the sidebar avatar (which reads from
     // CurrentUserContext, seeded server-side) also picks up the change.
     router.refresh();
@@ -802,37 +1040,51 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
   async function saveIdentity(e?: React.FormEvent) {
     e?.preventDefault();
-    setIdentityMsg(''); setIdentitySaving(true);
+    setIdentityMsg('');
+    setIdentitySaving(true);
     try {
       await api('/users/me', { method: 'PATCH', body: { name, githubUrl } });
       setIdentityMsg('Saved');
       setTimeout(() => setIdentityMsg(''), 2500);
-    } catch (err: any) { setIdentityMsg(err.message || 'Save failed.'); }
-    finally { setIdentitySaving(false); }
+    } catch (err: any) {
+      setIdentityMsg(err.message || 'Save failed.');
+    } finally {
+      setIdentitySaving(false);
+    }
   }
 
-  const pwStrong  = next.length >= 8 && /[A-Z]/.test(next) && /[a-z]/.test(next) && /[0-9]/.test(next) && /[^A-Za-z0-9]/.test(next);
+  const pwStrong =
+    next.length >= 8 &&
+    /[A-Z]/.test(next) &&
+    /[a-z]/.test(next) &&
+    /[0-9]/.test(next) &&
+    /[^A-Za-z0-9]/.test(next);
   const pwMatches = next === confirm && next.length > 0;
 
   async function savePw(e: React.FormEvent) {
     e.preventDefault();
-    setPwErr(''); setPwMsg('');
+    setPwErr('');
+    setPwMsg('');
     if (!pwStrong || !pwMatches) return;
     setPwSaving(true);
     try {
       await api('/auth/password', { method: 'PATCH', body: { currentPassword: current, newPassword: next } });
       setPwMsg('Password updated successfully.');
-      setCurrent(''); setNext(''); setConfirm('');
-    } catch (err: any) { setPwErr(err.message || 'Failed to update password.'); }
-    finally { setPwSaving(false); }
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+    } catch (err: any) {
+      setPwErr(err.message || 'Failed to update password.');
+    } finally {
+      setPwSaving(false);
+    }
   }
 
-  const isLeadOrAdmin = (user.role === 'lead' || user.role === 'admin');
+  const isLeadOrAdmin = user.role === 'lead' || user.role === 'admin';
   const roleText = user.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Individual Contributor';
 
   return (
     <div className="max-w-5xl mx-auto pb-12 space-y-6">
-
       {/* ── Hero profile card (shared with the public /username view) ──── */}
       <ProfileHero
         name={user.name}
@@ -880,14 +1132,25 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
       {/* Inline profile editor — name + read-only fields */}
       {editingProfile && (
-        <Section icon={User} title="Edit profile" subtitle="Your name and avatar as they appear across Pragati.">
-          <form onSubmit={(e) => { saveIdentity(e); }} className="space-y-4">
+        <Section
+          icon={User}
+          title="Edit profile"
+          subtitle="Your name and avatar as they appear across Pragati."
+        >
+          <form
+            onSubmit={(e) => {
+              saveIdentity(e);
+            }}
+            className="space-y-4"
+          >
             <div className="flex items-center gap-3">
               <Avatar name={user.name} size={52} letter={avatarLetter} bg={avatarBg} font={avatarFont} />
-              <p className="text-xs text-slate-400 dark:text-white/30">Tap your avatar on the profile page to change it.</p>
+              <p className="text-xs text-slate-400 dark:text-white/30">
+                Tap your avatar on the profile page to change it.
+              </p>
             </div>
             <Field label="Full name">
-              <input className="input" value={name} onChange={e => setName(e.target.value)} required />
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
             </Field>
             <Field label="GitHub profile URL" hint="Optional — shown on your public profile">
               <input
@@ -895,7 +1158,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
                 type="url"
                 placeholder="https://github.com/username"
                 value={githubUrl}
-                onChange={e => setGithubUrl(e.target.value)}
+                onChange={(e) => setGithubUrl(e.target.value)}
                 pattern="^(https://github\.com/[A-Za-z0-9_.-]{1,39})?$"
               />
             </Field>
@@ -916,7 +1179,11 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
       {/* ── Activity — the star feature, front and centre ────────────────── */}
       <div id="activity" className="scroll-mt-6">
-        <Section icon={Activity} title="Activity" subtitle="Your delivered work on Pragati — completed tasks, weighted for on-time and priority.">
+        <Section
+          icon={Activity}
+          title="Activity"
+          subtitle="Your delivered work on Pragati — completed tasks, weighted for on-time and priority."
+        >
           <ActivityGraph />
         </Section>
       </div>
@@ -938,65 +1205,110 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold text-slate-800">Account &amp; security</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Password, Quick PIN{user.role === 'admin' ? ', recovery key & system monitor' : ''} — hidden until you need them.
+              Password, Quick PIN{user.role === 'admin' ? ', recovery key & system monitor' : ''} — hidden
+              until you need them.
             </p>
           </div>
-          <ChevronDown size={16} className={`text-slate-400 shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            size={16}
+            className={`text-slate-400 shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`}
+          />
         </button>
 
         {moreOpen && (
           <div className="p-5 space-y-5 fade-in-soft">
-
             {/* Password + Quick PIN sit side by side on wider screens — they're
                 both "how you get in", so pairing them reads as one unit. */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-            <div id="security" className="scroll-mt-6">
-              <Section icon={Lock} title="Security" subtitle="Change your login password.">
-                <form onSubmit={savePw} className="space-y-3.5">
-                  <Field label="Current password">
-                    <input type="password" className="input" autoComplete="current-password"
-                      value={current} onChange={e => setCurrent(e.target.value)} placeholder="••••••••" />
-                  </Field>
-                  <Field label="New password">
-                    <input type="password" className="input" autoComplete="new-password"
-                      value={next} onChange={e => setNext(e.target.value)} placeholder="Min 8 characters" />
-                    <StrengthMeter password={next} />
-                  </Field>
-                  <Field label="Confirm password">
-                    <input type="password"
-                      className={`input ${confirm && !pwMatches ? 'border-red-300 focus:border-red-400' : ''}`}
-                      autoComplete="new-password"
-                      value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" />
-                    {confirm && !pwMatches && <p className="text-[11px] text-red-500 mt-1">Passwords don't match.</p>}
-                  </Field>
-                  {pwErr && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{pwErr}</div>}
-                  {pwMsg && <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">✓ {pwMsg}</div>}
-                  <button type="submit" className="btn-primary w-full justify-center"
-                    disabled={!current || !pwStrong || !pwMatches || pwSaving}>
-                    {pwSaving ? 'Updating…' : 'Update password'}
-                  </button>
-                </form>
-              </Section>
-            </div>
+              <div id="security" className="scroll-mt-6">
+                <Section icon={Lock} title="Security" subtitle="Change your login password.">
+                  <form onSubmit={savePw} className="space-y-3.5">
+                    <Field label="Current password">
+                      <input
+                        type="password"
+                        className="input"
+                        autoComplete="current-password"
+                        value={current}
+                        onChange={(e) => setCurrent(e.target.value)}
+                        placeholder="••••••••"
+                      />
+                    </Field>
+                    <Field label="New password">
+                      <input
+                        type="password"
+                        className="input"
+                        autoComplete="new-password"
+                        value={next}
+                        onChange={(e) => setNext(e.target.value)}
+                        placeholder="Min 8 characters"
+                      />
+                      <StrengthMeter password={next} />
+                    </Field>
+                    <Field label="Confirm password">
+                      <input
+                        type="password"
+                        className={`input ${confirm && !pwMatches ? 'border-red-300 focus:border-red-400' : ''}`}
+                        autoComplete="new-password"
+                        value={confirm}
+                        onChange={(e) => setConfirm(e.target.value)}
+                        placeholder="Repeat password"
+                      />
+                      {confirm && !pwMatches && (
+                        <p className="text-[11px] text-red-500 mt-1">Passwords don't match.</p>
+                      )}
+                    </Field>
+                    {pwErr && (
+                      <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        {pwErr}
+                      </div>
+                    )}
+                    {pwMsg && (
+                      <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        ✓ {pwMsg}
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      className="btn-primary w-full justify-center"
+                      disabled={!current || !pwStrong || !pwMatches || pwSaving}
+                    >
+                      {pwSaving ? 'Updating…' : 'Update password'}
+                    </button>
+                  </form>
+                </Section>
+              </div>
 
-            <QuickPinSection />
+              <QuickPinSection />
             </div>
 
             <DropSoundToggle initial={initialUser.soundDropEnabled !== false} />
 
             {user.role === 'admin' && (
               <div id="recovery-key" className="scroll-mt-6">
-                <Section icon={ShieldCheck} title="Recovery key"
-                  subtitle="Sign in with this if you ever forget your password.">
+                <Section
+                  icon={ShieldCheck}
+                  title="Recovery key"
+                  subtitle="Sign in with this if you ever forget your password."
+                >
                   <div className="space-y-3.5">
                     <div className="rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5 text-xs text-slate-500 leading-snug">
-                      {hasRecoveryKey === null
-                        ? 'Checking…'
-                        : hasRecoveryKey
-                          ? <><span className="text-green-700 font-semibold">✓ Key is set.</span> Regenerate it only if you think it has been exposed — the old key stops working.</>
-                          : <><span className="text-amber-700 font-semibold">No key yet.</span> Generate one and keep it safe so you&rsquo;re never locked out.</>}
+                      {hasRecoveryKey === null ? (
+                        'Checking…'
+                      ) : hasRecoveryKey ? (
+                        <>
+                          <span className="text-green-700 font-semibold">✓ Key is set.</span> Regenerate it
+                          only if you think it has been exposed — the old key stops working.
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-amber-700 font-semibold">No key yet.</span> Generate one and
+                          keep it safe so you&rsquo;re never locked out.
+                        </>
+                      )}
                     </div>
-                    <button type="button" onClick={generateRecoveryKey}
+                    <button
+                      type="button"
+                      onClick={generateRecoveryKey}
                       disabled={recoveryKeyBusy || hasRecoveryKey === null}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
                       style={{
@@ -1004,13 +1316,18 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
                         color: hasRecoveryKey ? '#475569' : '#ffffff',
                         border: hasRecoveryKey ? '1px solid #e2e8f0' : 'none',
                         opacity: recoveryKeyBusy || hasRecoveryKey === null ? 0.6 : 1,
-                      }}>
+                      }}
+                    >
                       <RefreshCw size={14} className={recoveryKeyBusy ? 'animate-spin' : ''} />
-                      {recoveryKeyBusy ? 'Generating…' : hasRecoveryKey ? 'Regenerate recovery key' : 'Generate recovery key'}
+                      {recoveryKeyBusy
+                        ? 'Generating…'
+                        : hasRecoveryKey
+                          ? 'Regenerate recovery key'
+                          : 'Generate recovery key'}
                     </button>
                     <p className="text-[11px] text-slate-400 leading-snug">
-                      To use it: on the login screen, enter your email and type this key in the
-                      password box. You&rsquo;ll be signed in and can set a new password here.
+                      To use it: on the login screen, enter your email and type this key in the password box.
+                      You&rsquo;ll be signed in and can set a new password here.
                     </p>
                   </div>
                 </Section>
@@ -1018,14 +1335,11 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             )}
 
             {user.role === 'admin' && <AdminErrorMonitor />}
-
           </div>
         )}
       </div>
 
-      {generatedKey && (
-        <RecoveryKeyModal keyValue={generatedKey} onClose={() => setGeneratedKey(null)} />
-      )}
+      {generatedKey && <RecoveryKeyModal keyValue={generatedKey} onClose={() => setGeneratedKey(null)} />}
 
       {/* View public profile — floating bottom-right anchor */}
       {user.username && (

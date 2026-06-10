@@ -17,7 +17,10 @@ test.describe('Teams page', () => {
     await expect(page.locator('text=/internal server error|application error/i')).toHaveCount(0);
   });
 
-  test('membership-as-tagging helper is visible on a team detail page (if any team exists)', async ({ page, request }) => {
+  test('membership-as-tagging helper is visible on a team detail page (if any team exists)', async ({
+    page,
+    request,
+  }) => {
     // Make sure at least one team exists so we have a detail page to visit.
     const list = await request.get('/api/teams');
     let teams: any[] = await list.json().catch(() => []);

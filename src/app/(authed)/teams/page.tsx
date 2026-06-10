@@ -31,7 +31,9 @@ export default async function TeamsPage() {
   ]);
 
   const canManage = jwt.role === 'lead' || jwt.role === 'admin';
-  const visibleUserIds = Array.from(new Set(teams.flatMap((t: any) => [t.leadId, ...(t.memberIds || [])].filter(Boolean).map(String))));
+  const visibleUserIds = Array.from(
+    new Set(teams.flatMap((t: any) => [t.leadId, ...(t.memberIds || [])].filter(Boolean).map(String))),
+  );
   const users = await User.find(
     canManage ? { active: { $ne: false } } : { _id: { $in: visibleUserIds }, active: { $ne: false } },
   )
@@ -46,17 +48,17 @@ export default async function TeamsPage() {
     teamS(t, {
       memberCount: (t.memberIds || []).filter((id: any) => !adminIds.has(String(id))).length,
       projectCount: cmap.get(String(t._id)) || 0,
-    })
+    }),
   );
 
   const initialUsers = users.map((u: any) => ({
     id: String(u._id),
     name: u.name,
     role: u.role === 'pm' ? 'lead' : u.role === 'employee' ? 'contributor' : u.role,
-    title:        u.title        || undefined,
-    department:   u.department   || '',
+    title: u.title || undefined,
+    department: u.department || '',
     organisation: u.organisation || '',
-    location:     u.location     || '',
+    location: u.location || '',
   }));
 
   return (

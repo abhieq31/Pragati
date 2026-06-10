@@ -23,15 +23,15 @@ export async function GET(req: NextRequest) {
 
     const invites = await Invite.find({}).sort({ createdAt: -1 }).limit(100).lean();
     return NextResponse.json({
-      invites: invites.map(i => ({
-        id:            String(i._id),
-        email:         i.email,
+      invites: invites.map((i) => ({
+        id: String(i._id),
+        email: i.email,
         invitedByName: i.invitedByName,
-        createdAt:     i.createdAt,
-        expiresAt:     i.expiresAt,
-        consumedAt:    i.consumedAt,
-        revokedAt:     i.revokedAt,
-        token:         i.consumedAt || i.revokedAt ? null : i.token, // only expose token for active invites
+        createdAt: i.createdAt,
+        expiresAt: i.expiresAt,
+        consumedAt: i.consumedAt,
+        revokedAt: i.revokedAt,
+        token: i.consumedAt || i.revokedAt ? null : i.token, // only expose token for active invites
       })),
     });
   } catch (e) {
@@ -57,13 +57,13 @@ export async function POST(req: NextRequest) {
     const activePending = await Invite.findOne({
       email,
       consumedAt: null,
-      revokedAt:  null,
-      expiresAt:  { $gt: now },
+      revokedAt: null,
+      expiresAt: { $gt: now },
     }).lean();
     if (activePending) {
       return NextResponse.json(
         { error: 'An active invite already exists for this email. Revoke it first to reissue.' },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -71,15 +71,15 @@ export async function POST(req: NextRequest) {
     const invite = await Invite.create({
       token,
       email,
-      invitedBy:     caller.sub,
+      invitedBy: caller.sub,
       invitedByName: caller.name,
-      expiresAt:     new Date(now.getTime() + SEVEN_DAYS_MS),
+      expiresAt: new Date(now.getTime() + SEVEN_DAYS_MS),
     });
 
     return NextResponse.json({
-      id:        String(invite._id),
-      email:     invite.email,
-      token:     invite.token,
+      id: String(invite._id),
+      email: invite.email,
+      token: invite.token,
       expiresAt: invite.expiresAt,
     });
   } catch (e) {

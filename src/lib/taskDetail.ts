@@ -28,49 +28,61 @@ export async function getTaskDetail(id: string, userId: string, role?: string | 
     const proj = await Project.findOne({
       _id: (t as any).projectId,
       ...projectsVisibleFilter(scope),
-    }).select('_id').lean();
+    })
+      .select('_id')
+      .lean();
     if (!proj) return null;
 
     const [project, assignee, qa, commentUsers, flowConfirmer] = await Promise.all([
-      Project.findById((t as any).projectId).select('code name teamId').lean(),
+      Project.findById((t as any).projectId)
+        .select('code name teamId')
+        .lean(),
       (t as any).assigneeId ? User.findById((t as any).assigneeId).lean() : Promise.resolve(null),
       (t as any).qaSignoffUserId ? User.findById((t as any).qaSignoffUserId).lean() : Promise.resolve(null),
       // One batched lookup covers both comment authors and effort-log entries.
-      User.find({ _id: { $in: [
-        ...((t as any).comments || []).map((c: any) => c.userId),
-        ...((t as any).effortLog || []).map((e: any) => e.userId),
-      ] } }).select('name').lean(),
+      User.find({
+        _id: {
+          $in: [
+            ...((t as any).comments || []).map((c: any) => c.userId),
+            ...((t as any).effortLog || []).map((e: any) => e.userId),
+          ],
+        },
+      })
+        .select('name')
+        .lean(),
       (t as any).flowPendingConfirmedByUserId
-        ? User.findById((t as any).flowPendingConfirmedByUserId).select('name').lean()
+        ? User.findById((t as any).flowPendingConfirmedByUserId)
+            .select('name')
+            .lean()
         : Promise.resolve(null),
     ]);
     const uMap = new Map(commentUsers.map((u) => [String(u._id), u.name]));
     const comments = ((t as any).comments || []).map((c: any) => ({
-      id:        String(c._id),
-      userId:    String(c.userId),
-      userName:  uMap.get(String(c.userId)) || 'User',
-      body:      c.body,
+      id: String(c._id),
+      userId: String(c.userId),
+      userName: uMap.get(String(c.userId)) || 'User',
+      body: c.body,
       createdAt: toIso(c.createdAt),
     }));
     const effortLog = ((t as any).effortLog || []).map((e: any) => ({
-      id:        String(e._id),
-      userId:    String(e.userId),
-      userName:  uMap.get(String(e.userId)) || 'User',
-      minutes:   e.minutes,
-      note:      e.note || '',
-      onDate:    e.onDate || '',
-      source:    e.source || 'manual',
+      id: String(e._id),
+      userId: String(e.userId),
+      userName: uMap.get(String(e.userId)) || 'User',
+      minutes: e.minutes,
+      note: e.note || '',
+      onDate: e.onDate || '',
+      source: e.source || 'manual',
       createdAt: toIso(e.createdAt),
     }));
 
     return {
       ...taskS(t as any, {
-        assigneeName:   (assignee as any)?.name || null,
+        assigneeName: (assignee as any)?.name || null,
         assigneeActive: assignee ? (assignee as any).active !== false : null,
-        qaSignoffName:  (qa as any)?.name || null,
-        projectCode:    (project as any)?.code,
-        projectName:    (project as any)?.name,
-        projectTeamId:  (project as any)?.teamId ? String((project as any).teamId) : null,
+        qaSignoffName: (qa as any)?.name || null,
+        projectCode: (project as any)?.code,
+        projectName: (project as any)?.name,
+        projectTeamId: (project as any)?.teamId ? String((project as any).teamId) : null,
         flowPendingConfirmedByName: (flowConfirmer as any)?.name || null,
       }),
       comments,

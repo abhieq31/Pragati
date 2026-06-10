@@ -11,41 +11,78 @@ import { LIFECYCLES, type LifecycleKey } from '../src/lib/lifecycles';
 async function main() {
   await connectDB();
   console.log('[seed] clearing collections...');
-  await Promise.all([
-    User.deleteMany({}),
-    Team.deleteMany({}),
-    Project.deleteMany({}),
-    Task.deleteMany({})
-  ]);
+  await Promise.all([User.deleteMany({}), Team.deleteMany({}), Project.deleteMany({}), Task.deleteMany({})]);
 
   const hash = (pw: string) => bcrypt.hashSync(pw, 10);
-  const mkUser = async (p: {
-    email: string;
-    name: string;
-    role: string;
-    title: string;
-    pw: string;
-  }) =>
+  const mkUser = async (p: { email: string; name: string; role: string; title: string; pw: string }) =>
     User.create({
       email: p.email.toLowerCase(),
       name: p.name,
       passwordHash: hash(p.pw),
       role: (p.role === 'employee' ? 'contributor' : p.role) as any,
-      title: p.title
+      title: p.title,
     });
 
   console.log('[seed] creating users...');
   const people = [
     { email: 'admin@pragati.local', name: 'Admin', role: 'lead', title: 'Workspace admin', pw: 'admin123' },
-    { email: 'priya@pragati.local', name: 'Priya Shah', role: 'lead', title: 'Head of Quality Informatics', pw: 'priya123' },
+    {
+      email: 'priya@pragati.local',
+      name: 'Priya Shah',
+      role: 'lead',
+      title: 'Head of Quality Informatics',
+      pw: 'priya123',
+    },
     { email: 'rahul@pragati.local', name: 'Rahul Mehta', role: 'lead', title: 'CSV Lead', pw: 'rahul123' },
-    { email: 'ananya@pragati.local', name: 'Ananya Iyer', role: 'lead', title: 'Data Integrity Lead', pw: 'ananya123' },
-    { email: 'dhruv@pragati.local', name: 'Dhruv Kapoor', role: 'lead', title: 'Pharmacovigilance Lead', pw: 'dhruv123' },
-    { email: 'karan@pragati.local', name: 'Karan Desai', role: 'contributor', title: 'QA Analyst', pw: 'karan123' },
-    { email: 'neha@pragati.local', name: 'Neha Patel', role: 'contributor', title: 'QA Analyst', pw: 'neha123' },
-    { email: 'vikram@pragati.local', name: 'Vikram Joshi', role: 'contributor', title: 'CSV Engineer', pw: 'vikram123' },
-    { email: 'meera@pragati.local', name: 'Meera Kulkarni', role: 'contributor', title: 'Validation Specialist', pw: 'meera123' },
-    { email: 'arjun@pragati.local', name: 'Arjun Reddy', role: 'contributor', title: 'PV Case Processor', pw: 'arjun123' }
+    {
+      email: 'ananya@pragati.local',
+      name: 'Ananya Iyer',
+      role: 'lead',
+      title: 'Data Integrity Lead',
+      pw: 'ananya123',
+    },
+    {
+      email: 'dhruv@pragati.local',
+      name: 'Dhruv Kapoor',
+      role: 'lead',
+      title: 'Pharmacovigilance Lead',
+      pw: 'dhruv123',
+    },
+    {
+      email: 'karan@pragati.local',
+      name: 'Karan Desai',
+      role: 'contributor',
+      title: 'QA Analyst',
+      pw: 'karan123',
+    },
+    {
+      email: 'neha@pragati.local',
+      name: 'Neha Patel',
+      role: 'contributor',
+      title: 'QA Analyst',
+      pw: 'neha123',
+    },
+    {
+      email: 'vikram@pragati.local',
+      name: 'Vikram Joshi',
+      role: 'contributor',
+      title: 'CSV Engineer',
+      pw: 'vikram123',
+    },
+    {
+      email: 'meera@pragati.local',
+      name: 'Meera Kulkarni',
+      role: 'contributor',
+      title: 'Validation Specialist',
+      pw: 'meera123',
+    },
+    {
+      email: 'arjun@pragati.local',
+      name: 'Arjun Reddy',
+      role: 'contributor',
+      title: 'PV Case Processor',
+      pw: 'arjun123',
+    },
   ];
   const users = await Promise.all(people.map(mkUser));
   const U = Object.fromEntries(users.map((u) => [u.email, u]));
@@ -57,22 +94,22 @@ async function main() {
       description: 'CSV / GAMP 5 lifecycle for GxP computerized systems.',
       lead: 'rahul@pragati.local',
       members: ['rahul@pragati.local', 'vikram@pragati.local', 'meera@pragati.local', 'karan@pragati.local'],
-      function: 'csv_validation'
+      function: 'csv_validation',
     },
     {
       name: 'Data Integrity & Audit',
       description: 'ALCOA+ assessments, audit trail reviews, inspection readiness.',
       lead: 'ananya@pragati.local',
       members: ['ananya@pragati.local', 'neha@pragati.local', 'arjun@pragati.local', 'karan@pragati.local'],
-      function: 'data_integrity'
+      function: 'data_integrity',
     },
     {
       name: 'Pharmacovigilance Informatics',
       description: 'ICSR intake, E2B submissions, safety system operations.',
       lead: 'dhruv@pragati.local',
       members: ['dhruv@pragati.local', 'arjun@pragati.local', 'neha@pragati.local'],
-      function: 'pharmacovigilance'
-    }
+      function: 'pharmacovigilance',
+    },
   ];
   const teams = await Promise.all(
     teamDefs.map(async (t) =>
@@ -81,9 +118,9 @@ async function main() {
         description: t.description,
         leadId: U[t.lead]._id,
         memberIds: t.members.map((m) => U[m]._id),
-        function: t.function
-      })
-    )
+        function: t.function,
+      }),
+    ),
   );
   const T = Object.fromEntries(teams.map((x) => [x.name, x]));
 
@@ -110,7 +147,7 @@ async function main() {
     const phases = lc.phases.map((ph, i) => ({
       _id: new mongoose.Types.ObjectId(),
       name: ph.name,
-      position: i
+      position: i,
     }));
     const project = await Project.create({
       code: opts.code,
@@ -125,7 +162,7 @@ async function main() {
       gxpImpact: opts.gxpImpact || 'high',
       regulatoryRefs: lc.regulatoryRefs,
       status: 'in_progress',
-      phases
+      phases,
     });
     const memberIds = (team as any).memberIds;
     const tasks: any[] = [];
@@ -133,10 +170,7 @@ async function main() {
       ph.tasks.forEach((t, j) => {
         const assigneeId = memberIds[(i + j) % memberIds.length];
         const startDate = iso(opts.start + Math.floor((opts.due - opts.start) * (i / lc.phases.length)));
-        const dueDate = iso(
-          opts.start +
-            Math.floor((opts.due - opts.start) * ((i + 1) / lc.phases.length))
-        );
+        const dueDate = iso(opts.start + Math.floor((opts.due - opts.start) * ((i + 1) / lc.phases.length)));
         tasks.push({
           projectId: project._id,
           phaseId: phases[i]._id,
@@ -147,7 +181,7 @@ async function main() {
           priority: opts.priority || 'high',
           assigneeId,
           startDate,
-          dueDate
+          dueDate,
         });
       });
     });
@@ -163,7 +197,7 @@ async function main() {
     teamName: 'Computerized System Validation',
     ownerEmail: 'rahul@pragati.local',
     start: -40,
-    due: 30
+    due: 30,
   });
   await createProjectFromTemplate({
     name: 'Chromatography Data System - Data Integrity Assessment',
@@ -172,7 +206,7 @@ async function main() {
     teamName: 'Data Integrity & Audit',
     ownerEmail: 'ananya@pragati.local',
     start: -25,
-    due: 40
+    due: 40,
   });
   await createProjectFromTemplate({
     name: 'USFDA Mock Inspection 2026',
@@ -182,7 +216,7 @@ async function main() {
     ownerEmail: 'ananya@pragati.local',
     start: -15,
     due: 25,
-    priority: 'critical'
+    priority: 'critical',
   });
   await createProjectFromTemplate({
     name: 'Shared-login Deviation #DEV-AL-2213',
@@ -192,7 +226,7 @@ async function main() {
     ownerEmail: 'ananya@pragati.local',
     start: -10,
     due: 18,
-    priority: 'critical'
+    priority: 'critical',
   });
   await createProjectFromTemplate({
     name: 'HVAC Requalification Change Control',
@@ -201,7 +235,7 @@ async function main() {
     teamName: 'Computerized System Validation',
     ownerEmail: 'rahul@pragati.local',
     start: -5,
-    due: 45
+    due: 45,
   });
   await createProjectFromTemplate({
     name: 'ICSR Intake Automation - Safety System',
@@ -210,13 +244,13 @@ async function main() {
     teamName: 'Pharmacovigilance Informatics',
     ownerEmail: 'dhruv@pragati.local',
     start: -12,
-    due: 32
+    due: 32,
   });
 
   console.log('[seed] marking some tasks done (including early completions)...');
   const allProjects = await Project.find({}).lean();
   for (const p of allProjects) {
-    const pTasks = await Task.find({ projectId: p._id }).sort({ 'phaseId': 1, createdAt: 1 });
+    const pTasks = await Task.find({ projectId: p._id }).sort({ phaseId: 1, createdAt: 1 });
     const n = Math.floor(pTasks.length * 0.4);
     for (let i = 0; i < n; i++) {
       const t = pTasks[i];
@@ -255,14 +289,14 @@ async function main() {
         dueDate: iso(2),
         completedAt: iso(-1),
         assigneeId: U['karan@pragati.local']._id,
-        position: 0
+        position: 0,
       });
       (dt as any).subtasks.push({
         title: 'Interview impacted analysts',
         status: 'todo',
         dueDate: iso(4),
         assigneeId: U['neha@pragati.local']._id,
-        position: 1
+        position: 1,
       });
       await dt.save();
     }
@@ -272,18 +306,18 @@ async function main() {
       {
         $set: {
           description:
-            'Shared login used on chromatography data system during batch release. Audit trail review shows 3 batches impacted. Possible ALCOA+ violation; potential FDA exposure during next inspection.'
-        }
-      }
+            'Shared login used on chromatography data system during batch release. Audit trail review shows 3 batches impacted. Possible ALCOA+ violation; potential FDA exposure during next inspection.',
+        },
+      },
     );
     await Task.updateOne(
       { projectId: devProj._id, title: /Impact assessment/i },
       {
         $set: {
           description:
-            'Need to determine if any released batches are impacted and whether a recall should be considered. Review raw data integrity and audit trail gaps.'
-        }
-      }
+            'Need to determine if any released batches are impacted and whether a recall should be considered. Review raw data integrity and audit trail gaps.',
+        },
+      },
     );
   }
 
@@ -306,7 +340,7 @@ async function main() {
         gxpCritical: Math.random() < 0.4,
         requiresQaSignoff: Math.random() < 0.3,
         dueDate: due,
-        completedAt: d
+        completedAt: d,
       });
     }
   };

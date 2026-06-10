@@ -14,8 +14,8 @@ import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 const ScratchNoteSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    text:   { type: String, required: true, maxlength: 2000 },
-    done:   { type: Boolean, default: false },
+    text: { type: String, required: true, maxlength: 2000 },
+    done: { type: Boolean, default: false },
     // If the note was promoted into a task, remember which — lets the UI
     // show a quiet "→ tracked" link instead of re-promoting.
     promotedTaskId: { type: Schema.Types.ObjectId, ref: 'Task', default: null },

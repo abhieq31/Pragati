@@ -23,23 +23,29 @@ async function main() {
 
   await connectDB();
 
-  const users   = await User.find({}, '_id name email role createdAt').lean();
+  const users = await User.find({}, '_id name email role createdAt').lean();
   const invites = await Invite.find({ consumedByUserId: { $ne: null } }, 'consumedByUserId').lean();
-  const invitedUserIds = new Set(invites.map(i => String(i.consumedByUserId)));
+  const invitedUserIds = new Set(invites.map((i) => String(i.consumedByUserId)));
 
   // The very first registered account (the workspace founder) survives even
   // without an invite — that's how /auth/register is intended to work.
-  const sorted = [...users].sort((a, b) =>
-    new Date(a.createdAt as any).getTime() - new Date(b.createdAt as any).getTime(),
+  const sorted = [...users].sort(
+    (a, b) => new Date(a.createdAt as any).getTime() - new Date(b.createdAt as any).getTime(),
   );
   const founderId = sorted[0]?._id ? String(sorted[0]._id) : null;
 
-  const toKeep: typeof users   = [];
-  const toDrop: typeof users   = [];
+  const toKeep: typeof users = [];
+  const toDrop: typeof users = [];
   for (const u of users) {
     const id = String(u._id);
-    if (id === founderId)          { toKeep.push(u); continue; }
-    if (invitedUserIds.has(id))    { toKeep.push(u); continue; }
+    if (id === founderId) {
+      toKeep.push(u);
+      continue;
+    }
+    if (invitedUserIds.has(id)) {
+      toKeep.push(u);
+      continue;
+    }
     toDrop.push(u);
   }
 
@@ -61,14 +67,14 @@ async function main() {
     return;
   }
 
-  const ids = toDrop.map(u => u._id);
+  const ids = toDrop.map((u) => u._id);
   const res = await User.deleteMany({ _id: { $in: ids } });
   console.log(`\n[cleanup] deleted ${res.deletedCount} user(s).`);
 
   await mongoose.disconnect();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

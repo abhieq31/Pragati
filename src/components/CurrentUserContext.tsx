@@ -4,9 +4,7 @@ import type { CurrentUser } from './AppShell';
 
 const Ctx = createContext<CurrentUser | null>(null);
 
-export function CurrentUserProvider({
-  user, children,
-}: { user: CurrentUser; children: React.ReactNode }) {
+export function CurrentUserProvider({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   return <Ctx.Provider value={user}>{children}</Ctx.Provider>;
 }
 

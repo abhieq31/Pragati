@@ -43,11 +43,15 @@ export function Select({
   const [mounted, setMounted] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(
+    null,
+  );
 
   const selected = options.find((o) => o.value === value) || null;
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useLayoutEffect(() => {
     if (!open || !btnRef.current) return;
@@ -85,7 +89,13 @@ export function Select({
 
   // When opening, focus the currently-selected row.
   useEffect(() => {
-    if (open) setActive(Math.max(0, options.findIndex((o) => o.value === value)));
+    if (open)
+      setActive(
+        Math.max(
+          0,
+          options.findIndex((o) => o.value === value),
+        ),
+      );
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function commit(idx: number) {
@@ -99,15 +109,32 @@ export function Select({
   function onKeyDown(e: React.KeyboardEvent) {
     if (disabled) return;
     if (!open) {
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); }
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setOpen(true);
+      }
       return;
     }
-    if (e.key === 'Escape') { e.preventDefault(); setOpen(false); btnRef.current?.focus(); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(options.length - 1, i + 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(0, i - 1)); }
-    else if (e.key === 'Enter') { e.preventDefault(); commit(active); }
-    else if (e.key === 'Home') { e.preventDefault(); setActive(0); }
-    else if (e.key === 'End') { e.preventDefault(); setActive(options.length - 1); }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setOpen(false);
+      btnRef.current?.focus();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive((i) => Math.min(options.length - 1, i + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive((i) => Math.max(0, i - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      commit(active);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActive(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setActive(options.length - 1);
+    }
   }
 
   return (
@@ -127,54 +154,70 @@ export function Select({
         <span className={`truncate ${selected ? '' : 'text-slate-400'}`}>
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown size={15} className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={15}
+          className={`shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
       </button>
 
-      {mounted && open && coords && createPortal(
-        <div
-          ref={popRef}
-          role="listbox"
-          tabIndex={-1}
-          className="popover-in fixed z-[9999] rounded-xl border border-slate-200/80 bg-white dark:bg-[#262624] dark:border-white/10 shadow-xl overflow-hidden p-1 datepicker-pop origin-top"
-          style={{
-            top: coords.top, left: coords.left, width: coords.width,
-            maxHeight: 300, overflowY: 'auto',
-            boxShadow: '0 18px 44px rgba(15,23,42,0.16)',
-          }}
-          onKeyDown={onKeyDown}
-        >
-          {options.map((opt, i) => {
-            const isSel = opt.value === value;
-            const isActive = i === active;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={isSel}
-                disabled={opt.disabled}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => commit(i)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm transition-colors ${
-                  opt.disabled ? 'opacity-40 cursor-not-allowed'
-                  : isActive ? 'bg-blue-50 dark:bg-white/5' : 'hover:bg-slate-50 dark:hover:bg-white/5'
-                }`}
-              >
-                <span className="w-4 shrink-0 flex items-center justify-center">
-                  {isSel && <Check size={14} className="text-blue-600 dark:text-blue-400" />}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block truncate ${isSel ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-white/80'}`}>
-                    {opt.label}
+      {mounted &&
+        open &&
+        coords &&
+        createPortal(
+          <div
+            ref={popRef}
+            role="listbox"
+            tabIndex={-1}
+            className="popover-in fixed z-[9999] rounded-xl border border-slate-200/80 bg-white dark:bg-[#262624] dark:border-white/10 shadow-xl overflow-hidden p-1 datepicker-pop origin-top"
+            style={{
+              top: coords.top,
+              left: coords.left,
+              width: coords.width,
+              maxHeight: 300,
+              overflowY: 'auto',
+              boxShadow: '0 18px 44px rgba(15,23,42,0.16)',
+            }}
+            onKeyDown={onKeyDown}
+          >
+            {options.map((opt, i) => {
+              const isSel = opt.value === value;
+              const isActive = i === active;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isSel}
+                  disabled={opt.disabled}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => commit(i)}
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm transition-colors ${
+                    opt.disabled
+                      ? 'opacity-40 cursor-not-allowed'
+                      : isActive
+                        ? 'bg-blue-50 dark:bg-white/5'
+                        : 'hover:bg-slate-50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <span className="w-4 shrink-0 flex items-center justify-center">
+                    {isSel && <Check size={14} className="text-blue-600 dark:text-blue-400" />}
                   </span>
-                  {opt.hint && <span className="block text-[11px] text-slate-400 truncate">{opt.hint}</span>}
-                </span>
-              </button>
-            );
-          })}
-        </div>,
-        document.body,
-      )}
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block truncate ${isSel ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-white/80'}`}
+                    >
+                      {opt.label}
+                    </span>
+                    {opt.hint && (
+                      <span className="block text-[11px] text-slate-400 truncate">{opt.hint}</span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

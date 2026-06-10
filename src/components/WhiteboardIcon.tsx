@@ -50,20 +50,8 @@ export function WhiteboardIcon({
       <path d="M8 17 L7 21" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" />
       <path d="M16 17 L17 21" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" />
       {/* A short sketch line on the board — signals "you draw here" */}
-      <path
-        d="M6 8 L13 8"
-        stroke={stroke}
-        strokeOpacity="0.55"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-      <path
-        d="M6 12 L11 12"
-        stroke={stroke}
-        strokeOpacity="0.45"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
+      <path d="M6 8 L13 8" stroke={stroke} strokeOpacity="0.55" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M6 12 L11 12" stroke={stroke} strokeOpacity="0.45" strokeWidth="1.4" strokeLinecap="round" />
       {/* Pen — body angled across the board, tip pointing into the writing area.
           Slightly thicker outline + emerald accent so the pen is the eye-magnet
           element of the glyph. */}

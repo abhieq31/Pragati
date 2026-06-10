@@ -9,51 +9,57 @@ import { AVATAR_FONTS, avatarFg } from '@/components/ui';
 
 function getInitials(name: string) {
   if (!name) return '?';
-  return name.trim().split(/\s+/).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 /* Rotating wisdom from Jensen Huang, CEO of NVIDIA. */
 const QUOTES = [
-  "You have to be the very best at what you do, because the world is so competitive.",
-  "The more you suffer, the more it shows you really care about what you are doing.",
-  "I want you to be in a state of urgency. Not panic — urgency.",
+  'You have to be the very best at what you do, because the world is so competitive.',
+  'The more you suffer, the more it shows you really care about what you are doing.',
+  'I want you to be in a state of urgency. Not panic — urgency.',
   "Run. Don't walk.",
-  "The greatest opportunity in human history is right now. The next industrial revolution has begun.",
-  "Speed is a strategy. Doing things fast is not just efficiency — it is competitive advantage.",
-  "If you are not embarrassed by version one, you shipped too late.",
-  "We have to be the best. Not incrementally better — we have to be the best.",
-  "The most important thing a leader can do is set a high bar for quality.",
-  "Our goal is not to be a technology company. Our goal is to solve problems that matter.",
-  "Expectations lead to disappointment. Determination leads to results.",
-  "Every day you have to earn your place. Every single day.",
-  "The company that moves fastest wins. Always.",
+  'The greatest opportunity in human history is right now. The next industrial revolution has begun.',
+  'Speed is a strategy. Doing things fast is not just efficiency — it is competitive advantage.',
+  'If you are not embarrassed by version one, you shipped too late.',
+  'We have to be the best. Not incrementally better — we have to be the best.',
+  'The most important thing a leader can do is set a high bar for quality.',
+  'Our goal is not to be a technology company. Our goal is to solve problems that matter.',
+  'Expectations lead to disappointment. Determination leads to results.',
+  'Every day you have to earn your place. Every single day.',
+  'The company that moves fastest wins. Always.',
   "Do not celebrate yesterday's wins too long. Tomorrow's competition does not rest.",
   "You have to be willing to do what others won't. That is the only way to get where others haven't been.",
-  "If I had not gotten comfortable with failure, I would never have achieved anything.",
-  "The ability to learn is the most important quality a leader can have.",
-  "Talent is everywhere. Opportunity is not. Close that gap.",
-  "Being brilliant is not enough. You have to do something with it.",
-  "Great execution beats great strategy every time.",
-  "You can either fear change or embrace it. One path leads to extinction, the other to leadership.",
-  "We do not just build products. We build trust. One delivery at a time.",
-  "The work is the message. Ship it right.",
-  "Done is not enough. Done well is the standard.",
-  "Your team is your most important product. Build them like it.",
-  "A roadmap without urgency is a wish list.",
-  "Software without discipline is chaos. Discipline without software is just slow chaos.",
-  "Every feature you ship is a promise. Honor it.",
-  "Complexity is the enemy of execution. Simplify relentlessly.",
-  "The best teams do not just meet expectations — they redefine them.",
-  "Accountability is not a punishment. It is a sign that your work matters.",
-  "The difference between good and great is attention to the things others ignore.",
-  "Move fast. Learn faster. Ship. Repeat.",
-  "Quality is not a phase. It is the whole process.",
-  "If your team does not know the goal, they cannot reach it. Clarity is leadership.",
-  "The race is not always to the swift, but to the ones who never stop.",
-  "Precision and speed are not opposites. The most precise teams move fastest.",
-  "Build for impact, not for applause.",
-  "Vision without execution is delusion.",
-  "The best time to fix a problem is before it becomes one.",
+  'If I had not gotten comfortable with failure, I would never have achieved anything.',
+  'The ability to learn is the most important quality a leader can have.',
+  'Talent is everywhere. Opportunity is not. Close that gap.',
+  'Being brilliant is not enough. You have to do something with it.',
+  'Great execution beats great strategy every time.',
+  'You can either fear change or embrace it. One path leads to extinction, the other to leadership.',
+  'We do not just build products. We build trust. One delivery at a time.',
+  'The work is the message. Ship it right.',
+  'Done is not enough. Done well is the standard.',
+  'Your team is your most important product. Build them like it.',
+  'A roadmap without urgency is a wish list.',
+  'Software without discipline is chaos. Discipline without software is just slow chaos.',
+  'Every feature you ship is a promise. Honor it.',
+  'Complexity is the enemy of execution. Simplify relentlessly.',
+  'The best teams do not just meet expectations — they redefine them.',
+  'Accountability is not a punishment. It is a sign that your work matters.',
+  'The difference between good and great is attention to the things others ignore.',
+  'Move fast. Learn faster. Ship. Repeat.',
+  'Quality is not a phase. It is the whole process.',
+  'If your team does not know the goal, they cannot reach it. Clarity is leadership.',
+  'The race is not always to the swift, but to the ones who never stop.',
+  'Precision and speed are not opposites. The most precise teams move fastest.',
+  'Build for impact, not for applause.',
+  'Vision without execution is delusion.',
+  'The best time to fix a problem is before it becomes one.',
 ];
 
 function RotatingQuote() {
@@ -62,13 +68,22 @@ function RotatingQuote() {
   useEffect(() => {
     const t = setInterval(() => {
       setShow(false);
-      setTimeout(() => { setI((n) => (n + 1) % QUOTES.length); setShow(true); }, 400);
+      setTimeout(() => {
+        setI((n) => (n + 1) % QUOTES.length);
+        setShow(true);
+      }, 400);
     }, 6000);
     return () => clearInterval(t);
   }, []);
   return (
     <div
-      style={{ fontSize: 12, fontStyle: 'italic', transition: 'opacity 0.4s ease', opacity: show ? 1 : 0, minHeight: 18 }}
+      style={{
+        fontSize: 12,
+        fontStyle: 'italic',
+        transition: 'opacity 0.4s ease',
+        opacity: show ? 1 : 0,
+        minHeight: 18,
+      }}
       className="text-white/40 tracking-wide max-w-[300px] mx-auto leading-snug"
     >
       “{QUOTES[i]}”
@@ -79,12 +94,12 @@ function RotatingQuote() {
 function StrengthMeter({ password }: { password: string }) {
   const checks = [
     { label: '8+ chars', ok: password.length >= 8 },
-    { label: 'A–Z',      ok: /[A-Z]/.test(password) },
-    { label: 'a–z',      ok: /[a-z]/.test(password) },
-    { label: '0–9',      ok: /[0-9]/.test(password) },
-    { label: '#!@',      ok: /[^A-Za-z0-9]/.test(password) },
+    { label: 'A–Z', ok: /[A-Z]/.test(password) },
+    { label: 'a–z', ok: /[a-z]/.test(password) },
+    { label: '0–9', ok: /[0-9]/.test(password) },
+    { label: '#!@', ok: /[^A-Za-z0-9]/.test(password) },
   ];
-  const score = checks.filter(c => c.ok).length;
+  const score = checks.filter((c) => c.ok).length;
   const barColor = score <= 2 ? '#EF4444' : score <= 3 ? '#F59E0B' : '#43A047';
   const labels = ['', 'Very weak', 'Weak', 'Okay', 'Strong', 'Excellent'];
   if (!password) return null;
@@ -92,19 +107,28 @@ function StrengthMeter({ password }: { password: string }) {
     <div className="mt-2 space-y-1.5 fade-in-soft">
       <div className="flex items-center gap-2">
         <div className="flex gap-0.5 flex-1">
-          {[1,2,3,4,5].map(i => (
-            <div key={i} className="h-1 flex-1 rounded-sm transition-all duration-300"
-              style={{ background: i <= score ? barColor : '#E2E8F0' }} />
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="h-1 flex-1 rounded-sm transition-all duration-300"
+              style={{ background: i <= score ? barColor : '#E2E8F0' }}
+            />
           ))}
         </div>
-        <span style={{ fontSize: 10, color: barColor }} className="font-semibold tabular-nums w-[64px] text-right">
+        <span
+          style={{ fontSize: 10, color: barColor }}
+          className="font-semibold tabular-nums w-[64px] text-right"
+        >
           {labels[score]}
         </span>
       </div>
       <div className="flex gap-3 flex-wrap">
-        {checks.map(c => (
-          <span key={c.label} style={{ fontSize: 10 }}
-            className={`transition-colors ${c.ok ? 'text-forest-600 font-medium' : 'text-slate-300'}`}>
+        {checks.map((c) => (
+          <span
+            key={c.label}
+            style={{ fontSize: 10 }}
+            className={`transition-colors ${c.ok ? 'text-forest-600 font-medium' : 'text-slate-300'}`}
+          >
             {c.ok ? '✓' : '·'} {c.label}
           </span>
         ))}
@@ -140,17 +164,31 @@ export default function LoginPage() {
   const [deviceName, setDeviceName] = useState('');
   // Monogram avatar for the trusted device, so the greeting matches the
   // avatar the user picked in settings rather than plain initials.
-  const [deviceAvatar, setDeviceAvatar] = useState<{ letter: string; bg: string; font: number }>({ letter: '', bg: '', font: 0 });
+  const [deviceAvatar, setDeviceAvatar] = useState<{ letter: string; bg: string; font: number }>({
+    letter: '',
+    bg: '',
+    font: 0,
+  });
   const [pin, setPin] = useState('');
   const pinInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api<{ initialized: boolean }>('/system/status').then(d => {
-      if (!d.initialized) setIsFirstRun(true);
-    }).catch(() => {});
+    api<{ initialized: boolean }>('/system/status')
+      .then((d) => {
+        if (!d.initialized) setIsFirstRun(true);
+      })
+      .catch(() => {});
     // Auto-switch to PIN pad for trusted devices — no opt-in button needed.
-    api<{ trusted: boolean; name?: string; hasPin?: boolean; locked?: boolean; avatarLetter?: string; avatarBg?: string; avatarFont?: number }>('/auth/device')
-      .then(d => {
+    api<{
+      trusted: boolean;
+      name?: string;
+      hasPin?: boolean;
+      locked?: boolean;
+      avatarLetter?: string;
+      avatarBg?: string;
+      avatarFont?: number;
+    }>('/auth/device')
+      .then((d) => {
         if (d.trusted && d.hasPin && !d.locked) {
           setDeviceName(d.name || '');
           setDeviceAvatar({ letter: d.avatarLetter || '', bg: d.avatarBg || '', font: d.avatarFont ?? 0 });
@@ -313,41 +351,65 @@ export default function LoginPage() {
       `}</style>
 
       <div className="min-h-screen flex">
-
         {/* ════ LEFT — Pragati brand panel ═══════════════════════════════ */}
         <div
           className="hidden lg:flex lg:w-[54%] flex-col relative overflow-hidden"
-          style={{ background: 'linear-gradient(160deg, #050E1D 0%, #091828 40%, #0B1F3A 70%, #0C2347 100%)' }}
+          style={{
+            background: 'linear-gradient(160deg, #050E1D 0%, #091828 40%, #0B1F3A 70%, #0C2347 100%)',
+          }}
         >
           {/* Aurora — three slow-drifting colour blobs give the panel a living,
               premium backdrop. Blurred + blended so they read as soft light. */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute aurora-1" style={{
-              top: '-10%', left: '8%', width: 560, height: 560, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(30,136,229,0.40) 0%, transparent 60%)',
-              filter: 'blur(28px)',
-            }} />
-            <div className="absolute aurora-2" style={{
-              top: '28%', right: '-12%', width: 480, height: 480, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(46,125,50,0.32) 0%, transparent 62%)',
-              filter: 'blur(30px)',
-            }} />
-            <div className="absolute aurora-3" style={{
-              bottom: '-16%', left: '30%', width: 520, height: 520, borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 64%)',
-              filter: 'blur(34px)',
-            }} />
+            <div
+              className="absolute aurora-1"
+              style={{
+                top: '-10%',
+                left: '8%',
+                width: 560,
+                height: 560,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(30,136,229,0.40) 0%, transparent 60%)',
+                filter: 'blur(28px)',
+              }}
+            />
+            <div
+              className="absolute aurora-2"
+              style={{
+                top: '28%',
+                right: '-12%',
+                width: 480,
+                height: 480,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(46,125,50,0.32) 0%, transparent 62%)',
+                filter: 'blur(30px)',
+              }}
+            />
+            <div
+              className="absolute aurora-3"
+              style={{
+                bottom: '-16%',
+                left: '30%',
+                width: 520,
+                height: 520,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(124,58,237,0.22) 0%, transparent 64%)',
+                filter: 'blur(34px)',
+              }}
+            />
           </div>
 
           {/* Dot grid texture (above the aurora, very faint) */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }} />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
+              backgroundSize: '28px 28px',
+            }}
+          />
 
           <div className="relative flex flex-col flex-1 px-14 py-12">
             <div className="flex-1 flex flex-col justify-center">
-
               {/* Pragati mark with three staggered, expanding rings —
                   reads as outward / forward motion, the literal meaning of
                   "pragati". Replaced the two orbiting dots that were
@@ -385,8 +447,10 @@ export default function LoginPage() {
               </h1>
 
               <div className="fade-up-2 flex justify-center mt-5">
-                <div className="relative h-0.5 w-20 rounded-full overflow-hidden shimmer-line"
-                  style={{ background: 'linear-gradient(90deg, #1769C8, #43A047)' }} />
+                <div
+                  className="relative h-0.5 w-20 rounded-full overflow-hidden shimmer-line"
+                  style={{ background: 'linear-gradient(90deg, #1769C8, #43A047)' }}
+                />
               </div>
 
               <p
@@ -394,9 +458,9 @@ export default function LoginPage() {
                 style={{ fontSize: 14, maxWidth: 320 }}
               >
                 A bird's-eye view of every project,
-                <br />every action, every contributor.
+                <br />
+                every action, every contributor.
               </p>
-
             </div>
 
             <div className="text-center pb-2 fade-up-3">
@@ -406,20 +470,25 @@ export default function LoginPage() {
         </div>
 
         {/* ════ RIGHT — Form panel ═══════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col justify-center items-center px-6 py-12 relative
-          bg-white lg:bg-white">
+        <div
+          className="flex-1 flex flex-col justify-center items-center px-6 py-12 relative
+          bg-white lg:bg-white"
+        >
           {/* Mobile shimmer background — only visible on small screens where the
               left brand panel is hidden */}
           <div className="absolute inset-0 lg:hidden profile-hero-shimmer opacity-90" />
-          <div className="absolute top-0 left-0 right-0 h-[3px]"
-            style={{ background: 'linear-gradient(90deg, #1565C0 0%, #1769C8 50%, #2B8C29 100%)' }} />
+          <div
+            className="absolute top-0 left-0 right-0 h-[3px]"
+            style={{ background: 'linear-gradient(90deg, #1565C0 0%, #1769C8 50%, #2B8C29 100%)' }}
+          />
 
           <div className="w-full max-w-[340px] fade-up relative">
-
             {/* Mobile branding — floating card over the shimmer */}
             <div className="flex flex-col items-center mb-8 lg:hidden">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-1"
-                style={{ boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}>
+              <div
+                className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-1"
+                style={{ boxShadow: '0 8px 24px rgba(15,23,42,0.3)' }}
+              >
                 <PragatiMark size={44} />
               </div>
               <div className="brand-wordmark text-[2rem] text-white mt-3 drop-shadow">Pragati</div>
@@ -428,285 +497,351 @@ export default function LoginPage() {
 
             {/* White card on mobile to contrast the shimmer; transparent on desktop */}
             <div className="rounded-2xl bg-white p-6 shadow-2xl lg:p-0 lg:rounded-none lg:bg-transparent lg:shadow-none">
-
-            {/* Deactivated-account notice */}
-            {notice && (
-              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
-                <span className="text-red-500 font-bold shrink-0 mt-0.5 text-sm">!</span>
-                <div className="text-sm text-red-800 leading-snug">{notice}</div>
-              </div>
-            )}
-
-            {/* First-run banner */}
-            {isFirstRun && mode === 'login' && (
-              <div className="mb-6 rounded-xl border border-forest-200 bg-forest-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
-                <Sparkles size={15} className="text-forest-600 shrink-0 mt-0.5" />
-                <div className="text-xs leading-snug">
-                  <div className="font-semibold text-forest-800">Welcome to <span className="brand-wordmark">Pragati</span></div>
-                  <button onClick={() => { setMode('setup'); setErr(''); }}
-                    className="text-forest-700 font-bold underline hover:no-underline mt-0.5">
-                    Set up your workspace →
-                  </button>
+              {/* Deactivated-account notice */}
+              {notice && (
+                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
+                  <span className="text-red-500 font-bold shrink-0 mt-0.5 text-sm">!</span>
+                  <div className="text-sm text-red-800 leading-snug">{notice}</div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* ── Quick-PIN unlock (trusted device) ─────────────────────── */}
-            {mode === 'unlock' && (
-              <div className="form-swap" key="unlock">
+              {/* First-run banner */}
+              {isFirstRun && mode === 'login' && (
+                <div className="mb-6 rounded-xl border border-forest-200 bg-forest-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
+                  <Sparkles size={15} className="text-forest-600 shrink-0 mt-0.5" />
+                  <div className="text-xs leading-snug">
+                    <div className="font-semibold text-forest-800">
+                      Welcome to <span className="brand-wordmark">Pragati</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMode('setup');
+                        setErr('');
+                      }}
+                      className="text-forest-700 font-bold underline hover:no-underline mt-0.5"
+                    >
+                      Set up your workspace →
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                {/* Avatar + name — two concentric rings rotate slowly around the
+              {/* ── Quick-PIN unlock (trusted device) ─────────────────────── */}
+              {mode === 'unlock' && (
+                <div className="form-swap" key="unlock">
+                  {/* Avatar + name — two concentric rings rotate slowly around the
                     avatar (the returning-user echo of the brand mark's orbit),
                     with a soft breathing halo, so re-entry feels alive. */}
-                <div className="flex flex-col items-center text-center mb-7">
-                  <div className="relative mb-5" style={{ width: 96, height: 96 }}>
-                    {/* Breathing halo */}
-                    <div aria-hidden className="absolute inset-0 rounded-full"
-                      style={{
-                        background: 'radial-gradient(circle, rgba(21,101,192,0.26) 0%, transparent 68%)',
-                        animation: 'glow-pulse 3.4s ease-in-out infinite',
-                      }} />
-                    {/* Dashed orbit rings — slow, opposite directions. */}
-                    <div aria-hidden className="absolute inset-0 rounded-full pin-orbit-a"
-                      style={{ border: '1.5px dashed rgba(21,101,192,0.30)' }} />
-                    <div aria-hidden className="absolute rounded-full pin-orbit-b"
-                      style={{ inset: 10, border: '1.5px dashed rgba(46,125,50,0.28)' }} />
-                    {/* Avatar tile */}
-                    <div className="absolute inset-[18px] rounded-[20px] flex items-center justify-center text-2xl select-none"
-                      style={{
-                        background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
-                        color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
-                        fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
-                        fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
-                        boxShadow: '0 10px 28px rgba(21,101,192,0.34)',
-                      }}>
-                      {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+                  <div className="flex flex-col items-center text-center mb-7">
+                    <div className="relative mb-5" style={{ width: 96, height: 96 }}>
+                      {/* Breathing halo */}
+                      <div
+                        aria-hidden
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          background: 'radial-gradient(circle, rgba(21,101,192,0.26) 0%, transparent 68%)',
+                          animation: 'glow-pulse 3.4s ease-in-out infinite',
+                        }}
+                      />
+                      {/* Dashed orbit rings — slow, opposite directions. */}
+                      <div
+                        aria-hidden
+                        className="absolute inset-0 rounded-full pin-orbit-a"
+                        style={{ border: '1.5px dashed rgba(21,101,192,0.30)' }}
+                      />
+                      <div
+                        aria-hidden
+                        className="absolute rounded-full pin-orbit-b"
+                        style={{ inset: 10, border: '1.5px dashed rgba(46,125,50,0.28)' }}
+                      />
+                      {/* Avatar tile */}
+                      <div
+                        className="absolute inset-[18px] rounded-[20px] flex items-center justify-center text-2xl select-none"
+                        style={{
+                          background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                          color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
+                          fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
+                          fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
+                          boxShadow: '0 10px 28px rgba(21,101,192,0.34)',
+                        }}
+                      >
+                        {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.22em] mb-1.5 fade-up-1">Welcome back</p>
-                  {/* Name in the display face — matches the brand wordmark
+                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.22em] mb-1.5 fade-up-1">
+                      Welcome back
+                    </p>
+                    {/* Name in the display face — matches the brand wordmark
                       treatment so it reads as crafted, not default sans. */}
-                  <h2 className="font-display text-[26px] font-black text-slate-900 tracking-tight leading-none fade-up-1">
-                    {deviceName || 'You'}
-                  </h2>
-                  <p className="text-[13px] text-slate-400 mt-2 leading-snug fade-up-2 inline-flex items-center gap-1.5">
-                    <Sparkles size={12} className="text-blue-400" />
-                    Enter your Quick PIN to continue
-                  </p>
-                </div>
+                    <h2 className="font-display text-[26px] font-black text-slate-900 tracking-tight leading-none fade-up-1">
+                      {deviceName || 'You'}
+                    </h2>
+                    <p className="text-[13px] text-slate-400 mt-2 leading-snug fade-up-2 inline-flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-blue-400" />
+                      Enter your Quick PIN to continue
+                    </p>
+                  </div>
 
-                {/* 4-box PIN input — keyboard plus touch keypad, so it works on every device */}
-                <div className="relative flex justify-center gap-3 mb-4 cursor-text"
-                  onClick={() => pinInputRef.current?.focus()}>
-                  {[0, 1, 2, 3].map(i => (
-                    <div key={i}
-                      className="w-[54px] h-[62px] rounded-2xl border-2 flex items-center justify-center transition-all duration-200"
-                      style={{
-                        borderColor: pin.length === i ? '#1565C0'
-                                   : pin.length > i  ? '#93c5fd'
-                                   : '#e2e8f0',
-                        background:  pin.length > i  ? '#eff6ff'
-                                   : pin.length === i ? '#f0f9ff'
-                                   : 'white',
-                        boxShadow:   pin.length === i ? '0 0 0 3px rgba(21,101,192,0.13)' : 'none',
-                        transform:   pin.length > i  ? 'scale(1.04)' : 'scale(1)',
-                      }}>
-                      {pin.length > i && (
-                        <div className="w-3 h-3 rounded-full bg-blue-600" />
-                      )}
-                    </div>
-                  ))}
+                  {/* 4-box PIN input — keyboard plus touch keypad, so it works on every device */}
+                  <div
+                    className="relative flex justify-center gap-3 mb-4 cursor-text"
+                    onClick={() => pinInputRef.current?.focus()}
+                  >
+                    {[0, 1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="w-[54px] h-[62px] rounded-2xl border-2 flex items-center justify-center transition-all duration-200"
+                        style={{
+                          borderColor: pin.length === i ? '#1565C0' : pin.length > i ? '#93c5fd' : '#e2e8f0',
+                          background: pin.length > i ? '#eff6ff' : pin.length === i ? '#f0f9ff' : 'white',
+                          boxShadow: pin.length === i ? '0 0 0 3px rgba(21,101,192,0.13)' : 'none',
+                          transform: pin.length > i ? 'scale(1.04)' : 'scale(1)',
+                        }}
+                      >
+                        {pin.length > i && <div className="w-3 h-3 rounded-full bg-blue-600" />}
+                      </div>
+                    ))}
 
-                  {/* Invisible input layered over the boxes — captures all keystrokes */}
-                  <input
-                    ref={pinInputRef}
-                    autoFocus
-                    type="text"
-                    inputMode="numeric"
-                    pattern="\d*"
-                    maxLength={4}
-                    value={pin}
-                    disabled={loading}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                      setPin(v);
-                      setErr('');
-                      if (v.length === 4) unlock(v);
-                    }}
-                    className="absolute inset-0 opacity-0 w-full h-full cursor-text"
-                    style={{ color: 'transparent', caretColor: 'transparent' }}
-                    aria-label="Quick PIN"
-                  />
-                </div>
+                    {/* Invisible input layered over the boxes — captures all keystrokes */}
+                    <input
+                      ref={pinInputRef}
+                      autoFocus
+                      type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
+                      maxLength={4}
+                      value={pin}
+                      disabled={loading}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setPin(v);
+                        setErr('');
+                        if (v.length === 4) unlock(v);
+                      }}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-text"
+                      style={{ color: 'transparent', caretColor: 'transparent' }}
+                      aria-label="Quick PIN"
+                    />
+                  </div>
 
-                {/* Keypad removed by design — just type the PIN. The 4-box
+                  {/* Keypad removed by design — just type the PIN. The 4-box
                     indicator above lights up as digits are entered and the
                     form auto-submits on the 4th character. */}
 
-                {err && (
-                  <div role="alert" aria-live="assertive"
-                    className="mt-1 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-snug flex items-start gap-2 fade-in-soft">
-                    <span aria-hidden="true" className="font-bold leading-none mt-0.5">!</span>
-                    <span>{err}</span>
-                  </div>
-                )}
-
-                {loading && (
-                  <div className="mt-2 fade-in-soft">
-                    <BirdsEyeLoader size="sm" inline label="Unlocking your workspace…" sublabel="One moment — getting your bird's-eye view ready." />
-                  </div>
-                )}
-
-                <div className="mt-6 flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-2 w-full">
-                    <span className="h-px flex-1 bg-slate-200" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">or</span>
-                    <span className="h-px flex-1 bg-slate-200" />
-                  </div>
-                  <button onClick={usePasswordInstead} type="button"
-                    className="w-full py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:text-blue-700 hover:border-blue-300 hover:bg-blue-50/50 transition-colors">
-                    Use password / switch account
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Heading */}
-            {mode !== 'unlock' && (
-            <div className="mb-7 form-swap" key={mode + '-h'}>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                {mode === 'login' ? 'Sign in' : 'Set up workspace'}
-              </h2>
-              <p className="text-sm text-slate-400 mt-1 leading-snug">
-                {mode === 'login'
-                  ? 'Welcome to Pragati — sign in to continue.'
-                  : 'Create the first lead account.'}
-              </p>
-            </div>
-            )}
-
-            {mode !== 'unlock' && (
-            <form onSubmit={submit} className="space-y-4 form-swap" key={mode + '-f'}>
-              {mode === 'setup' && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Full name</label>
-                    <input className="input" placeholder="Your name" required
-                      value={name} onChange={e => setName(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                      Job title <span className="normal-case font-normal text-slate-300">(optional)</span>
-                    </label>
-                    <input className="input" placeholder="e.g. Team Lead"
-                      value={title} onChange={e => setTitle(e.target.value)} />
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  {mode === 'login' ? 'Username' : 'Email'}
-                </label>
-                <input
-                  className="input"
-                  type={mode === 'login' ? 'text' : 'email'}
-                  placeholder={mode === 'login' ? 'username or employee ID' : 'you@company.com'}
-                  required
-                  autoComplete={mode === 'login' ? 'username' : 'email'}
-                  spellCheck={false}
-                  autoCapitalize="none"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <input className="input pr-10" type={showPw ? 'text' : 'password'} required minLength={mode === 'setup' ? 8 : 1}
-                    placeholder={mode === 'setup' ? 'Min 8 characters' : '••••••••'}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    style={{ WebkitAppearance: 'none' } as React.CSSProperties} />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    tabIndex={-1}
-                    aria-label={showPw ? 'Hide password' : 'Show password'}
-                  >
-                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-                {mode === 'setup' && <StrengthMeter password={password} />}
-              </div>
-
-              {err && (
-                <div
-                  role="alert"
-                  aria-live="assertive"
-                  className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-snug flex items-start gap-2 fade-in-soft"
-                >
-                  <span aria-hidden="true" className="font-bold leading-none mt-0.5">!</span>
-                  <span>{err}</span>
-                </div>
-              )}
-
-              <button type="submit" disabled={loading} aria-busy={loading}
-                className="btn-primary w-full justify-center py-3 text-sm font-bold group mt-1"
-                style={{ boxShadow: '0 4px 14px rgba(21,101,192,0.35)' }}
-              >
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                    <span>{mode === 'login' ? 'Signing in…' : 'Creating workspace…'}</span>
-                  </>
-                ) : (
-                  <>
-                    {mode === 'login' ? 'Sign in' : 'Create workspace'}
-                    <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                  </>
-                )}
-              </button>
-            </form>
-            )}
-
-            {mode !== 'unlock' && (
-            <div className="mt-5 text-center">
-              {mode === 'setup' ? (
-                <p className="text-sm text-slate-400">
-                  Already have an account?{' '}
-                  <button onClick={() => { setMode('login'); setErr(''); }}
-                    className="text-blue-600 font-semibold hover:underline">Sign in</button>
-                </p>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowForgot((v) => !v)}
-                    className="text-xs text-slate-400 hover:text-blue-600 underline underline-offset-2 transition-colors"
-                  >
-                    Forgot your password?
-                  </button>
-                  {showForgot && (
-                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left fade-in-soft">
-                      <p className="text-[12px] text-blue-700 leading-snug">
-                        Contact your administrator to reset your password.
-                      </p>
+                  {err && (
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="mt-1 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-snug flex items-start gap-2 fade-in-soft"
+                    >
+                      <span aria-hidden="true" className="font-bold leading-none mt-0.5">
+                        !
+                      </span>
+                      <span>{err}</span>
                     </div>
                   )}
-                </>
+
+                  {loading && (
+                    <div className="mt-2 fade-in-soft">
+                      <BirdsEyeLoader
+                        size="sm"
+                        inline
+                        label="Unlocking your workspace…"
+                        sublabel="One moment — getting your bird's-eye view ready."
+                      />
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2 w-full">
+                      <span className="h-px flex-1 bg-slate-200" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+                        or
+                      </span>
+                      <span className="h-px flex-1 bg-slate-200" />
+                    </div>
+                    <button
+                      onClick={usePasswordInstead}
+                      type="button"
+                      className="w-full py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:text-blue-700 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
+                    >
+                      Use password / switch account
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Heading */}
+              {mode !== 'unlock' && (
+                <div className="mb-7 form-swap" key={mode + '-h'}>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                    {mode === 'login' ? 'Sign in' : 'Set up workspace'}
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1 leading-snug">
+                    {mode === 'login'
+                      ? 'Welcome to Pragati — sign in to continue.'
+                      : 'Create the first lead account.'}
+                  </p>
+                </div>
+              )}
+
+              {mode !== 'unlock' && (
+                <form onSubmit={submit} className="space-y-4 form-swap" key={mode + '-f'}>
+                  {mode === 'setup' && (
+                    <>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Full name
+                        </label>
+                        <input
+                          className="input"
+                          placeholder="Your name"
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                          Job title <span className="normal-case font-normal text-slate-300">(optional)</span>
+                        </label>
+                        <input
+                          className="input"
+                          placeholder="e.g. Team Lead"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      {mode === 'login' ? 'Username' : 'Email'}
+                    </label>
+                    <input
+                      className="input"
+                      type={mode === 'login' ? 'text' : 'email'}
+                      placeholder={mode === 'login' ? 'username or employee ID' : 'you@company.com'}
+                      required
+                      autoComplete={mode === 'login' ? 'username' : 'email'}
+                      spellCheck={false}
+                      autoCapitalize="none"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="input pr-10"
+                        type={showPw ? 'text' : 'password'}
+                        required
+                        minLength={mode === 'setup' ? 8 : 1}
+                        placeholder={mode === 'setup' ? 'Min 8 characters' : '••••••••'}
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        style={{ WebkitAppearance: 'none' } as React.CSSProperties}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPw((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        tabIndex={-1}
+                        aria-label={showPw ? 'Hide password' : 'Show password'}
+                      >
+                        {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                    {mode === 'setup' && <StrengthMeter password={password} />}
+                  </div>
+
+                  {err && (
+                    <div
+                      role="alert"
+                      aria-live="assertive"
+                      className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 leading-snug flex items-start gap-2 fade-in-soft"
+                    >
+                      <span aria-hidden="true" className="font-bold leading-none mt-0.5">
+                        !
+                      </span>
+                      <span>{err}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    aria-busy={loading}
+                    className="btn-primary w-full justify-center py-3 text-sm font-bold group mt-1"
+                    style={{ boxShadow: '0 4px 14px rgba(21,101,192,0.35)' }}
+                  >
+                    {loading ? (
+                      <>
+                        <span
+                          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                          aria-hidden="true"
+                        />
+                        <span>{mode === 'login' ? 'Signing in…' : 'Creating workspace…'}</span>
+                      </>
+                    ) : (
+                      <>
+                        {mode === 'login' ? 'Sign in' : 'Create workspace'}
+                        <ArrowRight
+                          size={15}
+                          className="transition-transform group-hover:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+
+              {mode !== 'unlock' && (
+                <div className="mt-5 text-center">
+                  {mode === 'setup' ? (
+                    <p className="text-sm text-slate-400">
+                      Already have an account?{' '}
+                      <button
+                        onClick={() => {
+                          setMode('login');
+                          setErr('');
+                        }}
+                        className="text-blue-600 font-semibold hover:underline"
+                      >
+                        Sign in
+                      </button>
+                    </p>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgot((v) => !v)}
+                        className="text-xs text-slate-400 hover:text-blue-600 underline underline-offset-2 transition-colors"
+                      >
+                        Forgot your password?
+                      </button>
+                      {showForgot && (
+                        <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left fade-in-soft">
+                          <p className="text-[12px] text-blue-700 leading-snug">
+                            Contact your administrator to reset your password.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
             </div>
-            )}
-
-            </div>{/* end white card */}
+            {/* end white card */}
           </div>
         </div>
-
       </div>
     </>
   );

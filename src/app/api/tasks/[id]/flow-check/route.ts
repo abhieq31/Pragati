@@ -56,49 +56,51 @@ const Body = z.object({
 
 type Action = z.infer<typeof Body>['action'];
 
-const PENDING_TYPE_BY_ACTION: Partial<Record<Action, 'approval' | 'another_team' | 'person' | 'other' | 'decision' | 'help'>> = {
-  waiting_approval:     'approval',
+const PENDING_TYPE_BY_ACTION: Partial<
+  Record<Action, 'approval' | 'another_team' | 'person' | 'other' | 'decision' | 'help'>
+> = {
+  waiting_approval: 'approval',
   waiting_another_team: 'another_team',
-  waiting_person:       'person',
-  waiting_other:        'other',
-  decision_needed:      'decision',
-  help_needed:          'help',
+  waiting_person: 'person',
+  waiting_other: 'other',
+  decision_needed: 'decision',
+  help_needed: 'help',
 };
 
 const EVENT_BY_ACTION: Record<Action, FlowEventType> = {
-  still_moving:         'still_moving_confirmed',
-  waiting_approval:     'waiting_confirmed',
+  still_moving: 'still_moving_confirmed',
+  waiting_approval: 'waiting_confirmed',
   waiting_another_team: 'waiting_confirmed',
-  waiting_person:       'waiting_confirmed',
-  waiting_other:        'waiting_confirmed',
-  decision_needed:      'decision_requested',
-  help_needed:          'help_requested',
-  dismiss:              'prompt_dismissed',
-  resolve:              'waiting_cleared',
+  waiting_person: 'waiting_confirmed',
+  waiting_other: 'waiting_confirmed',
+  decision_needed: 'decision_requested',
+  help_needed: 'help_requested',
+  dismiss: 'prompt_dismissed',
+  resolve: 'waiting_cleared',
 };
 
 const NEUTRAL_SUMMARY: Record<Action, string> = {
-  still_moving:         'Confirmed task is still moving',
-  waiting_approval:     'Confirmed waiting on approval',
+  still_moving: 'Confirmed task is still moving',
+  waiting_approval: 'Confirmed waiting on approval',
   waiting_another_team: 'Confirmed waiting on another team',
-  waiting_person:       'Confirmed waiting on a person',
-  waiting_other:        'Confirmed waiting',
-  decision_needed:      'Requested a decision',
-  help_needed:          'Requested help',
-  dismiss:              'Dismissed quick check',
-  resolve:              'Marked waiting item resolved',
+  waiting_person: 'Confirmed waiting on a person',
+  waiting_other: 'Confirmed waiting',
+  decision_needed: 'Requested a decision',
+  help_needed: 'Requested help',
+  dismiss: 'Dismissed quick check',
+  resolve: 'Marked waiting item resolved',
 };
 
 const AUDIT_ACTION: Record<Action, string> = {
-  still_moving:         'flow.quick_check.still_moving',
-  waiting_approval:     'flow.waiting.confirmed',
+  still_moving: 'flow.quick_check.still_moving',
+  waiting_approval: 'flow.waiting.confirmed',
   waiting_another_team: 'flow.waiting.confirmed',
-  waiting_person:       'flow.waiting.confirmed',
-  waiting_other:        'flow.waiting.confirmed',
-  decision_needed:      'flow.decision.requested',
-  help_needed:          'flow.help.requested',
-  dismiss:              'flow.quick_check.dismissed',
-  resolve:              'flow.waiting.resolved',
+  waiting_person: 'flow.waiting.confirmed',
+  waiting_other: 'flow.waiting.confirmed',
+  decision_needed: 'flow.decision.requested',
+  help_needed: 'flow.help.requested',
+  dismiss: 'flow.quick_check.dismissed',
+  resolve: 'flow.waiting.resolved',
 };
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -113,10 +115,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // confirmations. 20/minute per (user,task) is generous for a human and
     // tight enough to bound abuse.
     if (!rateLimit(`flow:${user!.sub}:${params.id}`, 20, 60_000)) {
-      return NextResponse.json(
-        { error: 'Too many quick-check actions. Wait a minute.' },
-        { status: 429 },
-      );
+      return NextResponse.json({ error: 'Too many quick-check actions. Wait a minute.' }, { status: 429 });
     }
 
     await connectDB();
@@ -168,29 +167,29 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       // 24h snooze on inferred prompts. Does NOT touch
       // lastMeaningfulActivityAt — the user's reassurance is recorded
       // separately so the baseline can't be self-attested.
-      set.flowPromptSnoozedUntil     = new Date(now.getTime() + 1000 * 60 * 60 * 24);
-      set.flowPromptLastReasonCodes  = ['still_moving'];
+      set.flowPromptSnoozedUntil = new Date(now.getTime() + 1000 * 60 * 60 * 24);
+      set.flowPromptLastReasonCodes = ['still_moving'];
     } else if (pendingType) {
       // Confirmed waiting / decision / help. flowStateVersion increments so
       // a later resolve can be checked against the version the client saw.
-      set.flowPendingType        = pendingType;
-      set.flowPendingDetail      = safeDetail;
-      set.flowPendingSince       = (t as any).flowPendingSince || now;
+      set.flowPendingType = pendingType;
+      set.flowPendingDetail = safeDetail;
+      set.flowPendingSince = (t as any).flowPendingSince || now;
       set.flowPendingConfirmedAt = now;
       set.flowPendingConfirmedByUserId = user!.sub;
-      set.flowResolvedAt         = null;
+      set.flowResolvedAt = null;
       set.flowPromptLastReasonCodes = [pendingType];
       inc.flowStateVersion = 1;
     } else if (action === 'dismiss') {
-      set.flowPromptSnoozedUntil    = new Date(now.getTime() + 1000 * 60 * 60 * 6); // 6h snooze
+      set.flowPromptSnoozedUntil = new Date(now.getTime() + 1000 * 60 * 60 * 6); // 6h snooze
       set.flowPromptLastReasonCodes = ['dismiss'];
     } else if (action === 'resolve') {
-      set.flowPendingType        = null;
-      set.flowPendingDetail      = '';
-      set.flowPendingSince       = null;
+      set.flowPendingType = null;
+      set.flowPendingDetail = '';
+      set.flowPendingSince = null;
       set.flowPendingConfirmedAt = null;
       set.flowPendingConfirmedByUserId = null;
-      set.flowResolvedAt         = now;
+      set.flowResolvedAt = now;
       set.flowPromptLastReasonCodes = ['resolved'];
       inc.flowStateVersion = 1;
     }
@@ -212,8 +211,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     // Privacy gates: notify + audit only for shared, non-personal tasks.
-    const proj = await Project.findById((t as any).projectId).select('isPersonal code ownerId name').lean();
-    const isPrivateTask  = !!(t as any).privateToUserId;
+    const proj = await Project.findById((t as any).projectId)
+      .select('isPersonal code ownerId name')
+      .lean();
+    const isPrivateTask = !!(t as any).privateToUserId;
     const isPersonalProj =
       !!proj && (!!(proj as any).isPersonal || String((proj as any).code || '').startsWith('PRSN-'));
 
@@ -223,12 +224,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const ownerId = (proj as any)?.ownerId;
         if (ownerId && String(ownerId) !== String(user!.sub)) {
           await notify({
-            userId:    String(ownerId),
-            actorId:   user!.sub,
-            type:      'task_waiting',
-            title:     headlineForOwner(pendingType, action),
-            body:      ((t as any).title || '').slice(0, 200),
-            taskId:    params.id,
+            userId: String(ownerId),
+            actorId: user!.sub,
+            type: 'task_waiting',
+            title: headlineForOwner(pendingType, action),
+            body: ((t as any).title || '').slice(0, 200),
+            taskId: params.id,
             projectId: String((t as any).projectId || ''),
             preferenceKey: 'notifProjectUpdate',
           });
@@ -236,13 +237,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
 
       await logOperation({
-        action:      AUDIT_ACTION[action],
-        category:    'task',
-        actor:       user,
-        targetType:  'task',
-        targetId:    params.id,
+        action: AUDIT_ACTION[action],
+        category: 'task',
+        actor: user,
+        targetType: 'task',
+        targetId: params.id,
         targetLabel: (t as any).title || '',
-        summary:     NEUTRAL_SUMMARY[action],
+        summary: NEUTRAL_SUMMARY[action],
         meta: {
           projectId: String((t as any).projectId || ''),
           pendingType,
@@ -262,15 +263,22 @@ function headlineForOwner(
   pendingType: 'approval' | 'another_team' | 'person' | 'other' | 'decision' | 'help' | null,
   action: Action,
 ): string {
-  if (action === 'help_needed')     return 'Help requested';
+  if (action === 'help_needed') return 'Help requested';
   if (action === 'decision_needed') return 'Decision requested';
   switch (pendingType) {
-    case 'approval':     return 'Waiting on approval';
-    case 'another_team': return 'Waiting on another team';
-    case 'person':       return 'Waiting on a person';
-    case 'other':        return 'Waiting on something';
-    case 'decision':     return 'Decision requested';
-    case 'help':         return 'Help requested';
-    default:             return 'Needs attention';
+    case 'approval':
+      return 'Waiting on approval';
+    case 'another_team':
+      return 'Waiting on another team';
+    case 'person':
+      return 'Waiting on a person';
+    case 'other':
+      return 'Waiting on something';
+    case 'decision':
+      return 'Decision requested';
+    case 'help':
+      return 'Help requested';
+    default:
+      return 'Needs attention';
   }
 }

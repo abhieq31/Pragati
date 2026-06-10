@@ -11,9 +11,9 @@ export const runtime = 'nodejs';
 
 const ReportBody = z.object({
   message: z.string().min(1).max(1000),
-  stack:   z.string().max(8000).optional(),
-  digest:  z.string().max(200).optional(),
-  path:    z.string().max(500).optional(),
+  stack: z.string().max(8000).optional(),
+  digest: z.string().max(200).optional(),
+  path: z.string().max(500).optional(),
 });
 
 /**
@@ -70,18 +70,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       unacknowledged,
       errors: items.map((e: any) => ({
-        id:         String(e._id),
-        source:     e.source,
-        message:    e.message,
-        digest:     e.digest || '',
-        path:       e.path || '',
-        method:     e.method || '',
+        id: String(e._id),
+        source: e.source,
+        message: e.message,
+        digest: e.digest || '',
+        path: e.path || '',
+        method: e.method || '',
         statusCode: e.statusCode ?? 500,
-        userName:   e.userName || '',
-        count:      e.count ?? 1,
+        userName: e.userName || '',
+        count: e.count ?? 1,
         acknowledged: !!e.acknowledged,
         lastSeenAt: e.lastSeenAt ? new Date(e.lastSeenAt).toISOString() : null,
-        createdAt:  e.createdAt ? new Date(e.createdAt).toISOString() : null,
+        createdAt: e.createdAt ? new Date(e.createdAt).toISOString() : null,
       })),
     });
   } catch (e) {
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 }
 
 const AckBody = z.object({
-  id:  z.string().optional(),
+  id: z.string().optional(),
   all: z.boolean().optional(),
 });
 

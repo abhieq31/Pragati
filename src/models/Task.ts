@@ -7,17 +7,17 @@ const SubtaskSchema = new Schema(
     status: { type: String, enum: ['todo', 'in_progress', 'done'], default: 'todo' },
     dueDate: { type: Date },
     completedAt: { type: Date },
-    position: { type: Number, default: 0 }
+    position: { type: Number, default: 0 },
   },
-  { _id: true, timestamps: true }
+  { _id: true, timestamps: true },
 );
 
 const CommentSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    body: { type: String, required: true }
+    body: { type: String, required: true },
   },
-  { _id: true, timestamps: true }
+  { _id: true, timestamps: true },
 );
 
 /** Effort log entry — minutes spent on this task. */
@@ -29,7 +29,7 @@ const EffortEntrySchema = new Schema(
     onDate: { type: String, default: '' },
     source: { type: String, enum: ['manual', 'calendar'], default: 'manual' },
   },
-  { _id: true, timestamps: true }
+  { _id: true, timestamps: true },
 );
 
 const TaskSchema = new Schema(
@@ -46,13 +46,13 @@ const TaskSchema = new Schema(
     status: {
       type: String,
       enum: ['todo', 'in_progress', 'review', 'blocked', 'done'],
-      default: 'todo'
+      default: 'todo',
     },
     priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
     taskType: {
       type: String,
       enum: ['task', 'review', 'approval', 'test', 'deviation', 'capa', 'audit_finding', 'data_review'],
-      default: 'task'
+      default: 'task',
     },
     gxpCritical: { type: Boolean, default: false },
     requiresQaSignoff: { type: Boolean, default: false },
@@ -72,14 +72,14 @@ const TaskSchema = new Schema(
       rationale: [{ type: String }],
       suggestedCapa: [{ type: String }],
       similarTaskIds: [{ type: Schema.Types.ObjectId }],
-      computedAt: { type: Date }
+      computedAt: { type: Date },
     },
 
     // ── Pharma / Change-Control fields ─────────────────────────────────
     // Mirrors the columns teams already track in Excel IDP sheets.
-    ccNo:           { type: String, default: '' },   // Change Control number, e.g. "CC-2025-042"
-    ccTcd:          { type: Date },                   // CC Target Completion Date
-    documentNo:     { type: String, default: '' },   // SOP / protocol / doc reference
+    ccNo: { type: String, default: '' }, // Change Control number, e.g. "CC-2025-042"
+    ccTcd: { type: Date }, // CC Target Completion Date
+    documentNo: { type: String, default: '' }, // SOP / protocol / doc reference
     applicableSite: {
       type: String,
       enum: ['val', 'prd', 'val_prd', 'na'],
@@ -124,8 +124,8 @@ const TaskSchema = new Schema(
 
     // Prompt bookkeeping — for cooldowns + de-duping. Bounded enum codes
     // only, never user-authored text.
-    flowPromptLastShownAt:     { type: Date, default: null },
-    flowPromptSnoozedUntil:    { type: Date, default: null },
+    flowPromptLastShownAt: { type: Date, default: null },
+    flowPromptSnoozedUntil: { type: Date, default: null },
     flowPromptLastReasonCodes: { type: [String], default: [] },
 
     // Confirmed waiting state — populated only after a *user* (assignee or
@@ -139,15 +139,15 @@ const TaskSchema = new Schema(
     },
     // Optional short context provided by the assignee on "Waiting → Other".
     // Bounded length, sanitised on write, never used as ML training text.
-    flowPendingDetail:          { type: String, default: '' },
-    flowPendingSince:           { type: Date, default: null },
-    flowPendingConfirmedAt:     { type: Date, default: null },
+    flowPendingDetail: { type: String, default: '' },
+    flowPendingSince: { type: Date, default: null },
+    flowPendingConfirmedAt: { type: Date, default: null },
     flowPendingConfirmedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
-    flowResolvedAt:             { type: Date, default: null },
+    flowResolvedAt: { type: Date, default: null },
     // Monotonic counter so a stale resolve can't clobber a fresher confirm.
-    flowStateVersion:           { type: Number, default: 0 },
+    flowStateVersion: { type: Number, default: 0 },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 TaskSchema.index({ assigneeId: 1 });

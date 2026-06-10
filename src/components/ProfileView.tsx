@@ -9,10 +9,10 @@ import { api } from '@/lib/client/api';
 
 // The contribution heatmap is a sizeable, below-the-fold client component —
 // lazy-load it so it never blocks first paint of the profile page.
-const ActivityGraph = dynamic(
-  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
-  { ssr: false, loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" /> },
-);
+const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
+  ssr: false,
+  loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" />,
+});
 
 /**
  * Read-only public profile, shown at /[username]. Any signed-in member can
@@ -62,7 +62,7 @@ export default function ProfileView({
     const wasFollowing = following;
     // Optimistic update
     setFollowing(!wasFollowing);
-    setFollowerCount(c => c + (wasFollowing ? -1 : 1));
+    setFollowerCount((c) => c + (wasFollowing ? -1 : 1));
     try {
       await api(`/users/${profile.id}/follow`, {
         method: wasFollowing ? 'DELETE' : 'POST',
@@ -70,7 +70,7 @@ export default function ProfileView({
     } catch {
       // Revert on error
       setFollowing(wasFollowing);
-      setFollowerCount(c => c + (wasFollowing ? 1 : -1));
+      setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
     } finally {
       setBusy(false);
     }
@@ -126,10 +126,7 @@ export default function ProfileView({
             <span className="flex items-center gap-1.5">
               <UserCheck size={14} className="text-slate-400" />
               <span>
-                follows{' '}
-                <strong className="font-bold text-slate-700">
-                  {profile.followingCount ?? 0}
-                </strong>
+                follows <strong className="font-bold text-slate-700">{profile.followingCount ?? 0}</strong>
               </span>
             </span>
           </div>
@@ -162,11 +159,7 @@ export default function ProfileView({
                     : 'border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
                 }
               >
-                {following
-                  ? hoveringFollow
-                    ? 'Unfollow'
-                    : 'Following ✓'
-                  : 'Follow'}
+                {following ? (hoveringFollow ? 'Unfollow' : 'Following ✓') : 'Follow'}
               </button>
             )}
           </div>
@@ -183,8 +176,8 @@ export default function ProfileView({
             <div>
               <h3 className="text-[15px] font-bold text-slate-800 leading-tight">Activity</h3>
               <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                {isSelf ? 'Your' : `${firstName}'s`} delivered work on Pragati —
-                completed tasks, weighted for on-time and priority.
+                {isSelf ? 'Your' : `${firstName}'s`} delivered work on Pragati — completed tasks, weighted for
+                on-time and priority.
               </p>
             </div>
           </div>

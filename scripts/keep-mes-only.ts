@@ -26,14 +26,14 @@ async function main() {
   if (!mes) {
     console.error(
       '[keep-mes-only] No team whose name starts with "MES" found. Aborting.\n' +
-      'Run `npx tsx scripts/seed.ts` or create the MES team in the UI first.',
+        'Run `npx tsx scripts/seed.ts` or create the MES team in the UI first.',
     );
     process.exit(1);
   }
 
   const all = await Project.find({}, '_id code name teamId').lean();
-  const keep = all.filter(p => String(p.teamId) === String(mes._id));
-  const drop = all.filter(p => String(p.teamId) !== String(mes._id));
+  const keep = all.filter((p) => String(p.teamId) === String(mes._id));
+  const drop = all.filter((p) => String(p.teamId) !== String(mes._id));
 
   console.log(`\n[keep-mes-only] MES team: ${mes.name}  (${mes._id})`);
   console.log(`  surveyed ${all.length} project(s)`);
@@ -54,18 +54,18 @@ async function main() {
     return;
   }
 
-  const ids = drop.map(p => p._id);
-  const taskRes    = await Task.deleteMany({ projectId: { $in: ids } });
+  const ids = drop.map((p) => p._id);
+  const taskRes = await Task.deleteMany({ projectId: { $in: ids } });
   const projectRes = await Project.deleteMany({ _id: { $in: ids } });
   console.log(
     `\n[keep-mes-only] deleted ${projectRes.deletedCount} project(s) ` +
-    `and ${taskRes.deletedCount} task(s).`,
+      `and ${taskRes.deletedCount} task(s).`,
   );
 
   await mongoose.disconnect();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

@@ -106,31 +106,28 @@ describe('clusterDocs', () => {
       makeDoc('7', 'training gap personnel SOP not completed competency'),
     ];
 
-    const clusters = clusterDocs(docs, 0.40);
+    const clusters = clusterDocs(docs, 0.4);
 
     // Should find at least one cluster
     assert.ok(clusters.length >= 1, 'Expected at least one cluster');
 
     // The HPLC group (1-4) and the training group (5-7) should cluster separately
-    const allIds = clusters.flatMap(c => c.map(m => m.id));
+    const allIds = clusters.flatMap((c) => c.map((m) => m.id));
     const hplcIds = ['1', '2', '3', '4'];
     const trainingIds = ['5', '6', '7'];
 
     // At least some of each group should be in a cluster
-    const hplcInCluster = hplcIds.filter(id => allIds.includes(id));
-    const trainingInCluster = trainingIds.filter(id => allIds.includes(id));
+    const hplcInCluster = hplcIds.filter((id) => allIds.includes(id));
+    const trainingInCluster = trainingIds.filter((id) => allIds.includes(id));
     assert.ok(hplcInCluster.length >= 3, `Expected HPLC cluster, got: ${hplcInCluster}`);
     assert.ok(trainingInCluster.length >= 3, `Expected training cluster, got: ${trainingInCluster}`);
 
     // The two groups should not be in the same cluster
     for (const cluster of clusters) {
-      const ids = cluster.map(m => m.id);
-      const hasHplc = hplcIds.some(id => ids.includes(id));
-      const hasTraining = trainingIds.some(id => ids.includes(id));
-      assert.ok(
-        !(hasHplc && hasTraining),
-        `HPLC and training should not cluster together, got: ${ids}`,
-      );
+      const ids = cluster.map((m) => m.id);
+      const hasHplc = hplcIds.some((id) => ids.includes(id));
+      const hasTraining = trainingIds.some((id) => ids.includes(id));
+      assert.ok(!(hasHplc && hasTraining), `HPLC and training should not cluster together, got: ${ids}`);
     }
   });
 
@@ -140,7 +137,7 @@ describe('clusterDocs', () => {
       makeDoc('2', 'training competency SOP qualified person gap'),
       makeDoc('3', 'batch released recalled patient safety market withdrawal'),
     ];
-    const clusters = clusterDocs(docs, 0.40);
+    const clusters = clusterDocs(docs, 0.4);
     assert.equal(clusters.length, 0);
   });
 
@@ -150,7 +147,7 @@ describe('clusterDocs', () => {
       makeDoc('2', 'HPLC chromatography audit trail gap injection sequence'),
       makeDoc('3', 'training competency SOP qualified person gap certification'),
     ];
-    const clusters = clusterDocs(docs, 0.40);
+    const clusters = clusterDocs(docs, 0.4);
     // The pair (1,2) should not form a cluster on its own
     for (const c of clusters) {
       assert.ok(c.length >= 3, `Cluster has only ${c.length} members`);
@@ -158,13 +155,10 @@ describe('clusterDocs', () => {
   });
 
   it('returns empty for fewer than 3 documents', () => {
-    assert.deepEqual(clusterDocs([], 0.40), []);
-    assert.deepEqual(clusterDocs([makeDoc('1', 'audit trail disabled')], 0.40), []);
+    assert.deepEqual(clusterDocs([], 0.4), []);
+    assert.deepEqual(clusterDocs([makeDoc('1', 'audit trail disabled')], 0.4), []);
     assert.deepEqual(
-      clusterDocs([
-        makeDoc('1', 'audit trail disabled'),
-        makeDoc('2', 'audit trail disabled'),
-      ], 0.40),
+      clusterDocs([makeDoc('1', 'audit trail disabled'), makeDoc('2', 'audit trail disabled')], 0.4),
       [],
     );
   });
@@ -192,12 +186,12 @@ describe('clusterDocs', () => {
       makeDoc('4', 'training SOP competency qualification'),
     ];
 
-    const result1 = clusterDocs(docs, 0.40);
-    const result2 = clusterDocs(docs, 0.40);
+    const result1 = clusterDocs(docs, 0.4);
+    const result2 = clusterDocs(docs, 0.4);
 
     assert.equal(
-      JSON.stringify(result1.map(c => c.map(m => m.id).sort())),
-      JSON.stringify(result2.map(c => c.map(m => m.id).sort())),
+      JSON.stringify(result1.map((c) => c.map((m) => m.id).sort())),
+      JSON.stringify(result2.map((c) => c.map((m) => m.id).sort())),
     );
   });
 });

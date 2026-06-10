@@ -35,12 +35,15 @@ test.describe('Dashboard', () => {
     await page.getByRole('button', { name: /until/i }).click();
     await page.getByRole('button', { name: /pick an end date/i }).click();
     // The popover is portaled to <body>, so it should be a sibling of <main>.
-    const pop = page.locator('.datepicker-pop, .fade-in-soft.bg-white').filter({ hasText: /S\s*M\s*T\s*W/ }).first();
+    const pop = page
+      .locator('.datepicker-pop, .fade-in-soft.bg-white')
+      .filter({ hasText: /S\s*M\s*T\s*W/ })
+      .first();
     await expect(pop).toBeVisible();
 
     // Geometry check: popover must reach beyond the Actions panel's right edge,
     // OR at minimum extend more vertical space than the panel header allows.
-    const popBox  = await pop.boundingBox();
+    const popBox = await pop.boundingBox();
     expect(popBox).not.toBeNull();
     expect(popBox!.height).toBeGreaterThan(180); // would be much smaller if clipped
   });
@@ -49,8 +52,10 @@ test.describe('Dashboard', () => {
     for (const label of ['Projects', 'Team', 'Settings']) {
       const link = page.getByRole('link', { name: new RegExp(`^${label}`, 'i') }).first();
       await link.click();
-      await expect(page.locator('text=/404|not found|application error|internal server error/i'))
-        .toHaveCount(0, { timeout: 5_000 });
+      await expect(page.locator('text=/404|not found|application error|internal server error/i')).toHaveCount(
+        0,
+        { timeout: 5_000 },
+      );
       // Back to home for the next iteration
       await page.goto('/');
     }

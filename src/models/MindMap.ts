@@ -10,26 +10,36 @@ import mongoose, { Schema, InferSchemaType } from 'mongoose';
  * Sub-documents intentionally have `_id: false` — the client supplies stable
  * string ids, and storing extra ObjectIds would just bloat the document.
  */
-const MMNodeSchema = new Schema({
-  id:    { type: String, required: true },
-  x:     { type: Number, required: true },
-  y:     { type: Number, required: true },
-  text:  { type: String, default: '' },
-  color: { type: String, default: '' },
-}, { _id: false });
+const MMNodeSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    x: { type: Number, required: true },
+    y: { type: Number, required: true },
+    text: { type: String, default: '' },
+    color: { type: String, default: '' },
+  },
+  { _id: false },
+);
 
-const MMEdgeSchema = new Schema({
-  id:   { type: String, required: true },
-  from: { type: String, required: true },
-  to:   { type: String, required: true },
-}, { _id: false });
+const MMEdgeSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    from: { type: String, required: true },
+    to: { type: String, required: true },
+  },
+  { _id: false },
+);
 
-const MindMapSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-  nodes:  { type: [MMNodeSchema], default: [] },
-  edges:  { type: [MMEdgeSchema], default: [] },
-}, { timestamps: true });
+const MindMapSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    nodes: { type: [MMNodeSchema], default: [] },
+    edges: { type: [MMEdgeSchema], default: [] },
+  },
+  { timestamps: true },
+);
 
 export type MindMapDoc = InferSchemaType<typeof MindMapSchema>;
-export const MindMap = (mongoose.models.MindMap as mongoose.Model<MindMapDoc>) ||
+export const MindMap =
+  (mongoose.models.MindMap as mongoose.Model<MindMapDoc>) ||
   mongoose.model<MindMapDoc>('MindMap', MindMapSchema);

@@ -20,11 +20,15 @@ test.describe('Projects + Kanban', () => {
     if (await createBtn.count()) await expect(createBtn).toBeVisible();
   });
 
-  test('create a project from the UI, then open it, switch to Kanban, slider arrows present', async ({ page, request }) => {
+  test('create a project from the UI, then open it, switch to Kanban, slider arrows present', async ({
+    page,
+    request,
+  }) => {
     // Try UI create first; fall back to API if the UI flow doesn't surface.
     await page.goto('/projects');
 
-    const newBtn = page.getByRole('link', { name: /new project|\+ new/i })
+    const newBtn = page
+      .getByRole('link', { name: /new project|\+ new/i })
       .or(page.getByRole('button', { name: /new project|\+ new/i }))
       .first();
 
@@ -47,7 +51,8 @@ test.describe('Projects + Kanban', () => {
     }
 
     // Switch to Kanban view
-    const kanbanTab = page.getByRole('button', { name: /^kanban$/i })
+    const kanbanTab = page
+      .getByRole('button', { name: /^kanban$/i })
       .or(page.locator('button', { hasText: /^kanban$/i }))
       .first();
     if (await kanbanTab.count()) {

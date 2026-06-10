@@ -7,10 +7,7 @@ import { WorkflowTemplateUpdateSchema } from '@/lib/validations';
 
 export const runtime = 'nodejs';
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
@@ -42,10 +39,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;

@@ -76,12 +76,19 @@ export async function tenantDbName(slug: string): Promise<string> {
   try {
     const t = await Tenant.findOne({ slug: safe, active: true }, 'dbName connectionUri').lean();
     if ((t as any)?.dbName) return (t as any).dbName;
-  } catch { /* fall through to derived name */ }
+  } catch {
+    /* fall through to derived name */
+  }
   return `pragati_${safe}`;
 }
 
 function sanitizeSlug(s: string): string {
-  return String(s || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '').slice(0, 40) || DEFAULT_TENANT_SLUG;
+  return (
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '')
+      .slice(0, 40) || DEFAULT_TENANT_SLUG
+  );
 }
 
 /** Role check helper — kept here so it doesn't bloat src/lib/auth.ts. */

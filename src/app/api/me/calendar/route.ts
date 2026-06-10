@@ -33,9 +33,9 @@ export async function GET(req: NextRequest) {
     // omits the range, so the first paint always has something to show.
     const now = new Date();
     const from = req.nextUrl.searchParams.get('from');
-    const to   = req.nextUrl.searchParams.get('to');
+    const to = req.nextUrl.searchParams.get('to');
     const fromDate = from ? new Date(from) : new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const toDate   = to   ? new Date(to)   : new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    const toDate = to ? new Date(to) : new Date(now.getFullYear(), now.getMonth() + 2, 0);
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       return NextResponse.json({ error: 'Invalid date range.' }, { status: 400 });
     }
@@ -46,13 +46,17 @@ export async function GET(req: NextRequest) {
     // show the project's reference number when set.
     const projects = await Project.find({
       $or: [{ teamId: { $in: scope.teamOids } }, { ownerId: scope.userOid }],
-    }).select('_id code name teamId ccNo').lean();
+    })
+      .select('_id code name teamId ccNo')
+      .lean();
 
-    const projMap = new Map(projects.map(p => [String(p._id), p]));
-    const projIds = projects.map(p => p._id);
+    const projMap = new Map(projects.map((p) => [String(p._id), p]));
+    const projIds = projects.map((p) => p._id);
 
-    const teams = await Team.find({ _id: { $in: scope.teamOids } }).select('_id name').lean();
-    const teamMap = new Map(teams.map(t => [String(t._id), t.name]));
+    const teams = await Team.find({ _id: { $in: scope.teamOids } })
+      .select('_id name')
+      .lean();
+    const teamMap = new Map(teams.map((t) => [String(t._id), t.name]));
 
     // Open tasks due in-window that are either mine or live in a team project.
     const rangeMatch = { $gte: fromDate, $lte: toDate };
@@ -68,12 +72,14 @@ export async function GET(req: NextRequest) {
       .lean();
 
     // Resolve assignee names in one batch query rather than N individual lookups.
-    const assigneeIds = [...new Set(
-      (tasks as any[]).filter(t => t.assigneeId).map(t => String(t.assigneeId)),
-    )];
+    const assigneeIds = [
+      ...new Set((tasks as any[]).filter((t) => t.assigneeId).map((t) => String(t.assigneeId))),
+    ];
     const nameMap = new Map<string, string>();
     if (assigneeIds.length > 0) {
-      const assignees = await User.find({ _id: { $in: assigneeIds } }).select('_id name').lean();
+      const assignees = await User.find({ _id: { $in: assigneeIds } })
+        .select('_id name')
+        .lean();
       for (const a of assignees as any[]) {
         nameMap.set(String(a._id), a.name);
       }
@@ -96,7 +102,7 @@ export async function GET(req: NextRequest) {
         status: t.status,
         due: effDate.toISOString(),
         mine: String(t.assigneeId) === String(scope.userOid),
-        assigneeName: t.assigneeId ? (nameMap.get(String(t.assigneeId)) || null) : null,
+        assigneeName: t.assigneeId ? nameMap.get(String(t.assigneeId)) || null : null,
         teamName: teamName || null,
         projectRef,
         priority: t.priority || null,

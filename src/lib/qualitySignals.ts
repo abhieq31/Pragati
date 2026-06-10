@@ -66,10 +66,7 @@ export interface ClusterDoc {
   vec: Map<string, number>;
 }
 
-export function clusterDocs(
-  docs: ClusterDoc[],
-  threshold: number,
-): ClusterDoc[][] {
+export function clusterDocs(docs: ClusterDoc[], threshold: number): ClusterDoc[][] {
   const parent = new Map<string, string>(docs.map((d) => [d.id, d.id]));
 
   function find(id: string): string {
@@ -116,9 +113,7 @@ export async function findPastCases(
   const { Project } = await import('@/models/Project');
   await connectDB();
 
-  const target = await Task.findById(taskId)
-    .select('title description taskType')
-    .lean() as any;
+  const target = (await Task.findById(taskId).select('title description taskType').lean()) as any;
   if (!target || !QA_TASK_TYPES.has(target.taskType)) return [];
 
   const targetText = `${target.title} ${target.description || ''}`.trim();
@@ -126,7 +121,7 @@ export async function findPastCases(
 
   const since = new Date(Date.now() - lookbackDays * 86_400_000);
 
-  const candidates = await Task.find({
+  const candidates = (await Task.find({
     _id: { $ne: new mongoose.Types.ObjectId(taskId) },
     taskType: target.taskType,
     status: 'done',
@@ -134,7 +129,7 @@ export async function findPastCases(
   })
     .select('title description taskType projectId completedAt createdAt')
     .limit(300)
-    .lean() as any[];
+    .lean()) as any[];
 
   if (!candidates.length) return [];
 
@@ -142,9 +137,9 @@ export async function findPastCases(
   // Institutional memory must never surface a personal project's task — its
   // title and project code are owner-private, full stop. Drop those candidates
   // before they ever reach the similarity scoring / response.
-  const projects = await Project.find({ _id: { $in: projectIds }, ...NOT_PERSONAL })
+  const projects = (await Project.find({ _id: { $in: projectIds }, ...NOT_PERSONAL })
     .select('_id code')
-    .lean() as any[];
+    .lean()) as any[];
   const codeMap = new Map(projects.map((p: any) => [String(p._id), p.code || '']));
   const visibleCandidates = candidates.filter((c: any) => codeMap.has(String(c.projectId)));
 
@@ -152,15 +147,10 @@ export async function findPastCases(
 
   return visibleCandidates
     .map((c: any) => {
-      const score = cosine(
-        targetVec,
-        bagOfWords(tokenize(`${c.title} ${c.description || ''}`)),
-      );
+      const score = cosine(targetVec, bagOfWords(tokenize(`${c.title} ${c.description || ''}`)));
       const daysToClose =
         c.completedAt && c.createdAt
-          ? Math.round(
-              (new Date(c.completedAt).getTime() - new Date(c.createdAt).getTime()) / 86_400_000,
-            )
+          ? Math.round((new Date(c.completedAt).getTime() - new Date(c.createdAt).getTime()) / 86_400_000)
           : null;
       return {
         id: String(c._id),
@@ -197,9 +187,7 @@ export async function checkCapaEffectiveness(
   const daysSinceClosure = (Date.now() - completedAt.getTime()) / 86_400_000;
   if (daysSinceClosure < 14) return null;
 
-  const target = await Task.findById(taskId)
-    .select('title description taskType')
-    .lean() as any;
+  const target = (await Task.findById(taskId).select('title description taskType').lean()) as any;
   if (!target || !['capa', 'corrective_action'].includes(target.taskType)) return null;
 
   const targetText = `${target.title} ${target.description || ''}`.trim();
@@ -208,22 +196,23 @@ export async function checkCapaEffectiveness(
   const targetVec = bagOfWords(tokenize(targetText));
   const windowEnd = new Date(completedAt.getTime() + 90 * 86_400_000);
 
-  const newerRaw = await Task.find({
+  const newerRaw = (await Task.find({
     _id: { $ne: new mongoose.Types.ObjectId(taskId) },
     taskType: { $in: ['deviation', 'capa', 'audit_finding', 'data_review'] },
     createdAt: { $gte: completedAt, $lte: windowEnd },
   })
     .select('_id title description projectId')
     .limit(200)
-    .lean() as any[];
+    .lean()) as any[];
 
   if (!newerRaw.length) return null;
 
   // A recurrence signal must never name-drop a task from someone's personal
   // project — filter those out before scoring or surfacing any title.
   const newerProjectIds = [...new Set(newerRaw.map((t: any) => String(t.projectId)))];
-  const visibleProjects = await Project.find({ _id: { $in: newerProjectIds }, ...NOT_PERSONAL })
-    .select('_id').lean() as any[];
+  const visibleProjects = (await Project.find({ _id: { $in: newerProjectIds }, ...NOT_PERSONAL })
+    .select('_id')
+    .lean()) as any[];
   const visibleProjectIds = new Set(visibleProjects.map((p: any) => String(p._id)));
   const newer = newerRaw.filter((t: any) => visibleProjectIds.has(String(t.projectId)));
 
@@ -233,7 +222,7 @@ export async function checkCapaEffectiveness(
     .map((t: any) => ({
       id: String(t._id),
       title: t.title as string,
-      score: cosine(targetVec, bagOfWords(tokenize(`${t.title} ${t.description || ''}`)))
+      score: cosine(targetVec, bagOfWords(tokenize(`${t.title} ${t.description || ''}`))),
     }))
     .filter((t) => t.score >= 0.35)
     .sort((a, b) => b.score - a.score)
@@ -266,7 +255,7 @@ export async function detectPatternClusters(
 
   const since = new Date(Date.now() - lookbackDays * 86_400_000);
 
-  const tasks = await Task.find({
+  const tasks = (await Task.find({
     projectId: { $in: projectIds },
     taskType: { $in: [...QA_TASK_TYPES] },
     status: { $ne: 'done' },
@@ -274,7 +263,7 @@ export async function detectPatternClusters(
   })
     .select('_id title description taskType')
     .limit(400)
-    .lean() as any[];
+    .lean()) as any[];
 
   if (tasks.length < 3) return [];
 
@@ -296,7 +285,7 @@ export async function detectPatternClusters(
       vec: bagOfWords(tokenize(`${t.title} ${t.description || ''}`)),
     }));
 
-    const clusters = clusterDocs(docs, 0.40);
+    const clusters = clusterDocs(docs, 0.4);
 
     for (const members of clusters) {
       // Find terms that appear in at least half the cluster members

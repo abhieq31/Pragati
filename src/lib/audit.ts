@@ -5,7 +5,11 @@ import { Task } from '@/models/Task';
 
 export type AuditCategory = 'project' | 'task' | 'team' | 'user' | 'auth' | 'general';
 
-interface Actor { sub?: string; id?: string; name?: string }
+interface Actor {
+  sub?: string;
+  id?: string;
+  name?: string;
+}
 
 /**
  * Hard privacy guard for personal projects. A personal project is the user's
@@ -20,13 +24,21 @@ interface Actor { sub?: string; id?: string; name?: string }
  *  - Anything that can't be resolved (no DB, missing ids) defaults to "not
  *    personal" so the legitimate cross-user audit trail keeps working.
  */
-async function isPersonalScope(targetType: string | undefined, targetId: string | undefined, meta: any): Promise<boolean> {
+async function isPersonalScope(
+  targetType: string | undefined,
+  targetId: string | undefined,
+  meta: any,
+): Promise<boolean> {
   if (!targetType || !targetId) return false;
   try {
     if (targetType === 'project') {
       const p = await Project.findById(targetId).select('isPersonal personal code').lean();
       if (!p) return false;
-      return !!((p as any).isPersonal || (p as any).personal || String((p as any).code || '').startsWith('PRSN-'));
+      return !!(
+        (p as any).isPersonal ||
+        (p as any).personal ||
+        String((p as any).code || '').startsWith('PRSN-')
+      );
     }
     if (targetType === 'task') {
       // Allow callers to hint via meta.projectId to save a round-trip.
@@ -38,9 +50,15 @@ async function isPersonalScope(targetType: string | undefined, targetId: string 
       }
       const p = await Project.findById(projectId).select('isPersonal personal code').lean();
       if (!p) return false;
-      return !!((p as any).isPersonal || (p as any).personal || String((p as any).code || '').startsWith('PRSN-'));
+      return !!(
+        (p as any).isPersonal ||
+        (p as any).personal ||
+        String((p as any).code || '').startsWith('PRSN-')
+      );
     }
-  } catch { /* fall through — never let a privacy check break the request */ }
+  } catch {
+    /* fall through — never let a privacy check break the request */
+  }
   return false;
 }
 

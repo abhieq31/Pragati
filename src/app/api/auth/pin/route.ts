@@ -12,7 +12,20 @@ export const runtime = 'nodejs';
 const PIN_RE = /^\d{4}$/;
 // Trivially weak PINs are rejected so a convenience unlock doesn't become the
 // obvious "0000 / 1234" everyone uses.
-const WEAK_PINS = new Set(['0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1234', '4321']);
+const WEAK_PINS = new Set([
+  '0000',
+  '1111',
+  '2222',
+  '3333',
+  '4444',
+  '5555',
+  '6666',
+  '7777',
+  '8888',
+  '9999',
+  '1234',
+  '4321',
+]);
 
 const Body = z.object({
   pin: z.string().regex(PIN_RE, 'PIN must be exactly 4 digits'),
@@ -75,9 +88,12 @@ export async function POST(req: NextRequest) {
     await u.save();
 
     await logOperation({
-      action: 'auth.pin_set', category: 'auth',
+      action: 'auth.pin_set',
+      category: 'auth',
       actor: { id: user!.sub, name: user!.name },
-      targetType: 'user', targetId: user!.sub, targetLabel: user!.name,
+      targetType: 'user',
+      targetId: user!.sub,
+      targetLabel: user!.name,
       summary: 'Set or changed their Quick PIN',
     });
 

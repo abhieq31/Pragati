@@ -14,43 +14,43 @@ export const runtime = 'nodejs';
 /* ── Colour palette ─────────────────────────────────────────────────────── */
 const C = {
   // Brand
-  brandBlue:   'FF1565C0',
-  brandDark:   'FF0D47A1',
-  brandLight:  'FFE3F2FD',
+  brandBlue: 'FF1565C0',
+  brandDark: 'FF0D47A1',
+  brandLight: 'FFE3F2FD',
   // Status
-  done:        'FF22C55E',
-  doneBg:      'FFF0FDF4',
-  inProgress:  'FF1565C0',
-  inProgressBg:'FFEFF6FF',
-  todo:        'FF94A3B8',
-  todoBg:      'FFF8FAFC',
-  review:      'FF7C3AED',
-  reviewBg:    'FFF5F3FF',
-  blocked:     'FFDC2626',
-  blockedBg:   'FFFEF2F2',
-  onHold:      'FFF59E0B',
+  done: 'FF22C55E',
+  doneBg: 'FFF0FDF4',
+  inProgress: 'FF1565C0',
+  inProgressBg: 'FFEFF6FF',
+  todo: 'FF94A3B8',
+  todoBg: 'FFF8FAFC',
+  review: 'FF7C3AED',
+  reviewBg: 'FFF5F3FF',
+  blocked: 'FFDC2626',
+  blockedBg: 'FFFEF2F2',
+  onHold: 'FFF59E0B',
   // Priority
-  critical:    'FFEF4444',
-  criticalBg:  'FFFEF2F2',
-  high:        'FFF97316',
-  highBg:      'FFFFF7ED',
-  medium:      'FF0EA5E9',
-  mediumBg:    'FFF0F9FF',
+  critical: 'FFEF4444',
+  criticalBg: 'FFFEF2F2',
+  high: 'FFF97316',
+  highBg: 'FFFFF7ED',
+  medium: 'FF0EA5E9',
+  mediumBg: 'FFF0F9FF',
   // Health
-  healthGood:  'FF22C55E',
-  healthRisk:  'FFF59E0B',
-  healthCrit:  'FFEF4444',
+  healthGood: 'FF22C55E',
+  healthRisk: 'FFF59E0B',
+  healthCrit: 'FFEF4444',
   // Neutral
-  headerBg:    'FF0B1628',
-  headerFg:    'FFFFFFFF',
-  sectionBg:   'FF1E3A5F',
-  sectionFg:   'FFFFFFFF',
+  headerBg: 'FF0B1628',
+  headerFg: 'FFFFFFFF',
+  sectionBg: 'FF1E3A5F',
+  sectionFg: 'FFFFFFFF',
   subHeaderBg: 'FFE8EDF4',
   subHeaderFg: 'FF0F172A',
-  rowAlt:      'FFF8FAFC',
-  border:      'FFD2DAE4',
-  textMuted:   'FF64748B',
-  white:       'FFFFFFFF',
+  rowAlt: 'FFF8FAFC',
+  border: 'FFD2DAE4',
+  textMuted: 'FF64748B',
+  white: 'FFFFFFFF',
 };
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -66,26 +66,46 @@ function fmt(d: string | Date | null | undefined): string {
 }
 
 function statusLabel(s: string): string {
-  return ({ todo: 'To Do', in_progress: 'In Progress', review: 'Review', blocked: 'Blocked', done: 'Done', planning: 'Planning', on_hold: 'On Hold', completed: 'Completed', cancelled: 'Cancelled' })[s] ?? s;
+  return (
+    {
+      todo: 'To Do',
+      in_progress: 'In Progress',
+      review: 'Review',
+      blocked: 'Blocked',
+      done: 'Done',
+      planning: 'Planning',
+      on_hold: 'On Hold',
+      completed: 'Completed',
+      cancelled: 'Cancelled',
+    }[s] ?? s
+  );
 }
 
 function lcLabel(lc: string): string {
-  return lc.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return lc.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function applyBorder(ws: ExcelJS.Worksheet, row: number, colStart: number, colEnd: number) {
   for (let c = colStart; c <= colEnd; c++) {
     const cell = ws.getCell(row, c);
     cell.border = {
-      top:    { style: 'thin', color: { argb: C.border } },
+      top: { style: 'thin', color: { argb: C.border } },
       bottom: { style: 'thin', color: { argb: C.border } },
-      left:   { style: 'thin', color: { argb: C.border } },
-      right:  { style: 'thin', color: { argb: C.border } },
+      left: { style: 'thin', color: { argb: C.border } },
+      right: { style: 'thin', color: { argb: C.border } },
     };
   }
 }
 
-function hdr(ws: ExcelJS.Worksheet, row: number, cols: number, text: string, bg = C.sectionBg, fg = C.sectionFg, fontSize = 11) {
+function hdr(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  cols: number,
+  text: string,
+  bg = C.sectionBg,
+  fg = C.sectionFg,
+  fontSize = 11,
+) {
   const cell = ws.getCell(row, 1);
   cell.value = text;
   cell.font = { bold: true, color: { argb: fg }, size: fontSize, name: 'Calibri' };
@@ -105,10 +125,10 @@ function colHdr(ws: ExcelJS.Worksheet, row: number, cols: string[]) {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.subHeaderBg } };
     cell.alignment = { vertical: 'middle', horizontal: 'center' };
     cell.border = {
-      top:    { style: 'medium', color: { argb: C.brandBlue } },
+      top: { style: 'medium', color: { argb: C.brandBlue } },
       bottom: { style: 'medium', color: { argb: C.brandBlue } },
-      left:   { style: 'thin',   color: { argb: C.border } },
-      right:  { style: 'thin',   color: { argb: C.border } },
+      left: { style: 'thin', color: { argb: C.border } },
+      right: { style: 'thin', color: { argb: C.border } },
     };
   });
 }
@@ -125,21 +145,48 @@ function safeCellValue(value: any): any {
   if (typeof value !== 'string') return value;
   if (value.length === 0) return value;
   const first = value.charCodeAt(0);
-  if (first === 0x3D /* = */ || first === 0x2B /* + */ || first === 0x2D /* - */ ||
-      first === 0x40 /* @ */ || first === 0x09 /* TAB */ || first === 0x0D /* CR */) {
+  if (
+    first === 0x3d /* = */ ||
+    first === 0x2b /* + */ ||
+    first === 0x2d /* - */ ||
+    first === 0x40 /* @ */ ||
+    first === 0x09 /* TAB */ ||
+    first === 0x0d /* CR */
+  ) {
     return `'${value}`;
   }
   return value;
 }
 
-function setVal(ws: ExcelJS.Worksheet, row: number, col: number, value: any, opts: {
-  bold?: boolean; color?: string; bg?: string; align?: ExcelJS.Alignment['horizontal']; size?: number; wrapText?: boolean;
-} = {}) {
+function setVal(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  col: number,
+  value: any,
+  opts: {
+    bold?: boolean;
+    color?: string;
+    bg?: string;
+    align?: ExcelJS.Alignment['horizontal'];
+    size?: number;
+    wrapText?: boolean;
+  } = {},
+) {
   const cell = ws.getCell(row, col);
   cell.value = safeCellValue(value ?? '—');
-  cell.font = { name: 'Calibri', size: opts.size ?? 10, bold: opts.bold, color: { argb: opts.color ?? C.subHeaderFg } };
+  cell.font = {
+    name: 'Calibri',
+    size: opts.size ?? 10,
+    bold: opts.bold,
+    color: { argb: opts.color ?? C.subHeaderFg },
+  };
   if (opts.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.bg } };
-  cell.alignment = { vertical: 'middle', horizontal: opts.align ?? 'left', indent: opts.align === 'center' ? 0 : 1, wrapText: opts.wrapText };
+  cell.alignment = {
+    vertical: 'middle',
+    horizontal: opts.align ?? 'left',
+    indent: opts.align === 'center' ? 0 : 1,
+    wrapText: opts.wrapText,
+  };
 }
 
 function progressBar(ws: ExcelJS.Worksheet, row: number, col: number, pct: number) {
@@ -161,8 +208,14 @@ function buildSummarySheet(wb: ExcelJS.Workbook, project: any, tasks: any[], pha
 
   const COLS = 8;
   ws.columns = [
-    { width: 22 }, { width: 18 }, { width: 18 }, { width: 18 },
-    { width: 18 }, { width: 18 }, { width: 18 }, { width: 18 },
+    { width: 22 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
+    { width: 18 },
   ];
 
   // Title banner
@@ -177,7 +230,8 @@ function buildSummarySheet(wb: ExcelJS.Workbook, project: any, tasks: any[], pha
 
   r++;
   ws.mergeCells(r, 1, r, COLS);
-  ws.getCell(r, 1).value = `  Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}`;
+  ws.getCell(r, 1).value =
+    `  Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}`;
   ws.getCell(r, 1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: C.textMuted } };
   ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2F8' } };
   ws.getRow(r).height = 16;
@@ -188,10 +242,15 @@ function buildSummarySheet(wb: ExcelJS.Workbook, project: any, tasks: any[], pha
 
   const details = [
     ['Project Name', project.name, 'Project Code', project.code],
-    ['Status',       statusLabel(project.status), 'Priority', (project.priority || 'medium').toUpperCase()],
-    ['Lifecycle',    lcLabel(project.lifecycle || 'generic'), 'GxP Impact', (project.gxpImpact || 'none').toUpperCase()],
-    ['Start Date',   fmt(project.startDate), 'Due Date', fmt(project.dueDate)],
-    ['Team',         project.teamName || '—', 'Owner', project.ownerName || '—'],
+    ['Status', statusLabel(project.status), 'Priority', (project.priority || 'medium').toUpperCase()],
+    [
+      'Lifecycle',
+      lcLabel(project.lifecycle || 'generic'),
+      'GxP Impact',
+      (project.gxpImpact || 'none').toUpperCase(),
+    ],
+    ['Start Date', fmt(project.startDate), 'Due Date', fmt(project.dueDate)],
+    ['Team', project.teamName || '—', 'Owner', project.ownerName || '—'],
   ];
 
   for (const [k1, v1, k2, v2] of details) {
@@ -220,24 +279,26 @@ function buildSummarySheet(wb: ExcelJS.Workbook, project: any, tasks: any[], pha
   hdr(ws, r, COLS, '  KEY METRICS AT A GLANCE', C.brandDark, C.headerFg, 12);
   r++;
 
-  const done      = tasks.filter(t => t.status === 'done').length;
-  const overdue   = tasks.filter(t => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0).length;
-  const blocked   = tasks.filter(t => t.status === 'blocked').length;
-  const inProg    = tasks.filter(t => t.status === 'in_progress').length;
-  const total     = tasks.length;
-  const pct       = total ? Math.round(done / total * 100) : 0;
-  const critical  = tasks.filter(t => t.priority === 'critical' && t.status !== 'done').length;
-  const high      = tasks.filter(t => t.priority === 'high' && t.status !== 'done').length;
+  const done = tasks.filter((t) => t.status === 'done').length;
+  const overdue = tasks.filter(
+    (t) => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0,
+  ).length;
+  const blocked = tasks.filter((t) => t.status === 'blocked').length;
+  const inProg = tasks.filter((t) => t.status === 'in_progress').length;
+  const total = tasks.length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const critical = tasks.filter((t) => t.priority === 'critical' && t.status !== 'done').length;
+  const high = tasks.filter((t) => t.priority === 'high' && t.status !== 'done').length;
 
   const kpis: [string, string | number, string][] = [
-    ['Total Tasks',      total,    C.subHeaderBg],
-    ['Completed',        done,     C.doneBg],
-    ['In Progress',      inProg,   C.inProgressBg],
-    ['Overdue',          overdue,  overdue > 0 ? C.criticalBg : C.doneBg],
-    ['Blocked',          blocked,  blocked > 0 ? C.blockedBg  : C.doneBg],
+    ['Total Tasks', total, C.subHeaderBg],
+    ['Completed', done, C.doneBg],
+    ['In Progress', inProg, C.inProgressBg],
+    ['Overdue', overdue, overdue > 0 ? C.criticalBg : C.doneBg],
+    ['Blocked', blocked, blocked > 0 ? C.blockedBg : C.doneBg],
     ['Critical Priority', critical, critical > 0 ? C.criticalBg : C.doneBg],
-    ['High Priority',    high,     high > 0 ? C.highBg : C.doneBg],
-    ['Completion %',     `${pct}%`, pct >= 80 ? C.doneBg : pct >= 50 ? C.inProgressBg : C.criticalBg],
+    ['High Priority', high, high > 0 ? C.highBg : C.doneBg],
+    ['Completion %', `${pct}%`, pct >= 80 ? C.doneBg : pct >= 50 ? C.inProgressBg : C.criticalBg],
   ];
 
   // KPI row — labels
@@ -256,7 +317,11 @@ function buildSummarySheet(wb: ExcelJS.Workbook, project: any, tasks: any[], pha
     cell.font = { name: 'Calibri', size: 16, bold: true, color: { argb: C.brandDark } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
     cell.alignment = { vertical: 'middle', horizontal: 'center' };
-    cell.border = { bottom: { style: 'medium', color: { argb: C.brandBlue } }, left: { style: 'thin', color: { argb: C.border } }, right: { style: 'thin', color: { argb: C.border } } };
+    cell.border = {
+      bottom: { style: 'medium', color: { argb: C.brandBlue } },
+      left: { style: 'thin', color: { argb: C.border } },
+      right: { style: 'thin', color: { argb: C.border } },
+    };
   });
   r++;
 
@@ -275,27 +340,50 @@ function buildSummarySheet(wb: ExcelJS.Workbook, project: any, tasks: any[], pha
   r += 2;
   hdr(ws, r, COLS, '  PROGRESS BY PHASE', C.sectionBg, C.sectionFg);
   r++;
-  colHdr(ws, r, ['Phase', 'Total Tasks', 'Done', 'In Progress', 'Blocked', 'Overdue', '% Complete', 'Progress']);
+  colHdr(ws, r, [
+    'Phase',
+    'Total Tasks',
+    'Done',
+    'In Progress',
+    'Blocked',
+    'Overdue',
+    '% Complete',
+    'Progress',
+  ]);
   r++;
 
   const phases = project.phases || [];
   for (const phase of phases) {
-    const pTasks = tasks.filter(t => String(t.phaseId) === String(phase._id));
+    const pTasks = tasks.filter((t) => String(t.phaseId) === String(phase._id));
     if (!pTasks.length) continue;
-    const pDone    = pTasks.filter(t => t.status === 'done').length;
-    const pInProg  = pTasks.filter(t => t.status === 'in_progress').length;
-    const pBlocked = pTasks.filter(t => t.status === 'blocked').length;
-    const pOverdue = pTasks.filter(t => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0).length;
-    const pPct     = pTasks.length ? Math.round(pDone / pTasks.length * 100) : 0;
+    const pDone = pTasks.filter((t) => t.status === 'done').length;
+    const pInProg = pTasks.filter((t) => t.status === 'in_progress').length;
+    const pBlocked = pTasks.filter((t) => t.status === 'blocked').length;
+    const pOverdue = pTasks.filter(
+      (t) => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0,
+    ).length;
+    const pPct = pTasks.length ? Math.round((pDone / pTasks.length) * 100) : 0;
 
     ws.getRow(r).height = 20;
     setVal(ws, r, 1, phase.name, { bold: true });
     setVal(ws, r, 2, pTasks.length, { align: 'center' });
-    setVal(ws, r, 3, pDone,    { align: 'center', color: pDone > 0 ? C.done : C.textMuted, bold: pDone > 0 });
-    setVal(ws, r, 4, pInProg,  { align: 'center', color: C.inProgress });
-    setVal(ws, r, 5, pBlocked, { align: 'center', color: pBlocked > 0 ? C.blocked : C.textMuted, bold: pBlocked > 0 });
-    setVal(ws, r, 6, pOverdue, { align: 'center', color: pOverdue > 0 ? C.critical : C.textMuted, bold: pOverdue > 0 });
-    setVal(ws, r, 7, `${pPct}%`, { align: 'center', bold: true, color: pPct >= 80 ? C.done : pPct >= 50 ? C.inProgress : C.critical });
+    setVal(ws, r, 3, pDone, { align: 'center', color: pDone > 0 ? C.done : C.textMuted, bold: pDone > 0 });
+    setVal(ws, r, 4, pInProg, { align: 'center', color: C.inProgress });
+    setVal(ws, r, 5, pBlocked, {
+      align: 'center',
+      color: pBlocked > 0 ? C.blocked : C.textMuted,
+      bold: pBlocked > 0,
+    });
+    setVal(ws, r, 6, pOverdue, {
+      align: 'center',
+      color: pOverdue > 0 ? C.critical : C.textMuted,
+      bold: pOverdue > 0,
+    });
+    setVal(ws, r, 7, `${pPct}%`, {
+      align: 'center',
+      bold: true,
+      color: pPct >= 80 ? C.done : pPct >= 50 ? C.inProgress : C.critical,
+    });
     progressBar(ws, r, 8, pPct);
     applyBorder(ws, r, 1, COLS);
     if (r % 2 === 0) {
@@ -317,12 +405,18 @@ function buildTasksSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], users
   const ws = wb.addWorksheet('📝 All Tasks', { properties: { tabColor: { argb: C.brandBlue } } });
   ws.views = [{ showGridLines: false }];
   ws.columns = [
-    { width: 5 }, { width: 38 }, { width: 16 }, { width: 16 },
-    { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 },
+    { width: 5 },
+    { width: 38 },
+    { width: 16 },
+    { width: 16 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
   ];
 
   const COLS = 8;
-  const userMap = new Map(users.map(u => [String(u._id), u.name]));
+  const userMap = new Map(users.map((u) => [String(u._id), u.name]));
 
   let r = 1;
   ws.mergeCells(r, 1, r, COLS);
@@ -335,11 +429,19 @@ function buildTasksSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], users
 
   const phases = project.phases || [];
   for (const phase of phases) {
-    const pTasks = tasks.filter(t => String(t.phaseId) === String(phase._id));
+    const pTasks = tasks.filter((t) => String(t.phaseId) === String(phase._id));
     if (!pTasks.length) continue;
 
     // Phase header
-    hdr(ws, r, COLS, `  PHASE: ${phase.name.toUpperCase()}  (${pTasks.filter(t => t.status === 'done').length}/${pTasks.length} done)`, C.sectionBg, C.sectionFg, 11);
+    hdr(
+      ws,
+      r,
+      COLS,
+      `  PHASE: ${phase.name.toUpperCase()}  (${pTasks.filter((t) => t.status === 'done').length}/${pTasks.length} done)`,
+      C.sectionBg,
+      C.sectionFg,
+      11,
+    );
     r++;
     colHdr(ws, r, ['#', 'Task Title', 'Assignee', 'Status', 'Priority', 'Due Date', 'Days Late', 'GxP']);
     r++;
@@ -348,7 +450,15 @@ function buildTasksSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], users
       const late = daysOverdue(task.dueDate);
       const isLate = task.status !== 'done' && late !== null && late > 0;
       const isBlocked = task.status === 'blocked';
-      const rowBg = isBlocked ? C.blockedBg : isLate ? C.criticalBg : task.status === 'done' ? C.doneBg : idx % 2 === 0 ? C.white : C.rowAlt;
+      const rowBg = isBlocked
+        ? C.blockedBg
+        : isLate
+          ? C.criticalBg
+          : task.status === 'done'
+            ? C.doneBg
+            : idx % 2 === 0
+              ? C.white
+              : C.rowAlt;
 
       ws.getRow(r).height = 18;
       setVal(ws, r, 1, idx + 1, { align: 'center', bg: rowBg, color: C.textMuted });
@@ -356,20 +466,51 @@ function buildTasksSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], users
       setVal(ws, r, 3, userMap.get(String(task.assigneeId)) || '—', { bg: rowBg, align: 'center' });
 
       // Status cell with colour
-      const sBg: Record<string, string> = { done: C.doneBg, in_progress: C.inProgressBg, review: C.reviewBg, blocked: C.blockedBg, todo: C.todoBg };
-      const sCol: Record<string, string> = { done: C.done, in_progress: C.inProgress, review: C.review, blocked: C.blocked, todo: C.todo };
-      setVal(ws, r, 4, statusLabel(task.status), { bg: sBg[task.status] ?? rowBg, color: sCol[task.status] ?? C.subHeaderFg, bold: true, align: 'center' });
+      const sBg: Record<string, string> = {
+        done: C.doneBg,
+        in_progress: C.inProgressBg,
+        review: C.reviewBg,
+        blocked: C.blockedBg,
+        todo: C.todoBg,
+      };
+      const sCol: Record<string, string> = {
+        done: C.done,
+        in_progress: C.inProgress,
+        review: C.review,
+        blocked: C.blocked,
+        todo: C.todo,
+      };
+      setVal(ws, r, 4, statusLabel(task.status), {
+        bg: sBg[task.status] ?? rowBg,
+        color: sCol[task.status] ?? C.subHeaderFg,
+        bold: true,
+        align: 'center',
+      });
 
       // Priority cell
       const pBg: Record<string, string> = { critical: C.criticalBg, high: C.highBg, medium: C.mediumBg };
       const pCol: Record<string, string> = { critical: C.critical, high: C.high, medium: C.medium };
       const pri = task.priority || 'low';
-      setVal(ws, r, 5, pri.toUpperCase(), { bg: pBg[pri] ?? rowBg, color: pCol[pri] ?? C.textMuted, bold: pri === 'critical' || pri === 'high', align: 'center' });
+      setVal(ws, r, 5, pri.toUpperCase(), {
+        bg: pBg[pri] ?? rowBg,
+        color: pCol[pri] ?? C.textMuted,
+        bold: pri === 'critical' || pri === 'high',
+        align: 'center',
+      });
 
       setVal(ws, r, 6, fmt(task.dueDate), { bg: rowBg, align: 'center' });
-      setVal(ws, r, 7, task.status === 'done' ? 'Done' : late !== null && late > 0 ? `${late}d` : late === 0 ? 'Today' : '—',
-        { bg: rowBg, color: isLate ? C.critical : C.textMuted, bold: isLate, align: 'center' });
-      setVal(ws, r, 8, task.gxpCritical ? '⚠ GxP' : '—', { bg: rowBg, align: 'center', color: task.gxpCritical ? C.review : C.textMuted });
+      setVal(
+        ws,
+        r,
+        7,
+        task.status === 'done' ? 'Done' : late !== null && late > 0 ? `${late}d` : late === 0 ? 'Today' : '—',
+        { bg: rowBg, color: isLate ? C.critical : C.textMuted, bold: isLate, align: 'center' },
+      );
+      setVal(ws, r, 8, task.gxpCritical ? '⚠ GxP' : '—', {
+        bg: rowBg,
+        align: 'center',
+        color: task.gxpCritical ? C.review : C.textMuted,
+      });
       applyBorder(ws, r, 1, COLS);
       r++;
     });
@@ -384,12 +525,18 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
   const ws = wb.addWorksheet('🚨 Blockers & Bottlenecks', { properties: { tabColor: { argb: C.critical } } });
   ws.views = [{ showGridLines: false }];
   ws.columns = [
-    { width: 5 }, { width: 38 }, { width: 16 }, { width: 16 },
-    { width: 14 }, { width: 14 }, { width: 14 }, { width: 22 },
+    { width: 5 },
+    { width: 38 },
+    { width: 16 },
+    { width: 16 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 22 },
   ];
 
   const COLS = 8;
-  const userMap = new Map(users.map(u => [String(u._id), u.name]));
+  const userMap = new Map(users.map((u) => [String(u._id), u.name]));
   const phaseMap = new Map((project.phases || []).map((p: any) => [String(p._id), p.name]));
 
   let r = 1;
@@ -401,15 +548,24 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
   ws.getRow(r).height = 30;
   r++;
   ws.mergeCells(r, 1, r, COLS);
-  ws.getCell(r, 1).value = '  Use this sheet for stand-up / review meeting discussions. Focus on items with highest impact.';
+  ws.getCell(r, 1).value =
+    '  Use this sheet for stand-up / review meeting discussions. Focus on items with highest impact.';
   ws.getCell(r, 1).font = { name: 'Calibri', size: 9, italic: true, color: { argb: C.textMuted } };
   ws.getCell(r, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF1F2' } };
   ws.getRow(r).height = 16;
   r += 2;
 
   // ── Section A: BLOCKED tasks ──
-  const blockedTasks = tasks.filter(t => t.status === 'blocked');
-  hdr(ws, r, COLS, `  🔴  BLOCKED TASKS  (${blockedTasks.length})  —  Cannot proceed without resolution`, 'FFDC2626', C.headerFg, 11);
+  const blockedTasks = tasks.filter((t) => t.status === 'blocked');
+  hdr(
+    ws,
+    r,
+    COLS,
+    `  🔴  BLOCKED TASKS  (${blockedTasks.length})  —  Cannot proceed without resolution`,
+    'FFDC2626',
+    C.headerFg,
+    11,
+  );
   r++;
   if (blockedTasks.length === 0) {
     ws.getRow(r).height = 18;
@@ -417,7 +573,16 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
     setVal(ws, r, 1, '  ✅  No blocked tasks — looking good!', { color: C.done, bold: true });
     r++;
   } else {
-    colHdr(ws, r, ['#', 'Task Title', 'Phase', 'Assignee', 'Priority', 'Due Date', 'Days Late', 'Action Needed']);
+    colHdr(ws, r, [
+      '#',
+      'Task Title',
+      'Phase',
+      'Assignee',
+      'Priority',
+      'Due Date',
+      'Days Late',
+      'Action Needed',
+    ]);
     r++;
     blockedTasks.forEach((task, i) => {
       const late = daysOverdue(task.dueDate);
@@ -426,9 +591,19 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
       setVal(ws, r, 2, task.title, { bg: C.blockedBg, bold: true, color: C.blocked });
       setVal(ws, r, 3, phaseMap.get(String(task.phaseId)) || '—', { bg: C.blockedBg, align: 'center' });
       setVal(ws, r, 4, userMap.get(String(task.assigneeId)) || '—', { bg: C.blockedBg, align: 'center' });
-      setVal(ws, r, 5, (task.priority || 'low').toUpperCase(), { bg: C.criticalBg, color: C.critical, bold: true, align: 'center' });
+      setVal(ws, r, 5, (task.priority || 'low').toUpperCase(), {
+        bg: C.criticalBg,
+        color: C.critical,
+        bold: true,
+        align: 'center',
+      });
       setVal(ws, r, 6, fmt(task.dueDate), { bg: C.blockedBg, align: 'center' });
-      setVal(ws, r, 7, late !== null && late > 0 ? `${late}d overdue` : '—', { bg: C.blockedBg, color: C.critical, bold: late !== null && late > 0, align: 'center' });
+      setVal(ws, r, 7, late !== null && late > 0 ? `${late}d overdue` : '—', {
+        bg: C.blockedBg,
+        color: C.critical,
+        bold: late !== null && late > 0,
+        align: 'center',
+      });
       setVal(ws, r, 8, 'Resolve blocker →', { bg: C.criticalBg, color: C.critical, bold: true });
       applyBorder(ws, r, 1, COLS);
       r++;
@@ -437,9 +612,18 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
 
   // ── Section B: OVERDUE tasks ──
   r++;
-  const overdueTasks = tasks.filter(t => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0)
+  const overdueTasks = tasks
+    .filter((t) => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0)
     .sort((a, b) => daysOverdue(b.dueDate)! - daysOverdue(a.dueDate)!);
-  hdr(ws, r, COLS, `  🟠  OVERDUE TASKS  (${overdueTasks.length})  —  Past deadline, sorted by most overdue first`, 'FFF97316', C.headerFg, 11);
+  hdr(
+    ws,
+    r,
+    COLS,
+    `  🟠  OVERDUE TASKS  (${overdueTasks.length})  —  Past deadline, sorted by most overdue first`,
+    'FFF97316',
+    C.headerFg,
+    11,
+  );
   r++;
   if (overdueTasks.length === 0) {
     ws.getRow(r).height = 18;
@@ -459,7 +643,12 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
       setVal(ws, r, 4, userMap.get(String(task.assigneeId)) || '—', { bg, align: 'center' });
       setVal(ws, r, 5, statusLabel(task.status), { bg, align: 'center' });
       setVal(ws, r, 6, fmt(task.dueDate), { bg, align: 'center' });
-      setVal(ws, r, 7, `${late}d overdue`, { bg: C.criticalBg, color: C.critical, bold: true, align: 'center' });
+      setVal(ws, r, 7, `${late}d overdue`, {
+        bg: C.criticalBg,
+        color: C.critical,
+        bold: true,
+        align: 'center',
+      });
       setVal(ws, r, 8, (task.priority || 'low').toUpperCase(), { bg, bold: true, align: 'center' });
       applyBorder(ws, r, 1, COLS);
       r++;
@@ -468,8 +657,18 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
 
   // ── Section C: High/Critical open tasks ──
   r++;
-  const criticalOpen = tasks.filter(t => t.status !== 'done' && (t.priority === 'critical' || t.priority === 'high'));
-  hdr(ws, r, COLS, `  🟡  HIGH & CRITICAL OPEN TASKS  (${criticalOpen.length})  —  Top priority items requiring attention`, 'FFF59E0B', 'FF0F172A', 11);
+  const criticalOpen = tasks.filter(
+    (t) => t.status !== 'done' && (t.priority === 'critical' || t.priority === 'high'),
+  );
+  hdr(
+    ws,
+    r,
+    COLS,
+    `  🟡  HIGH & CRITICAL OPEN TASKS  (${criticalOpen.length})  —  Top priority items requiring attention`,
+    'FFF59E0B',
+    'FF0F172A',
+    11,
+  );
   r++;
   if (criticalOpen.length === 0) {
     ws.getRow(r).height = 18;
@@ -488,9 +687,18 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
       setVal(ws, r, 3, phaseMap.get(String(task.phaseId)) || '—', { bg, align: 'center' });
       setVal(ws, r, 4, userMap.get(String(task.assigneeId)) || '—', { bg, align: 'center' });
       setVal(ws, r, 5, statusLabel(task.status), { bg, align: 'center' });
-      setVal(ws, r, 6, task.priority.toUpperCase(), { bg: isCrit ? C.criticalBg : C.highBg, color: isCrit ? C.critical : C.high, bold: true, align: 'center' });
+      setVal(ws, r, 6, task.priority.toUpperCase(), {
+        bg: isCrit ? C.criticalBg : C.highBg,
+        color: isCrit ? C.critical : C.high,
+        bold: true,
+        align: 'center',
+      });
       setVal(ws, r, 7, fmt(task.dueDate), { bg, align: 'center' });
-      setVal(ws, r, 8, task.gxpCritical ? '⚠ GxP' : '—', { bg, align: 'center', color: task.gxpCritical ? C.review : C.textMuted });
+      setVal(ws, r, 8, task.gxpCritical ? '⚠ GxP' : '—', {
+        bg,
+        align: 'center',
+        color: task.gxpCritical ? C.review : C.textMuted,
+      });
       applyBorder(ws, r, 1, COLS);
       r++;
     });
@@ -504,11 +712,17 @@ function buildTeamScheduleSheet(wb: ExcelJS.Workbook, project: any, tasks: any[]
   const ws = wb.addWorksheet('👥 Team & Schedule', { properties: { tabColor: { argb: C.healthGood } } });
   ws.views = [{ showGridLines: false }];
   ws.columns = [
-    { width: 5 }, { width: 30 }, { width: 14 }, { width: 14 },
-    { width: 14 }, { width: 14 }, { width: 16 }, { width: 18 },
+    { width: 5 },
+    { width: 30 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 14 },
+    { width: 16 },
+    { width: 18 },
   ];
   const COLS = 8;
-  const userMap = new Map(users.map(u => [String(u._id), u.name]));
+  const userMap = new Map(users.map((u) => [String(u._id), u.name]));
   const phaseMap = new Map((project.phases || []).map((p: any) => [String(p._id), p.name]));
 
   let r = 1;
@@ -533,16 +747,23 @@ function buildTeamScheduleSheet(wb: ExcelJS.Workbook, project: any, tasks: any[]
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key)!.push(t);
   }
-  const rows = Array.from(buckets.entries()).map(([key, ts]) => {
-    const done    = ts.filter(t => t.status === 'done').length;
-    const inProg  = ts.filter(t => t.status === 'in_progress').length;
-    const overdue = ts.filter(t => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0).length;
-    return {
-      name: key === '__unassigned__' ? 'Unassigned' : (userMap.get(key) || 'Unknown'),
-      assigned: ts.length, done, inProg, overdue,
-      pct: ts.length ? Math.round(done / ts.length * 100) : 0,
-    };
-  }).sort((a, b) => b.assigned - a.assigned);
+  const rows = Array.from(buckets.entries())
+    .map(([key, ts]) => {
+      const done = ts.filter((t) => t.status === 'done').length;
+      const inProg = ts.filter((t) => t.status === 'in_progress').length;
+      const overdue = ts.filter(
+        (t) => t.status !== 'done' && daysOverdue(t.dueDate) !== null && daysOverdue(t.dueDate)! > 0,
+      ).length;
+      return {
+        name: key === '__unassigned__' ? 'Unassigned' : userMap.get(key) || 'Unknown',
+        assigned: ts.length,
+        done,
+        inProg,
+        overdue,
+        pct: ts.length ? Math.round((done / ts.length) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.assigned - a.assigned);
 
   rows.forEach((m, i) => {
     const bg = i % 2 === 0 ? C.white : C.rowAlt;
@@ -552,8 +773,18 @@ function buildTeamScheduleSheet(wb: ExcelJS.Workbook, project: any, tasks: any[]
     setVal(ws, r, 3, m.assigned, { align: 'center', bg });
     setVal(ws, r, 4, m.done, { align: 'center', bg, color: m.done ? C.done : C.textMuted, bold: m.done > 0 });
     setVal(ws, r, 5, m.inProg, { align: 'center', bg, color: C.inProgress });
-    setVal(ws, r, 6, m.overdue, { align: 'center', bg, color: m.overdue ? C.critical : C.textMuted, bold: m.overdue > 0 });
-    setVal(ws, r, 7, `${m.pct}%`, { align: 'center', bg, bold: true, color: m.pct >= 80 ? C.done : m.pct >= 50 ? C.inProgress : C.critical });
+    setVal(ws, r, 6, m.overdue, {
+      align: 'center',
+      bg,
+      color: m.overdue ? C.critical : C.textMuted,
+      bold: m.overdue > 0,
+    });
+    setVal(ws, r, 7, `${m.pct}%`, {
+      align: 'center',
+      bg,
+      bold: true,
+      color: m.pct >= 80 ? C.done : m.pct >= 50 ? C.inProgress : C.critical,
+    });
     progressBar(ws, r, 8, m.pct);
     applyBorder(ws, r, 1, COLS);
     r++;
@@ -570,9 +801,23 @@ function buildTeamScheduleSheet(wb: ExcelJS.Workbook, project: any, tasks: any[]
   const now = Date.now();
   const soon = now + 14 * 86400000;
   const upcoming = tasks
-    .filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate).getTime() >= now && new Date(t.dueDate).getTime() <= soon)
+    .filter(
+      (t) =>
+        t.status !== 'done' &&
+        t.dueDate &&
+        new Date(t.dueDate).getTime() >= now &&
+        new Date(t.dueDate).getTime() <= soon,
+    )
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  hdr(ws, r, COLS, `  UPCOMING DEADLINES  (${upcoming.length})  —  due in the next 14 days`, C.brandDark, C.headerFg, 11);
+  hdr(
+    ws,
+    r,
+    COLS,
+    `  UPCOMING DEADLINES  (${upcoming.length})  —  due in the next 14 days`,
+    C.brandDark,
+    C.headerFg,
+    11,
+  );
   r++;
   if (upcoming.length === 0) {
     ws.getRow(r).height = 18;
@@ -592,9 +837,18 @@ function buildTeamScheduleSheet(wb: ExcelJS.Workbook, project: any, tasks: any[]
       setVal(ws, r, 3, (phaseMap.get(String(task.phaseId)) as string) || '—', { bg, align: 'center' });
       setVal(ws, r, 4, userMap.get(String(task.assigneeId)) || '—', { bg, align: 'center' });
       setVal(ws, r, 5, statusLabel(task.status), { bg, align: 'center' });
-      setVal(ws, r, 6, (task.priority || 'low').toUpperCase(), { bg, align: 'center', bold: task.priority === 'critical' || task.priority === 'high' });
+      setVal(ws, r, 6, (task.priority || 'low').toUpperCase(), {
+        bg,
+        align: 'center',
+        bold: task.priority === 'critical' || task.priority === 'high',
+      });
       setVal(ws, r, 7, fmt(task.dueDate), { bg, align: 'center' });
-      setVal(ws, r, 8, days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`, { bg, align: 'center', color: urgent ? C.high : C.textMuted, bold: urgent });
+      setVal(ws, r, 8, days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`, {
+        bg,
+        align: 'center',
+        color: urgent ? C.high : C.textMuted,
+        bold: urgent,
+      });
       applyBorder(ws, r, 1, COLS);
       r++;
     });
@@ -633,7 +887,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     ]);
 
     const phaseMap = new Map<string, string>(
-      ((project as any).phases || []).map((p: any) => [String(p._id), p.name])
+      ((project as any).phases || []).map((p: any) => [String(p._id), p.name]),
     );
 
     const wb = new ExcelJS.Workbook();

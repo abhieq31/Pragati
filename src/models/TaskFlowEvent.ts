@@ -24,11 +24,11 @@ const TaskFlowEventSchema = new Schema(
     // Scoping keys — kept flat so a future cross-tenant index never has to
     // walk into a nested doc. `scopeKey` is the workspace identifier; in
     // single-tenant mode we use 'default' but the field is reserved.
-    scopeKey:  { type: String, default: 'default', index: true },
-    teamId:    { type: Schema.Types.ObjectId, ref: 'Team' },
+    scopeKey: { type: String, default: 'default', index: true },
+    teamId: { type: Schema.Types.ObjectId, ref: 'Team' },
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
-    taskId:    { type: Schema.Types.ObjectId, ref: 'Task', required: true },
-    actorId:   { type: Schema.Types.ObjectId, ref: 'User' },
+    taskId: { type: Schema.Types.ObjectId, ref: 'Task', required: true },
+    actorId: { type: Schema.Types.ObjectId, ref: 'User' },
 
     eventType: {
       type: String,
@@ -58,11 +58,11 @@ const TaskFlowEventSchema = new Schema(
     },
 
     stateBefore: { type: String },
-    stateAfter:  { type: String },
+    stateAfter: { type: String },
 
     // Light-weight context that lets baselines & process-mining segment by
     // task type / project lifecycle without re-joining to Task.
-    taskType:         { type: String },
+    taskType: { type: String },
     projectLifecycle: { type: String },
 
     occurredAt: { type: Date, default: Date.now, required: true, index: true },

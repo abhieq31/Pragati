@@ -29,8 +29,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await target.save();
 
     await logOperation({
-      action: 'user.unlock', category: 'user', actor: user,
-      targetType: 'user', targetId: params.id, targetLabel: target.name,
+      action: 'user.unlock',
+      category: 'user',
+      actor: user,
+      targetType: 'user',
+      targetId: params.id,
+      targetLabel: target.name,
       summary: `Unlocked account for ${target.name}`,
     });
 

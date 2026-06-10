@@ -36,10 +36,7 @@ export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anon';
     if (!rateLimit(`register:${ip}`, 5, 60_000)) {
-      return NextResponse.json(
-        { error: 'Too many attempts. Wait a minute and try again.' },
-        { status: 429 },
-      );
+      return NextResponse.json({ error: 'Too many attempts. Wait a minute and try again.' }, { status: 429 });
     }
 
     await connectDB();
@@ -64,21 +61,21 @@ export async function POST(req: NextRequest) {
     // Founder gets the admin role automatically when their email matches
     // ADMIN_EMAIL, otherwise lead.
     const email = body.email.toLowerCase();
-    const role  = email === configuredAdminEmail() ? 'admin' : 'lead';
+    const role = email === configuredAdminEmail() ? 'admin' : 'lead';
     const user = await User.create({
       email,
-      name:         body.name,
+      name: body.name,
       passwordHash: bcrypt.hashSync(body.password, 10),
       role,
-      title:        body.title || '',
-      hasSeenTour:  false,
+      title: body.title || '',
+      hasSeenTour: false,
     });
     const token = signToken({
       sub: String(user._id),
       email: user.email,
       role: normalizeRole(user.role),
       name: user.name,
-      title: user.title || ''
+      title: user.title || '',
     });
     const res = NextResponse.json({ token, user: u(user) });
     setAuthCookie(res, token);

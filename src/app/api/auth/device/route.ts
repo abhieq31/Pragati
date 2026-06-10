@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
     const userId = getDeviceUserId(req);
     if (!userId) return NextResponse.json({ trusted: false });
     await connectDB();
-    const user = await User
-      .findById(userId, 'name username pinHash lockedAt avatarLetter avatarBg avatarFont')
-      .lean();
+    const user = await User.findById(
+      userId,
+      'name username pinHash lockedAt avatarLetter avatarBg avatarFont',
+    ).lean();
     if (!user) return NextResponse.json({ trusted: false });
     return NextResponse.json({
       trusted: true,
@@ -28,8 +29,8 @@ export async function GET(req: NextRequest) {
       // Monogram avatar so the Quick-PIN greeting matches the user's chosen
       // avatar everywhere else. Empty/absent when they've never customised it.
       avatarLetter: (user as any).avatarLetter || '',
-      avatarBg:     (user as any).avatarBg     || '',
-      avatarFont:   typeof (user as any).avatarFont === 'number' ? (user as any).avatarFont : 0,
+      avatarBg: (user as any).avatarBg || '',
+      avatarFont: typeof (user as any).avatarFont === 'number' ? (user as any).avatarFont : 0,
     });
   } catch (e) {
     return handleError(e);

@@ -22,10 +22,7 @@ export const runtime = 'nodejs';
  * the phase is moved to the project's "Unphased" bucket so no work (or its
  * audit history) is lost.
  */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string; phaseId: string } },
-) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string; phaseId: string } }) {
   try {
     const { error, user } = await requireUser(req);
     if (error) return error;
@@ -33,7 +30,8 @@ export async function DELETE(
 
     const scope = await getLeadScope(user!.sub, user!.role);
     const project = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) })
-      .select('_id name ownerId isPersonal code phases').lean();
+      .select('_id name ownerId isPersonal code phases')
+      .lean();
     if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const ownsProject = String((project as any).ownerId) === user!.sub;
@@ -52,11 +50,17 @@ export async function DELETE(
     );
     await Project.updateOne({ _id: params.id }, { $pull: { phases: { _id: params.phaseId } } });
 
-    const isShared = !((project as any).isPersonal || String((project as any).code || '').startsWith('PRSN-'));
+    const isShared = !(
+      (project as any).isPersonal || String((project as any).code || '').startsWith('PRSN-')
+    );
     if (isShared) {
       await logOperation({
-        action: 'project.phase.delete', category: 'project', actor: user,
-        targetType: 'project', targetId: params.id, targetLabel: (project as any).name || '',
+        action: 'project.phase.delete',
+        category: 'project',
+        actor: user,
+        targetType: 'project',
+        targetId: params.id,
+        targetLabel: (project as any).name || '',
         summary: `Deleted phase "${phase.name}" (${detached.modifiedCount} task${detached.modifiedCount === 1 ? '' : 's'} moved to Unphased)`,
         meta: { phaseId: params.phaseId, phaseName: phase.name, tasksDetached: detached.modifiedCount },
       });

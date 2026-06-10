@@ -8,10 +8,10 @@ import mongoose from 'mongoose';
 // to every role including admin: the admin role grants access to the People,
 // Audit, and Teams management surfaces, but not blanket project visibility.
 export interface LeadScope {
-  userOid:      mongoose.Types.ObjectId;
-  teamOids:     mongoose.Types.ObjectId[];     // teams the user leads or belongs to
-  memberOids:   mongoose.Types.ObjectId[];     // union of memberIds across those teams (incl. the user themselves)
-  unrestricted: boolean;                       // always false — kept for interface stability
+  userOid: mongoose.Types.ObjectId;
+  teamOids: mongoose.Types.ObjectId[]; // teams the user leads or belongs to
+  memberOids: mongoose.Types.ObjectId[]; // union of memberIds across those teams (incl. the user themselves)
+  unrestricted: boolean; // always false — kept for interface stability
 }
 
 export async function getLeadScope(userId: string, _role?: string | null): Promise<LeadScope> {
@@ -23,15 +23,15 @@ export async function getLeadScope(userId: string, _role?: string | null): Promi
     '_id memberIds',
   ).lean();
 
-  const teamOids = teams.map(t => t._id);
+  const teamOids = teams.map((t) => t._id);
 
   // Build the member set — include the lead themselves so their own tasks
   // always surface even before anyone is assigned to their team.
   const memberSet = new Set<string>([String(userOid)]);
   for (const t of teams) {
-    for (const m of (t.memberIds || [])) memberSet.add(String(m));
+    for (const m of t.memberIds || []) memberSet.add(String(m));
   }
-  const memberOids = [...memberSet].map(id => new mongoose.Types.ObjectId(id));
+  const memberOids = [...memberSet].map((id) => new mongoose.Types.ObjectId(id));
 
   return { userOid, teamOids, memberOids, unrestricted: false as const };
 }

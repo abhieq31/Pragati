@@ -20,7 +20,7 @@ export const runtime = 'nodejs';
  */
 const Body = z.object({
   identifier: z.string().min(1).max(254),
-  password:   z.string().min(1).max(200),
+  password: z.string().min(1).max(200),
 });
 
 // After this many consecutive wrong passwords the account is locked
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     // Validate the body BEFORE touching the database, so malformed input
     // fails fast with a 400 regardless of DB health.
-    const body  = await readBody(req, Body);
+    const body = await readBody(req, Body);
     const idKey = body.identifier.toLowerCase().trim();
     if (!rateLimit(`login-id:${idKey}`, 10, 60_000)) {
       return NextResponse.json(
@@ -71,11 +71,7 @@ export async function POST(req: NextRequest) {
     } else {
       const localPart = new RegExp('^' + ident.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '@', 'i');
       user = await User.findOne({
-        $or: [
-          { username: ident },
-          { employeeId: body.identifier.trim() },
-          { email: localPart },
-        ],
+        $or: [{ username: ident }, { employeeId: body.identifier.trim() }, { email: localPart }],
       });
     }
 
@@ -108,10 +104,14 @@ export async function POST(req: NextRequest) {
       // a legitimate user keeps retrying with the correct password and
       // would never learn why it stops working. Email enumeration is not
       // a concern here: we already matched a known account.
-      return NextResponse.json({
-        error: 'Your account is locked after multiple wrong attempts. Please contact your admin to unlock it and reset your password.',
-        locked: true,
-      }, { status: 423 });
+      return NextResponse.json(
+        {
+          error:
+            'Your account is locked after multiple wrong attempts. Please contact your admin to unlock it and reset your password.',
+          locked: true,
+        },
+        { status: 423 },
+      );
     }
 
     if (!passwordOk && !securityKeyOk) {
@@ -130,11 +130,7 @@ export async function POST(req: NextRequest) {
           {
             $set: {
               lockedAt: {
-                $cond: [
-                  { $gte: ['$failedLoginAttempts', MAX_FAILED_LOGINS] },
-                  new Date(),
-                  null,
-                ],
+                $cond: [{ $gte: ['$failedLoginAttempts', MAX_FAILED_LOGINS] }, new Date(), null],
               },
             },
           },
@@ -150,16 +146,23 @@ export async function POST(req: NextRequest) {
       const nowLocked = !!(updated as any)?.lockedAt;
       const fails = (updated as any)?.failedLoginAttempts ?? 0;
       if (nowLocked) {
-        return NextResponse.json({
-          error: 'Your account is locked after multiple wrong attempts. Please contact your admin to unlock it and reset your password.',
-          locked: true,
-        }, { status: 423 });
+        return NextResponse.json(
+          {
+            error:
+              'Your account is locked after multiple wrong attempts. Please contact your admin to unlock it and reset your password.',
+            locked: true,
+          },
+          { status: 423 },
+        );
       }
       const remaining = Math.max(0, MAX_FAILED_LOGINS - fails);
       if (remaining > 0 && remaining <= 2) {
-        return NextResponse.json({
-          error: `Wrong password. ${remaining} attempt${remaining === 1 ? '' : 's'} left before this account is locked.`,
-        }, { status: 401 });
+        return NextResponse.json(
+          {
+            error: `Wrong password. ${remaining} attempt${remaining === 1 ? '' : 's'} left before this account is locked.`,
+          },
+          { status: 401 },
+        );
       }
       return NextResponse.json(GENERIC_INVALID.body, { status: GENERIC_INVALID.status });
     }
@@ -182,7 +185,7 @@ export async function POST(req: NextRequest) {
     // configured workspace owner. Single atomic save afterwards.
     if ((user.failedLoginAttempts ?? 0) > 0 || user.lockedAt) {
       user.failedLoginAttempts = 0;
-      user.lockedAt            = null;
+      user.lockedAt = null;
     }
     const adminEmail = configuredAdminEmail();
     if (adminEmail && user.email === adminEmail && user.role !== 'admin') {
@@ -215,20 +218,23 @@ export async function POST(req: NextRequest) {
     }
 
     const token = signToken({
-      sub:   String(user._id),
+      sub: String(user._id),
       email: user.email,
-      role:  user.role === 'pm' ? 'lead' : user.role === 'employee' ? 'contributor' : user.role as any,
-      name:  user.name,
+      role: user.role === 'pm' ? 'lead' : user.role === 'employee' ? 'contributor' : (user.role as any),
+      name: user.name,
       title: user.title || '',
       mustChangePassword: !!user.mustChangePassword,
-      sv:    user.sessionVersion ?? 0,
+      sv: user.sessionVersion ?? 0,
       sid,
     });
 
     await logOperation({
-      action: 'auth.login', category: 'auth',
+      action: 'auth.login',
+      category: 'auth',
       actor: { id: String(user._id), name: user.name },
-      targetType: 'user', targetId: String(user._id), targetLabel: user.name,
+      targetType: 'user',
+      targetId: String(user._id),
+      targetLabel: user.name,
       summary: securityKeyOk ? 'Signed in with recovery key' : 'Signed in',
     });
 

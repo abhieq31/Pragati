@@ -39,15 +39,15 @@ const CATEGORIES: TriageCategory[] = [
       /\borphan\s+data\b/i,
       /\bbackdated?\b/i,
       /\bre[-\s]?integrat(e|ion)\b/i,
-      /\buntimestamped\b/i
+      /\buntimestamped\b/i,
     ],
     defaultCapa: [
       'Disable shared/generic accounts; enforce unique user IDs with audit trail review.',
       'Update SOP to require contemporaneous entry and periodic audit trail review.',
       'Perform retrospective audit-trail review for the impacted period.',
       'Train impacted users on ALCOA+ and update training records.',
-      'Add system configuration to require second-person verification on critical records.'
-    ]
+      'Add system configuration to require second-person verification on critical records.',
+    ],
   },
   {
     key: 'csv_validation',
@@ -60,15 +60,15 @@ const CATEGORIES: TriageCategory[] = [
       /\burs\b/i,
       /\btraceability\s+matrix\b/i,
       /\brequirement(s)?\s+not\s+tested\b/i,
-      /\bun(validated|documented)\s+(change|configuration)\b/i
+      /\bun(validated|documented)\s+(change|configuration)\b/i,
     ],
     defaultCapa: [
       'Re-execute affected qualification script(s) under a deviation report.',
       'Update Requirements Traceability Matrix to close the coverage gap.',
       'Raise a change control to formalise the undocumented configuration change.',
       'Perform an impact assessment on validated state and re-release if needed.',
-      'Update validation SOP to require peer review of URS coverage pre-OQ.'
-    ]
+      'Update validation SOP to require peer review of URS coverage pre-OQ.',
+    ],
   },
   {
     key: 'pharmacovigilance',
@@ -82,15 +82,15 @@ const CATEGORIES: TriageCategory[] = [
       /\bseriousness\b/i,
       /\bexpedited\b/i,
       /\bcase\s+intake\b/i,
-      /\bPSUR\b/
+      /\bPSUR\b/,
     ],
     defaultCapa: [
       'File a late-submission notification to the authority within 24 hours.',
       'Perform reconciliation of the impacted case(s) and re-submit corrected E2B.',
       'Review case-intake SOP; add automated duplicate detection before triage.',
       'Train case-processing team on seriousness criteria; refresh competency records.',
-      'Update regulatory clock start definition; add dashboard alerts for approaching due dates.'
-    ]
+      'Update regulatory clock start definition; add dashboard alerts for approaching due dates.',
+    ],
   },
   {
     key: 'audit_trail',
@@ -98,13 +98,13 @@ const CATEGORIES: TriageCategory[] = [
     keywords: [
       /\baudit\s+trail\s+(disabled|turned\s+off|gap)\b/i,
       /\bmissing\s+(entries|events)\b/i,
-      /\btimestamp\s+(mismatch|missing)\b/i
+      /\btimestamp\s+(mismatch|missing)\b/i,
     ],
     defaultCapa: [
       'Restore and lock audit trail configuration; remove admin-level bypass.',
       'Perform retrospective audit trail review; capture findings as deviations.',
-      'Add periodic (e.g. monthly) documented audit trail review to SOP.'
-    ]
+      'Add periodic (e.g. monthly) documented audit trail review to SOP.',
+    ],
   },
   {
     key: 'lab_informatics',
@@ -116,14 +116,14 @@ const CATEGORIES: TriageCategory[] = [
       /\bGC[-\s]?MS\b/i,
       /\binjection\s+sequence\b/i,
       /\bsample\s+result\b/i,
-      /\binstrument\s+qualif(ication|y)\b/i
+      /\binstrument\s+qualif(ication|y)\b/i,
     ],
     defaultCapa: [
       'Quarantine the affected result; perform investigation under OOS/OOT procedure.',
       'Verify instrument qualification status and calibration records.',
       'Review chromatography processing parameters and integration settings.',
-      'Add 4-eyes review to chromatographic re-integration.'
-    ]
+      'Add 4-eyes review to chromatographic re-integration.',
+    ],
   },
   {
     key: 'training',
@@ -131,13 +131,13 @@ const CATEGORIES: TriageCategory[] = [
     keywords: [
       /\btraining\s+(gap|missing|not\s+recorded)\b/i,
       /\bcompetency\b/i,
-      /\bquali(fied|fication)\s+person\b/i
+      /\bquali(fied|fication)\s+person\b/i,
     ],
     defaultCapa: [
       'Issue training on the impacted procedure; record in training matrix.',
       'Add annual refresher training for the relevant SOP.',
-      'Update role-to-SOP mapping in the training system.'
-    ]
+      'Update role-to-SOP mapping in the training system.',
+    ],
   },
   {
     key: 'general',
@@ -146,9 +146,9 @@ const CATEGORIES: TriageCategory[] = [
     defaultCapa: [
       'Perform a root cause analysis using a 5-Why or fishbone technique.',
       'Define corrective and preventive actions with accountable owners and due dates.',
-      'Schedule an effectiveness check 30-90 days after CAPA closure.'
-    ]
-  }
+      'Schedule an effectiveness check 30-90 days after CAPA closure.',
+    ],
+  },
 ];
 
 export interface SeverityFeature {
@@ -158,13 +158,33 @@ export interface SeverityFeature {
 }
 
 const SEVERITY_FEATURES: SeverityFeature[] = [
-  { pattern: /\b(patient|subject)\s+(safety|harm|death|fatal)\b/i, weight: 6, reason: 'Patient safety impact' },
+  {
+    pattern: /\b(patient|subject)\s+(safety|harm|death|fatal)\b/i,
+    weight: 6,
+    reason: 'Patient safety impact',
+  },
   { pattern: /\brecall\b/i, weight: 5, reason: 'Recall implication' },
-  { pattern: /\bbatch(es)?\s+(affected|released|impacted)\b/i, weight: 4, reason: 'Multiple batches impacted' },
-  { pattern: /\b(regulatory|authority|inspector|FDA|EMA|MHRA)\b/i, weight: 4, reason: 'Regulatory / inspection exposure' },
-  { pattern: /\bdata\s+(loss|deleted|falsif(y|ied|ication))\b/i, weight: 5, reason: 'Data loss or falsification' },
+  {
+    pattern: /\bbatch(es)?\s+(affected|released|impacted)\b/i,
+    weight: 4,
+    reason: 'Multiple batches impacted',
+  },
+  {
+    pattern: /\b(regulatory|authority|inspector|FDA|EMA|MHRA)\b/i,
+    weight: 4,
+    reason: 'Regulatory / inspection exposure',
+  },
+  {
+    pattern: /\bdata\s+(loss|deleted|falsif(y|ied|ication))\b/i,
+    weight: 5,
+    reason: 'Data loss or falsification',
+  },
   { pattern: /\bshared\s+(login|account|credential)\b/i, weight: 3, reason: 'Shared credentials' },
-  { pattern: /\baudit\s+trail\s+(disabled|turned\s+off|missing)\b/i, weight: 4, reason: 'Audit trail compromised' },
+  {
+    pattern: /\baudit\s+trail\s+(disabled|turned\s+off|missing)\b/i,
+    weight: 4,
+    reason: 'Audit trail compromised',
+  },
   { pattern: /\brelease(d)?\s+to\s+market\b/i, weight: 4, reason: 'Product already released' },
   { pattern: /\bcritical\b/i, weight: 2, reason: 'Reporter used "critical"' },
   { pattern: /\bmajor\b/i, weight: 1.5, reason: 'Reporter used "major"' },
@@ -173,7 +193,7 @@ const SEVERITY_FEATURES: SeverityFeature[] = [
   { pattern: /\bsingle\s+(record|sample|event)\b/i, weight: -1, reason: 'Single isolated record' },
   { pattern: /\bsandbox|test\s+environment\b/i, weight: -3, reason: 'Non-production / sandbox' },
   { pattern: /\blate\s+submission\b/i, weight: 3, reason: 'Late regulatory submission' },
-  { pattern: /\brepeat(ed)?\s+finding\b/i, weight: 3, reason: 'Repeat / recurring finding' }
+  { pattern: /\brepeat(ed)?\s+finding\b/i, weight: 3, reason: 'Repeat / recurring finding' },
 ];
 
 export interface TriageResult {
@@ -218,10 +238,59 @@ export function severityFromScore(score: number): Severity {
 
 // ---------- lexical similarity ----------
 const STOP = new Set([
-  'the','a','an','and','or','of','in','to','for','on','at','by','with','is','are','was','were',
-  'be','been','being','it','its','as','that','this','these','those','from','than','but','not','no',
-  'we','they','he','she','i','you','our','their','his','her','will','would','could','should','has',
-  'have','had','do','does','did','done'
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'of',
+  'in',
+  'to',
+  'for',
+  'on',
+  'at',
+  'by',
+  'with',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'it',
+  'its',
+  'as',
+  'that',
+  'this',
+  'these',
+  'those',
+  'from',
+  'than',
+  'but',
+  'not',
+  'no',
+  'we',
+  'they',
+  'he',
+  'she',
+  'i',
+  'you',
+  'our',
+  'their',
+  'his',
+  'her',
+  'will',
+  'would',
+  'could',
+  'should',
+  'has',
+  'have',
+  'had',
+  'do',
+  'does',
+  'did',
+  'done',
 ]);
 
 export function tokenize(text: string): string[] {
@@ -263,7 +332,7 @@ export function findSimilar(queryText: string, corpus: KnownTask[], k = 5) {
   const q = bagOfWords(tokenize(queryText));
   const scored = corpus.map((c) => ({
     task: c,
-    score: cosine(q, bagOfWords(tokenize(`${c.title} ${c.description || ''}`)))
+    score: cosine(q, bagOfWords(tokenize(`${c.title} ${c.description || ''}`))),
   }));
   return scored
     .filter((s) => s.score > 0.1)
@@ -272,11 +341,7 @@ export function findSimilar(queryText: string, corpus: KnownTask[], k = 5) {
 }
 
 // ---------- full triage ----------
-export function runTriage(
-  title: string,
-  description: string,
-  corpus: KnownTask[]
-): TriageResult {
+export function runTriage(title: string, description: string, corpus: KnownTask[]): TriageResult {
   const text = `${title}\n${description || ''}`;
   const cat = classifyCategory(text);
   const sev = scoreSeverity(text);
@@ -304,8 +369,8 @@ export function runTriage(
       id: String(s.task._id),
       title: s.task.title,
       projectCode: s.task.projectCode,
-      score: Math.round(s.score * 100) / 100
+      score: Math.round(s.score * 100) / 100,
     })),
-    computedAt: new Date().toISOString()
+    computedAt: new Date().toISOString(),
   };
 }

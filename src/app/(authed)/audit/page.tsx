@@ -22,14 +22,17 @@ export default async function AuditPage() {
   // Cursor for the first "Load more" — from the raw page, so it matches the API.
   const rawLast = rows.length === limit ? (rows[rows.length - 1] as any).createdAt : null;
   const initialNextBefore = rawLast
-    ? (rawLast instanceof Date ? rawLast.toISOString() : String(rawLast))
+    ? rawLast instanceof Date
+      ? rawLast.toISOString()
+      : String(rawLast)
     : null;
 
   // Never surface personal project data in the operational audit trail.
   const personalIds = new Set(personalProjects.map((p: any) => String(p._id)));
   let visible = (rows as any[]).filter((r) => {
     if (r.targetType === 'project' && personalIds.has(r.targetId)) return false;
-    if (r.targetType === 'task' && r.meta?.projectId && personalIds.has(String(r.meta.projectId))) return false;
+    if (r.targetType === 'task' && r.meta?.projectId && personalIds.has(String(r.meta.projectId)))
+      return false;
     return true;
   });
 
@@ -66,7 +69,13 @@ export default async function AuditPage() {
   // Suspense boundary required because AuditClient reads ?targetType/&targetId
   // via useSearchParams — without it, the build fails the static-bailout check.
   return (
-    <Suspense fallback={<div className="max-w-5xl pb-12"><div className="card p-8 text-center text-sm text-slate-400">Loading audit trail…</div></div>}>
+    <Suspense
+      fallback={
+        <div className="max-w-5xl pb-12">
+          <div className="card p-8 text-center text-sm text-slate-400">Loading audit trail…</div>
+        </div>
+      }
+    >
       <AuditClient initialRows={initialRows} initialNextBefore={initialNextBefore} />
     </Suspense>
   );

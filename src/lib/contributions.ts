@@ -23,15 +23,15 @@ import { NOT_PERSONAL } from '@/lib/leadScope';
 // actually cares about: hitting the date, regulated (GxP) work, and the
 // review/approval gates that leads own.
 const W = {
-  taskBase:       5,   // completing any task
-  onTime:         2,   // finished on or before its (CC target) due date
-  gxpCritical:    2,   // GxP-critical work carries regulatory weight
-  priorityHigh:   2,   // high priority
-  priorityCrit:   3,   // critical priority
-  reviewApproval: 2,   // the task itself was a review/approval/sign-off gate
-  subtask:        1,   // each subtask checked off
-  comment:        1,   // each comment authored — collaboration effort
-  firstDay:       1,   // the day the account was created (first login)
+  taskBase: 5, // completing any task
+  onTime: 2, // finished on or before its (CC target) due date
+  gxpCritical: 2, // GxP-critical work carries regulatory weight
+  priorityHigh: 2, // high priority
+  priorityCrit: 3, // critical priority
+  reviewApproval: 2, // the task itself was a review/approval/sign-off gate
+  subtask: 1, // each subtask checked off
+  comment: 1, // each comment authored — collaboration effort
+  firstDay: 1, // the day the account was created (first login)
 } as const;
 
 export interface ContribItem {
@@ -70,21 +70,20 @@ export interface Achievement {
 
 export interface ContribData {
   year: number;
-  firstYear: number;                 // earliest year the person delivered work
-  days: Record<string, number>;      // weighted score per YYYY-MM-DD in `year`
-  total: number;                     // sum of `days`
-  streak: number;                    // consecutive active days up to today
-  totalTasksDone: number;            // all-time completed count (drives badges)
-  onTimeTasks: number;               // all-time count of tasks finished on/before due
-  onTimeRate: number;                // 0..100, all-time, for the quality badge
-  projectsCompleted: number;         // all-time projects this person helped finish
-  projectsOnTime: number;            // of those, how many landed on/before due
+  firstYear: number; // earliest year the person delivered work
+  days: Record<string, number>; // weighted score per YYYY-MM-DD in `year`
+  total: number; // sum of `days`
+  streak: number; // consecutive active days up to today
+  totalTasksDone: number; // all-time completed count (drives badges)
+  onTimeTasks: number; // all-time count of tasks finished on/before due
+  onTimeRate: number; // 0..100, all-time, for the quality badge
+  projectsCompleted: number; // all-time projects this person helped finish
+  projectsOnTime: number; // of those, how many landed on/before due
   badges: string[];
-  recent: ContribItem[];             // newest-first feed of delivered work
-  achievements: Achievement[];       // role-based achievements (4 per role)
-  role: 'ic' | 'lead' | 'admin';     // viewed user's role, drives achievement set
+  recent: ContribItem[]; // newest-first feed of delivered work
+  achievements: Achievement[]; // role-based achievements (4 per role)
+  role: 'ic' | 'lead' | 'admin'; // viewed user's role, drives achievement set
 }
-
 
 const CONTRIBUTION_CACHE_TTL_MS = 60 * 1000;
 const contributionCache = new Map<string, { data: ContribData; expiresAt: number }>();
@@ -105,8 +104,12 @@ function dayKey(d: Date): string {
 
 /** Points for a single completed task, given its attributes. Pure + traceable. */
 export function scoreTask(t: {
-  priority?: string; gxpCritical?: boolean; taskType?: string;
-  completedAt?: Date | null; dueDate?: Date | null; ccTcd?: Date | null;
+  priority?: string;
+  gxpCritical?: boolean;
+  taskType?: string;
+  completedAt?: Date | null;
+  dueDate?: Date | null;
+  ccTcd?: Date | null;
 }): number {
   let pts = W.taskBase;
   const due = t.ccTcd || t.dueDate;
@@ -114,7 +117,8 @@ export function scoreTask(t: {
   if (t.gxpCritical) pts += W.gxpCritical;
   if (t.priority === 'critical') pts += W.priorityCrit;
   else if (t.priority === 'high') pts += W.priorityHigh;
-  if (t.taskType === 'review' || t.taskType === 'approval' || t.taskType === 'data_review') pts += W.reviewApproval;
+  if (t.taskType === 'review' || t.taskType === 'approval' || t.taskType === 'data_review')
+    pts += W.reviewApproval;
   return pts;
 }
 
@@ -122,7 +126,11 @@ export function scoreTask(t: {
  * Build the full contribution dataset for one user and one calendar year.
  * Used by both /api/users/me/activity and /api/users/[id]/activity.
  */
-export async function buildContributions(userId: string, year: number, viewerId?: string): Promise<ContribData> {
+export async function buildContributions(
+  userId: string,
+  year: number,
+  viewerId?: string,
+): Promise<ContribData> {
   // A colleague's contribution graph is open by design (see CLAUDE.md), but a
   // personal project is the user's own private to-do list — its task titles,
   // project names and comments must never leak through someone else's view of
@@ -139,16 +147,14 @@ export async function buildContributions(userId: string, year: number, viewerId?
 
   const userOid = new mongoose.Types.ObjectId(userId);
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
-  const end   = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
 
   // Pull the user's role up front — different roles get a different
   // achievement set, since a TL's wins (delivering projects, mentoring) and an
   // admin's wins (onboarding, audit hygiene) aren't comparable to an IC's.
   const userDoc = await User.findById(userOid).select('role createdAt').lean();
   const role: 'ic' | 'lead' | 'admin' =
-    (userDoc as any)?.role === 'admin' ? 'admin'
-    : (userDoc as any)?.role === 'lead' ? 'lead'
-    : 'ic';
+    (userDoc as any)?.role === 'admin' ? 'admin' : (userDoc as any)?.role === 'lead' ? 'lead' : 'ic';
 
   const [yearTasks, totalDone, onTimeAgg, earliest, account, commentTasks] = await Promise.all([
     // Tasks where either the task itself, or one of its subtasks, was
@@ -174,11 +180,14 @@ export async function buildContributions(userId: string, year: number, viewerId?
         $project: {
           onTime: {
             $cond: [
-              { $and: [
-                { $ne: [{ $ifNull: ['$ccTcd', '$dueDate'] }, null] },
-                { $lte: ['$completedAt', { $ifNull: ['$ccTcd', '$dueDate'] }] },
-              ] },
-              1, 0,
+              {
+                $and: [
+                  { $ne: [{ $ifNull: ['$ccTcd', '$dueDate'] }, null] },
+                  { $lte: ['$completedAt', { $ifNull: ['$ccTcd', '$dueDate'] }] },
+                ],
+              },
+              1,
+              0,
             ],
           },
         },
@@ -188,7 +197,10 @@ export async function buildContributions(userId: string, year: number, viewerId?
 
     // Earliest delivered work — the first year of the year rail.
     Task.find({ assigneeId: userOid, completedAt: { $ne: null } })
-      .sort({ completedAt: 1 }).limit(1).select('completedAt').lean(),
+      .sort({ completedAt: 1 })
+      .limit(1)
+      .select('completedAt')
+      .lean(),
 
     User.findById(userOid).select('createdAt').lean(),
 
@@ -201,21 +213,24 @@ export async function buildContributions(userId: string, year: number, viewerId?
   ]);
 
   // Resolve project labels for the items we'll surface (tasks + commented tasks).
-  const rawProjectIds = Array.from(new Set(
-    [...yearTasks, ...(commentTasks as any[])].map((t: any) => String(t.projectId)).filter(Boolean),
-  ));
+  const rawProjectIds = Array.from(
+    new Set([...yearTasks, ...(commentTasks as any[])].map((t: any) => String(t.projectId)).filter(Boolean)),
+  );
   const rawProjects = rawProjectIds.length
     ? await Project.find({ _id: { $in: rawProjectIds } })
-        .select(`code name${viewingSelf ? '' : ' isPersonal personal'}`).lean()
+        .select(`code name${viewingSelf ? '' : ' isPersonal personal'}`)
+        .lean()
     : [];
   // Strip personal-project entries entirely from someone else's view — the
   // project, and every task/comment that lives inside it, must vanish from
   // the feed as if it never happened.
   const visibleProjectIds = viewingSelf
     ? new Set(rawProjects.map((p: any) => String(p._id)))
-    : new Set(rawProjects.filter((p: any) =>
-        !(p.isPersonal || p.personal || String(p.code || '').startsWith('PRSN-'))
-      ).map((p: any) => String(p._id)));
+    : new Set(
+        rawProjects
+          .filter((p: any) => !(p.isPersonal || p.personal || String(p.code || '').startsWith('PRSN-')))
+          .map((p: any) => String(p._id)),
+      );
   const yearTasksVisible = viewingSelf
     ? (yearTasks as any[])
     : (yearTasks as any[]).filter((t) => visibleProjectIds.has(String(t.projectId)));
@@ -240,21 +255,33 @@ export async function buildContributions(userId: string, year: number, viewerId?
       const key = dayKey(new Date(t.completedAt));
       days[key] = (days[key] || 0) + pts;
       items.push({
-        id: String(t._id), title: t.title || 'Task', projectName: proj.name, projectCode: proj.code,
-        completedAt: new Date(t.completedAt).toISOString(), points: pts,
-        gxpCritical: !!t.gxpCritical, priority: t.priority || 'medium', kind: 'task',
+        id: String(t._id),
+        title: t.title || 'Task',
+        projectName: proj.name,
+        projectCode: proj.code,
+        completedAt: new Date(t.completedAt).toISOString(),
+        points: pts,
+        gxpCritical: !!t.gxpCritical,
+        priority: t.priority || 'medium',
+        kind: 'task',
       });
     }
 
     // Subtasks completed in-year (each a small, real increment of progress).
-    for (const s of (t.subtasks || [])) {
+    for (const s of t.subtasks || []) {
       if (s.completedAt && new Date(s.completedAt) >= start && new Date(s.completedAt) < end) {
         const key = dayKey(new Date(s.completedAt));
         days[key] = (days[key] || 0) + W.subtask;
         items.push({
-          id: String(s._id), title: s.title || 'Subtask', projectName: proj.name, projectCode: proj.code,
-          completedAt: new Date(s.completedAt).toISOString(), points: W.subtask,
-          gxpCritical: !!t.gxpCritical, priority: t.priority || 'medium', kind: 'subtask',
+          id: String(s._id),
+          title: s.title || 'Subtask',
+          projectName: proj.name,
+          projectCode: proj.code,
+          completedAt: new Date(s.completedAt).toISOString(),
+          points: W.subtask,
+          gxpCritical: !!t.gxpCritical,
+          priority: t.priority || 'medium',
+          kind: 'subtask',
         });
       }
     }
@@ -264,16 +291,22 @@ export async function buildContributions(userId: string, year: number, viewerId?
   // adds W.comment to its day and appears in the activity feed.
   for (const t of commentTasksVisible) {
     const proj = projMap.get(String(t.projectId)) || { code: '', name: '' };
-    for (const c of (t.comments || [])) {
+    for (const c of t.comments || []) {
       if (String(c.userId) !== String(userOid)) continue;
       const at = c.createdAt;
       if (!at || new Date(at) < start || new Date(at) >= end) continue;
       const key = dayKey(new Date(at));
       days[key] = (days[key] || 0) + W.comment;
       items.push({
-        id: String(c._id), title: t.title || 'Task', projectName: proj.name, projectCode: proj.code,
-        completedAt: new Date(at).toISOString(), points: W.comment,
-        gxpCritical: false, priority: 'medium', kind: 'comment',
+        id: String(c._id),
+        title: t.title || 'Task',
+        projectName: proj.name,
+        projectCode: proj.code,
+        completedAt: new Date(at).toISOString(),
+        points: W.comment,
+        gxpCritical: false,
+        priority: 'medium',
+        kind: 'comment',
       });
     }
   }
@@ -286,9 +319,15 @@ export async function buildContributions(userId: string, year: number, viewerId?
     if (!days[key]) {
       days[key] = W.firstDay;
       items.push({
-        id: `first-${key}`, title: 'Joined Pragati', projectName: '', projectCode: '',
-        completedAt: createdAt.toISOString(), points: W.firstDay,
-        gxpCritical: false, priority: 'medium', kind: 'first_day',
+        id: `first-${key}`,
+        title: 'Joined Pragati',
+        projectName: '',
+        projectCode: '',
+        completedAt: createdAt.toISOString(),
+        points: W.firstDay,
+        gxpCritical: false,
+        priority: 'medium',
+        kind: 'first_day',
       });
     }
   }
@@ -302,14 +341,15 @@ export async function buildContributions(userId: string, year: number, viewerId?
   const today = new Date();
   if (year === today.getFullYear()) {
     for (let i = 0; i < 60; i++) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
       if ((days[dayKey(d)] || 0) > 0) streak++;
       else if (i > 0) break;
     }
   }
 
   const otRow = (onTimeAgg as any[])[0];
-  const onTimeTasks = otRow ? (otRow.onTime || 0) : 0;
+  const onTimeTasks = otRow ? otRow.onTime || 0 : 0;
   const onTimeRate = otRow && otRow.total ? Math.round((onTimeTasks / otRow.total) * 100) : 0;
 
   // ── Project delivery (all-time) ─────────────────────────────────────────
@@ -323,7 +363,9 @@ export async function buildContributions(userId: string, year: number, viewerId?
     // Someone else's "projects completed" badge must never be inflated by a
     // personal project — that count would itself be a leak of its existence.
     ...(viewingSelf ? {} : NOT_PERSONAL),
-  }).select('completedAt dueDate').lean();
+  })
+    .select('completedAt dueDate')
+    .lean();
   const projectsCompleted = completedProjects.length;
   const projectsOnTime = (completedProjects as any[]).filter(
     (p) => p.completedAt && p.dueDate && new Date(p.completedAt) <= new Date(p.dueDate),
@@ -331,15 +373,16 @@ export async function buildContributions(userId: string, year: number, viewerId?
 
   const earliestYear = (earliest as any[])[0]?.completedAt
     ? new Date((earliest as any[])[0].completedAt).getFullYear()
-    : (account as any)?.createdAt ? new Date((account as any).createdAt).getFullYear()
-    : year;
+    : (account as any)?.createdAt
+      ? new Date((account as any).createdAt).getFullYear()
+      : year;
   const firstYear = Math.min(earliestYear, today.getFullYear());
 
   // ── Badges (milestones) ────────────────────────────────────────────────
   const badges: string[] = ['first_step'];
-  if (totalDone >= 1)   badges.push('task_rookie');
-  if (totalDone >= 10)  badges.push('task_achiever');
-  if (totalDone >= 50)  badges.push('task_performer');
+  if (totalDone >= 1) badges.push('task_rookie');
+  if (totalDone >= 10) badges.push('task_achiever');
+  if (totalDone >= 50) badges.push('task_performer');
   if (totalDone >= 100) badges.push('task_champion');
   if (streak >= 3) badges.push('streak_3');
   if (streak >= 7) badges.push('streak_7');
@@ -349,17 +392,34 @@ export async function buildContributions(userId: string, year: number, viewerId?
   items.sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
 
   const achievements = await computeAchievements(userOid, role, {
-    totalDone, onTimeTasks, onTimeRate, projectsCompleted, projectsOnTime, days,
+    totalDone,
+    onTimeTasks,
+    onTimeRate,
+    projectsCompleted,
+    projectsOnTime,
+    days,
   });
 
   const result: ContribData = {
-    year, firstYear, days, total, streak,
-    totalTasksDone: totalDone, onTimeTasks, onTimeRate,
-    projectsCompleted, projectsOnTime, badges,
+    year,
+    firstYear,
+    days,
+    total,
+    streak,
+    totalTasksDone: totalDone,
+    onTimeTasks,
+    onTimeRate,
+    projectsCompleted,
+    projectsOnTime,
+    badges,
     recent: items.slice(0, 40),
-    achievements, role,
+    achievements,
+    role,
   };
-  contributionCache.set(cacheKey, { data: cloneContribData(result), expiresAt: Date.now() + CONTRIBUTION_CACHE_TTL_MS });
+  contributionCache.set(cacheKey, {
+    data: cloneContribData(result),
+    expiresAt: Date.now() + CONTRIBUTION_CACHE_TTL_MS,
+  });
   return result;
 }
 
@@ -385,7 +445,10 @@ async function computeAchievements(
     days: Record<string, number>;
   },
 ): Promise<Achievement[]> {
-  const tierFor = (v: number, tiers: [number, number, number]): { tier: 0 | 1 | 2 | 3; target: number | null } => {
+  const tierFor = (
+    v: number,
+    tiers: [number, number, number],
+  ): { tier: 0 | 1 | 2 | 3; target: number | null } => {
     if (v >= tiers[2]) return { tier: 3, target: null };
     if (v >= tiers[1]) return { tier: 2, target: tiers[2] };
     if (v >= tiers[0]) return { tier: 1, target: tiers[1] };
@@ -402,23 +465,24 @@ async function computeAchievements(
     const [recent, distinctProjects, commentAgg] = await Promise.all([
       // 2. On-Time Streak — longest recent run of consecutive on-time tasks.
       Task.find({ assigneeId: userOid, status: 'done', completedAt: { $ne: null } })
-        .sort({ completedAt: -1 }).limit(40)
-        .select('completedAt dueDate ccTcd').lean(),
+        .sort({ completedAt: -1 })
+        .limit(40)
+        .select('completedAt dueDate ccTcd')
+        .lean(),
       // 3. Team Collaborator — distinct projects the IC contributed to.
       Task.distinct('projectId', { assigneeId: userOid, status: 'done' }),
       // 4. Idea Contributor — comments the IC left on tasks.
-      Task.aggregate([
-        { $unwind: '$comments' },
-        { $match: { 'comments.userId': userOid } },
-        { $count: 'n' },
-      ]),
+      Task.aggregate([{ $unwind: '$comments' }, { $match: { 'comments.userId': userOid } }, { $count: 'n' }]),
     ]);
-    let streak = 0, maxStreak = 0;
+    let streak = 0,
+      maxStreak = 0;
     for (const t of recent as any[]) {
       const due = t.ccTcd || t.dueDate;
       const onTime = due && new Date(t.completedAt) <= new Date(due);
-      if (onTime) { streak++; if (streak > maxStreak) maxStreak = streak; }
-      else streak = 0;
+      if (onTime) {
+        streak++;
+        if (streak > maxStreak) maxStreak = streak;
+      } else streak = 0;
     }
     const otStreak = tierFor(maxStreak, [3, 5, 10]);
     const collab = tierFor(distinctProjects.length, [2, 5, 10]);
@@ -426,10 +490,38 @@ async function computeAchievements(
     const ideas = tierFor(commentCount, [3, 10, 25]);
 
     return [
-      { id: 'ic_milestone',  role, label: 'Milestone Achiever', hint: 'Tasks completed end-to-end',           value: ctx.totalDone, ...milestone },
-      { id: 'ic_on_time',    role, label: 'On-Time Streak',     hint: 'Recent run of on-time completions',    value: maxStreak,     ...otStreak  },
-      { id: 'ic_collab',     role, label: 'Team Collaborator',  hint: 'Distinct projects you contributed to', value: distinctProjects.length, ...collab },
-      { id: 'ic_ideas',      role, label: 'Idea Contributor',   hint: 'Comments left on task discussions',    value: commentCount,  ...ideas     },
+      {
+        id: 'ic_milestone',
+        role,
+        label: 'Milestone Achiever',
+        hint: 'Tasks completed end-to-end',
+        value: ctx.totalDone,
+        ...milestone,
+      },
+      {
+        id: 'ic_on_time',
+        role,
+        label: 'On-Time Streak',
+        hint: 'Recent run of on-time completions',
+        value: maxStreak,
+        ...otStreak,
+      },
+      {
+        id: 'ic_collab',
+        role,
+        label: 'Team Collaborator',
+        hint: 'Distinct projects you contributed to',
+        value: distinctProjects.length,
+        ...collab,
+      },
+      {
+        id: 'ic_ideas',
+        role,
+        label: 'Idea Contributor',
+        hint: 'Comments left on task discussions',
+        value: commentCount,
+        ...ideas,
+      },
     ];
   }
 
@@ -460,7 +552,13 @@ async function computeAchievements(
     // 3. Load Balancer + 4. Velocity Driver both key off ownedProjectIds.
     const [loadAgg, teamThroughput] = await Promise.all([
       Task.aggregate([
-        { $match: { projectId: { $in: ownedProjectIds }, status: { $nin: ['done'] }, assigneeId: { $ne: null } } },
+        {
+          $match: {
+            projectId: { $in: ownedProjectIds },
+            status: { $nin: ['done'] },
+            assigneeId: { $ne: null },
+          },
+        },
         { $group: { _id: '$assigneeId', n: { $sum: 1 } } },
       ]),
       Task.countDocuments({ projectId: { $in: ownedProjectIds }, status: 'done' }),
@@ -482,10 +580,38 @@ async function computeAchievements(
     const velocity = tierFor(teamThroughput, [25, 100, 300]);
 
     return [
-      { id: 'lead_finisher', role, label: 'Project Finisher', hint: 'Owned projects delivered on time',                value: ownedOnTime,    ...finisher },
-      { id: 'lead_mentor',   role, label: 'Mentor',           hint: "Coaching comments on contributors' work (proxy)", value: mentorCount,    ...mentor   },
-      { id: 'lead_balance',  role, label: 'Load Balancer',    hint: 'Workload evenness across your team (0–100)',      value: balanceScore,   ...balancer },
-      { id: 'lead_velocity', role, label: 'Velocity Driver',  hint: 'Tasks your team has completed',                   value: teamThroughput, ...velocity },
+      {
+        id: 'lead_finisher',
+        role,
+        label: 'Project Finisher',
+        hint: 'Owned projects delivered on time',
+        value: ownedOnTime,
+        ...finisher,
+      },
+      {
+        id: 'lead_mentor',
+        role,
+        label: 'Mentor',
+        hint: "Coaching comments on contributors' work (proxy)",
+        value: mentorCount,
+        ...mentor,
+      },
+      {
+        id: 'lead_balance',
+        role,
+        label: 'Load Balancer',
+        hint: 'Workload evenness across your team (0–100)',
+        value: balanceScore,
+        ...balancer,
+      },
+      {
+        id: 'lead_velocity',
+        role,
+        label: 'Velocity Driver',
+        hint: 'Tasks your team has completed',
+        value: teamThroughput,
+        ...velocity,
+      },
     ];
   }
 
@@ -510,9 +636,37 @@ async function computeAchievements(
   const audit = tierFor(activeProjects, [3, 10, 25]);
 
   return [
-    { id: 'adm_onboard',  role, label: 'Onboarder',       hint: 'Active users in the workspace',                  value: activeUsers,    ...onboard  },
-    { id: 'adm_guardian', role, label: 'System Guardian', hint: 'Days clear of long-standing overdues (last 30)', value: guardianScore,  ...guardian },
-    { id: 'adm_steward',  role, label: 'Data Steward',    hint: 'Completed projects in good standing (proxy)',    value: closedProjects, ...steward  },
-    { id: 'adm_audit',    role, label: 'Audit Keeper',    hint: 'Projects with recent activity (last 30d)',       value: activeProjects, ...audit    },
+    {
+      id: 'adm_onboard',
+      role,
+      label: 'Onboarder',
+      hint: 'Active users in the workspace',
+      value: activeUsers,
+      ...onboard,
+    },
+    {
+      id: 'adm_guardian',
+      role,
+      label: 'System Guardian',
+      hint: 'Days clear of long-standing overdues (last 30)',
+      value: guardianScore,
+      ...guardian,
+    },
+    {
+      id: 'adm_steward',
+      role,
+      label: 'Data Steward',
+      hint: 'Completed projects in good standing (proxy)',
+      value: closedProjects,
+      ...steward,
+    },
+    {
+      id: 'adm_audit',
+      role,
+      label: 'Audit Keeper',
+      hint: 'Projects with recent activity (last 30d)',
+      value: activeProjects,
+      ...audit,
+    },
   ];
 }

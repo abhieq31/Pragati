@@ -16,14 +16,24 @@ function esc(s: any): string {
 function fmtDate(d: any): string {
   if (!d) return '—';
   const dt = new Date(d);
-  return Number.isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+  return Number.isNaN(dt.getTime())
+    ? '—'
+    : dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  todo: 'To do', in_progress: 'In progress', review: 'Review', blocked: 'Blocked', done: 'Done',
+  todo: 'To do',
+  in_progress: 'In progress',
+  review: 'Review',
+  blocked: 'Blocked',
+  done: 'Done',
 };
 const STATUS_COLOR: Record<string, string> = {
-  todo: '#94a3b8', in_progress: '#3b82f6', review: '#8b5cf6', blocked: '#ef4444', done: '#22c55e',
+  todo: '#94a3b8',
+  in_progress: '#3b82f6',
+  review: '#8b5cf6',
+  blocked: '#ef4444',
+  done: '#22c55e',
 };
 
 function bar(pct: number): string {
@@ -44,7 +54,9 @@ function byTcd(a: any, b: any): number {
 }
 
 function lcLabel(lc: string): string {
-  return String(lc || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  return String(lc || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function buildProjectReportHtml(project: any, phases: any[], exportedBy = ''): string {
@@ -52,62 +64,90 @@ export function buildProjectReportHtml(project: any, phases: any[], exportedBy =
   const now = new Date();
   const tasks: any[] = Array.isArray(project?.tasks) ? project.tasks : [];
 
-  const total   = tasks.length;
-  const done    = tasks.filter((t) => t.status === 'done').length;
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.status === 'done').length;
   const overdueTasks = tasks.filter((t) => {
     const d = t.ccTcd || t.dueDate;
     return d && new Date(d) < now && t.status !== 'done';
   });
   const blocked = tasks.filter((t) => t.status === 'blocked').length;
-  const pct     = total ? Math.round((done / total) * 100) : 0;
+  const pct = total ? Math.round((done / total) * 100) : 0;
 
   // Status distribution bar.
   const order = ['todo', 'in_progress', 'review', 'blocked', 'done'];
   const counts: Record<string, number> = {};
   for (const s of order) counts[s] = 0;
   for (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;
-  const distSegments = order.filter((s) => counts[s] > 0)
-    .map((s) => `<div class="seg" title="${STATUS_LABEL[s]}: ${counts[s]}" style="flex:${counts[s]};background:${STATUS_COLOR[s]}"></div>`).join('');
-  const distLegend = order.map((s) => `<span class="lg"><i style="background:${STATUS_COLOR[s]}"></i>${STATUS_LABEL[s]} <b>${counts[s]}</b></span>`).join('');
+  const distSegments = order
+    .filter((s) => counts[s] > 0)
+    .map(
+      (s) =>
+        `<div class="seg" title="${STATUS_LABEL[s]}: ${counts[s]}" style="flex:${counts[s]};background:${STATUS_COLOR[s]}"></div>`,
+    )
+    .join('');
+  const distLegend = order
+    .map(
+      (s) =>
+        `<span class="lg"><i style="background:${STATUS_COLOR[s]}"></i>${STATUS_LABEL[s]} <b>${counts[s]}</b></span>`,
+    )
+    .join('');
 
   // Auto-narrative summary.
   const bits: string[] = [];
-  bits.push(`This project is <b>${pct}%</b> complete — <b>${done}</b> of <b>${total}</b> task${total === 1 ? '' : 's'} done.`);
-  if (overdueTasks.length > 0) bits.push(`<b style="color:#b91c1c">${overdueTasks.length} overdue</b> and need attention.`);
+  bits.push(
+    `This project is <b>${pct}%</b> complete — <b>${done}</b> of <b>${total}</b> task${total === 1 ? '' : 's'} done.`,
+  );
+  if (overdueTasks.length > 0)
+    bits.push(`<b style="color:#b91c1c">${overdueTasks.length} overdue</b> and need attention.`);
   else bits.push('Nothing is overdue.');
   if (blocked > 0) bits.push(`<b style="color:#b91c1c">${blocked} blocked.</b>`);
   if (project?.dueDate) {
     const days = Math.ceil((new Date(project.dueDate).getTime() - now.getTime()) / 86400000);
-    bits.push(days < 0 ? `<b style="color:#b91c1c">Past due by ${Math.abs(days)}d.</b>` : `Due ${fmtDate(project.dueDate)} (${days}d left).`);
+    bits.push(
+      days < 0
+        ? `<b style="color:#b91c1c">Past due by ${Math.abs(days)}d.</b>`
+        : `Due ${fmtDate(project.dueDate)} (${days}d left).`,
+    );
   }
 
   // Phase progress table.
-  const phaseRows = (phases || []).map((ph: any) => {
-    const pts = tasks.filter((t) => String(t.phaseId) === String(ph.id));
-    const pdone = pts.filter((t) => t.status === 'done').length;
-    const ppct = pts.length ? Math.round((pdone / pts.length) * 100) : 0;
-    return `<tr>
+  const phaseRows = (phases || [])
+    .map((ph: any) => {
+      const pts = tasks.filter((t) => String(t.phaseId) === String(ph.id));
+      const pdone = pts.filter((t) => t.status === 'done').length;
+      const ppct = pts.length ? Math.round((pdone / pts.length) * 100) : 0;
+      return `<tr>
       <td><strong>${esc(ph.name || '')}</strong></td>
       <td style="text-align:right">${pdone}/${pts.length}</td>
       <td style="width:160px">${bar(ppct)}</td>
       <td style="text-align:right;font-weight:700">${ppct}%</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
   // Overdue action list — TCD order.
-  const overdueRows = [...overdueTasks].sort(byTcd).map((t) => `<tr>
+  const overdueRows = [...overdueTasks]
+    .sort(byTcd)
+    .map(
+      (t) => `<tr>
     <td>${esc(t.title || '')}</td>
     <td>${esc(t.assigneeName || 'Unassigned')}</td>
     <td style="color:#b91c1c;font-weight:600">${fmtDate(t.ccTcd || t.dueDate)}</td>
-  </tr>`).join('');
+  </tr>`,
+    )
+    .join('');
 
   // Full task list — TCD order.
-  const taskRows = [...tasks].sort(byTcd).map((t) => {
-    const target = t.ccTcd || t.dueDate;
-    const od = target && new Date(target) < now && t.status !== 'done';
-    const subs = (t.subtaskCount ?? (t.subtasks?.length ?? 0)) > 0
-      ? `${t.subtasksDone ?? (t.subtasks?.filter((s: any) => s.status === 'done').length ?? 0)}/${t.subtaskCount ?? t.subtasks.length}` : '—';
-    return `<tr>
+  const taskRows = [...tasks]
+    .sort(byTcd)
+    .map((t) => {
+      const target = t.ccTcd || t.dueDate;
+      const od = target && new Date(target) < now && t.status !== 'done';
+      const subs =
+        (t.subtaskCount ?? t.subtasks?.length ?? 0) > 0
+          ? `${t.subtasksDone ?? t.subtasks?.filter((s: any) => s.status === 'done').length ?? 0}/${t.subtaskCount ?? t.subtasks.length}`
+          : '—';
+      return `<tr>
       <td>${esc(t.ccNo || '')}</td>
       <td>${esc(t.title || '')}</td>
       <td>${esc(t.assigneeName || 'Unassigned')}</td>
@@ -115,9 +155,10 @@ export function buildProjectReportHtml(project: any, phases: any[], exportedBy =
       <td style="text-align:center">${esc(subs)}</td>
       <td style="${od ? 'color:#b91c1c;font-weight:600' : ''}">${fmtDate(t.ccTcd || t.dueDate)}</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
-  const ref = project?.isPersonal ? 'Personal' : (project?.code || '');
+  const ref = project?.isPersonal ? 'Personal' : project?.code || '';
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -192,13 +233,21 @@ export function buildProjectReportHtml(project: any, phases: any[], exportedBy =
     <div class="legend">${distLegend}</div>
     <div class="dist">${distSegments || '<div class="seg" style="flex:1;background:#eef2f7"></div>'}</div>
 
-    ${(phases || []).length > 0 ? `<h2>Phase progress</h2>
+    ${
+      (phases || []).length > 0
+        ? `<h2>Phase progress</h2>
     <table><thead><tr><th>Phase</th><th style="text-align:right">Done</th><th>Progress</th><th style="text-align:right">%</th></tr></thead>
-    <tbody>${phaseRows}</tbody></table>` : ''}
+    <tbody>${phaseRows}</tbody></table>`
+        : ''
+    }
 
-    ${overdueTasks.length > 0 ? `<h2>⚠ Overdue — needs attention</h2>
+    ${
+      overdueTasks.length > 0
+        ? `<h2>⚠ Overdue — needs attention</h2>
     <div class="risk"><table><thead><tr><th>Task</th><th>Assignee</th><th>Target (TCD)</th></tr></thead>
-    <tbody>${overdueRows}</tbody></table></div>` : ''}
+    <tbody>${overdueRows}</tbody></table></div>`
+        : ''
+    }
 
     <h2>All tasks — by target date</h2>
     <table><thead><tr><th>Ref</th><th>Task</th><th>Assignee</th><th>Status</th><th style="text-align:center">Subtasks</th><th>Target (TCD)</th></tr></thead>
@@ -218,10 +267,10 @@ function csvCell(v: any): string {
 export function buildProjectReportCsv(project: any, phases: any[] = [], exportedBy = ''): string {
   const now = new Date();
   const tasks: any[] = [...(Array.isArray(project?.tasks) ? project.tasks : [])].sort(byTcd);
-  const ref = project?.isPersonal ? 'Personal' : (project?.code || '');
+  const ref = project?.isPersonal ? 'Personal' : project?.code || '';
   const total = tasks.length;
-  const done  = tasks.filter((t) => t.status === 'done').length;
-  const pct   = total ? Math.round((done / total) * 100) : 0;
+  const done = tasks.filter((t) => t.status === 'done').length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
   const overdueAll = tasks.filter((t) => {
     const d = t.ccTcd || t.dueDate;
     return d && new Date(d) < now && t.status !== 'done';
@@ -257,28 +306,43 @@ export function buildProjectReportCsv(project: any, phases: any[] = [], exported
     ['Phases', String((phases || []).length)],
     ['', ''],
     ['Status distribution', ''],
-    ['  To do',       String(dist.todo)],
+    ['  To do', String(dist.todo)],
     ['  In progress', String(dist.in_progress)],
-    ['  Review',      String(dist.review)],
-    ['  Blocked',     String(dist.blocked)],
-    ['  Done',        String(dist.done)],
+    ['  Review', String(dist.review)],
+    ['  Blocked', String(dist.blocked)],
+    ['  Done', String(dist.done)],
     ['', ''],
   ];
 
   // Section 2: tasks table.
   const header = [
-    'Sr', 'Project Ref', 'Phase', 'Task Ref No', 'Task',
-    'Description', 'Assignee', 'Status', 'Priority', 'Type',
-    'GxP Critical', 'QA Sign-off Required', 'Waiting On',
-    'Target Date (TCD)', 'Due Date', 'Start Date', 'Completed At',
-    'Subtasks (done/total)', 'Overdue', 'Days Overdue',
+    'Sr',
+    'Project Ref',
+    'Phase',
+    'Task Ref No',
+    'Task',
+    'Description',
+    'Assignee',
+    'Status',
+    'Priority',
+    'Type',
+    'GxP Critical',
+    'QA Sign-off Required',
+    'Waiting On',
+    'Target Date (TCD)',
+    'Due Date',
+    'Start Date',
+    'Completed At',
+    'Subtasks (done/total)',
+    'Overdue',
+    'Days Overdue',
   ];
   const rows = tasks.map((t, i) => {
     const target = t.ccTcd || t.dueDate;
     const overdue = target && new Date(target) < now && t.status !== 'done';
     const daysOver = overdue ? Math.round((now.getTime() - new Date(target).getTime()) / 86400000) : '';
-    const subCount = t.subtaskCount ?? (t.subtasks?.length ?? 0);
-    const subDone = t.subtasksDone ?? (t.subtasks?.filter((s: any) => s.status === 'done').length ?? 0);
+    const subCount = t.subtaskCount ?? t.subtasks?.length ?? 0;
+    const subDone = t.subtasksDone ?? t.subtasks?.filter((s: any) => s.status === 'done').length ?? 0;
     return [
       String(i + 1),
       ref,
@@ -301,55 +365,68 @@ export function buildProjectReportCsv(project: any, phases: any[] = [], exported
       subCount > 0 ? `${subDone}/${subCount}` : '',
       overdue ? 'Yes' : 'No',
       daysOver === '' ? '' : String(daysOver),
-    ].map(csvCell).join(',');
+    ]
+      .map(csvCell)
+      .join(',');
   });
 
   const metaRows = meta.map(([k, v]) => [k, v].map(csvCell).join(','));
   const tasksHeader = ['Tasks', ''].map(csvCell).join(',');
   // BOM + CRLF so Excel/Sheets open UTF-8 + line breaks correctly.
-  return '﻿' + [
-    ...metaRows,
-    tasksHeader,
-    header.map(csvCell).join(','),
-    ...rows,
-  ].join('\r\n');
+  return '﻿' + [...metaRows, tasksHeader, header.map(csvCell).join(','), ...rows].join('\r\n');
 }
 
 function triggerDownload(content: string, mime: string, filename: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function safeName(project: any): string {
-  return String(project?.code || project?.name || 'project').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  return String(project?.code || project?.name || 'project')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .toLowerCase();
 }
 
 export function downloadProjectCsv(project: any, phases: any[] = [], exportedBy = '') {
-  triggerDownload(buildProjectReportCsv(project, phases, exportedBy), 'text/csv;charset=utf-8',
-    `${safeName(project)}-tasks-${new Date().toISOString().slice(0, 10)}.csv`);
+  triggerDownload(
+    buildProjectReportCsv(project, phases, exportedBy),
+    'text/csv;charset=utf-8',
+    `${safeName(project)}-tasks-${new Date().toISOString().slice(0, 10)}.csv`,
+  );
 }
 
 export function downloadProjectReport(project: any, phases: any[], exportedBy = '') {
-  triggerDownload(buildProjectReportHtml(project, phases, exportedBy), 'text/html;charset=utf-8',
-    `${safeName(project)}-report-${new Date().toISOString().slice(0, 10)}.html`);
+  triggerDownload(
+    buildProjectReportHtml(project, phases, exportedBy),
+    'text/html;charset=utf-8',
+    `${safeName(project)}-report-${new Date().toISOString().slice(0, 10)}.html`,
+  );
 }
 
 export function printProjectReport(project: any, phases: any[], exportedBy = '') {
   const html = buildProjectReportHtml(project, phases, exportedBy);
   const w = window.open('', '_blank');
-  if (!w) { downloadProjectReport(project, phases); return; }
+  if (!w) {
+    downloadProjectReport(project, phases);
+    return;
+  }
   // Inject a floating action bar with a "Save as PDF" trigger, hidden on print.
-  const withPrintBar = html.replace('</body>',
+  const withPrintBar = html.replace(
+    '</body>',
     `<div id="pragati-print-bar" style="position:fixed;right:16px;bottom:16px;z-index:99999;display:flex;gap:8px;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
        <button onclick="window.print()" style="background:linear-gradient(135deg,#1565C0,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,0.18)">Save as PDF / Print</button>
        <button onclick="window.close()" style="background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
      </div>
      <style>@media print { #pragati-print-bar { display:none !important; } }</style>
-     </body>`);
+     </body>`,
+  );
   w.document.write(withPrintBar);
   w.document.close();
   w.focus();

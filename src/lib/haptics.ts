@@ -14,26 +14,40 @@ function allowed(): boolean {
   if (localStorage.getItem('pragati-haptics') === 'off') return false;
   try {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
-  } catch { /* matchMedia unavailable — proceed */ }
+  } catch {
+    /* matchMedia unavailable — proceed */
+  }
   return true;
 }
 
 /** A single light tick — for taps, toggles, drops. */
 export function hapticTap() {
   if (!allowed()) return;
-  try { navigator.vibrate(10); } catch { /* ignore */ }
+  try {
+    navigator.vibrate(10);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** A short double-buzz — for a completed task / saved record. */
 export function hapticSuccess() {
   if (!allowed()) return;
-  try { navigator.vibrate([14, 40, 22]); } catch { /* ignore */ }
+  try {
+    navigator.vibrate([14, 40, 22]);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** A celebratory pattern — reserved for milestones (phase / project complete). */
 export function hapticCelebrate() {
   if (!allowed()) return;
-  try { navigator.vibrate([18, 50, 24, 50, 38]); } catch { /* ignore */ }
+  try {
+    navigator.vibrate([18, 50, 24, 50, 38]);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function hapticsEnabled(): boolean {

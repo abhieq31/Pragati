@@ -123,7 +123,7 @@ function getSecret(): string {
   if (process.env.NODE_ENV !== 'production') return DEV_SECRET_FALLBACK;
   throw new Error(
     '[SECURITY] JWT_SECRET is not set (or shorter than 16 chars) in production. ' +
-    'Refusing to sign/verify auth tokens with an insecure value.',
+      'Refusing to sign/verify auth tokens with an insecure value.',
   );
 }
 
@@ -147,7 +147,12 @@ export function verifyToken(token: string): JwtPayload {
    completed a full password login for `sub`. It carries no privileges on its
    own — it only gates whether the PIN-unlock endpoint will even look at a PIN.
    `typ:'device'` keeps it from ever being mistaken for a session token. */
-interface DeviceToken { sub: string; typ: 'device'; iat?: number; exp?: number; }
+interface DeviceToken {
+  sub: string;
+  typ: 'device';
+  iat?: number;
+  exp?: number;
+}
 
 export function signDeviceToken(userId: string): string {
   return jwt.sign({ sub: userId, typ: 'device' }, getSecret(), { expiresIn: `${DEVICE_TRUST_DAYS}d` });
@@ -257,7 +262,7 @@ export async function validateSession(payload: JwtPayload): Promise<JwtPayload |
 }
 
 export async function getCurrentUserFromRequest(
-  req: NextRequest
+  req: NextRequest,
 ): Promise<{ user: JwtPayload | null; deactivated?: boolean }> {
   const token = getTokenFromRequest(req);
   if (!token) return { user: null };
@@ -299,10 +304,15 @@ export async function requireUser(req: NextRequest) {
   if (!user) {
     return {
       error: NextResponse.json(
-        { error: deactivated ? 'Your account has been deactivated. Please contact your administrator.' : 'Authentication required', deactivated: !!deactivated },
+        {
+          error: deactivated
+            ? 'Your account has been deactivated. Please contact your administrator.'
+            : 'Authentication required',
+          deactivated: !!deactivated,
+        },
         { status: 401 },
       ),
-      user: null as unknown as JwtPayload
+      user: null as unknown as JwtPayload,
     };
   }
   return { error: null, user };
@@ -314,7 +324,7 @@ export async function requireRole(req: NextRequest, ...roles: Role[]) {
   if (!roles.includes(normalizeRole(user.role))) {
     return {
       error: NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 }),
-      user
+      user,
     };
   }
   return { user, error: null };

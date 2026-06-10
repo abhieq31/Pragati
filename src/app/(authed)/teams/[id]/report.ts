@@ -17,14 +17,24 @@ function esc(s: any): string {
 function fmtDate(d: any): string {
   if (!d) return '—';
   const dt = new Date(d);
-  return Number.isNaN(dt.getTime()) ? '—' : dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+  return Number.isNaN(dt.getTime())
+    ? '—'
+    : dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  todo: 'To do', in_progress: 'In progress', review: 'Review', blocked: 'Blocked', done: 'Done',
+  todo: 'To do',
+  in_progress: 'In progress',
+  review: 'Review',
+  blocked: 'Blocked',
+  done: 'Done',
 };
 const STATUS_COLOR: Record<string, string> = {
-  todo: '#94a3b8', in_progress: '#3b82f6', review: '#8b5cf6', blocked: '#ef4444', done: '#22c55e',
+  todo: '#94a3b8',
+  in_progress: '#3b82f6',
+  review: '#8b5cf6',
+  blocked: '#ef4444',
+  done: '#22c55e',
 };
 
 function bar(pct: number): string {
@@ -53,7 +63,10 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
   // Upcoming deadlines — open tasks due within the next 14 days. This is the
   // forward-looking list a lead actually drives the meeting from.
   const upcomingTasks = tasks
-    .filter((t) => t.status !== 'done' && t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) <= soonCutoff)
+    .filter(
+      (t) =>
+        t.status !== 'done' && t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) <= soonCutoff,
+    )
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   // Per-project signal roll-up (keyed by project code) so the Projects table
@@ -64,13 +77,15 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
     const s = projStats.get(key) || { overdue: 0, blocked: 0, dueSoon: 0 };
     if (t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now) s.overdue++;
     if (t.status === 'blocked') s.blocked++;
-    if (t.status !== 'done' && t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) <= soonCutoff) s.dueSoon++;
+    if (t.status !== 'done' && t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) <= soonCutoff)
+      s.dueSoon++;
     projStats.set(key, s);
   }
   // Health from the signals: a simple, explainable RAG rule.
   function projHealth(code: string, pct: number): { label: string; color: string; bg: string } {
     const s = projStats.get(code) || { overdue: 0, blocked: 0, dueSoon: 0 };
-    if (s.overdue >= 3 || (s.overdue >= 1 && s.blocked >= 1)) return { label: 'Critical', color: '#b91c1c', bg: '#fef2f2' };
+    if (s.overdue >= 3 || (s.overdue >= 1 && s.blocked >= 1))
+      return { label: 'Critical', color: '#b91c1c', bg: '#fef2f2' };
     if (s.overdue >= 1 || s.blocked >= 1) return { label: 'At risk', color: '#b45309', bg: '#fffbeb' };
     return { label: 'On track', color: '#15803d', bg: '#f0fdf4' };
   }
@@ -86,27 +101,45 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
   for (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;
   const distSegments = order
     .filter((s) => counts[s] > 0)
-    .map((s) => `<div class="seg" title="${STATUS_LABEL[s]}: ${counts[s]}" style="flex:${counts[s]};background:${STATUS_COLOR[s]}"></div>`)
+    .map(
+      (s) =>
+        `<div class="seg" title="${STATUS_LABEL[s]}: ${counts[s]}" style="flex:${counts[s]};background:${STATUS_COLOR[s]}"></div>`,
+    )
     .join('');
-  const distLegend = order.map((s) =>
-    `<span class="lg"><i style="background:${STATUS_COLOR[s]}"></i>${STATUS_LABEL[s]} <b>${counts[s]}</b></span>`
-  ).join('');
+  const distLegend = order
+    .map(
+      (s) =>
+        `<span class="lg"><i style="background:${STATUS_COLOR[s]}"></i>${STATUS_LABEL[s]} <b>${counts[s]}</b></span>`,
+    )
+    .join('');
 
   // ── Executive summary auto-narrative — the line a lead reads aloud. ──
   const summaryBits: string[] = [];
-  summaryBits.push(`The team is <b>${overallPct}%</b> complete across <b>${projects.length}</b> project${projects.length === 1 ? '' : 's'} (${activeProjects} active).`);
-  if (overdue > 0) summaryBits.push(`<b style="color:#b91c1c">${overdue} task${overdue === 1 ? '' : 's'} overdue</b> and need attention.`);
+  summaryBits.push(
+    `The team is <b>${overallPct}%</b> complete across <b>${projects.length}</b> project${projects.length === 1 ? '' : 's'} (${activeProjects} active).`,
+  );
+  if (overdue > 0)
+    summaryBits.push(
+      `<b style="color:#b91c1c">${overdue} task${overdue === 1 ? '' : 's'} overdue</b> and need attention.`,
+    );
   else summaryBits.push(`Nothing is overdue — the team is on schedule.`);
   if (blocked > 0) summaryBits.push(`<b style="color:#b91c1c">${blocked} blocked</b>.`);
-  if (atRiskProjects > 0) summaryBits.push(`<b style="color:#b45309">${atRiskProjects} project${atRiskProjects === 1 ? '' : 's'} at risk.</b>`);
-  if (upcomingTasks.length > 0) summaryBits.push(`<b>${upcomingTasks.length}</b> deadline${upcomingTasks.length === 1 ? '' : 's'} in the next 14 days.`);
+  if (atRiskProjects > 0)
+    summaryBits.push(
+      `<b style="color:#b45309">${atRiskProjects} project${atRiskProjects === 1 ? '' : 's'} at risk.</b>`,
+    );
+  if (upcomingTasks.length > 0)
+    summaryBits.push(
+      `<b>${upcomingTasks.length}</b> deadline${upcomingTasks.length === 1 ? '' : 's'} in the next 14 days.`,
+    );
 
-  const projectRows = projects.map((p) => {
-    const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
-    const code = p.code || p.name || '—';
-    const s = projStats.get(code) || { overdue: 0, blocked: 0, dueSoon: 0 };
-    const h = projHealth(code, pct);
-    return `<tr>
+  const projectRows = projects
+    .map((p) => {
+      const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
+      const code = p.code || p.name || '—';
+      const s = projStats.get(code) || { overdue: 0, blocked: 0, dueSoon: 0 };
+      const h = projHealth(code, pct);
+      return `<tr>
       <td><strong>${esc(p.code || '')}</strong> ${esc(p.name || '')}</td>
       <td><span class="pill" style="background:${h.bg};color:${h.color};font-weight:700">${h.label}</span></td>
       <td style="text-align:right">${esc(p.tasksDone ?? 0)}/${esc(p.taskCount ?? 0)}</td>
@@ -115,24 +148,28 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
       <td style="width:140px">${bar(pct)}</td>
       <td style="text-align:right;font-weight:700">${pct}%</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
   // Upcoming deadlines rows — the next-14-days action list.
-  const upcomingRows = upcomingTasks.map((t) => {
-    const days = Math.ceil((new Date(t.dueDate).getTime() - now.getTime()) / 86400000);
-    const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days}d`;
-    return `<tr>
+  const upcomingRows = upcomingTasks
+    .map((t) => {
+      const days = Math.ceil((new Date(t.dueDate).getTime() - now.getTime()) / 86400000);
+      const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days}d`;
+      return `<tr>
       <td>${esc(t.title || '')}</td>
       <td>${esc(t.projectCode || '')}</td>
       <td>${esc(t.assigneeName || 'Unassigned')}</td>
       <td><span class="dot" style="background:${STATUS_COLOR[t.status] || '#94a3b8'}"></span>${esc(STATUS_LABEL[t.status] || t.status || '')}</td>
       <td style="font-weight:600;${days <= 2 ? 'color:#b45309' : ''}">${fmtDate(t.dueDate)} <span class="muted">· ${when}</span></td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
-  const memberRows = members.map((m) => {
-    const pct = m.assigned ? Math.round((m.done / m.assigned) * 100) : 0;
-    return `<tr>
+  const memberRows = members
+    .map((m) => {
+      const pct = m.assigned ? Math.round((m.done / m.assigned) * 100) : 0;
+      return `<tr>
       <td>${esc(m.name || '')}${m.title ? ` <span class="muted">· ${esc(m.title)}</span>` : ''}</td>
       <td style="text-align:right">${esc(m.assigned ?? 0)}</td>
       <td style="text-align:right">${esc(m.done ?? 0)}</td>
@@ -140,17 +177,21 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
       <td style="width:140px">${bar(pct)}</td>
       <td style="text-align:right;font-weight:700">${pct}%</td>
     </tr>`;
-  }).join('');
+    })
+    .join('');
 
   // Overdue / at-risk section — the meeting's action list.
   const overdueRows = overdueTasks
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-    .map((t) => `<tr>
+    .map(
+      (t) => `<tr>
       <td>${esc(t.title || '')}</td>
       <td>${esc(t.projectCode || '')}</td>
       <td>${esc(t.assigneeName || 'Unassigned')}</td>
       <td style="color:#b91c1c;font-weight:600">${fmtDate(t.dueDate)}</td>
-    </tr>`).join('');
+    </tr>`,
+    )
+    .join('');
 
   // All tasks grouped by project for a clean, readable backlog.
   const byProject = new Map<string, any[]>();
@@ -159,22 +200,27 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
     if (!byProject.has(key)) byProject.set(key, []);
     byProject.get(key)!.push(t);
   }
-  const groupedTasks = [...byProject.entries()].map(([code, ts]) => {
-    // Within each project, tasks are listed in TCD (target-date) order — the
-    // priority order a reviewer reads top-to-bottom.
-    const rows = [...ts].sort(byTcd).map((t) => {
-      const target = t.ccTcd || t.dueDate;
-      const od = target && new Date(target) < new Date() && t.status !== 'done';
-      return `<tr>
+  const groupedTasks = [...byProject.entries()]
+    .map(([code, ts]) => {
+      // Within each project, tasks are listed in TCD (target-date) order — the
+      // priority order a reviewer reads top-to-bottom.
+      const rows = [...ts]
+        .sort(byTcd)
+        .map((t) => {
+          const target = t.ccTcd || t.dueDate;
+          const od = target && new Date(target) < new Date() && t.status !== 'done';
+          return `<tr>
         <td>${esc(t.title || '')}</td>
         <td>${esc(t.assigneeName || 'Unassigned')}</td>
         <td><span class="dot" style="background:${STATUS_COLOR[t.status] || '#94a3b8'}"></span>${esc(STATUS_LABEL[t.status] || t.status || '')}</td>
         <td style="${od ? 'color:#b91c1c;font-weight:600' : ''}">${fmtDate(t.ccTcd || t.dueDate)}</td>
       </tr>`;
-    }).join('');
-    return `<h3>${esc(code)} <span class="muted">· ${ts.length} task${ts.length === 1 ? '' : 's'}</span></h3>
+        })
+        .join('');
+      return `<h3>${esc(code)} <span class="muted">· ${ts.length} task${ts.length === 1 ? '' : 's'}</span></h3>
       <table><thead><tr><th>Task</th><th>Assignee</th><th>Status</th><th>Target (TCD)</th></tr></thead><tbody>${rows}</tbody></table>`;
-  }).join('');
+    })
+    .join('');
 
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -256,17 +302,25 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
     <table><thead><tr><th>Project</th><th>Health</th><th style="text-align:right">Tasks</th><th style="text-align:right">Overdue</th><th style="text-align:right">Blocked</th><th>Progress</th><th style="text-align:right">%</th></tr></thead>
     <tbody>${projectRows || '<tr><td colspan="7" class="muted">No projects.</td></tr>'}</tbody></table>
 
-    ${upcomingTasks.length > 0 ? `<h2>Upcoming deadlines — next 14 days</h2>
+    ${
+      upcomingTasks.length > 0
+        ? `<h2>Upcoming deadlines — next 14 days</h2>
     <table><thead><tr><th>Task</th><th>Project</th><th>Assignee</th><th>Status</th><th>Due</th></tr></thead>
-    <tbody>${upcomingRows}</tbody></table>` : ''}
+    <tbody>${upcomingRows}</tbody></table>`
+        : ''
+    }
 
     <h2>Member workload</h2>
     <table><thead><tr><th>Member</th><th style="text-align:right">Assigned</th><th style="text-align:right">Done</th><th style="text-align:right">Overdue</th><th>Progress</th><th style="text-align:right">%</th></tr></thead>
     <tbody>${memberRows || '<tr><td colspan="6" class="muted">No members.</td></tr>'}</tbody></table>
 
-    ${overdue > 0 ? `<h2>⚠ Overdue — needs attention</h2>
+    ${
+      overdue > 0
+        ? `<h2>⚠ Overdue — needs attention</h2>
     <div class="risk"><table><thead><tr><th>Task</th><th>Project</th><th>Assignee</th><th>Due</th></tr></thead>
-    <tbody>${overdueRows}</tbody></table></div>` : ''}
+    <tbody>${overdueRows}</tbody></table></div>`
+        : ''
+    }
 
     <h2>Task backlog by project</h2>
     ${groupedTasks || '<p class="muted">No tasks.</p>'}
@@ -303,8 +357,18 @@ export function buildTeamReportCsv(team: any, board: any[], exportedBy = ''): st
   const tasks: any[] = [...(board || [])].sort(byTcd);
   const now = new Date();
   const header = [
-    'Ref No', 'Project Code', 'Project', 'Task', 'Assignee', 'Status', 'Priority',
-    'Target Date (TCD)', 'Due Date', 'Subtasks', 'Overdue', 'Days Overdue',
+    'Ref No',
+    'Project Code',
+    'Project',
+    'Task',
+    'Assignee',
+    'Status',
+    'Priority',
+    'Target Date (TCD)',
+    'Due Date',
+    'Subtasks',
+    'Overdue',
+    'Days Overdue',
   ];
   const rows = tasks.map((t) => {
     const target = t.ccTcd || t.dueDate;
@@ -324,7 +388,9 @@ export function buildTeamReportCsv(team: any, board: any[], exportedBy = ''): st
       subs,
       overdue ? 'Yes' : 'No',
       daysOver === '' ? '' : String(daysOver),
-    ].map(csvCell).join(',');
+    ]
+      .map(csvCell)
+      .join(',');
   });
   const metaBlock = [
     ['Pragati Team Report', ''],
@@ -350,7 +416,9 @@ function triggerDownload(content: string, mime: string, filename: string) {
 }
 
 export function downloadTeamCsv(team: any, board: any[], exportedBy = '') {
-  const safeName = String(team?.name || 'team').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  const safeName = String(team?.name || 'team')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .toLowerCase();
   triggerDownload(
     buildTeamReportCsv(team, board, exportedBy),
     'text/csv;charset=utf-8',
@@ -363,7 +431,9 @@ export function downloadTeamReport(team: any, progress: any, board: any[], expor
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const safeName = String(team?.name || 'team').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  const safeName = String(team?.name || 'team')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .toLowerCase();
   a.href = url;
   a.download = `${safeName}-report-${new Date().toISOString().slice(0, 10)}.html`;
   document.body.appendChild(a);
@@ -378,14 +448,19 @@ export function downloadTeamReport(team: any, progress: any, board: any[], expor
 export function printTeamReport(team: any, progress: any, board: any[], exportedBy = '') {
   const html = buildTeamReportHtml(team, progress, board, exportedBy);
   const w = window.open('', '_blank');
-  if (!w) { downloadTeamReport(team, progress, board, exportedBy); return; }
-  const withPrintBar = html.replace('</body>',
+  if (!w) {
+    downloadTeamReport(team, progress, board, exportedBy);
+    return;
+  }
+  const withPrintBar = html.replace(
+    '</body>',
     `<div id="pragati-print-bar" style="position:fixed;right:16px;bottom:16px;z-index:99999;display:flex;gap:8px;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
        <button onclick="window.print()" style="background:linear-gradient(135deg,#1565C0,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,0.18)">Save as PDF / Print</button>
        <button onclick="window.close()" style="background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
      </div>
      <style>@media print { #pragati-print-bar { display:none !important; } }</style>
-     </body>`);
+     </body>`,
+  );
   w.document.write(withPrintBar);
   w.document.close();
   w.focus();

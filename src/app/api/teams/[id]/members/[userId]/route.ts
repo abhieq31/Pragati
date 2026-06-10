@@ -9,10 +9,7 @@ import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string; userId: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string; userId: string } }) {
   try {
     const { error, user } = await requireRole(req, 'lead', 'admin');
     if (error) return error;
@@ -21,11 +18,15 @@ export async function DELETE(
     if (denied) return denied;
     await Team.updateOne(
       { _id: params.id },
-      { $pull: { memberIds: new mongoose.Types.ObjectId(params.userId) } }
+      { $pull: { memberIds: new mongoose.Types.ObjectId(params.userId) } },
     );
     await logOperation({
-      action: 'team.member_remove', category: 'team', actor: user,
-      targetType: 'team', targetId: params.id, summary: 'Removed a team member',
+      action: 'team.member_remove',
+      category: 'team',
+      actor: user,
+      targetType: 'team',
+      targetId: params.id,
+      summary: 'Removed a team member',
       meta: { userId: params.userId },
     });
     return NextResponse.json({ ok: true });

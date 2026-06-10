@@ -87,12 +87,12 @@ export interface ComputeStripArgs {
 }
 
 const HEADLINE_BY_PENDING: Record<string, string> = {
-  approval:     'Waiting on approval',
+  approval: 'Waiting on approval',
   another_team: 'Waiting on another team',
-  person:       'Waiting on a person',
-  other:        'Waiting',
-  decision:     'Decision needed',
-  help:         'Help requested',
+  person: 'Waiting on a person',
+  other: 'Waiting',
+  decision: 'Decision needed',
+  help: 'Help requested',
 };
 
 /**
@@ -139,19 +139,17 @@ export function computeFlowStrip(args: ComputeStripArgs): FlowSignalPayload | nu
         ? userNameById.get(String(t.flowPendingConfirmedByUserId))
         : undefined;
       candidates.push({
-        taskId:      String(t._id),
-        projectId:   String(t.projectId),
+        taskId: String(t._id),
+        projectId: String(t.projectId),
         projectCode: proj.code,
-        taskTitle:   t.title || '',
-        headline:    HEADLINE_BY_PENDING[pending] || 'Needs attention',
-        detail:      t.flowPendingDetail || undefined,
+        taskTitle: t.title || '',
+        headline: HEADLINE_BY_PENDING[pending] || 'Needs attention',
+        detail: t.flowPendingDetail || undefined,
         reasonCodes: [pending, 'confirmed'],
         pendingType: pending,
-        confirmed:   true,
+        confirmed: true,
         confirmedByName: confirmedBy,
-        confirmedAt: t.flowPendingConfirmedAt
-          ? new Date(t.flowPendingConfirmedAt).toISOString()
-          : undefined,
+        confirmedAt: t.flowPendingConfirmedAt ? new Date(t.flowPendingConfirmedAt).toISOString() : undefined,
       });
       continue;
     }
@@ -161,13 +159,13 @@ export function computeFlowStrip(args: ComputeStripArgs): FlowSignalPayload | nu
     // so we don't double-emit on the same task.
     if (t.status === 'blocked') {
       candidates.push({
-        taskId:      String(t._id),
-        projectId:   String(t.projectId),
+        taskId: String(t._id),
+        projectId: String(t.projectId),
         projectCode: proj.code,
-        taskTitle:   t.title || '',
-        headline:    'Marked blocked',
+        taskTitle: t.title || '',
+        headline: 'Marked blocked',
         reasonCodes: ['blocked', 'status'],
-        confirmed:   true,
+        confirmed: true,
       });
     }
   }

@@ -17,7 +17,7 @@ const Create = z.object({
   description: z.string().optional(),
   leadId: z.string().optional(),
   memberIds: z.array(z.string()).optional(),
-  function: TeamFunctionEnum.optional()
+  function: TeamFunctionEnum.optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -50,9 +50,9 @@ export async function GET(req: NextRequest) {
           // Exclude admin accounts from member count — admins are workspace
           // owners, not assignable team contributors.
           memberCount: (t.memberIds || []).filter((id: any) => !adminIds.has(String(id))).length,
-          projectCount: cmap.get(String(t._id)) || 0
-        })
-      )
+          projectCount: cmap.get(String(t._id)) || 0,
+        }),
+      ),
     );
   } catch (e) {
     return handleError(e);
@@ -73,11 +73,15 @@ export async function POST(req: NextRequest) {
       description: body.description || '',
       leadId: body.leadId || undefined,
       memberIds: body.memberIds || (body.leadId ? [body.leadId] : []),
-      function: body.function || 'general'
+      function: body.function || 'general',
     });
     await logOperation({
-      action: 'team.create', category: 'team', actor: user,
-      targetType: 'team', targetId: String(team._id), targetLabel: team.name,
+      action: 'team.create',
+      category: 'team',
+      actor: user,
+      targetType: 'team',
+      targetId: String(team._id),
+      targetLabel: team.name,
       summary: `Created team ${team.name}`,
     });
     return NextResponse.json(teamS(team));

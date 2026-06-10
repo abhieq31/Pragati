@@ -9,9 +9,9 @@ const LIFECYCLE_KEYS = Object.keys(LIFECYCLES);
 const PhaseSchema = new Schema(
   {
     name: { type: String, required: true },
-    position: { type: Number, default: 0 }
+    position: { type: Number, default: 0 },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const ProjectSchema = new Schema(
@@ -22,17 +22,17 @@ const ProjectSchema = new Schema(
     lifecycle: {
       type: String,
       enum: LIFECYCLE_KEYS,
-      default: 'generic'
+      default: 'generic',
     },
     status: {
       type: String,
       enum: ['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'],
-      default: 'planning'
+      default: 'planning',
     },
     priority: {
       type: String,
       enum: ['low', 'medium', 'high', 'critical'],
-      default: 'medium'
+      default: 'medium',
     },
     teamId: { type: Schema.Types.ObjectId, ref: 'Team' },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -53,8 +53,8 @@ const ProjectSchema = new Schema(
     // and audit trails remain intact — only the default project list
     // and dashboard hide it. Toggleable from the project header by
     // lead/admin. archivedAt also stamps the moment for the audit log.
-    archived:   { type: Boolean, default: false },
-    archivedAt: { type: Date,    default: null   },
+    archived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null },
     archivedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 
     // ── Personal projects ───────────────────────────────────────────────
@@ -77,7 +77,7 @@ const ProjectSchema = new Schema(
     // numbering scheme. Empty string renders as the generic "Ref #".
     refLabel: { type: String, default: '' },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 ProjectSchema.index({ teamId: 1 });
@@ -93,5 +93,4 @@ ProjectSchema.index({ lifecycle: 1, archived: 1 });
 export type ProjectDoc = InferSchemaType<typeof ProjectSchema> & { _id: mongoose.Types.ObjectId };
 
 export const Project: Model<ProjectDoc> =
-  (mongoose.models.Project as Model<ProjectDoc>) ||
-  mongoose.model<ProjectDoc>('Project', ProjectSchema);
+  (mongoose.models.Project as Model<ProjectDoc>) || mongoose.model<ProjectDoc>('Project', ProjectSchema);

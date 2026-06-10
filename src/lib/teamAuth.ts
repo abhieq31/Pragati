@@ -11,10 +11,7 @@ export async function guardTeamOwner(teamId: string, userId: string, role: strin
   const t = await Team.findById(teamId).select('leadId').lean();
   if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   if (isAdmin(role) || role === 'lead') return null;
-  return NextResponse.json(
-    { error: 'Only a team lead or admin can change this team.' },
-    { status: 403 },
-  );
+  return NextResponse.json({ error: 'Only a team lead or admin can change this team.' }, { status: 403 });
 }
 
 /**
@@ -32,8 +29,5 @@ export async function guardTeamMember(teamId: string, userId: string, role: stri
   if (ownerId === userId) return null;
   const isMember = ((t as any).memberIds || []).some((m: any) => String(m) === userId);
   if (isMember) return null;
-  return NextResponse.json(
-    { error: 'You do not have access to this team.' },
-    { status: 403 },
-  );
+  return NextResponse.json({ error: 'You do not have access to this team.' }, { status: 403 });
 }

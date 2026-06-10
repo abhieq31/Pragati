@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
     for (const r of rows as any[]) {
       avatars[String(r._id)] = {
         letter: r.avatarLetter || '',
-        bg:     r.avatarBg || '',
-        font:   typeof r.avatarFont === 'number' ? r.avatarFont : 0,
+        bg: r.avatarBg || '',
+        font: typeof r.avatarFont === 'number' ? r.avatarFont : 0,
       };
     }
 
