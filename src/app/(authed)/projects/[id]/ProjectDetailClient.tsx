@@ -42,10 +42,12 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; bo
 const COLUMN_WIDTH = 230;
 const COLUMN_GAP   = 12;
 
-function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
+function KanbanBoard({ tasks, onDropReorder, isLead, canDelete, onDelete }: {
   tasks: any[];
   onDropReorder: (taskId: string, toStatus: string, orderedIds: string[]) => void;
   isLead: boolean;
+  /** Deleting is owner-only — stricter than the manage (isLead) gate. */
+  canDelete: boolean;
   onDelete: (taskId: string) => void;
 }) {
   const dark = useIsDark();
@@ -262,7 +264,7 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
                     <div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-40 transition-opacity" style={{ color: meta.color }}>
                       <GripVertical size={12} />
                     </div>
-                    {isLead && (
+                    {canDelete && (
                       <button
                         onClick={e => { e.stopPropagation(); e.preventDefault(); onDelete(t.id); }}
                         draggable={false}
@@ -327,10 +329,12 @@ function KanbanBoard({ tasks, onDropReorder, isLead, onDelete }: {
    tap — a "Move to" sheet — not a drag, which is far more reliable on touch.
    This component is only mounted below `md`, so the desktop experience is
    completely untouched. */
-function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
+function KanbanBoardMobile({ tasks, onMove, isLead, canDelete, onDelete }: {
   tasks: any[];
   onMove: (taskId: string, toStatus: string, orderedIds: string[]) => void;
   isLead: boolean;
+  /** Deleting is owner-only — stricter than the manage (isLead) gate. */
+  canDelete: boolean;
   onDelete: (taskId: string) => void;
 }) {
   const [active, setActive] = useState<string>('todo');
@@ -415,7 +419,7 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
                   </div>
                 )}
               </Link>
-              {/* Card actions: Move (lead) + Delete (lead). Big tap targets. */}
+              {/* Card actions: Move (lead) + Delete (owner-only). Big tap targets. */}
               {isLead && (
                 <div className="flex items-stretch border-t border-slate-100 dark:border-white/5">
                   <button
@@ -424,13 +428,15 @@ function KanbanBoardMobile({ tasks, onMove, isLead, onDelete }: {
                   >
                     <ChevronRight size={13} /> Move
                   </button>
-                  <button
-                    onClick={() => onDelete(t.id)}
-                    className="w-12 py-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-white/5 transition-colors inline-flex items-center justify-center border-l border-slate-100 dark:border-white/5"
-                    aria-label="Delete task"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  {canDelete && (
+                    <button
+                      onClick={() => onDelete(t.id)}
+                      className="w-12 py-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-white/5 transition-colors inline-flex items-center justify-center border-l border-slate-100 dark:border-white/5"
+                      aria-label="Delete task"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -783,6 +789,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // Only the project owner (the person who created/owns the project) may edit
   // the title, description, due date, and reference number.
   const isOwner = !!(me && project && String(project.ownerId) === String(me.id));
+  // Destructive actions (deleting tasks/phases) are owner-only — leads may
+  // manage work but not destroy it. Admins keep the ability because they can
+  // already delete the entire project.
+  const canDelete = isOwner || isAdmin;
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen]           = useState(false);
   const [blockCompleteOpen, setBlockComplete] = useState(false);
@@ -801,6 +811,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // Inline ccNo editor (owner only)
   const [editingCcNo, setEditingCcNo]         = useState(false);
   const [ccNoDraft, setCcNoDraft]             = useState('');
+  // What the reference IS for this project ("CC#", "SOP#", "CAPA#", …) —
+  // user-pickable because not every project is a Change Control.
+  const [refLabelDraft, setRefLabelDraft]     = useState('');
   // Hover-to-edit title and description (owner only)
   const [editingTitle, setEditingTitle]       = useState(false);
   const [titleDraft, setTitleDraft]           = useState('');
@@ -952,14 +965,28 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     }
   }
 
-  async function saveCcNo(value: string) {
+  async function saveCcNo(value: string, label?: string) {
+    const refName = (label ?? project?.refLabel) || 'Reference number';
     try {
-      await api(`/projects/${id}`, { method: 'PATCH', body: { ccNo: value.trim() } });
+      const body: any = { ccNo: value.trim() };
+      if (label !== undefined) body.refLabel = label.trim();
+      await api(`/projects/${id}`, { method: 'PATCH', body });
       setEditingCcNo(false);
-      showToast('CC# updated');
+      showToast(`${refName} updated`);
       load();
     } catch (e: any) {
-      showToast(e.message || 'Failed to update CC#', 'err');
+      showToast(e.message || `Failed to update ${refName}`, 'err');
+    }
+  }
+
+  async function deletePhase(phaseId: string, phaseName: string) {
+    if (!confirm(`Delete phase "${phaseName}"? Its tasks are kept and move to Unphased. This cannot be undone.`)) return;
+    try {
+      await api(`/projects/${id}/phases/${phaseId}`, { method: 'DELETE' });
+      showToast('Phase deleted — its tasks moved to Unphased');
+      load();
+    } catch (e: any) {
+      showToast(e.message || 'Delete failed', 'err');
     }
   }
 
@@ -1151,9 +1178,26 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           </div>
           {!project.isPersonal && (
             <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[11px] text-slate-400 font-mono">CC#:</span>
               {editingCcNo ? (
                 <>
+                  {/* The reference SCHEME is user-pickable per project — a
+                      project may be tracked by a CC#, an SOP#, a CAPA#, … */}
+                  <datalist id="reflabel-suggestions">
+                    {['CC#', 'SOP#', 'CAPA#', 'DEV#', 'INC#', 'DOC#', 'Ref #'].map((v) => (
+                      <option key={v} value={v} />
+                    ))}
+                  </datalist>
+                  <input
+                    type="text"
+                    list="reflabel-suggestions"
+                    value={refLabelDraft}
+                    onChange={e => setRefLabelDraft(e.target.value)}
+                    maxLength={20}
+                    placeholder="Ref #"
+                    aria-label="Reference type"
+                    title="What this reference is — e.g. CC#, SOP#, CAPA#"
+                    className="text-[11px] font-mono text-slate-500 border-b border-blue-400 outline-none bg-transparent px-0.5 w-16"
+                  />
                   {/* datalist for autocomplete from existing task ccNos */}
                   <datalist id="ccno-suggestions">
                     {Array.from(new Set(tasks.map((t: any) => t.ccNo).filter(Boolean))).map((v: any) => (
@@ -1166,27 +1210,30 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     value={ccNoDraft}
                     onChange={e => setCcNoDraft(e.target.value)}
                     onKeyDown={e => {
-                      if (e.key === 'Enter') { e.preventDefault(); saveCcNo(ccNoDraft); }
+                      if (e.key === 'Enter') { e.preventDefault(); saveCcNo(ccNoDraft, refLabelDraft); }
                       if (e.key === 'Escape') { setEditingCcNo(false); }
                     }}
-                    onBlur={() => saveCcNo(ccNoDraft)}
                     autoFocus
                     maxLength={60}
                     placeholder="e.g. CC-2025-042"
                     className="text-[11px] font-mono text-slate-700 border-b border-blue-400 outline-none bg-transparent px-0.5 w-36"
                   />
-                  <button onClick={() => setEditingCcNo(false)} className="text-slate-300 hover:text-slate-500 ml-1" title="Cancel">
+                  <button onClick={() => saveCcNo(ccNoDraft, refLabelDraft)} className="text-blue-500 hover:text-blue-700 ml-1" title="Save">
+                    <CheckCircle2 size={12} />
+                  </button>
+                  <button onClick={() => setEditingCcNo(false)} className="text-slate-300 hover:text-slate-500 ml-0.5" title="Cancel">
                     <X size={11} />
                   </button>
                 </>
               ) : (
                 <>
+                  <span className="text-[11px] text-slate-400 font-mono">{project.refLabel || 'Ref #'}:</span>
                   <span className="text-[11px] font-mono text-slate-600">{project.ccNo || '—'}</span>
                   {isOwner && (
                     <button
-                      onClick={() => { setCcNoDraft(project.ccNo || ''); setEditingCcNo(true); }}
+                      onClick={() => { setCcNoDraft(project.ccNo || ''); setRefLabelDraft(project.refLabel || ''); setEditingCcNo(true); }}
                       className="ml-1 text-slate-300 hover:text-blue-500 transition-colors"
-                      title="Edit CC#"
+                      title={`Edit ${project.refLabel || 'reference number'}`}
                     >
                       <Pencil size={11} />
                     </button>
@@ -1434,6 +1481,13 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${pctP === 100 ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
                       {pctP}%
                     </span>
+                    {canDelete && (
+                      <button onClick={() => deletePhase(ph.id, ph.name)} aria-label={`Delete phase ${ph.name}`}
+                        title="Delete this phase (owner only) — its tasks move to Unphased"
+                        className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-all">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="divide-y divide-slate-100">
@@ -1486,7 +1540,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                         )}
                         <PriorityTag priority={t.priority} />
                         {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
-                        {canManage && (
+                        {canDelete && (
                           <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
                             className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-all shrink-0">
                             <Trash2 size={13} />
@@ -1550,7 +1604,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     )}
                     <PriorityTag priority={t.priority} />
                     {t.dueDate && <span className="text-xs text-slate-400 font-mono">{formatDate(t.dueDate)}</span>}
-                    {canManage && (
+                    {canDelete && (
                       <button onClick={() => deleteTask(t.id)} aria-label="Delete task"
                         className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-all shrink-0">
                         <Trash2 size={13} />
@@ -1577,10 +1631,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               status view (see KanbanBoardMobile). Pure CSS switch by breakpoint
               so the desktop board is never affected. */}
           <div className="hidden md:block">
-            <KanbanBoard tasks={tasks} onDropReorder={dropReorder} isLead={canManage} onDelete={deleteTask} />
+            <KanbanBoard tasks={tasks} onDropReorder={dropReorder} isLead={canManage} canDelete={canDelete} onDelete={deleteTask} />
           </div>
           <div className="md:hidden">
-            <KanbanBoardMobile tasks={tasks} onMove={dropReorder} isLead={canManage} onDelete={deleteTask} />
+            <KanbanBoardMobile tasks={tasks} onMove={dropReorder} isLead={canManage} canDelete={canDelete} onDelete={deleteTask} />
           </div>
         </>
       )}

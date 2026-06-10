@@ -951,12 +951,31 @@ export function BirdsEyeView({ data, onClose, onChange }: {
                       <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodColor="#1e293b" floodOpacity="0.10" />
                     </filter>
                   </defs>
+                  <g pointerEvents={brushOn ? 'none' : undefined}>
                   {edges.map((e, i) => {
                     const a = nodeIndex.get(e.from); const b = nodeIndex.get(e.to);
                     if (!a || !b) return null;
-                    // Softer, thinner connectors — calmer than a hard slate line.
-                    return <path key={i} d={edgePath(a, b)} fill="none" stroke="#cbd6e4" strokeWidth={1.25} strokeOpacity={0.85} />;
+                    // Clicking a connector expands/hides the subtree hanging
+                    // off it — the child's own subtree when the child is
+                    // collapsible, otherwise the parent's stack (so a
+                    // project → task edge folds the whole task column).
+                    const collapsibleChild = b.kind === 'team' || b.kind === 'project' || b.kind === 'phase';
+                    const toggleId = collapsibleChild ? b.id : a.id;
+                    const d = edgePath(a, b);
+                    return (
+                      <g key={i} data-be-action="edge-toggle"
+                        onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); toggleCollapsed(toggleId); }}
+                        style={{ cursor: 'pointer' }}>
+                        <title>Expand / hide this branch</title>
+                        {/* Softer, thinner connectors — calmer than a hard slate line. */}
+                        <path d={d} fill="none" stroke="#cbd6e4" strokeWidth={1.25} strokeOpacity={0.85} />
+                        {/* Invisible wide twin of the connector — a comfortable
+                            click target without thickening the visible line. */}
+                        <path d={d} fill="none" stroke="transparent" strokeWidth={14} />
+                      </g>
+                    );
                   })}
+                  </g>
                   <g pointerEvents={brushOn ? 'none' : undefined}>
                   {nodes.map((n) => {
                     const navHref = n.kind === 'task' ? `/tasks/${(n.data as BirdsEyeTask).id}`
@@ -1036,21 +1055,40 @@ export function BirdsEyeView({ data, onClose, onChange }: {
                       </g>
                     ) : null;
 
-                    if (!navHref) {
-                      return (
-                        <g key={n.id} {...dragProps}>
-                          {shape}
-                          {collapseBtn}
-                          {addBtn}
-                          {editBtn}
-                        </g>
-                      );
-                    }
+                    // Clicking the centre of a collapsible card expands/hides
+                    // its subtree (same as the − toggle). Navigation for those
+                    // cards moves to the dedicated ↗ button so a body click
+                    // never surprises with a new tab. Non-collapsible cards
+                    // (tasks without subtasks) keep click-to-open.
+                    const openBtn = navHref && canCollapse ? (
+                      <g
+                        data-be-action="open"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(navHref, '_blank', 'noopener,noreferrer'); }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <title>Open this {n.kind === 'team' ? 'team' : n.kind === 'project' ? 'project' : 'task'} page</title>
+                        <circle cx={n.x + n.width - 30} cy={n.y + 11} r={8} fill="#ffffff" stroke="#cbd5e1" strokeWidth={0.8} />
+                        <path d={`M ${n.x + n.width - 33} ${n.y + 14} L ${n.x + n.width - 27} ${n.y + 8} M ${n.x + n.width - 31} ${n.y + 8} h 4 v 4`}
+                          stroke="#475569" strokeWidth={1.1} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    ) : null;
+
+                    const body = canCollapse ? (
+                      <g onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCollapsed(n.id); }}>
+                        {shape}
+                      </g>
+                    ) : navHref ? (
+                      <a href={navHref} target="_blank" rel="noreferrer">
+                        {shape}
+                      </a>
+                    ) : (
+                      shape
+                    );
+
                     return (
                       <g key={n.id} {...dragProps}>
-                        <a href={navHref} target="_blank" rel="noreferrer">
-                          {shape}
-                        </a>
+                        {body}
+                        {openBtn}
                         {collapseBtn}
                         {addBtn}
                         {editBtn}
@@ -1096,7 +1134,7 @@ export function BirdsEyeView({ data, onClose, onChange }: {
               <span>{k.l}</span>
             </span>
           ))}
-          <span className="ml-auto text-slate-400 hidden sm:inline">Drag to rearrange · − to collapse · pencil to edit · tap to open.</span>
+          <span className="ml-auto text-slate-400 hidden sm:inline">Click a card or its connector to expand/hide · drag to rearrange · ↗ to open · pencil to edit.</span>
         </div>
 
         {editing && (

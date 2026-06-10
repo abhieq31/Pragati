@@ -120,6 +120,7 @@ export function project(p: any, extras: Any = {}) {
     isPersonal: !!(p.isPersonal || p.personal),
     personal: !!(p.isPersonal || p.personal),
     ccNo:      p.ccNo || '',
+    refLabel:  p.refLabel || '',
     createdAt: date(p.createdAt),
     ...extras
   };

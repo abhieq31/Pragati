@@ -82,8 +82,8 @@ export default function TeamsClient({
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap pt-1">
         <div>
-          <h1 className="text-[1.75rem] font-black text-slate-900 tracking-tight leading-tight">Teams</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-[1.75rem] font-black text-slate-900 dark:text-white tracking-tight leading-tight">Teams</h1>
+          <p className="text-sm text-slate-500 dark:text-white/40 mt-1">
             Cross-functional groups — people, projects, and shared accountability.
           </p>
         </div>
@@ -96,13 +96,20 @@ export default function TeamsClient({
 
       {/* Cards grid */}
       {filtered.length === 0 ? (
-        <div className="card p-10 text-center">
-          <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-3">
-            <UsersIcon size={20} className="text-slate-400" />
+        <div className="card p-12 text-center">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mb-4">
+            <UsersIcon size={22} className="text-blue-400" />
           </div>
-          <div className="text-sm font-semibold text-slate-700">No teams yet</div>
+          <div className="text-sm font-bold text-slate-700 dark:text-white/80 mb-1">No teams yet</div>
+          <div className="text-xs text-slate-400 dark:text-white/35 mb-4">
+            {canManage
+              ? 'Group people around a shared mission — then attach projects to it.'
+              : 'Your workspace admin or team lead creates teams; you will see yours here.'}
+          </div>
           {teams.length === 0 && canManage && (
-            <button className="btn-primary mt-3" onClick={() => setCreating(true)}>+ Create your first team</button>
+            <button className="btn-primary text-sm gap-2 inline-flex" onClick={() => setCreating(true)}>
+              <Plus size={14} /> Create your first team
+            </button>
           )}
         </div>
       ) : (
@@ -167,12 +174,12 @@ function TeamCard({
   const extra = Math.max(0, members.length - visibleMembers.length);
 
   return (
-    <div className="card p-6 group hover:shadow-md transition-shadow flex flex-col min-h-[220px]">
+    <div className="card p-6 group hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow] flex flex-col min-h-[220px]">
       {/* Top row: avatar + name + function tag + manage actions */}
       <div className="flex items-start gap-4">
         <Avatar name={team.name} size={48} />
         <div className="flex-1 min-w-0">
-          <Link href={`/teams/${team.id}`} className="font-bold text-[17px] text-slate-900 hover:text-brand-700 truncate block leading-snug">
+          <Link href={`/teams/${team.id}`} className="font-bold text-[17px] text-slate-900 dark:text-white/90 hover:text-brand-700 dark:hover:text-blue-400 truncate block leading-snug transition-colors">
             {team.name}
           </Link>
           <span className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${tone.bg} ${tone.text} ${tone.border}`}>
@@ -202,12 +209,12 @@ function TeamCard({
       </div>
 
       {team.description && (
-        <p className="mt-3 text-[13px] text-slate-500 line-clamp-2 leading-relaxed">{team.description}</p>
+        <p className="mt-3 text-[13px] text-slate-500 dark:text-white/40 line-clamp-2 leading-relaxed">{team.description}</p>
       )}
 
-      <div className="mt-3 text-[11px] text-slate-400">
+      <div className="mt-3 text-[11px] text-slate-400 dark:text-white/35">
         <span className="font-semibold uppercase tracking-wider">Team leader · </span>
-        <span className="text-slate-600 font-medium">{lead?.name || 'Unassigned'}</span>
+        <span className="text-slate-600 dark:text-white/60 font-medium">{lead?.name || 'Unassigned'}</span>
       </div>
 
       {/* Member rail */}
@@ -234,10 +241,10 @@ function TeamCard({
 
       {/* Footer — same structure as project card's bottom-meta row */}
       <div className="mt-auto pt-4 border-t border-slate-100 dark:border-white/[0.05] flex items-center justify-between gap-3">
-        <span className="text-[13px] text-slate-500">
-          <strong className="text-slate-700 font-semibold">{team.memberCount}</strong> member{team.memberCount !== 1 ? 's' : ''}
-          <span className="text-slate-300 mx-1.5">·</span>
-          <strong className="text-slate-700 font-semibold">{team.projectCount}</strong> project{team.projectCount !== 1 ? 's' : ''}
+        <span className="text-[13px] text-slate-500 dark:text-white/40 tabular-nums">
+          <strong className="text-slate-700 dark:text-white/80 font-semibold">{team.memberCount}</strong> member{team.memberCount !== 1 ? 's' : ''}
+          <span className="text-slate-300 dark:text-white/20 mx-1.5">·</span>
+          <strong className="text-slate-700 dark:text-white/80 font-semibold">{team.projectCount}</strong> project{team.projectCount !== 1 ? 's' : ''}
         </span>
         <Link
           href={`/teams/${team.id}`}

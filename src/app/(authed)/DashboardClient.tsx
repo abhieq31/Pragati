@@ -419,7 +419,7 @@ function PanelHeader({
       }`}
     >
       <span className="text-slate-400 dark:text-white/30 shrink-0 inline-flex">{icon}</span>
-      <h3 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/45">{title}</h3>
+      <h3 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/40">{title}</h3>
       {count != null && (
         <span className="text-[10px] font-semibold text-slate-300 dark:text-white/20 tabular-nums">
           {count}{countSuffix}
@@ -649,13 +649,13 @@ function ProjectsColumn({
     <section className="min-w-0">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <FolderKanban size={14} className="text-slate-400 shrink-0" />
-          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
+          <FolderKanban size={14} className="text-slate-400 dark:text-white/30 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/40 truncate">
             Your team’s projects
           </h2>
-          <span className="text-[10px] text-slate-300 font-semibold shrink-0">{projects.length}</span>
+          <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold shrink-0 tabular-nums">{projects.length}</span>
         </div>
-        <Link href="/projects" className="text-xs font-semibold text-blue-600 hover:text-blue-700 shrink-0 whitespace-nowrap">
+        <Link href="/projects" className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0 whitespace-nowrap transition-colors">
           All projects →
         </Link>
       </div>
@@ -1204,11 +1204,11 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
       {!expanded && (
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <TrendingUp size={14} className="text-slate-400 shrink-0" />
-            <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
+            <TrendingUp size={14} className="text-slate-400 dark:text-white/30 shrink-0" />
+            <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/40 truncate">
               Up Next
             </h2>
-            <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
+            <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold shrink-0 tabular-nums">{totalCount}</span>
           </div>
           <button
             type="button"

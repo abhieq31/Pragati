@@ -308,7 +308,7 @@ export default function NewProjectPage() {
     name: '', description: '', lifecycle: 'generic',
     priority: 'medium', gxpImpact: 'none',
     teamId: '', startDate: '', dueDate: '',
-    ccNo: '',
+    ccNo: '', refLabel: '',
   });
   const [phases, setPhases]     = useState<Phase[]>([]);
   const [teams, setTeams]       = useState<any[]>([]);
@@ -424,6 +424,7 @@ export default function NewProjectPage() {
           startDate:   form.startDate || undefined,
           dueDate:     form.dueDate || undefined,
           ccNo:        form.ccNo.trim() || undefined,
+          refLabel:    form.refLabel.trim() || undefined,
           useTemplate: false,
           customPhases: phases.map(ph => ({ name: ph.name, tasks: ph.tasks })),
         },
@@ -538,15 +539,33 @@ export default function NewProjectPage() {
                   Reference number
                   <span className="normal-case font-normal text-slate-300 ml-1">(optional)</span>
                 </label>
-                <input
-                  className="input font-mono"
-                  placeholder="e.g. CC-2025-042"
-                  maxLength={60}
-                  value={form.ccNo}
-                  onChange={e => up('ccNo', e.target.value)}
-                />
+                <div className="flex gap-2">
+                  {/* The reference TYPE is yours to pick — not every project is
+                      a Change Control, so the label isn't hardwired to CC#. */}
+                  <datalist id="new-reflabel-suggestions">
+                    {['CC#', 'SOP#', 'CAPA#', 'DEV#', 'INC#', 'DOC#', 'Ref #'].map(v => (
+                      <option key={v} value={v} />
+                    ))}
+                  </datalist>
+                  <input
+                    className="input font-mono w-28 shrink-0"
+                    list="new-reflabel-suggestions"
+                    placeholder="Type"
+                    aria-label="Reference type"
+                    maxLength={20}
+                    value={form.refLabel}
+                    onChange={e => up('refLabel', e.target.value)}
+                  />
+                  <input
+                    className="input font-mono flex-1"
+                    placeholder="e.g. CC-2025-042"
+                    maxLength={60}
+                    value={form.ccNo}
+                    onChange={e => up('ccNo', e.target.value)}
+                  />
+                </div>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Your own reference number (e.g. Change Control ID). Shown everywhere instead of the system-generated code.
+                  Pick what the reference is (CC#, SOP#, CAPA#, …) and your own number. Shown everywhere instead of the system-generated code.
                 </p>
               </div>
             )}

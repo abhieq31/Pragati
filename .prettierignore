@@ -1,0 +1,16 @@
+# Build output & deps
+node_modules
+.next
+out
+dist
+build
+coverage
+test-results
+playwright-report
+
+# Lockfiles & generated
+package-lock.json
+next-env.d.ts
+
+# Markdown keeps hand-tuned tables/line breaks
+*.md

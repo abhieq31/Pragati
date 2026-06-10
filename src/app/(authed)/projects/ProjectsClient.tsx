@@ -5,7 +5,7 @@ import { api } from '@/lib/client/api';
 import { LifecycleTag, StatusTag, formatDate } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { useIsLead } from '@/components/CurrentUserContext';
-import { Plus, Search, SlidersHorizontal, Lock } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Lock, X } from 'lucide-react';
 
 interface InitialData {
   projects:   any[];
@@ -73,8 +73,8 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       {/* Header */}
       <div className="flex items-start justify-between pt-1">
         <div>
-          <h1 className="text-[1.75rem] font-black text-slate-900 tracking-tight leading-tight">Projects</h1>
-          <p className="text-sm text-slate-500 mt-1">All quality projects across teams &amp; lifecycles.</p>
+          <h1 className="text-[1.75rem] font-black text-slate-900 dark:text-white tracking-tight leading-tight">Projects</h1>
+          <p className="text-sm text-slate-500 dark:text-white/40 mt-1">All quality projects across teams &amp; lifecycles.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {/* Single create flow for every user — the form on /projects/new
@@ -87,15 +87,17 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       </div>
 
       {/* Tabs — archiving isn't in use yet, so the Archived bin is hidden. */}
-      <div className="flex gap-1 border-b border-slate-100">
+      <div className="flex gap-1 border-b border-slate-100 dark:border-white/[0.06]" role="tablist" aria-label="Project filters">
         {(['active', 'completed', 'all'] as const).map(t => (
           <button
             key={t}
+            role="tab"
+            aria-selected={tab === t}
             onClick={() => { setTab(t); setStatus(''); }}
-            className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors capitalize ${
+            className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${
               tab === t
-                ? 'text-blue-700 border-b-2 border-blue-600 bg-blue-50/50'
-                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                ? 'text-blue-700 dark:text-blue-400 border-b-2 border-blue-600 bg-blue-50/50 dark:bg-blue-500/10'
+                : 'text-slate-400 dark:text-white/35 hover:text-slate-600 dark:hover:text-white/60 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
             }`}
           >
             {t === 'active' ? 'Active' : t === 'completed' ? 'Completed' : 'All'}
@@ -311,14 +313,25 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {loaded && projects.length === 0 && (
         <div className="card p-12 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-            <Plus size={22} className="text-blue-400" />
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
+            {q || team || lc || status
+              ? <Search size={22} className="text-blue-400" />
+              : <Plus size={22} className="text-blue-400" />}
           </div>
-          <div className="text-sm font-bold text-slate-700 mb-1">No projects yet</div>
-          <div className="text-xs text-slate-400 mb-4">
-            {q || team || lc || status ? 'No projects match those filters.' : 'Create your first project to get started.'}
+          <div className="text-sm font-bold text-slate-700 dark:text-white/80 mb-1">
+            {q || team || lc || status ? 'No matching projects' : 'No projects yet'}
           </div>
-          {!q && !team && !lc && !status && (
+          <div className="text-xs text-slate-400 dark:text-white/35 mb-4">
+            {q || team || lc || status ? 'Try a different search or clear the filters below.' : 'Create your first project to get started.'}
+          </div>
+          {q || team || lc || status ? (
+            <button
+              onClick={() => { setQ(''); setTeam(''); setLc(''); setStatus(''); }}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            >
+              <X size={14} /> Clear filters
+            </button>
+          ) : (
             <Link href="/projects/new" className="btn-primary text-sm gap-2 inline-flex">
               <Plus size={14} /> New project
             </Link>

@@ -63,12 +63,19 @@ const ProjectSchema = new Schema(
     // can create one; it carries no team.
     personal: { type: Boolean, default: false },
 
-    // ── GxP / Change-Control project reference ──────────────────────────
-    // A project-level Change Control reference that ties this project to a
-    // formal CC document (e.g. "CC-2025-042"). Distinct from the per-task
-    // ccNo — this is the project-wide regulatory identifier. Every change is
-    // audited (before/after) because it is a regulated GxP record identifier.
+    // ── Project reference number ─────────────────────────────────────────
+    // A project-level reference that ties this project to a formal source
+    // document (e.g. "CC-2025-042", "SOP-2026-0004", "CAPA-2025-118").
+    // Stored in `ccNo` for backward compatibility, but the *kind* of
+    // reference is user-pickable per project via `refLabel` — not every
+    // project is a Change Control. Distinct from the per-task ccNo — this is
+    // the project-wide regulatory identifier. Every change is audited
+    // (before/after) because it is a regulated GxP record identifier.
     ccNo: { type: String, default: '' },
+    // What the reference number IS for this project — e.g. "CC#", "SOP#",
+    // "CAPA#", "INC#". Free text so each team can match its own document
+    // numbering scheme. Empty string renders as the generic "Ref #".
+    refLabel: { type: String, default: '' },
   },
   { timestamps: true }
 );

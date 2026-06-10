@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const scope = await getLeadScope(user!.sub, user!.role);
     const body = await readBody(req, ProjectUpdateSchema);
     const { password, remarks, ...updates } = body;
-    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status isPersonal code ccNo').lean();
+    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status isPersonal code ccNo refLabel').lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const isShared = !((current as any).isPersonal || String((current as any).code || '').startsWith('PRSN-'));
@@ -94,6 +94,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const ccNoChanging = updates.ccNo !== undefined && updates.ccNo !== ((current as any).ccNo || '');
     if (isShared) {
+      // The reference label is per-project ("CC#", "SOP#", …) so the audit
+      // entry names the scheme the team actually uses.
+      const refLabel = (updates.refLabel ?? (current as any).refLabel) || 'Ref #';
       const meta: Record<string, any> = {};
       if (ccNoChanging) {
         // GxP identifier change: record exact before/after values.
@@ -105,7 +108,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         category: 'project', actor: user,
         targetType: 'project', targetId: params.id, targetLabel: (fresh as any)?.name || '',
         summary: ccNoChanging
-          ? `Project CC# changed: "${(current as any).ccNo || '—'}" → "${updates.ccNo}"`
+          ? `Project ${refLabel} changed: "${(current as any).ccNo || '—'}" → "${updates.ccNo}"`
           : statusChanging
             ? `Project status → ${updates.status}${remarks ? ` — ${remarks.trim()}` : ''}`
             : 'Updated project details',

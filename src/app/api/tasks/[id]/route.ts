@@ -4,7 +4,7 @@ import { Task } from '@/models/Task';
 import { Project } from '@/models/Project';
 import { User } from '@/models/User';
 import { Notification } from '@/models/Notification';
-import { requireUser, canMutate } from '@/lib/auth';
+import { requireUser, canMutate, isAdmin } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { task as taskS } from '@/lib/serialize';
 import { TaskUpdateSchema } from '@/lib/validations';
@@ -20,19 +20,22 @@ export const runtime = 'nodejs';
 
 async function assertTaskInScope(taskId: string, userId: string, role?: string | null) {
   const t = await Task.findById(taskId).select('projectId privateToUserId').lean();
-  if (!t) return { t: null, forbidden: false, ownsPersonal: false, ownsPrivate: false };
+  if (!t) return { t: null, forbidden: false, ownsProject: false, ownsPersonal: false, ownsPrivate: false };
   const privateOwner = (t as any).privateToUserId;
   const ownsPrivate = !!privateOwner && String(privateOwner) === String(userId);
   if (privateOwner && !ownsPrivate) {
-    return { t, forbidden: true, ownsPersonal: false, ownsPrivate: false };
+    return { t, forbidden: true, ownsProject: false, ownsPersonal: false, ownsPrivate: false };
   }
   const scope = await getLeadScope(userId, role);
   const proj = await Project.findOne({ _id: t.projectId, ...projectsVisibleFilter(scope) })
     .select('_id isPersonal ownerId').lean();
+  // The project owner has full authority over its tasks — destructive actions
+  // (delete) are gated on ownership, not just the lead role.
+  const ownsProject = !!(proj && String((proj as any).ownerId) === String(userId));
   // The owner of a personal project has full authority over its tasks, even as
   // an IC — a private workspace would be pointless otherwise.
-  const ownsPersonal = !!(proj && (proj as any).isPersonal && String((proj as any).ownerId) === String(userId));
-  return { t, forbidden: !proj, ownsPersonal, ownsPrivate };
+  const ownsPersonal = !!(proj && (proj as any).isPersonal && ownsProject);
+  return { t, forbidden: !proj, ownsProject, ownsPersonal, ownsPrivate };
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -197,12 +200,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const { t, forbidden, ownsPersonal, ownsPrivate } = await assertTaskInScope(params.id, user!.sub, user!.role);
+    const { t, forbidden, ownsProject, ownsPrivate } = await assertTaskInScope(params.id, user!.sub, user!.role);
     if (!t || forbidden) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    // Leads delete visible shared tasks; ICs may delete tasks inside their own personal project
-    // and the owner can delete private task overlays linked to shared projects.
-    if (!canMutate(user!.role) && !ownsPersonal && !ownsPrivate) {
-      return NextResponse.json({ error: 'Only leads can delete tasks.' }, { status: 403 });
+    // Deleting a task is destructive — only the PROJECT OWNER may do it (plus
+    // workspace admins, who can already delete the entire project). Leads who
+    // don't own the project may manage tasks but not destroy them. The owner
+    // of a private task overlay can always delete their own overlay.
+    if (!isAdmin(user!.role) && !ownsProject && !ownsPrivate) {
+      return NextResponse.json({ error: 'Only the project owner can delete tasks.' }, { status: 403 });
     }
     const doomed = await Task.findById(params.id).select('title projectId').lean();
     await Task.deleteOne({ _id: params.id });

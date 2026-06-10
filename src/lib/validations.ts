@@ -135,6 +135,10 @@ export const ProjectCreateSchema = z.object({
   // User-defined reference number (e.g. "CC-2025-042"). Stored as ccNo;
   // distinct from the auto-generated `code` system identifier.
   ccNo: z.string().max(60).optional(),
+  // User-pickable label describing what the reference number is for THIS
+  // project ("CC#", "SOP#", "CAPA#", …) — not every project is a Change
+  // Control. Empty renders as the generic "Ref #".
+  refLabel: z.string().max(20).optional(),
   description: z.string().max(5000).optional(),
   lifecycle: ProjectLifecycleEnum.default('generic'),
   priority: PriorityEnum.optional(),
@@ -173,9 +177,11 @@ export const ProjectUpdateSchema = z.object({
   startDate: dateString.nullable().optional(),
   dueDate: dateString.nullable().optional(),
   gxpImpact: GxpImpactEnum.optional(),
-  // Project-level Change Control reference number — a GxP identifier whose
-  // every change must be logged with a before/after record.
+  // Project-level reference number — a GxP identifier whose every change
+  // must be logged with a before/after record. `refLabel` is the
+  // user-pickable name of the reference scheme ("CC#", "SOP#", "CAPA#", …).
   ccNo: z.string().max(60).optional(),
+  refLabel: z.string().max(20).optional(),
   // E-signature fields for controlled status changes on shared projects
   // (21 CFR Part 11 §11.10/§11.50). The route re-verifies `password` and
   // records `remarks` (the reason) verbatim in the audit trail. Optional here

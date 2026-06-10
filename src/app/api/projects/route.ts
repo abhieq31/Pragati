@@ -150,6 +150,7 @@ export async function POST(req: NextRequest) {
     const project = await Project.create({
       code,
       ccNo: body.ccNo || '',
+      refLabel: body.refLabel || '',
       name: body.name,
       description: body.description || '',
       lifecycle: isPersonal ? 'generic' : body.lifecycle,
