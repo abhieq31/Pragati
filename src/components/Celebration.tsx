@@ -15,10 +15,10 @@ const CONFETTI_COLORS = ['#1769C8', '#2B8C47', '#fbbf24', '#f472b6', '#38bdf8', 
 
 function ConfettiPiece({ i }: { i: number }) {
   // Deterministic-ish spread so pieces fan across the width with varied timing.
-  const left  = (i * 53) % 100;
+  const left = (i * 53) % 100;
   const delay = (i % 10) * 0.12;
-  const dur   = 2.4 + ((i * 7) % 12) / 10;
-  const size  = 7 + (i % 4) * 2;
+  const dur = 2.4 + ((i * 7) % 12) / 10;
+  const size = 7 + (i % 4) * 2;
   const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
   const round = i % 3 === 0;
   return (
@@ -71,7 +71,9 @@ export function Celebration({
     >
       {/* Confetti layer */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 70 }).map((_, i) => <ConfettiPiece key={i} i={i} />)}
+        {Array.from({ length: 70 }).map((_, i) => (
+          <ConfettiPiece key={i} i={i} />
+        ))}
       </div>
 
       {/* Kudos card */}
@@ -82,7 +84,9 @@ export function Celebration({
         <div className="text-5xl mb-2 leading-none">{emoji}</div>
         <h2 className="text-xl font-black tracking-tight text-slate-900">{title}</h2>
         {subtitle && <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{subtitle}</p>}
-        <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-300">Tap to dismiss</p>
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+          Tap to dismiss
+        </p>
       </div>
     </div>,
     document.body,

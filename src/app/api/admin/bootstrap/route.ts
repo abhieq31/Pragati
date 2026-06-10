@@ -48,11 +48,11 @@ function tokensMatch(a: string, b: string): boolean {
 }
 
 const BootstrapSchema = z.object({
-  email:        z.string().email().max(254),
-  password:     z.string().min(8).max(200),
-  name:         z.string().trim().max(120).optional().default(''),
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(200),
+  name: z.string().trim().max(120).optional().default(''),
   cleanupUsers: z.boolean().optional().default(false),
-  keepMesOnly:  z.boolean().optional().default(false),
+  keepMesOnly: z.boolean().optional().default(false),
 });
 
 export async function POST(req: NextRequest) {
@@ -80,16 +80,13 @@ export async function POST(req: NextRequest) {
     const json = await req.json().catch(() => ({}));
     const parsed = BootstrapSchema.safeParse(json);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid request', issues: parsed.error.flatten() },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Invalid request', issues: parsed.error.flatten() }, { status: 400 });
     }
-    const email        = parsed.data.email.toLowerCase().trim();
-    const password     = parsed.data.password;
-    const name         = (parsed.data.name || email.split('@')[0]).trim();
+    const email = parsed.data.email.toLowerCase().trim();
+    const password = parsed.data.password;
+    const name = (parsed.data.name || email.split('@')[0]).trim();
     const cleanupUsers = parsed.data.cleanupUsers;
-    const keepMesOnly  = parsed.data.keepMesOnly;
+    const keepMesOnly = parsed.data.keepMesOnly;
 
     await connectDB();
 
@@ -99,23 +96,20 @@ export async function POST(req: NextRequest) {
       user = await User.create({
         email,
         name,
-        passwordHash:       bcrypt.hashSync(password, 10),
-        role:               'admin',
+        passwordHash: bcrypt.hashSync(password, 10),
+        role: 'admin',
         mustChangePassword: false,
-        hasSeenTour:        false,
+        hasSeenTour: false,
       });
     } else {
-      user.passwordHash       = bcrypt.hashSync(password, 10);
-      user.role               = 'admin' as any;
+      user.passwordHash = bcrypt.hashSync(password, 10);
+      user.role = 'admin' as any;
       user.mustChangePassword = false;
       await user.save();
     }
 
     // Single-admin invariant: demote any other admin to 'lead'.
-    await User.updateMany(
-      { _id: { $ne: user._id }, role: 'admin' },
-      { $set: { role: 'lead' } },
-    );
+    await User.updateMany({ _id: { $ne: user._id }, role: 'admin' }, { $set: { role: 'lead' } });
 
     const summary: any = {
       admin: { id: String(user._id), email: user.email, name: user.name, role: user.role },
@@ -124,17 +118,12 @@ export async function POST(req: NextRequest) {
     // 2. Optional: drop every non-invited user.
     if (cleanupUsers) {
       const all = await User.find({}, '_id email createdAt').lean();
-      const invites = await Invite.find(
-        { consumedByUserId: { $ne: null } },
-        'consumedByUserId',
-      ).lean();
-      const invitedIds = new Set(invites.map(i => String(i.consumedByUserId)));
-      const toDrop = all.filter(u =>
-        String(u._id) !== String(user!._id) && !invitedIds.has(String(u._id)),
-      );
+      const invites = await Invite.find({ consumedByUserId: { $ne: null } }, 'consumedByUserId').lean();
+      const invitedIds = new Set(invites.map((i) => String(i.consumedByUserId)));
+      const toDrop = all.filter((u) => String(u._id) !== String(user!._id) && !invitedIds.has(String(u._id)));
       if (toDrop.length > 0) {
-        const res = await User.deleteMany({ _id: { $in: toDrop.map(u => u._id) } });
-        summary.usersDeleted = { count: res.deletedCount, emails: toDrop.map(u => u.email) };
+        const res = await User.deleteMany({ _id: { $in: toDrop.map((u) => u._id) } });
+        summary.usersDeleted = { count: res.deletedCount, emails: toDrop.map((u) => u.email) };
       } else {
         summary.usersDeleted = { count: 0, emails: [] };
       }
@@ -147,16 +136,16 @@ export async function POST(req: NextRequest) {
         summary.projectsDeleted = { error: 'No team starting with "MES" — skipped.' };
       } else {
         const allProjects = await Project.find({}, '_id name teamId').lean();
-        const drop = allProjects.filter(p => String(p.teamId) !== String(mes._id));
+        const drop = allProjects.filter((p) => String(p.teamId) !== String(mes._id));
         if (drop.length > 0) {
-          const ids = drop.map(p => p._id);
-          const taskRes    = await Task.deleteMany({ projectId: { $in: ids } });
+          const ids = drop.map((p) => p._id);
+          const taskRes = await Task.deleteMany({ projectId: { $in: ids } });
           const projectRes = await Project.deleteMany({ _id: { $in: ids } });
           summary.projectsDeleted = {
-            mesTeam:  mes.name,
+            mesTeam: mes.name,
             projects: projectRes.deletedCount,
-            tasks:    taskRes.deletedCount,
-            names:    drop.map(p => p.name),
+            tasks: taskRes.deletedCount,
+            names: drop.map((p) => p.name),
           };
         } else {
           summary.projectsDeleted = { mesTeam: mes.name, projects: 0, tasks: 0, names: [] };

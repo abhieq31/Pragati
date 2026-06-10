@@ -27,15 +27,61 @@ export const runtime = 'nodejs';
  */
 
 const STOP = new Set([
-  'the', 'a', 'an', 'of', 'for', 'to', 'and', 'or', 'in', 'on', 'with', 'at', 'by',
-  'from', 'as', 'is', 'are', 'be', 'this', 'that', 'task', 'tasks', 'new', 'update',
-  'updates', 'review', 'reviews', 'fix', 'add', 'create', 'check', 'do', 'make', 'use',
-  'per', 'via', 'into', 'out', 'up', 'all', 'any', 'no', 'not',
+  'the',
+  'a',
+  'an',
+  'of',
+  'for',
+  'to',
+  'and',
+  'or',
+  'in',
+  'on',
+  'with',
+  'at',
+  'by',
+  'from',
+  'as',
+  'is',
+  'are',
+  'be',
+  'this',
+  'that',
+  'task',
+  'tasks',
+  'new',
+  'update',
+  'updates',
+  'review',
+  'reviews',
+  'fix',
+  'add',
+  'create',
+  'check',
+  'do',
+  'make',
+  'use',
+  'per',
+  'via',
+  'into',
+  'out',
+  'up',
+  'all',
+  'any',
+  'no',
+  'not',
 ]);
 
 function tokenize(s: string): string[] {
-  return Array.from(new Set((String(s).toLowerCase().match(/[a-z0-9]+/g) || [])
-    .filter((w) => w.length > 2 && !STOP.has(w))));
+  return Array.from(
+    new Set(
+      (
+        String(s)
+          .toLowerCase()
+          .match(/[a-z0-9]+/g) || []
+      ).filter((w) => w.length > 2 && !STOP.has(w)),
+    ),
+  );
 }
 
 function median(xs: number[]): number {
@@ -60,13 +106,16 @@ export async function GET(req: NextRequest) {
     // Honour the same visibility the user already has on the project page.
     const scope = await getLeadScope(user!.sub, user!.role);
     const project = await Project.findOne({ _id: projectId, ...projectsVisibleFilter(scope) })
-      .select('_id teamId').lean();
+      .select('_id teamId')
+      .lean();
     if (!project) return empty;
 
     // History = tasks across the project's team (or just this project if none).
     let projectIds: any[] = [projectId];
     if ((project as any).teamId) {
-      const teamProjects = await Project.find({ teamId: (project as any).teamId }).select('_id').lean();
+      const teamProjects = await Project.find({ teamId: (project as any).teamId })
+        .select('_id')
+        .lean();
       if (teamProjects.length) projectIds = teamProjects.map((p) => p._id);
     }
 
@@ -119,7 +168,10 @@ export async function GET(req: NextRequest) {
       let score = 0;
       const matched: string[] = [];
       for (const tok of queryTokens) {
-        if (doc.toks.has(tok)) { score += idf(tok); matched.push(tok); }
+        if (doc.toks.has(tok)) {
+          score += idf(tok);
+          matched.push(tok);
+        }
       }
       if (score <= 0) continue;
       const cur = perAssignee.get(doc.assigneeId) || { score: 0, count: 0, terms: new Set<string>() };

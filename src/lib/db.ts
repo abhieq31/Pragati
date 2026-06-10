@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
-let cached: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } =
-  (global as any).__mongooseCache || { conn: null, promise: null };
+let cached: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } = (global as any)
+  .__mongooseCache || { conn: null, promise: null };
 (global as any).__mongooseCache = cached;
 
 async function resolveUri(): Promise<string> {
@@ -30,7 +30,7 @@ async function resolveUri(): Promise<string> {
   const where = process.env.NODE_ENV === 'production' ? '[CONFIG]' : '[db]';
   throw new Error(
     `${where} MONGODB_URI is not set. Configure it in the hosting dashboard, ` +
-    'or set USE_IN_MEMORY_MONGO=true for local dev.',
+      'or set USE_IN_MEMORY_MONGO=true for local dev.',
   );
 }
 
@@ -46,8 +46,8 @@ function assertProductionConfig() {
   if (!secret || secret.length < 16) {
     throw new Error(
       '[CONFIG] JWT_SECRET is missing or shorter than 16 chars in production. ' +
-      'Set a long random value in the hosting dashboard before serving traffic — ' +
-      'auth tokens cannot be signed or verified safely without it.',
+        'Set a long random value in the hosting dashboard before serving traffic — ' +
+        'auth tokens cannot be signed or verified safely without it.',
     );
   }
 }
@@ -62,7 +62,7 @@ export async function connectDB(): Promise<typeof mongoose> {
         // 25 connections gives headroom without hitting Atlas M0/M10 limits.
         maxPoolSize: 25,
         minPoolSize: 2,
-        serverSelectionTimeoutMS: 5000,  // fail fast, not 15s
+        serverSelectionTimeoutMS: 5000, // fail fast, not 15s
         connectTimeoutMS: 8000,
         socketTimeoutMS: 30000,
         heartbeatFrequencyMS: 10000,
@@ -77,7 +77,7 @@ export async function connectDB(): Promise<typeof mongoose> {
     // recycles). Reset so the next call can retry against a refreshed URI
     // / a recovered cluster.
     cached.promise = null;
-    cached.conn    = null;
+    cached.conn = null;
     throw err;
   }
 

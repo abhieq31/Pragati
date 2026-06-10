@@ -42,7 +42,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             overdue: {
               $sum: {
                 $cond: [
-                  { $and: [{ $ne: ['$status', 'done'] }, { $ne: ['$dueDate', null] }, { $lt: ['$dueDate', now] }] },
+                  {
+                    $and: [
+                      { $ne: ['$status', 'done'] },
+                      { $ne: ['$dueDate', null] },
+                      { $lt: ['$dueDate', now] },
+                    ],
+                  },
                   1,
                   0,
                 ],
@@ -51,7 +57,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           },
         },
       ]),
-      User.find({ _id: { $in: memberIds } }).select('name title').lean(),
+      User.find({ _id: { $in: memberIds } })
+        .select('name title')
+        .lean(),
     ]);
 
     const pMap = new Map<string, any>();

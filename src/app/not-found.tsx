@@ -13,12 +13,10 @@ export default function NotFound() {
         <div className="inline-flex">
           <PragatiMark size={56} flat />
         </div>
-        <h1 className="text-3xl font-black tracking-tight text-slate-900">
-          We can't find that page.
-        </h1>
+        <h1 className="text-3xl font-black tracking-tight text-slate-900">We can't find that page.</h1>
         <p className="text-sm text-slate-500 leading-relaxed">
-          The link you followed might be out of date, or you may not have
-          access. Head back to your dashboard and try again.
+          The link you followed might be out of date, or you may not have access. Head back to your dashboard
+          and try again.
         </p>
         <div>
           <Link href="/" className="btn-primary text-sm inline-flex">

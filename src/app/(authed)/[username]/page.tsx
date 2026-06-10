@@ -19,7 +19,9 @@ import ProfileView from '@/components/ProfileView';
 
 async function findByUsername(username: string) {
   await connectDB();
-  const handle = decodeURIComponent(username || '').trim().toLowerCase();
+  const handle = decodeURIComponent(username || '')
+    .trim()
+    .toLowerCase();
   if (!handle || !/^[a-z0-9._-]{2,40}$/.test(handle)) return null;
   return User.findOne({ username: handle }).lean();
 }
@@ -45,17 +47,13 @@ export default async function PublicProfilePage({ params }: { params: { username
   // contains this user's _id). Run in parallel with fetching the viewer doc.
   const [followerCount, viewerDoc] = await Promise.all([
     User.countDocuments({ following: (doc as any)._id }),
-    isSelf
-      ? Promise.resolve(null)
-      : User.findById(jwt.sub).select('following').lean(),
+    isSelf ? Promise.resolve(null) : User.findById(jwt.sub).select('following').lean(),
   ]);
 
   // Does the logged-in viewer already follow this profile?
   const viewerIsFollowing = isSelf
     ? false
-    : ((viewerDoc as any)?.following || []).some(
-        (id: any) => String(id) === profile.id,
-      );
+    : ((viewerDoc as any)?.following || []).some((id: any) => String(id) === profile.id);
 
   return (
     <ProfileView

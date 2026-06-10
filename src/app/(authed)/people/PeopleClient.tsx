@@ -6,19 +6,45 @@ import { api } from '@/lib/client/api';
 import { RoleBadge } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import dynamic from 'next/dynamic';
-const ActivityGraph = dynamic(
-  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
-  { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
-);
-import { UserPlus, Upload, Copy, Check, X, Shield, User, Users, AlertTriangle, Pencil, Trash2, BarChart3, Search, UserX, RotateCcw, ScrollText, CheckSquare, Square, MinusSquare } from 'lucide-react';
+const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
+  ssr: false,
+  loading: () => <div className="h-40 skeleton rounded-xl" />,
+});
+import {
+  UserPlus,
+  Upload,
+  Copy,
+  Check,
+  X,
+  Shield,
+  User,
+  Users,
+  AlertTriangle,
+  Pencil,
+  Trash2,
+  BarChart3,
+  Search,
+  UserX,
+  RotateCcw,
+  ScrollText,
+  CheckSquare,
+  Square,
+  MinusSquare,
+} from 'lucide-react';
 
 /* ── Activity peek modal — team leaders click a teammate to see how they're
    tracking: contribution graph, streak and badges (read-only, no private
    project data is exposed). ─────────────────────────────────────────────── */
 function ActivityModal({ user, onClose }: { user: any; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start gap-3 mb-5">
           <UserAvatar userId={user.id} name={user.name} size={44} />
           <div className="flex-1 min-w-0">
@@ -28,7 +54,9 @@ function ActivityModal({ user, onClose }: { user: any; onClose: () => void }) {
             </div>
             <div className="text-xs text-slate-400 mt-0.5">Performance overview</div>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"><X size={18} /></button>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5">
+            <X size={18} />
+          </button>
         </div>
         <ActivityGraph userId={user.id} name={user.name} />
       </div>
@@ -38,8 +66,8 @@ function ActivityModal({ user, onClose }: { user: any; onClose: () => void }) {
 
 /* ── role display helpers ─────────────────────────────────────────────── */
 const ROLE_COLOR: Record<string, string> = {
-  admin:    'bg-amber-50 text-amber-800 border-amber-200',
-  pm:       'bg-blue-50  text-blue-700  border-blue-200',
+  admin: 'bg-amber-50 text-amber-800 border-amber-200',
+  pm: 'bg-blue-50  text-blue-700  border-blue-200',
   employee: 'bg-slate-100 text-slate-600 border-slate-200',
 };
 
@@ -68,18 +96,34 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 /* ── Credentials reveal modal ─────────────────────────────────────────── */
-function CredentialsModal({ name, email, tempPassword, onClose }: {
-  name: string; email: string; tempPassword: string; onClose: () => void;
+function CredentialsModal({
+  name,
+  email,
+  tempPassword,
+  onClose,
+}: {
+  name: string;
+  email: string;
+  tempPassword: string;
+  onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Account created</div>
             <div className="text-sm text-slate-400 mt-0.5">Share these credentials with {name}.</div>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5">
+            <X size={18} />
+          </button>
         </div>
 
         <div className="space-y-3 mb-5">
@@ -91,9 +135,13 @@ function CredentialsModal({ name, email, tempPassword, onClose }: {
             </div>
           </div>
           <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 mb-1">Temporary password</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 mb-1">
+              Temporary password
+            </div>
             <div className="flex items-center">
-              <span className="text-sm font-mono font-semibold text-blue-800 flex-1 tracking-wide">{tempPassword}</span>
+              <span className="text-sm font-mono font-semibold text-blue-800 flex-1 tracking-wide">
+                {tempPassword}
+              </span>
               <CopyBtn text={tempPassword} />
             </div>
           </div>
@@ -103,7 +151,9 @@ function CredentialsModal({ name, email, tempPassword, onClose }: {
           This password is shown only once. {name} will be prompted to set their own on first login.
         </div>
 
-        <button onClick={onClose} className="btn-primary w-full justify-center">Done</button>
+        <button onClick={onClose} className="btn-primary w-full justify-center">
+          Done
+        </button>
       </div>
     </div>
   );
@@ -120,21 +170,18 @@ function deriveName(username: string): string {
     .join(' ');
 }
 
-function AddMemberModal({ onClose, onCreated }: {
-  onClose: () => void;
-  onCreated: (name: string) => void;
-}) {
+function AddMemberModal({ onClose, onCreated }: { onClose: () => void; onCreated: (name: string) => void }) {
   // Corporate username, employee ID, and a real work email (used for the daily
   // task-due digest). The display name auto-derives from the username (editable
   // if it looks wrong). No password is collected or shown — contributors sign
   // in with the standard convention the admin communicates out-of-band.
-  const [username, setUsername]     = useState('');
+  const [username, setUsername] = useState('');
   const [employeeId, setEmployeeId] = useState('');
-  const [email, setEmail]           = useState('');
-  const [name, setName]             = useState('');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
   const [nameEdited, setNameEdited] = useState(false);
-  const [saving, setSaving]         = useState(false);
-  const [err, setErr]               = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
 
   function onUsernameChange(value: string) {
     const v = value.toLowerCase();
@@ -160,24 +207,34 @@ function AddMemberModal({ onClose, onCreated }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Add team member</div>
             <div className="text-sm text-slate-400 mt-0.5">
-              Enter their company username and employee ID. They'll appear in
-              your assignee lists and team board straight away.
+              Enter their company username and employee ID. They'll appear in your assignee lists and team
+              board straight away.
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5">
+            <X size={18} />
+          </button>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="label">Corporate username</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono pointer-events-none">@</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono pointer-events-none">
+                @
+              </span>
               <input
                 className="input pl-7 font-mono text-sm"
                 placeholder="priya.sharma"
@@ -194,8 +251,8 @@ function AddMemberModal({ onClose, onCreated }: {
             </div>
             <div className="text-[11px] text-slate-400 mt-1 leading-snug">
               The part of their work email before the
-              <span className="font-mono px-1">@</span>
-              — e.g. <span className="font-mono">priya.sharma</span> for <span className="font-mono">priya.sharma@company.com</span>.
+              <span className="font-mono px-1">@</span>— e.g. <span className="font-mono">priya.sharma</span>{' '}
+              for <span className="font-mono">priya.sharma@company.com</span>.
             </div>
           </div>
 
@@ -227,23 +284,31 @@ function AddMemberModal({ onClose, onCreated }: {
               onChange={(e) => setEmail(e.target.value)}
             />
             <div className="text-[11px] text-slate-400 mt-1 leading-snug">
-              Where their daily “tasks due today” email is sent. They can turn that email on or off in their profile.
+              Where their daily “tasks due today” email is sent. They can turn that email on or off in their
+              profile.
             </div>
           </div>
 
           <div>
-            <label className="label">Display name <span className="text-slate-300 font-normal normal-case">(auto-filled)</span></label>
+            <label className="label">
+              Display name <span className="text-slate-300 font-normal normal-case">(auto-filled)</span>
+            </label>
             <input
               className="input"
               placeholder="Priya Sharma"
               required
               value={name}
-              onChange={(e) => { setName(e.target.value); setNameEdited(true); }}
+              onChange={(e) => {
+                setName(e.target.value);
+                setNameEdited(true);
+              }}
             />
           </div>
 
           {err && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">{err}</div>
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              {err}
+            </div>
           )}
 
           <button type="submit" disabled={saving} className="btn-primary w-full justify-center">
@@ -259,7 +324,13 @@ function AddMemberModal({ onClose, onCreated }: {
    Paste a roster (one person per line: username, employee ID, name) and
    create contributor accounts in one shot. Built for onboarding a big team
    without adding people one at a time. */
-interface ParsedRow { username: string; employeeId: string; name: string; notifyEmail: string; bad?: string; }
+interface ParsedRow {
+  username: string;
+  employeeId: string;
+  name: string;
+  notifyEmail: string;
+  bad?: string;
+}
 
 function parseRoster(text: string): ParsedRow[] {
   return text
@@ -269,9 +340,9 @@ function parseRoster(text: string): ParsedRow[] {
     .map((line) => {
       // comma- or tab-separated (so a paste straight from Excel works)
       const parts = line.split(/[,\t]/).map((p) => p.trim());
-      const username    = (parts[0] || '').toLowerCase();
-      const employeeId  = parts[1] || '';
-      const name        = parts[2] || '';
+      const username = (parts[0] || '').toLowerCase();
+      const employeeId = parts[1] || '';
+      const name = parts[2] || '';
       const notifyEmail = (parts[3] || '').toLowerCase();
       let bad: string | undefined;
       if (!/^[a-z][a-z0-9_.]{1,28}[a-z0-9_]$/.test(username)) bad = 'invalid username';
@@ -282,22 +353,37 @@ function parseRoster(text: string): ParsedRow[] {
 }
 
 function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: (n: number) => void }) {
-  const [text, setText]     = useState('');
+  const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
-  const [result, setResult] = useState<{ createdCount: number; skippedCount: number; skipped: Array<{ username: string; reason: string }> } | null>(null);
+  const [err, setErr] = useState('');
+  const [result, setResult] = useState<{
+    createdCount: number;
+    skippedCount: number;
+    skipped: Array<{ username: string; reason: string }>;
+  } | null>(null);
 
-  const rows      = parseRoster(text);
+  const rows = parseRoster(text);
   const validRows = rows.filter((r) => !r.bad);
-  const badRows   = rows.filter((r) => r.bad);
+  const badRows = rows.filter((r) => r.bad);
 
   async function submit() {
-    if (validRows.length === 0) { setErr('Add at least one valid row.'); return; }
-    setErr(''); setSaving(true);
+    if (validRows.length === 0) {
+      setErr('Add at least one valid row.');
+      return;
+    }
+    setErr('');
+    setSaving(true);
     try {
       const res = await api<{ createdCount: number; skippedCount: number; skipped: any[] }>('/users/bulk', {
         method: 'POST',
-        body: { rows: validRows.map((r) => ({ username: r.username, employeeId: r.employeeId, name: r.name || undefined, notifyEmail: r.notifyEmail || undefined })) },
+        body: {
+          rows: validRows.map((r) => ({
+            username: r.username,
+            employeeId: r.employeeId,
+            name: r.name || undefined,
+            notifyEmail: r.notifyEmail || undefined,
+          })),
+        },
       });
       setResult(res);
       onDone(res.createdCount);
@@ -309,17 +395,25 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="text-base font-bold text-slate-900">Import contributors</div>
             <div className="text-sm text-slate-400 mt-0.5">
-              One person per line: <span className="font-mono">username, employee ID, name, email</span>{' '}
-              (name &amp; email optional). Up to 100 at a time.
+              One person per line: <span className="font-mono">username, employee ID, name, email</span> (name
+              &amp; email optional). Up to 100 at a time.
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5">
+            <X size={18} />
+          </button>
         </div>
 
         {result ? (
@@ -331,19 +425,28 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
             {result.skipped.length > 0 && (
               <div className="text-xs text-slate-500 max-h-40 overflow-auto border border-slate-100 rounded-lg p-3">
                 {result.skipped.map((s) => (
-                  <div key={s.username}><span className="font-mono">@{s.username}</span> — {s.reason}</div>
+                  <div key={s.username}>
+                    <span className="font-mono">@{s.username}</span> — {s.reason}
+                  </div>
                 ))}
               </div>
             )}
-            <button onClick={onClose} className="btn-primary w-full justify-center">Done</button>
+            <button onClick={onClose} className="btn-primary w-full justify-center">
+              Done
+            </button>
           </div>
         ) : (
           <div className="space-y-3">
             <textarea
               className="textarea text-sm font-mono min-h-[180px]"
-              placeholder={'priya.sharma, 100245, Priya Sharma, priya.sharma@company.com\narjun.mehta, 100312\nneha.r, 100410, Neha Rao, neha.rao@company.com'}
+              placeholder={
+                'priya.sharma, 100245, Priya Sharma, priya.sharma@company.com\narjun.mehta, 100312\nneha.r, 100410, Neha Rao, neha.rao@company.com'
+              }
               value={text}
-              onChange={(e) => { setText(e.target.value); setErr(''); }}
+              onChange={(e) => {
+                setText(e.target.value);
+                setErr('');
+              }}
               spellCheck={false}
               autoCapitalize="none"
             />
@@ -351,7 +454,9 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
             {rows.length > 0 && (
               <div className="text-xs text-slate-500">
                 <span className="font-semibold text-emerald-600">{validRows.length} ready</span>
-                {badRows.length > 0 && <span className="text-rose-600 font-semibold"> · {badRows.length} need fixing</span>}
+                {badRows.length > 0 && (
+                  <span className="text-rose-600 font-semibold"> · {badRows.length} need fixing</span>
+                )}
                 {badRows.slice(0, 4).map((r, i) => (
                   <div key={i} className="text-rose-500 mt-0.5">
                     line “{r.username || '(empty)'}” — {r.bad}
@@ -361,12 +466,19 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
             )}
 
             {err && (
-              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">{err}</div>
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                {err}
+              </div>
             )}
 
-            <button onClick={submit} disabled={saving || validRows.length === 0}
-              className="btn-primary w-full justify-center">
-              {saving ? 'Importing…' : `Import ${validRows.length || ''} contributor${validRows.length === 1 ? '' : 's'}`}
+            <button
+              onClick={submit}
+              disabled={saving || validRows.length === 0}
+              className="btn-primary w-full justify-center"
+            >
+              {saving
+                ? 'Importing…'
+                : `Import ${validRows.length || ''} contributor${validRows.length === 1 ? '' : 's'}`}
             </button>
             <p className="text-[11px] text-slate-400 text-center">
               Each gets the standard default password (first name @ employee ID). Nothing is emailed.
@@ -379,11 +491,19 @@ function ImportMembersModal({ onClose, onDone }: { onClose: () => void; onDone: 
 }
 
 /* ── Role-change confirmation dialog ──────────────────────────────────── */
-function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
-  user: any; targetRole: 'lead' | 'contributor';
+function RoleConfirmDialog({
+  user,
+  targetRole,
+  onConfirm,
+  onCancel,
+  saving,
+}: {
+  user: any;
+  targetRole: 'lead' | 'contributor';
   // The handler now needs the sign-off bundle — it can't fire a bare PATCH.
   onConfirm: (signoff: { password: string; reason: string }) => void;
-  onCancel: () => void; saving: boolean;
+  onCancel: () => void;
+  saving: boolean;
 }) {
   const promote = targetRole === 'lead';
   const [password, setPassword] = useState('');
@@ -400,12 +520,24 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${promote ? 'bg-blue-50' : 'bg-amber-50'}`}>
-              {promote ? <Shield size={18} className="text-blue-600" /> : <AlertTriangle size={18} className="text-amber-500" />}
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${promote ? 'bg-blue-50' : 'bg-amber-50'}`}
+            >
+              {promote ? (
+                <Shield size={18} className="text-blue-600" />
+              ) : (
+                <AlertTriangle size={18} className="text-amber-500" />
+              )}
             </div>
             <div className="min-w-0">
               <div className="text-base font-black text-slate-900 tracking-tight">
@@ -424,25 +556,54 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
           <div className="space-y-2.5">
             <div>
               <label className="label">Your password</label>
-              <input type="password" className="input" autoComplete="current-password"
-                value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="Confirm with your password" autoFocus />
+              <input
+                type="password"
+                className="input"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Confirm with your password"
+                autoFocus
+              />
             </div>
             <div>
               <label className="label">Reason</label>
-              <textarea className="textarea" rows={2} value={reason}
-                onChange={e => setReason(e.target.value)}
-                placeholder={promote ? 'e.g. Moving to lead role per HR plan' : 'e.g. Stepping down from lead duties'} />
+              <textarea
+                className="textarea"
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={
+                  promote ? 'e.g. Moving to lead role per HR plan' : 'e.g. Stepping down from lead duties'
+                }
+              />
             </div>
           </div>
 
-          {err && <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2">{err}</div>}
+          {err && (
+            <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2">
+              {err}
+            </div>
+          )}
 
           <div className="flex gap-2 w-full pt-1">
-            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button onClick={submit} disabled={saving}
+            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">
+              Cancel
+            </button>
+            <button
+              onClick={submit}
+              disabled={saving}
               className={`flex-1 justify-center btn ${promote ? 'btn-primary' : ''}`}
-              style={!promote ? { background: 'linear-gradient(135deg,#b45309,#d97706)', color: '#fff', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' } : {}}>
+              style={
+                !promote
+                  ? {
+                      background: 'linear-gradient(135deg,#b45309,#d97706)',
+                      color: '#fff',
+                      boxShadow: '0 1px 3px rgba(180,83,9,0.3)',
+                    }
+                  : {}
+              }
+            >
               {saving ? '…' : promote ? 'Sign & promote' : 'Sign & make contributor'}
             </button>
           </div>
@@ -457,34 +618,31 @@ function RoleConfirmDialog({ user, targetRole, onConfirm, onCancel, saving }: {
    personal details. Identity changes require the admin to re-enter their own
    password and supply a justification — those touch downstream-reconciled
    fields and must leave a 21 CFR Part 11 §11.200 audit trail. */
-function EditUserModal({ user, onClose, onSaved }: {
-  user: any; onClose: () => void; onSaved: () => void;
-}) {
+function EditUserModal({ user, onClose, onSaved }: { user: any; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
-    name:         user.name         || '',
-    username:     user.username     || '',
-    email:        user.email        || '',
-    employeeId:   user.employeeId   || '',
-    notifyEmail:  user.notifyEmail  || '',
-    title:        user.title        || '',
-    department:   user.department   || '',
+    name: user.name || '',
+    username: user.username || '',
+    email: user.email || '',
+    employeeId: user.employeeId || '',
+    notifyEmail: user.notifyEmail || '',
+    title: user.title || '',
+    department: user.department || '',
     organisation: user.organisation || '',
-    location:     user.location     || '',
+    location: user.location || '',
   });
   const [reason, setReason] = useState('');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [err, setErr] = useState('');
 
   // Identity fields are the ones that trigger the e-signature requirement.
   // We diff against the loaded user so a "save" with no identity edits skips
   // the sign-off ask entirely.
-  const identityChanged = (
-    form.name       !== (user.name       || '') ||
-    form.username   !== (user.username   || '') ||
-    form.email      !== (user.email      || '') ||
-    form.employeeId !== (user.employeeId || '')
-  );
+  const identityChanged =
+    form.name !== (user.name || '') ||
+    form.username !== (user.username || '') ||
+    form.email !== (user.email || '') ||
+    form.employeeId !== (user.employeeId || '');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -492,7 +650,8 @@ function EditUserModal({ user, onClose, onSaved }: {
       setErr('Identity changes require your password and a 4+ character reason.');
       return;
     }
-    setSaving(true); setErr('');
+    setSaving(true);
+    setErr('');
     try {
       const body: Record<string, any> = { ...form };
       if (identityChanged) {
@@ -504,93 +663,139 @@ function EditUserModal({ user, onClose, onSaved }: {
       onClose();
     } catch (e: any) {
       setErr(e.message || 'Failed to save.');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-start justify-between mb-5">
           <div>
             <div className="text-base font-bold text-slate-900">Edit profile</div>
             <div className="text-sm text-slate-400 mt-0.5 font-mono">@{handleOf(user)}</div>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5"><X size={18} /></button>
+          <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5">
+            <X size={18} />
+          </button>
         </div>
         <form onSubmit={submit} className="space-y-4">
           {/* ── Identity (audited) ─────────────────────────────────────── */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Identity</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+              Identity
+            </div>
             <div className="space-y-3">
               <div>
                 <label className="label">Full name</label>
-                <input className="input" required value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })} />
+                <input
+                  className="input"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Username</label>
-                  <input className="input font-mono text-sm" pattern="[a-z0-9._-]+" value={form.username}
+                  <input
+                    className="input font-mono text-sm"
+                    pattern="[a-z0-9._-]+"
+                    value={form.username}
                     placeholder="e.g. priya.s"
-                    onChange={e => setForm({ ...form, username: e.target.value.toLowerCase() })} />
+                    onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase() })}
+                  />
                 </div>
                 <div>
                   <label className="label">Employee ID</label>
-                  <input className="input font-mono text-sm" value={form.employeeId}
+                  <input
+                    className="input font-mono text-sm"
+                    value={form.employeeId}
                     placeholder="e.g. EMP-1024"
-                    onChange={e => setForm({ ...form, employeeId: e.target.value })} />
+                    onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+                  />
                 </div>
               </div>
               <div>
                 <label className="label">Email</label>
-                <input type="email" className="input" value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })} />
+                <input
+                  type="email"
+                  className="input"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
               </div>
               <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 leading-snug">
-                Identity changes (name, username, email, employee ID) are signed
-                and audited. The user will be signed out across devices on save.
+                Identity changes (name, username, email, employee ID) are signed and audited. The user will be
+                signed out across devices on save.
               </p>
             </div>
           </div>
 
           {/* ── Personal details (not audited as identity) ─────────────── */}
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Personal details</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+              Personal details
+            </div>
             <div className="space-y-3">
               <div>
                 <label className="label">Notification email</label>
-                <input type="email" className="input" placeholder="priya.sharma@company.com"
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="priya.sharma@company.com"
                   value={form.notifyEmail}
-                  onChange={e => setForm({ ...form, notifyEmail: e.target.value })} />
+                  onChange={(e) => setForm({ ...form, notifyEmail: e.target.value })}
+                />
                 <p className="text-[11px] text-slate-400 mt-1 leading-snug">
-                  Real address for the daily “tasks due today” email. Leave blank to disable email for this person.
+                  Real address for the daily “tasks due today” email. Leave blank to disable email for this
+                  person.
                 </p>
               </div>
               <div>
                 <label className="label">Job title</label>
-                <input className="input" placeholder="e.g. QA Validation Engineer"
+                <input
+                  className="input"
+                  placeholder="e.g. QA Validation Engineer"
                   value={form.title}
-                  onChange={e => setForm({ ...form, title: e.target.value })} />
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Organisation</label>
-                  <input className="input" placeholder="e.g. Pharma Division"
+                  <input
+                    className="input"
+                    placeholder="e.g. Pharma Division"
                     value={form.organisation}
-                    onChange={e => setForm({ ...form, organisation: e.target.value })} />
+                    onChange={(e) => setForm({ ...form, organisation: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="label">Department</label>
-                  <input className="input" placeholder="e.g. Quality Assurance"
+                  <input
+                    className="input"
+                    placeholder="e.g. Quality Assurance"
                     value={form.department}
-                    onChange={e => setForm({ ...form, department: e.target.value })} />
+                    onChange={(e) => setForm({ ...form, department: e.target.value })}
+                  />
                 </div>
               </div>
               <div>
                 <label className="label">Location / site</label>
-                <input className="input" placeholder="e.g. Pune Plant 2"
+                <input
+                  className="input"
+                  placeholder="e.g. Pune Plant 2"
                   value={form.location}
-                  onChange={e => setForm({ ...form, location: e.target.value })} />
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                />
               </div>
             </div>
           </div>
@@ -598,24 +803,42 @@ function EditUserModal({ user, onClose, onSaved }: {
           {/* ── E-signature (only when identity changed) ──────────────── */}
           {identityChanged && (
             <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 space-y-2.5">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Sign-off required</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700">
+                Sign-off required
+              </div>
               <div>
                 <label className="label">Your password</label>
-                <input type="password" className="input" autoComplete="current-password"
-                  value={password} onChange={e => setPassword(e.target.value)} placeholder="Confirm with your password" />
+                <input
+                  type="password"
+                  className="input"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Confirm with your password"
+                />
               </div>
               <div>
                 <label className="label">Reason</label>
-                <textarea className="textarea" rows={2} value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  placeholder="e.g. Username corrected per HR ticket #4321" />
+                <textarea
+                  className="textarea"
+                  rows={2}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="e.g. Username corrected per HR ticket #4321"
+                />
               </div>
             </div>
           )}
 
-          {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">{err}</div>}
+          {err && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              {err}
+            </div>
+          )}
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">
+              Cancel
+            </button>
             <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
               {saving ? 'Saving…' : 'Save changes'}
             </button>
@@ -627,12 +850,26 @@ function EditUserModal({ user, onClose, onSaved }: {
 }
 
 /* ── Remove member confirm dialog ────────────────────────────────────── */
-function RemoveConfirmDialog({ user, onConfirm, onCancel, saving }: {
-  user: any; onConfirm: () => void; onCancel: () => void; saving: boolean;
+function RemoveConfirmDialog({
+  user,
+  onConfirm,
+  onCancel,
+  saving,
+}: {
+  user: any;
+  onConfirm: () => void;
+  onCancel: () => void;
+  saving: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex flex-col items-center text-center gap-4">
           <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
             <Trash2 size={22} className="text-red-600" />
@@ -640,15 +877,23 @@ function RemoveConfirmDialog({ user, onConfirm, onCancel, saving }: {
           <div>
             <div className="text-base font-black text-slate-900">Remove {user.name}?</div>
             <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-              Their account will be deleted and they will lose access immediately.
-              All tasks assigned to them will be unassigned. This cannot be undone.
+              Their account will be deleted and they will lose access immediately. All tasks assigned to them
+              will be unassigned. This cannot be undone.
             </p>
           </div>
           <div className="flex gap-2 w-full">
-            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button onClick={onConfirm} disabled={saving}
+            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={saving}
               className="flex-1 justify-center btn text-white"
-              style={{ background: 'linear-gradient(135deg,#dc2626,#ef4444)', boxShadow: '0 1px 3px rgba(220,38,38,0.3)' }}>
+              style={{
+                background: 'linear-gradient(135deg,#dc2626,#ef4444)',
+                boxShadow: '0 1px 3px rgba(220,38,38,0.3)',
+              }}
+            >
               {saving ? 'Removing…' : 'Remove member'}
             </button>
           </div>
@@ -663,53 +908,85 @@ function RemoveConfirmDialog({ user, onConfirm, onCancel, saving }: {
    person's task history intact (ALCOA+ Attributable & Enduring). A reason
    is required so the audit trail records *why* — 21 CFR Part 11 §11.10(e).
    The account can be reactivated later, which also clears any lock. */
-function DeactivateDialog({ user, onConfirm, onCancel, saving }: {
+function DeactivateDialog({
+  user,
+  onConfirm,
+  onCancel,
+  saving,
+}: {
   user: any;
   // Reason + admin password (e-signature). Server validates both.
   onConfirm: (data: { reason: string; password: string }) => void;
-  onCancel: () => void; saving: boolean;
+  onCancel: () => void;
+  saving: boolean;
 }) {
   const [reason, setReason] = useState('');
   const [password, setPassword] = useState('');
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal-sm max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
               <UserX size={18} className="text-amber-600" />
             </div>
             <div className="min-w-0">
-              <div className="text-base font-black text-slate-900 tracking-tight">Deactivate {user.name}?</div>
+              <div className="text-base font-black text-slate-900 tracking-tight">
+                Deactivate {user.name}?
+              </div>
               <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                They lose access immediately and disappear from assignee lists, but the
-                account and all their task history are preserved. You can reactivate it
-                later. This is the recommended alternative to permanent removal.
+                They lose access immediately and disappear from assignee lists, but the account and all their
+                task history are preserved. You can reactivate it later. This is the recommended alternative
+                to permanent removal.
               </p>
             </div>
           </div>
           <div>
-            <label className="label">Reason <span className="text-slate-300 font-normal normal-case">(audit trail)</span></label>
+            <label className="label">
+              Reason <span className="text-slate-300 font-normal normal-case">(audit trail)</span>
+            </label>
             <textarea
-              className="textarea text-sm" rows={2}
+              className="textarea text-sm"
+              rows={2}
               placeholder="e.g. Left the organisation · role transfer · extended leave"
-              value={reason} onChange={(e) => setReason(e.target.value)} autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              autoFocus
             />
           </div>
           <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1.5">Sign-off</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1.5">
+              Sign-off
+            </div>
             <label className="label">Your password</label>
-            <input type="password" className="input" autoComplete="current-password"
-              value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="Confirm with your password" />
+            <input
+              type="password"
+              className="input"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Confirm with your password"
+            />
           </div>
           <div className="flex gap-2 w-full">
-            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">
+              Cancel
+            </button>
             <button
               onClick={() => onConfirm({ reason: reason.trim(), password })}
               disabled={saving || !reason.trim() || !password}
               className="flex-1 justify-center btn text-white"
-              style={{ background: 'linear-gradient(135deg,#b45309,#d97706)', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' }}>
+              style={{
+                background: 'linear-gradient(135deg,#b45309,#d97706)',
+                boxShadow: '0 1px 3px rgba(180,83,9,0.3)',
+              }}
+            >
               {saving ? 'Deactivating…' : 'Sign & deactivate'}
             </button>
           </div>
@@ -726,22 +1003,51 @@ function DeactivateDialog({ user, onConfirm, onCancel, saving }: {
    user flow's sign-off requirement so bulk never becomes a compliance bypass. */
 type BulkAction = 'deactivate' | 'make_contributor' | 'promote_lead';
 const BULK_META: Record<BulkAction, { verb: string; tone: string; bg: string; note: string }> = {
-  deactivate:       { verb: 'Deactivate', tone: 'text-amber-700', bg: 'linear-gradient(135deg,#b45309,#d97706)', note: 'They lose access immediately but their accounts and task history are preserved. Reactivate any time.' },
-  make_contributor: { verb: 'Make contributor', tone: 'text-slate-700', bg: 'linear-gradient(135deg,#475569,#64748b)', note: 'Leads in the selection drop to contributor access. Their work stays intact.' },
-  promote_lead:     { verb: 'Promote to lead', tone: 'text-blue-700', bg: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', note: 'Contributors in the selection gain lead access — create teams, allocate projects, assign tasks.' },
+  deactivate: {
+    verb: 'Deactivate',
+    tone: 'text-amber-700',
+    bg: 'linear-gradient(135deg,#b45309,#d97706)',
+    note: 'They lose access immediately but their accounts and task history are preserved. Reactivate any time.',
+  },
+  make_contributor: {
+    verb: 'Make contributor',
+    tone: 'text-slate-700',
+    bg: 'linear-gradient(135deg,#475569,#64748b)',
+    note: 'Leads in the selection drop to contributor access. Their work stays intact.',
+  },
+  promote_lead: {
+    verb: 'Promote to lead',
+    tone: 'text-blue-700',
+    bg: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
+    note: 'Contributors in the selection gain lead access — create teams, allocate projects, assign tasks.',
+  },
 };
 
-function BulkActionDialog({ action, count, onConfirm, onCancel, saving }: {
-  action: BulkAction; count: number;
+function BulkActionDialog({
+  action,
+  count,
+  onConfirm,
+  onCancel,
+  saving,
+}: {
+  action: BulkAction;
+  count: number;
   onConfirm: (data: { password: string; reason: string }) => void;
-  onCancel: () => void; saving: boolean;
+  onCancel: () => void;
+  saving: boolean;
 }) {
   const [reason, setReason] = useState('');
   const [password, setPassword] = useState('');
   const m = BULK_META[action];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={onCancel}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-modal max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex flex-col gap-4">
           <div>
             <div className="text-base font-black text-slate-900 tracking-tight">
@@ -750,27 +1056,45 @@ function BulkActionDialog({ action, count, onConfirm, onCancel, saving }: {
             <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{m.note}</p>
           </div>
           <div>
-            <label className="label">Reason <span className="text-slate-300 font-normal normal-case">(audit trail · applied to each record)</span></label>
+            <label className="label">
+              Reason{' '}
+              <span className="text-slate-300 font-normal normal-case">
+                (audit trail · applied to each record)
+              </span>
+            </label>
             <textarea
-              className="textarea text-sm" rows={2}
+              className="textarea text-sm"
+              rows={2}
               placeholder="e.g. Quarterly access review · team restructure · offboarding cohort"
-              value={reason} onChange={(e) => setReason(e.target.value)} autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              autoFocus
             />
           </div>
           <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1.5">Sign-off</div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-700 mb-1.5">
+              Sign-off
+            </div>
             <label className="label">Your password</label>
-            <input type="password" className="input" autoComplete="current-password"
-              value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="Confirm with your password" />
+            <input
+              type="password"
+              className="input"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Confirm with your password"
+            />
           </div>
           <div className="flex gap-2 w-full">
-            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button onClick={onCancel} className="btn-secondary flex-1 justify-center">
+              Cancel
+            </button>
             <button
               onClick={() => onConfirm({ password, reason: reason.trim() })}
               disabled={saving || reason.trim().length < 4 || !password}
               className="flex-1 justify-center btn text-white"
-              style={{ background: m.bg }}>
+              style={{ background: m.bg }}
+            >
               {saving ? 'Applying…' : `Sign & apply`}
             </button>
           </div>
@@ -787,10 +1111,15 @@ interface PeopleClientProps {
   contribTotal?: number;
   /** Page size the server used for the first contributor batch. */
   contribPage?: number;
-  me:           any;
+  me: any;
 }
 
-export default function PeopleClient({ initialUsers, contribTotal = 0, contribPage = 150, me }: PeopleClientProps) {
+export default function PeopleClient({
+  initialUsers,
+  contribTotal = 0,
+  contribPage = 150,
+  me,
+}: PeopleClientProps) {
   const [users, setUsers] = useState<any[]>(initialUsers);
   const [loadingMore, setLoadingMore] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
@@ -798,7 +1127,9 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
   const [showImport, setShowImport] = useState(false);
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [creds, setCreds] = useState<{ name: string; email: string; tempPassword: string } | null>(null);
-  const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'lead' | 'contributor' } | null>(null);
+  const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'lead' | 'contributor' } | null>(
+    null,
+  );
   const [roleErr, setRoleErr] = useState('');
   const [editUser, setEditUser] = useState<any | null>(null);
   const [removeConfirm, setRemoveConfirm] = useState<any | null>(null);
@@ -817,7 +1148,10 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
     return !!u.username || isLeadOrAdmin;
   }
   function openPerson(u: any) {
-    if (u.username) { router.push(`/${u.username}`); return; }
+    if (u.username) {
+      router.push(`/${u.username}`);
+      return;
+    }
     if (isLeadOrAdmin) setActivityUser(u);
   }
   function personTitle(u: any): string | undefined {
@@ -835,7 +1169,9 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
     const sp = new URLSearchParams({ includeInactive: '1' });
     const term = queryRef.current.trim();
     if (term) sp.set('q', term);
-    api<any[]>(`/users?${sp.toString()}`).then(setUsers).catch(() => {});
+    api<any[]>(`/users?${sp.toString()}`)
+      .then(setUsers)
+      .catch(() => {});
   }
   // Mirror the live query into a ref so load() (called from many handlers) can
   // read it without being recreated on every keystroke.
@@ -869,13 +1205,20 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
     } catch (e: any) {
       setRoleErr(e.message || 'Failed to remove user.');
       setRemoveConfirm(null);
-    } finally { setRemoving(false); }
+    } finally {
+      setRemoving(false);
+    }
   }
 
   // Clear a brute-force lock without rotating the password — useful
   // when the lock came from typos, not a forgotten password.
   async function unlockAccount(user: any) {
-    if (!confirm(`Unlock ${user.name}'s account?\nTheir existing password still works; the failed-attempt counter is reset to zero.`)) return;
+    if (
+      !confirm(
+        `Unlock ${user.name}'s account?\nTheir existing password still works; the failed-attempt counter is reset to zero.`,
+      )
+    )
+      return;
     setSaving(user.id);
     try {
       await api(`/users/${user.id}/unlock`, { method: 'POST' });
@@ -891,13 +1234,18 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
   // we generate a temp password server-side and surface it through the
   // same CredentialsModal used after creating a new user.
   async function resetPassword(user: any) {
-    if (!confirm(`Generate a new temporary password for ${user.name}?\nThey'll be forced to change it on next sign-in.`)) return;
+    if (
+      !confirm(
+        `Generate a new temporary password for ${user.name}?\nThey'll be forced to change it on next sign-in.`,
+      )
+    )
+      return;
     setSaving(user.id);
     try {
-      const res = await api<{ tempPassword: string; user: { name: string; email: string; username?: string } }>(
-        `/users/${user.id}/reset-password`,
-        { method: 'POST' },
-      );
+      const res = await api<{
+        tempPassword: string;
+        user: { name: string; email: string; username?: string };
+      }>(`/users/${user.id}/reset-password`, { method: 'POST' });
       // Surface the username if the account has one, else fall back to email
       // for legacy accounts that haven't been backfilled yet.
       setCreds({
@@ -941,7 +1289,12 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
 
   // Reactivate — restores access and clears any brute-force lock in one go.
   async function reactivate(user: any) {
-    if (!confirm(`Reactivate ${user.name}'s account?\nThey'll be able to sign in again, and any lock is cleared. They keep their existing password.`)) return;
+    if (
+      !confirm(
+        `Reactivate ${user.name}'s account?\nThey'll be able to sign in again, and any lock is cleared. They keep their existing password.`,
+      )
+    )
+      return;
     setSaving(user.id);
     setRoleErr('');
     try {
@@ -979,13 +1332,19 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
   // restores the original bounded first page (kept in a ref) — no unbounded
   // "fetch everyone" ever fires from typing.
   const initialRef = useRef<any[]>(initialUsers);
-  useEffect(() => { queryRef.current = query; }, [query]);
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
   useEffect(() => {
     const term = query.trim();
-    if (!term) { setUsers(initialRef.current); return; }
+    if (!term) {
+      setUsers(initialRef.current);
+      return;
+    }
     const t = setTimeout(() => {
       api<any[]>(`/users?includeInactive=1&q=${encodeURIComponent(term)}`)
-        .then(setUsers).catch(() => {});
+        .then(setUsers)
+        .catch(() => {});
     }, 250);
     return () => clearTimeout(t);
   }, [query]);
@@ -994,14 +1353,19 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
     const loaded = users.filter((u) => u.active !== false && u.role === 'contributor').length;
     setLoadingMore(true);
     try {
-      const res = await api<{ items: any[] }>(`/users?role=contributor&limit=${contribPage}&offset=${loaded}`);
+      const res = await api<{ items: any[] }>(
+        `/users?role=contributor&limit=${contribPage}&offset=${loaded}`,
+      );
       const incoming = res.items || [];
       setUsers((prev) => {
         const seen = new Set(prev.map((u) => u.id));
         return [...prev, ...incoming.filter((u) => !seen.has(u.id))];
       });
-    } catch { /* keep what we have */ }
-    finally { setLoadingMore(false); }
+    } catch {
+      /* keep what we have */
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   // ── Bulk selection (contributors) ───────────────────────────────────────
@@ -1020,21 +1384,25 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
       return next;
     });
   }
-  function clearSelection() { setSelected(new Set()); }
+  function clearSelection() {
+    setSelected(new Set());
+  }
 
   async function confirmBulk(data: { password: string; reason: string }) {
     if (!bulkAction) return;
     setBulkSaving(true);
     setRoleErr('');
     try {
-      const res = await api<{ updatedCount: number; skippedCount: number }>(
-        '/admin/users/bulk-action',
-        { method: 'POST', body: { userIds: Array.from(selected), action: bulkAction, ...data } },
-      );
+      const res = await api<{ updatedCount: number; skippedCount: number }>('/admin/users/bulk-action', {
+        method: 'POST',
+        body: { userIds: Array.from(selected), action: bulkAction, ...data },
+      });
       setBulkAction(null);
       clearSelection();
       const n = res.updatedCount;
-      setJustAdded(`${n} ${n === 1 ? 'account' : 'accounts'} updated${res.skippedCount ? ` · ${res.skippedCount} skipped` : ''}`);
+      setJustAdded(
+        `${n} ${n === 1 ? 'account' : 'accounts'} updated${res.skippedCount ? ` · ${res.skippedCount} skipped` : ''}`,
+      );
       setTimeout(() => setJustAdded(null), 4000);
       await load();
     } catch (e: any) {
@@ -1050,15 +1418,15 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
   const pms = liveUsers.filter((u) => (u.role === 'lead' || u.role === 'admin') && matches(u));
   const ics = liveUsers.filter((u) => u.role === 'contributor' && matches(u));
   const deactivated = users.filter((u) => u.active === false && matches(u));
-  const isLeadOrAdmin = (me?.role === 'lead' || me?.role === 'admin');
+  const isLeadOrAdmin = me?.role === 'lead' || me?.role === 'admin';
   const isAdmin = me?.role === 'admin';
 
   // Workspace-wide totals (unfiltered) for the summary strip. Leads and
   // deactivated accounts are always loaded in full, so their counts are exact;
   // contributors use the server-wide total (the list itself may be paged).
-  const leadCount    = liveUsers.filter((u) => u.role === 'lead' || u.role === 'admin').length;
-  const icCount      = contribTotal || liveUsers.filter((u) => u.role === 'contributor').length;
-  const totalPeople  = leadCount + icCount;
+  const leadCount = liveUsers.filter((u) => u.role === 'lead' || u.role === 'admin').length;
+  const icCount = contribTotal || liveUsers.filter((u) => u.role === 'contributor').length;
+  const totalPeople = leadCount + icCount;
   const deactivatedCount = users.filter((u) => u.active === false).length;
 
   return (
@@ -1073,7 +1441,13 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
       {showImport && (
         <ImportMembersModal
           onClose={() => setShowImport(false)}
-          onDone={(n) => { if (n > 0) { setJustAdded(`${n} contributor${n === 1 ? '' : 's'}`); setTimeout(() => setJustAdded(null), 4000); } load(); }}
+          onDone={(n) => {
+            if (n > 0) {
+              setJustAdded(`${n} contributor${n === 1 ? '' : 's'}`);
+              setTimeout(() => setJustAdded(null), 4000);
+            }
+            load();
+          }}
         />
       )}
       {creds && <CredentialsModal {...creds} onClose={() => setCreds(null)} />}
@@ -1100,7 +1474,10 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
           user={roleConfirm.user}
           targetRole={roleConfirm.targetRole}
           onConfirm={confirmRoleChange}
-          onCancel={() => { setRoleConfirm(null); setRoleErr(''); }}
+          onCancel={() => {
+            setRoleConfirm(null);
+            setRoleErr('');
+          }}
           saving={saving === roleConfirm.user.id}
         />
       )}
@@ -1124,7 +1501,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
             <div>
               <h1 className="page-title">People</h1>
               <p className="text-sm text-slate-500 dark:text-white/45 mt-1 leading-snug">
-                Workspace user management — add people, promote contributors to leads, reset passwords, and unlock accounts.
+                Workspace user management — add people, promote contributors to leads, reset passwords, and
+                unlock accounts.
               </p>
             </div>
           </div>
@@ -1144,10 +1522,9 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
         <div className="flex items-start gap-3">
           <Shield size={16} className="text-blue-600 shrink-0 mt-0.5" />
           <div className="text-sm text-slate-600 leading-relaxed">
-            <strong className="text-blue-700">Roles:</strong>{' '}
-            <strong>Contributors</strong> read their team board and update their own tasks.{' '}
-            <strong>Team Leads</strong> create teams, allocate projects, and assign tasks.{' '}
-            <strong>Admin</strong> (you) manages everyone. Promote and demote anyone below.
+            <strong className="text-blue-700">Roles:</strong> <strong>Contributors</strong> read their team
+            board and update their own tasks. <strong>Team Leads</strong> create teams, allocate projects, and
+            assign tasks. <strong>Admin</strong> (you) manages everyone. Promote and demote anyone below.
           </div>
         </div>
       </div>
@@ -1155,10 +1532,15 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
       {/* Summary strip — at-a-glance workspace headcount + lock health. */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'People',       value: totalPeople, icon: User,   color: 'text-slate-600' },
-          { label: 'Leads & admin', value: leadCount,  icon: Shield, color: 'text-blue-600' },
-          { label: 'Contributors', value: icCount,     icon: User,   color: 'text-slate-600' },
-          { label: 'Deactivated',  value: deactivatedCount, icon: UserX, color: deactivatedCount ? 'text-amber-600' : 'text-slate-400' },
+          { label: 'People', value: totalPeople, icon: User, color: 'text-slate-600' },
+          { label: 'Leads & admin', value: leadCount, icon: Shield, color: 'text-blue-600' },
+          { label: 'Contributors', value: icCount, icon: User, color: 'text-slate-600' },
+          {
+            label: 'Deactivated',
+            value: deactivatedCount,
+            icon: UserX,
+            color: deactivatedCount ? 'text-amber-600' : 'text-slate-400',
+          },
         ].map((s) => {
           const Icon = s.icon;
           return (
@@ -1184,7 +1566,9 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
       </div>
 
       {roleErr && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{roleErr}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {roleErr}
+        </div>
       )}
 
       {/* PM section */}
@@ -1192,10 +1576,14 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
         <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
           <Shield size={14} className="text-blue-500" />
           <h2 className="text-sm font-bold text-slate-700">Team Leads &amp; Admin</h2>
-          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">{pms.length}</span>
+          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">
+            {pms.length}
+          </span>
         </div>
         {pms.length === 0 ? (
-          <div className="px-5 py-5 text-sm text-slate-400">{q ? 'No leads match your search.' : 'No leads yet.'}</div>
+          <div className="px-5 py-5 text-sm text-slate-400">
+            {q ? 'No leads match your search.' : 'No leads yet.'}
+          </div>
         ) : (
           <div className="divide-y divide-slate-50">
             {pms.map((u) => (
@@ -1205,7 +1593,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                   onClick={() => openPerson(u)}
                   disabled={!canOpenPerson(u)}
                   className={`group flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 transition-colors ${canOpenPerson(u) ? 'hover:bg-blue-50/60 cursor-pointer' : 'cursor-default'}`}
-                  title={personTitle(u)}>
+                  title={personTitle(u)}
+                >
                   <UserAvatar userId={u.id} name={u.name} size={36} />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-slate-800 text-sm leading-tight flex items-center gap-1.5">
@@ -1217,15 +1606,19 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                 </button>
                 <RoleBadge role={u.role} />
                 {u.lockedAt && (
-                  <span className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
-                        title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}>
+                  <span
+                    className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
+                    title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}
+                  >
                     Locked
                   </span>
                 )}
                 {isLeadOrAdmin && (
                   <button
                     className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                    onClick={() => setEditUser(u)} title="Edit profile">
+                    onClick={() => setEditUser(u)}
+                    title="Edit profile"
+                  >
                     <Pencil size={13} />
                   </button>
                 )}
@@ -1233,7 +1626,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                   <Link
                     href={`/audit?targetType=user&targetId=${u.id}`}
                     title="Audit trail"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
                     <ScrollText size={13} />
                   </Link>
                 )}
@@ -1242,7 +1636,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                     className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors border border-rose-200"
                     onClick={() => unlockAccount(u)}
                     disabled={saving === u.id}
-                    title="Clear the failed-login counter so this user can sign in again">
+                    title="Clear the failed-login counter so this user can sign in again"
+                  >
                     Unlock
                   </button>
                 )}
@@ -1251,7 +1646,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                     className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
                     onClick={() => resetPassword(u)}
                     disabled={saving === u.id}
-                    title="Generate a temporary password for this lead">
+                    title="Generate a temporary password for this lead"
+                  >
                     Reset password
                   </button>
                 )}
@@ -1261,7 +1657,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                   <button
                     className="text-xs text-slate-500 hover:text-amber-600 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-amber-50 transition-colors border border-transparent hover:border-amber-200"
                     onClick={() => setRoleConfirm({ user: u, targetRole: 'contributor' })}
-                    disabled={saving === u.id}>
+                    disabled={saving === u.id}
+                  >
                     Make contributor
                   </button>
                 )}
@@ -1270,7 +1667,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                     className="p-1.5 rounded-lg text-slate-300 hover:text-amber-600 hover:bg-amber-50 transition-colors"
                     onClick={() => setDeactivateTarget(u)}
                     disabled={saving === u.id}
-                    title="Deactivate account (keeps the record)">
+                    title="Deactivate account (keeps the record)"
+                  >
                     <UserX size={14} />
                   </button>
                 )}
@@ -1297,17 +1695,22 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                 });
               }}
               className="text-slate-400 hover:text-blue-600 transition-colors"
-              title="Select all shown contributors">
-              {ics.length > 0 && ics.every((u) => selected.has(u.id))
-                ? <CheckSquare size={15} className="text-blue-600" />
-                : ics.some((u) => selected.has(u.id))
-                  ? <MinusSquare size={15} className="text-blue-500" />
-                  : <Square size={15} />}
+              title="Select all shown contributors"
+            >
+              {ics.length > 0 && ics.every((u) => selected.has(u.id)) ? (
+                <CheckSquare size={15} className="text-blue-600" />
+              ) : ics.some((u) => selected.has(u.id)) ? (
+                <MinusSquare size={15} className="text-blue-500" />
+              ) : (
+                <Square size={15} />
+              )}
             </button>
           )}
           <User size={14} className="text-slate-400" />
           <h2 className="text-sm font-bold text-slate-700">Contributors</h2>
-          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 ml-1">{q ? ics.length : (contribTotal || ics.length)}</span>
+          <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 ml-1">
+            {q ? ics.length : contribTotal || ics.length}
+          </span>
         </div>
 
         {/* Bulk action bar — appears when ≥1 contributor is selected. Every
@@ -1315,39 +1718,56 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
         {selected.size > 0 && (
           <div className="px-5 py-2.5 border-b border-blue-100 bg-blue-50/70 flex items-center gap-2 flex-wrap fade-in-soft">
             <span className="text-xs font-bold text-blue-800">{selected.size} selected</span>
-            <button onClick={clearSelection}
-              className="text-xs text-slate-500 hover:text-slate-700 font-semibold px-2 py-1 rounded-lg hover:bg-white/60 transition-colors">
+            <button
+              onClick={clearSelection}
+              className="text-xs text-slate-500 hover:text-slate-700 font-semibold px-2 py-1 rounded-lg hover:bg-white/60 transition-colors"
+            >
               Clear
             </button>
             <div className="flex-1" />
-            <button onClick={() => setBulkAction('promote_lead')}
-              className="text-xs text-blue-700 hover:text-blue-900 font-semibold px-2.5 py-1.5 rounded-lg bg-white border border-blue-200 hover:bg-blue-50 transition-colors inline-flex items-center gap-1.5">
+            <button
+              onClick={() => setBulkAction('promote_lead')}
+              className="text-xs text-blue-700 hover:text-blue-900 font-semibold px-2.5 py-1.5 rounded-lg bg-white border border-blue-200 hover:bg-blue-50 transition-colors inline-flex items-center gap-1.5"
+            >
               <Shield size={12} /> Promote to lead
             </button>
-            <button onClick={() => setBulkAction('deactivate')}
-              className="text-xs text-amber-700 hover:text-amber-900 font-semibold px-2.5 py-1.5 rounded-lg bg-white border border-amber-200 hover:bg-amber-50 transition-colors inline-flex items-center gap-1.5">
+            <button
+              onClick={() => setBulkAction('deactivate')}
+              className="text-xs text-amber-700 hover:text-amber-900 font-semibold px-2.5 py-1.5 rounded-lg bg-white border border-amber-200 hover:bg-amber-50 transition-colors inline-flex items-center gap-1.5"
+            >
               <UserX size={12} /> Deactivate
             </button>
           </div>
         )}
         {ics.length === 0 ? (
           <div className="px-5 py-5 text-sm text-slate-400">
-            {q ? 'No contributors match your search.' : (
+            {q ? (
+              'No contributors match your search.'
+            ) : (
               <>
                 No contributors yet.{' '}
-                <button onClick={() => setShowAdd(true)} className="text-blue-600 font-medium hover:underline">Add the first member.</button>
+                <button
+                  onClick={() => setShowAdd(true)}
+                  className="text-blue-600 font-medium hover:underline"
+                >
+                  Add the first member.
+                </button>
               </>
             )}
           </div>
         ) : (
           <div className="divide-y divide-slate-50">
             {ics.map((u) => (
-              <div key={u.id} className={`group flex items-center flex-wrap gap-x-3 gap-y-2 px-5 py-4 transition-colors ${selected.has(u.id) ? 'bg-blue-50/50' : ''}`}>
+              <div
+                key={u.id}
+                className={`group flex items-center flex-wrap gap-x-3 gap-y-2 px-5 py-4 transition-colors ${selected.has(u.id) ? 'bg-blue-50/50' : ''}`}
+              >
                 <button
                   type="button"
                   onClick={() => toggleSelect(u.id)}
                   className={`shrink-0 transition-all ${selected.has(u.id) ? 'text-blue-600 opacity-100' : 'text-slate-300 opacity-0 group-hover:opacity-100 hover:text-blue-500'}`}
-                  title={selected.has(u.id) ? 'Deselect' : 'Select for bulk action'}>
+                  title={selected.has(u.id) ? 'Deselect' : 'Select for bulk action'}
+                >
                   {selected.has(u.id) ? <CheckSquare size={16} /> : <Square size={16} />}
                 </button>
                 <button
@@ -1355,7 +1775,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                   onClick={() => openPerson(u)}
                   disabled={!canOpenPerson(u)}
                   className={`group flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 transition-colors ${canOpenPerson(u) ? 'hover:bg-blue-50/60 cursor-pointer' : 'cursor-default'}`}
-                  title={personTitle(u)}>
+                  title={personTitle(u)}
+                >
                   <UserAvatar userId={u.id} name={u.name} size={36} />
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-slate-800 text-sm leading-tight flex items-center gap-1.5">
@@ -1367,14 +1788,18 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                 </button>
                 <RoleBadge role={u.role} />
                 {u.lockedAt && (
-                  <span className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
-                        title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}>
+                  <span
+                    className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
+                    title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}
+                  >
                     Locked
                   </span>
                 )}
                 <button
                   className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-all"
-                  onClick={() => setEditUser(u)} title="Edit profile">
+                  onClick={() => setEditUser(u)}
+                  title="Edit profile"
+                >
                   <Pencil size={13} />
                 </button>
                 {u.lockedAt && (
@@ -1382,7 +1807,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                     className="text-xs text-rose-600 hover:text-rose-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors border border-rose-200"
                     onClick={() => unlockAccount(u)}
                     disabled={saving === u.id}
-                    title="Clear the failed-login counter so this user can sign in again">
+                    title="Clear the failed-login counter so this user can sign in again"
+                  >
                     Unlock
                   </button>
                 )}
@@ -1390,25 +1816,30 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                   className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
                   onClick={() => resetPassword(u)}
                   disabled={saving === u.id}
-                  title="Generate a temporary password">
+                  title="Generate a temporary password"
+                >
                   Reset password
                 </button>
                 <button
                   className="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
                   onClick={() => setRoleConfirm({ user: u, targetRole: 'lead' })}
-                  disabled={saving === u.id}>
+                  disabled={saving === u.id}
+                >
                   Promote to Lead
                 </button>
                 <button
                   className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
                   onClick={() => setDeactivateTarget(u)}
                   disabled={saving === u.id}
-                  title="Deactivate account (keeps the record)">
+                  title="Deactivate account (keeps the record)"
+                >
                   <UserX size={14} />
                 </button>
                 <button
                   className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                  onClick={() => setRemoveConfirm(u)} title="Permanently remove (deletes the record)">
+                  onClick={() => setRemoveConfirm(u)}
+                  title="Permanently remove (deletes the record)"
+                >
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -1420,7 +1851,8 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                 <button
                   onClick={loadMoreContributors}
                   disabled={loadingMore}
-                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50 inline-flex items-center gap-1.5">
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
                   {loadingMore ? 'Loading…' : `Load more · showing ${ics.length} of ${contribTotal}`}
                 </button>
               </div>
@@ -1438,7 +1870,9 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
           <div className="px-5 py-3.5 border-b border-amber-100 bg-amber-50/50 flex items-center gap-2">
             <UserX size={14} className="text-amber-500" />
             <h2 className="text-sm font-bold text-slate-700">Deactivated accounts</h2>
-            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-1">{deactivated.length}</span>
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 ml-1">
+              {deactivated.length}
+            </span>
             <span className="ml-auto text-[11px] text-slate-400">Record retained · can be reactivated</span>
           </div>
           <div className="divide-y divide-slate-50">
@@ -1449,33 +1883,46 @@ export default function PeopleClient({ initialUsers, contribTotal = 0, contribPa
                   onClick={() => openPerson(u)}
                   disabled={!canOpenPerson(u)}
                   className={`flex items-center gap-3 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 transition-colors ${canOpenPerson(u) ? 'hover:bg-amber-50/60 cursor-pointer' : 'cursor-default'}`}
-                  title={personTitle(u)}>
-                  <span className="opacity-60"><UserAvatar userId={u.id} name={u.name} size={36} /></span>
+                  title={personTitle(u)}
+                >
+                  <span className="opacity-60">
+                    <UserAvatar userId={u.id} name={u.name} size={36} />
+                  </span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-slate-700 text-sm leading-tight truncate">{u.name}</div>
+                    <div className="font-semibold text-slate-700 text-sm leading-tight truncate">
+                      {u.name}
+                    </div>
                     <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono">@{handleOf(u)}</span>
                       {u.deactivatedAt && <span>· off {new Date(u.deactivatedAt).toLocaleDateString()}</span>}
                       {u.deactivatedBy && <span>· by {u.deactivatedBy}</span>}
                     </div>
                     {u.deactivationReason && (
-                      <div className="text-[11px] text-amber-700/80 mt-0.5 italic truncate" title={u.deactivationReason}>
+                      <div
+                        className="text-[11px] text-amber-700/80 mt-0.5 italic truncate"
+                        title={u.deactivationReason}
+                      >
                         “{u.deactivationReason}”
                       </div>
                     )}
                   </div>
                 </button>
-                <span className="tag border text-xs font-semibold border-amber-200 bg-amber-50 text-amber-700">Deactivated</span>
+                <span className="tag border text-xs font-semibold border-amber-200 bg-amber-50 text-amber-700">
+                  Deactivated
+                </span>
                 <button
                   className="text-xs text-emerald-700 hover:text-emerald-900 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors border border-emerald-200 inline-flex items-center gap-1.5"
                   onClick={() => reactivate(u)}
                   disabled={saving === u.id}
-                  title="Restore access and clear any lock">
+                  title="Restore access and clear any lock"
+                >
                   <RotateCcw size={12} /> Reactivate
                 </button>
                 <button
                   className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                  onClick={() => setRemoveConfirm(u)} title="Permanently remove (deletes the record)">
+                  onClick={() => setRemoveConfirm(u)}
+                  title="Permanently remove (deletes the record)"
+                >
                   <Trash2 size={13} />
                 </button>
               </div>

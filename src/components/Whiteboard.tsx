@@ -1,6 +1,26 @@
 'use client';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { Pen, Eraser, Undo2, Redo2, Save, RotateCcw, Highlighter, Type as TypeIcon, Square, Circle, ArrowRight as ArrowIcon, Download } from 'lucide-react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import {
+  Pen,
+  Eraser,
+  Undo2,
+  Redo2,
+  Save,
+  RotateCcw,
+  Highlighter,
+  Type as TypeIcon,
+  Square,
+  Circle,
+  ArrowRight as ArrowIcon,
+  Download,
+} from 'lucide-react';
 import { api } from '@/lib/client/api';
 // onSaveToNotes removed — whiteboard is a scratch surface; notes are independent
 
@@ -93,13 +113,17 @@ export function Whiteboard() {
         setPointer(strokes.length);
         if (d?.updatedAt) setSavedAt(new Date(d.updatedAt));
       })
-      .catch(() => { /* empty board */ });
+      .catch(() => {
+        /* empty board */
+      });
   }, []);
 
   // Debounced autosave — fires 1.5s after the last change.
   useEffect(() => {
     if (!dirty.current) return;
-    const t = setTimeout(() => { void save(); }, 1500);
+    const t = setTimeout(() => {
+      void save();
+    }, 1500);
     return () => clearTimeout(t);
   }, [doc, pointer]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -110,8 +134,11 @@ export function Whiteboard() {
       await api('/scratch/whiteboard', { method: 'PUT', body: { strokes } });
       setSavedAt(new Date());
       dirty.current = false;
-    } catch { /* keep dirty so the next change retries */ }
-    finally { setBusy(false); }
+    } catch {
+      /* keep dirty so the next change retries */
+    } finally {
+      setBusy(false);
+    }
   }
 
   // ── Canvas rendering ─────────────────────────────────────────────────
@@ -123,9 +150,9 @@ export function Whiteboard() {
     const cv = canvasRef.current;
     if (!cv) return;
     const dpr = window.devicePixelRatio || 1;
-    cv.width  = Math.round(size.w * dpr);
+    cv.width = Math.round(size.w * dpr);
     cv.height = Math.round(size.h * dpr);
-    cv.style.width  = `${size.w}px`;
+    cv.style.width = `${size.w}px`;
     cv.style.height = `${size.h}px`;
     const ctx = cv.getContext('2d');
     if (!ctx) return;
@@ -133,18 +160,21 @@ export function Whiteboard() {
     repaint(ctx);
   }, [size, doc, pointer]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const repaint = useCallback((ctx: CanvasRenderingContext2D) => {
-    ctx.clearRect(0, 0, size.w, size.h);
-    // Faint dot grid — gives the surface "whiteboard" texture without
-    // dominating the marks the user makes on it.
-    ctx.fillStyle = '#cbd5e1';
-    for (let x = 24; x < size.w; x += 24) {
-      for (let y = 24; y < size.h; y += 24) {
-        ctx.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+  const repaint = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      ctx.clearRect(0, 0, size.w, size.h);
+      // Faint dot grid — gives the surface "whiteboard" texture without
+      // dominating the marks the user makes on it.
+      ctx.fillStyle = '#cbd5e1';
+      for (let x = 24; x < size.w; x += 24) {
+        for (let y = 24; y < size.h; y += 24) {
+          ctx.fillRect(x - 0.6, y - 0.6, 1.2, 1.2);
+        }
       }
-    }
-    for (const s of visibleStrokes) paintStroke(ctx, s);
-  }, [size.w, size.h, visibleStrokes]);
+      for (const s of visibleStrokes) paintStroke(ctx, s);
+    },
+    [size.w, size.h, visibleStrokes],
+  );
 
   function paintStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
     if (s.tool === 'text' && s.text) {
@@ -192,9 +222,15 @@ export function Whiteboard() {
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p1.x - headLen * Math.cos(angle - Math.PI / 6), p1.y - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(
+        p1.x - headLen * Math.cos(angle - Math.PI / 6),
+        p1.y - headLen * Math.sin(angle - Math.PI / 6),
+      );
       ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p1.x - headLen * Math.cos(angle + Math.PI / 6), p1.y - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.lineTo(
+        p1.x - headLen * Math.cos(angle + Math.PI / 6),
+        p1.y - headLen * Math.sin(angle + Math.PI / 6),
+      );
       ctx.stroke();
       return;
     }
@@ -293,9 +329,14 @@ export function Whiteboard() {
     if (!editingText) return;
     const value = (pendingTextValue.current || editingText.value).trim();
     pendingTextValue.current = '';
-    if (!value) { setEditingText(null); return; }
+    if (!value) {
+      setEditingText(null);
+      return;
+    }
     const s: Stroke = {
-      tool: 'text', color, size: penSize,
+      tool: 'text',
+      color,
+      size: penSize,
       points: [{ x: editingText.x, y: editingText.y }],
       text: value,
     };
@@ -305,8 +346,18 @@ export function Whiteboard() {
     dirty.current = true;
   }
 
-  function undo() { if (pointer > 0) { setPointer((n) => n - 1); dirty.current = true; } }
-  function redo() { if (pointer < doc.strokes.length) { setPointer((n) => n + 1); dirty.current = true; } }
+  function undo() {
+    if (pointer > 0) {
+      setPointer((n) => n - 1);
+      dirty.current = true;
+    }
+  }
+  function redo() {
+    if (pointer < doc.strokes.length) {
+      setPointer((n) => n + 1);
+      dirty.current = true;
+    }
+  }
 
   function exportPng() {
     const cv = canvasRef.current;
@@ -319,7 +370,7 @@ export function Whiteboard() {
   }
 
   function clearAll() {
-    if (!confirm('Erase the whole board? This can\'t be undone after the next save.')) return;
+    if (!confirm("Erase the whole board? This can't be undone after the next save.")) return;
     setDoc({ strokes: [] });
     setPointer(0);
     dirty.current = true;
@@ -331,35 +382,76 @@ export function Whiteboard() {
       if (!(e.ctrlKey || e.metaKey)) return;
       if (e.key.toLowerCase() === 'z') {
         e.preventDefault();
-        if (e.shiftKey) redo(); else undo();
+        if (e.shiftKey) redo();
+        else undo();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointer, doc.strokes.length]);
 
   return (
-    <div className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden flex flex-col"
-      style={{ minHeight: 460 }}>
+    <div
+      className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/10 overflow-hidden flex flex-col"
+      style={{ minHeight: 460 }}
+    >
       <div className="shrink-0 flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-100 dark:border-white/[0.06] flex-wrap">
         {/* Tool group */}
         <div className="flex items-center gap-1">
-          <ToolBtn active={tool === 'pen'}         label="Pen"         icon={<Pen size={14} />}         onClick={() => setTool('pen')} />
-          <ToolBtn active={tool === 'highlighter'} label="Highlighter" icon={<Highlighter size={14} />} onClick={() => setTool('highlighter')} />
-          <ToolBtn active={tool === 'eraser'}      label="Eraser"      icon={<Eraser size={14} />}      onClick={() => setTool('eraser')} />
-          <ToolBtn active={tool === 'text'}        label="Text"        icon={<TypeIcon size={14} />}    onClick={() => setTool('text')} />
+          <ToolBtn
+            active={tool === 'pen'}
+            label="Pen"
+            icon={<Pen size={14} />}
+            onClick={() => setTool('pen')}
+          />
+          <ToolBtn
+            active={tool === 'highlighter'}
+            label="Highlighter"
+            icon={<Highlighter size={14} />}
+            onClick={() => setTool('highlighter')}
+          />
+          <ToolBtn
+            active={tool === 'eraser'}
+            label="Eraser"
+            icon={<Eraser size={14} />}
+            onClick={() => setTool('eraser')}
+          />
+          <ToolBtn
+            active={tool === 'text'}
+            label="Text"
+            icon={<TypeIcon size={14} />}
+            onClick={() => setTool('text')}
+          />
           <span className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-0.5" />
-          <ToolBtn active={tool === 'rect'}    label="Rectangle" icon={<Square size={14} />}    onClick={() => setTool('rect')} />
-          <ToolBtn active={tool === 'ellipse'} label="Ellipse"   icon={<Circle size={14} />}    onClick={() => setTool('ellipse')} />
-          <ToolBtn active={tool === 'arrow'}   label="Arrow"     icon={<ArrowIcon size={14} />} onClick={() => setTool('arrow')} />
+          <ToolBtn
+            active={tool === 'rect'}
+            label="Rectangle"
+            icon={<Square size={14} />}
+            onClick={() => setTool('rect')}
+          />
+          <ToolBtn
+            active={tool === 'ellipse'}
+            label="Ellipse"
+            icon={<Circle size={14} />}
+            onClick={() => setTool('ellipse')}
+          />
+          <ToolBtn
+            active={tool === 'arrow'}
+            label="Arrow"
+            icon={<ArrowIcon size={14} />}
+            onClick={() => setTool('arrow')}
+          />
         </div>
 
         {/* Colour swatches */}
         {tool !== 'eraser' && (
           <div className="flex items-center gap-1">
             {COLORS.map((c) => (
-              <button key={c.value} type="button" title={c.label}
+              <button
+                key={c.value}
+                type="button"
+                title={c.label}
                 onClick={() => setColor(c.value)}
                 className={`w-5 h-5 rounded-full transition-transform ${color === c.value ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-110'}`}
                 style={{ background: c.value }}
@@ -372,12 +464,18 @@ export function Whiteboard() {
         {/* Pen size */}
         <div className="flex items-center gap-1">
           {PEN_SIZES.map((s) => (
-            <button key={s} type="button" title={`Size ${s}`}
+            <button
+              key={s}
+              type="button"
+              title={`Size ${s}`}
               onClick={() => setPenSize(s)}
               className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${penSize === s ? 'bg-slate-100 dark:bg-white/[0.08]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.04]'}`}
               aria-label={`Pen size ${s}`}
             >
-              <span className="block rounded-full" style={{ width: s * 2.5, height: s * 2.5, background: tool === 'eraser' ? '#94a3b8' : color }} />
+              <span
+                className="block rounded-full"
+                style={{ width: s * 2.5, height: s * 2.5, background: tool === 'eraser' ? '#94a3b8' : color }}
+              />
             </button>
           ))}
         </div>
@@ -386,18 +484,34 @@ export function Whiteboard() {
         <div className="flex items-center gap-1">
           {savedAt && (
             <span className="text-[10px] text-slate-400 dark:text-white/30 hidden sm:inline mr-1">
-              {busy ? 'Saving…' : `Saved ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+              {busy
+                ? 'Saving…'
+                : `Saved ${savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
             </span>
           )}
           <ToolBtn label="Undo" icon={<Undo2 size={14} />} onClick={undo} disabled={pointer === 0} />
-          <ToolBtn label="Redo" icon={<Redo2 size={14} />} onClick={redo} disabled={pointer >= doc.strokes.length} />
-          <ToolBtn label="Export as PNG" icon={<Download size={14} />} onClick={exportPng} disabled={visibleStrokes.length === 0} />
+          <ToolBtn
+            label="Redo"
+            icon={<Redo2 size={14} />}
+            onClick={redo}
+            disabled={pointer >= doc.strokes.length}
+          />
+          <ToolBtn
+            label="Export as PNG"
+            icon={<Download size={14} />}
+            onClick={exportPng}
+            disabled={visibleStrokes.length === 0}
+          />
           <ToolBtn label="Save now" icon={<Save size={14} />} onClick={() => void save()} disabled={busy} />
           <ToolBtn label="Clear board" icon={<RotateCcw size={14} />} onClick={clearAll} dangerous />
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 relative" style={{ cursor: tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : 'crosshair' }}>
+      <div
+        ref={containerRef}
+        className="flex-1 relative"
+        style={{ cursor: tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : 'crosshair' }}
+      >
         <canvas
           ref={canvasRef}
           onPointerDown={startStroke}
@@ -415,18 +529,27 @@ export function Whiteboard() {
             onChange={(e) => {
               const v = e.target.value;
               pendingTextValue.current = v;
-              setEditingText((prev) => prev ? { ...prev, value: v } : prev);
+              setEditingText((prev) => (prev ? { ...prev, value: v } : prev));
             }}
             onBlur={commitText}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') { pendingTextValue.current = ''; setEditingText(null); }
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitText(); }
+              if (e.key === 'Escape') {
+                pendingTextValue.current = '';
+                setEditingText(null);
+              }
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                commitText();
+              }
             }}
             className="absolute outline-none border-2 border-dashed border-blue-400 bg-white/95 rounded-md p-2 shadow-md"
             style={{
-              left: editingText.x, top: editingText.y - 2,
-              minWidth: 140, minHeight: 32,
-              color, font: `${Math.round(penSize * 6)}px ui-sans-serif, system-ui, sans-serif`,
+              left: editingText.x,
+              top: editingText.y - 2,
+              minWidth: 140,
+              minHeight: 32,
+              color,
+              font: `${Math.round(penSize * 6)}px ui-sans-serif, system-ui, sans-serif`,
               zIndex: 10,
             }}
             placeholder="Type · Enter to place"
@@ -439,8 +562,8 @@ export function Whiteboard() {
               <Pen size={26} className="mx-auto mb-2 text-slate-300" />
               <div className="text-sm font-bold text-slate-500">Start drawing</div>
               <div className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Drag to draw. Switch to highlighter, eraser, or text. Undo
-                with Cmd/Ctrl + Z. Nothing precious — start over any time.
+                Drag to draw. Switch to highlighter, eraser, or text. Undo with Cmd/Ctrl + Z. Nothing precious
+                — start over any time.
               </div>
             </div>
           </div>
@@ -451,20 +574,37 @@ export function Whiteboard() {
 }
 
 function ToolBtn({
-  active, label, icon, onClick, disabled, dangerous,
+  active,
+  label,
+  icon,
+  onClick,
+  disabled,
+  dangerous,
 }: {
-  active?: boolean; label: string; icon: React.ReactNode; onClick: () => void;
-  disabled?: boolean; dangerous?: boolean;
+  active?: boolean;
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  dangerous?: boolean;
 }) {
   return (
-    <button type="button" title={label} aria-label={label}
-      onClick={onClick} disabled={disabled}
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
       className={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
-        disabled ? 'opacity-30 cursor-not-allowed'
-        : active ? 'bg-blue-600 text-white'
-        : dangerous ? 'text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'
-        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06]'
-      }`}>
+        disabled
+          ? 'opacity-30 cursor-not-allowed'
+          : active
+            ? 'bg-blue-600 text-white'
+            : dangerous
+              ? 'text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'
+              : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06]'
+      }`}
+    >
       {icon}
     </button>
   );

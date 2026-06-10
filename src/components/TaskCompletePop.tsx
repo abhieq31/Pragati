@@ -34,14 +34,14 @@ const LINES = [
 function leadIn(task: { title?: string; taskType?: string; gxpCritical?: boolean; priority?: string }) {
   const tt = task.taskType;
   if (tt === 'review' || tt === 'data_review') return 'Reviewed.';
-  if (tt === 'approval')      return 'Approved.';
-  if (tt === 'test')          return 'Test passed.';
-  if (tt === 'deviation')     return 'Deviation closed.';
-  if (tt === 'capa')          return 'CAPA closed.';
+  if (tt === 'approval') return 'Approved.';
+  if (tt === 'test') return 'Test passed.';
+  if (tt === 'deviation') return 'Deviation closed.';
+  if (tt === 'capa') return 'CAPA closed.';
   if (tt === 'audit_finding') return 'Finding resolved.';
-  if (task.gxpCritical)        return 'GxP work done.';
+  if (task.gxpCritical) return 'GxP work done.';
   if (task.priority === 'critical') return 'Critical task done.';
-  if (task.priority === 'high')     return 'High-priority task done.';
+  if (task.priority === 'high') return 'High-priority task done.';
   return 'Task done.';
 }
 
@@ -52,7 +52,8 @@ function hash(s: string): number {
 }
 
 export function TaskCompletePop({
-  task, onDone,
+  task,
+  onDone,
 }: {
   task: { id: string; title?: string; taskType?: string; gxpCritical?: boolean; priority?: string } | null;
   onDone: () => void;
@@ -60,20 +61,25 @@ export function TaskCompletePop({
   const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   useEffect(() => {
     if (!task) return;
     setShow(true);
     // Slide out + unmount. 2.6s on screen is enough to read without lingering.
     const t1 = setTimeout(() => setShow(false), 2400);
     const t2 = setTimeout(() => onDone(), 2700);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [task, onDone]);
 
   if (!task || !mounted) return null;
 
-  const line  = LINES[hash(task.id) % LINES.length];
-  const head  = leadIn(task);
+  const line = LINES[hash(task.id) % LINES.length];
+  const head = leadIn(task);
   const title = (task.title || '').trim();
 
   return createPortal(
@@ -96,12 +102,10 @@ export function TaskCompletePop({
       >
         <CheckCircle2 size={18} className="shrink-0" />
         <div className="min-w-0">
-          <div className="text-[12px] font-black leading-tight">{head} {line}</div>
-          {title && (
-            <div className="text-[11px] text-white/80 leading-tight truncate mt-0.5">
-              {title}
-            </div>
-          )}
+          <div className="text-[12px] font-black leading-tight">
+            {head} {line}
+          </div>
+          {title && <div className="text-[11px] text-white/80 leading-tight truncate mt-0.5">{title}</div>}
         </div>
       </div>
     </div>,

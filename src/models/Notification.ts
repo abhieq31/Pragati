@@ -9,12 +9,16 @@ import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 const NotificationSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    type:   { type: String, enum: ['task_assigned', 'task_done', 'task_waiting', 'general'], default: 'general' },
-    title:  { type: String, required: true },
-    body:   { type: String, default: '' },
-    taskId:    { type: Schema.Types.ObjectId, ref: 'Task' },
+    type: {
+      type: String,
+      enum: ['task_assigned', 'task_done', 'task_waiting', 'general'],
+      default: 'general',
+    },
+    title: { type: String, required: true },
+    body: { type: String, default: '' },
+    taskId: { type: Schema.Types.ObjectId, ref: 'Task' },
     projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
-    read:   { type: Boolean, default: false },
+    read: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

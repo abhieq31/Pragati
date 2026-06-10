@@ -20,10 +20,12 @@ import { User } from '@/models/User';
 
 function toUsername(email: string): string {
   const local = (email.split('@')[0] || '').toLowerCase();
-  return local
-    .replace(/[^a-z0-9._]/g, '')
-    .replace(/^[._]+|[._]+$/g, '')
-    .slice(0, 30) || 'user';
+  return (
+    local
+      .replace(/[^a-z0-9._]/g, '')
+      .replace(/^[._]+|[._]+$/g, '')
+      .slice(0, 30) || 'user'
+  );
 }
 
 async function main() {
@@ -31,7 +33,10 @@ async function main() {
 
   await connectDB();
 
-  const users = await User.find({ $or: [{ username: null }, { username: { $exists: false } }] }, '_id email username name').lean();
+  const users = await User.find(
+    { $or: [{ username: null }, { username: { $exists: false } }] },
+    '_id email username name',
+  ).lean();
   if (users.length === 0) {
     console.log('[backfill] every user already has a username — nothing to do.');
     await mongoose.disconnect();

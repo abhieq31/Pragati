@@ -48,23 +48,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const tempPassword = generateTempPassword();
-    target.passwordHash        = bcrypt.hashSync(tempPassword, 10);
-    target.mustChangePassword  = true;
+    target.passwordHash = bcrypt.hashSync(tempPassword, 10);
+    target.mustChangePassword = true;
     // Resetting the password implicitly lifts any brute-force lock —
     // otherwise the user would still be locked out with the new temp
     // password and admin would have to make two clicks.
     target.failedLoginAttempts = 0;
-    target.lockedAt            = null;
+    target.lockedAt = null;
     // Force-logout every existing session for this user: a reset means the
     // old credential is dead, so any device still holding a token must be
     // kicked out immediately.
-    target.sessionVersion      = (target.sessionVersion ?? 0) + 1;
-    target.activeSessionId     = null;
+    target.sessionVersion = (target.sessionVersion ?? 0) + 1;
+    target.activeSessionId = null;
     await target.save();
 
     await logOperation({
-      action: 'user.reset', category: 'user', actor: user,
-      targetType: 'user', targetId: params.id, targetLabel: target.name,
+      action: 'user.reset',
+      category: 'user',
+      actor: user,
+      targetType: 'user',
+      targetId: params.id,
+      targetLabel: target.name,
       summary: `Reset password for ${target.name}`,
     });
 

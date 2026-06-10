@@ -24,7 +24,10 @@ export default async function ChangelogPage() {
     <div className="max-w-3xl pb-12">
       {/* Header */}
       <div className="pb-5 mb-6 border-b border-slate-100 dark:border-white/[0.06] pt-1">
-        <Link href="/audit" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 mb-3">
+        <Link
+          href="/audit"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 mb-3"
+        >
           <ArrowLeft size={13} /> Back to audit
         </Link>
         <div className="flex items-start gap-3">
@@ -43,7 +46,10 @@ export default async function ChangelogPage() {
       {/* Timeline */}
       <div className="relative pl-5">
         {/* Vertical rail */}
-        <div className="absolute left-1.5 top-1.5 bottom-1.5 w-px bg-slate-200 dark:bg-white/10" aria-hidden />
+        <div
+          className="absolute left-1.5 top-1.5 bottom-1.5 w-px bg-slate-200 dark:bg-white/10"
+          aria-hidden
+        />
 
         <div className="space-y-7">
           {CHANGELOG.map((e, i) => (
@@ -58,16 +64,22 @@ export default async function ChangelogPage() {
                 aria-hidden
               />
 
-              <div className={`rounded-2xl p-5 border ${
-                e.highlight
-                  ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-500/5'
-                  : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03]'
-              }`}>
+              <div
+                className={`rounded-2xl p-5 border ${
+                  e.highlight
+                    ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-500/5'
+                    : 'border-slate-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03]'
+                }`}
+              >
                 <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1.5">
-                  <h2 className={`font-bold text-slate-900 dark:text-white/90 leading-tight ${e.highlight ? 'text-base' : 'text-sm'}`}>
+                  <h2
+                    className={`font-bold text-slate-900 dark:text-white/90 leading-tight ${e.highlight ? 'text-base' : 'text-sm'}`}
+                  >
                     {e.title}
                   </h2>
-                  <time className="text-[11px] font-mono text-slate-400 dark:text-white/40 whitespace-nowrap">{e.date}</time>
+                  <time className="text-[11px] font-mono text-slate-400 dark:text-white/40 whitespace-nowrap">
+                    {e.date}
+                  </time>
                 </div>
 
                 {/* Tag chips */}
@@ -75,7 +87,10 @@ export default async function ChangelogPage() {
                   {e.tags.map((t) => {
                     const m = CHANGELOG_TAG_META[t];
                     return (
-                      <span key={t} className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${m.bg} ${m.text}`}>
+                      <span
+                        key={t}
+                        className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${m.bg} ${m.text}`}
+                      >
                         {m.label}
                       </span>
                     );
@@ -84,7 +99,10 @@ export default async function ChangelogPage() {
 
                 <ul className="space-y-1.5">
                   {e.body.map((line, j) => (
-                    <li key={j} className="text-[13px] text-slate-600 dark:text-white/70 leading-relaxed flex gap-2">
+                    <li
+                      key={j}
+                      className="text-[13px] text-slate-600 dark:text-white/70 leading-relaxed flex gap-2"
+                    >
                       <span className="text-slate-300 dark:text-white/30 shrink-0">•</span>
                       <span>{line}</span>
                     </li>
@@ -97,7 +115,8 @@ export default async function ChangelogPage() {
       </div>
 
       <p className="text-[11px] text-slate-400 dark:text-white/40 mt-8 text-center">
-        Maintained in <code className="font-mono">src/lib/changelog.ts</code> — append an entry at the top of the array when a feature ships.
+        Maintained in <code className="font-mono">src/lib/changelog.ts</code> — append an entry at the top of
+        the array when a feature ships.
       </p>
     </div>
   );

@@ -16,7 +16,9 @@ function getCtx(): AudioContext | null {
     if (!Ctor) return null;
     ctx = new Ctor();
     return ctx;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /** Soft two-tone chime — for task / project completion. */
@@ -29,11 +31,11 @@ export function playSuccessChime() {
 
     const now = c.currentTime;
     const notes = [
-      { freq: 660, start: 0,    dur: 0.12 }, // E5
-      { freq: 880, start: 0.10, dur: 0.18 }, // A5
+      { freq: 660, start: 0, dur: 0.12 }, // E5
+      { freq: 880, start: 0.1, dur: 0.18 }, // A5
     ];
     for (const n of notes) {
-      const osc  = c.createOscillator();
+      const osc = c.createOscillator();
       const gain = c.createGain();
       osc.type = 'sine';
       osc.frequency.value = n.freq;
@@ -44,7 +46,9 @@ export function playSuccessChime() {
       osc.start(now + n.start);
       osc.stop(now + n.start + n.dur + 0.02);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Read user preference — defaults to enabled. */
@@ -80,13 +84,13 @@ export function playFanfare() {
     if (c.state === 'suspended') c.resume();
     const now = c.currentTime;
     const notes = [
-      { freq: 523.25, start: 0.00, dur: 0.16 }, // C5
-      { freq: 659.25, start: 0.10, dur: 0.16 }, // E5
-      { freq: 783.99, start: 0.20, dur: 0.18 }, // G5
+      { freq: 523.25, start: 0.0, dur: 0.16 }, // C5
+      { freq: 659.25, start: 0.1, dur: 0.16 }, // E5
+      { freq: 783.99, start: 0.2, dur: 0.18 }, // G5
       { freq: 1046.5, start: 0.32, dur: 0.34 }, // C6
     ];
     for (const n of notes) {
-      const osc  = c.createOscillator();
+      const osc = c.createOscillator();
       const gain = c.createGain();
       osc.type = 'triangle';
       osc.frequency.value = n.freq;
@@ -97,7 +101,9 @@ export function playFanfare() {
       osc.start(now + n.start);
       osc.stop(now + n.start + n.dur + 0.02);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -115,7 +121,7 @@ export function playDropTick(enabled = true) {
   try {
     if (c.state === 'suspended') c.resume();
     const now = c.currentTime;
-    const osc  = c.createOscillator();
+    const osc = c.createOscillator();
     const gain = c.createGain();
     osc.type = 'sine';
     // Quick descending sweep so it reads as "drop", not "ping".
@@ -127,5 +133,7 @@ export function playDropTick(enabled = true) {
     osc.connect(gain).connect(c.destination);
     osc.start(now);
     osc.stop(now + 0.1);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }

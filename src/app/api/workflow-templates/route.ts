@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const templates = await WorkflowTemplate.find().sort({ createdAt: -1 }).lean();
     return NextResponse.json(
-      templates.map(t => ({
+      templates.map((t) => ({
         id: String(t._id),
         name: t.name,
         description: t.description,
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         createdByName: t.createdByName,
         phases: t.phases,
         createdAt: (t as any).createdAt,
-      }))
+      })),
     );
   } catch (e) {
     return handleError(e);
@@ -42,15 +42,18 @@ export async function POST(req: NextRequest) {
       createdByName: user.name || '',
       phases: body.phases,
     });
-    return NextResponse.json({
-      id: String(template._id),
-      name: template.name,
-      description: template.description,
-      createdBy: String(template.createdBy),
-      createdByName: template.createdByName,
-      phases: template.phases,
-      createdAt: (template as any).createdAt,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        id: String(template._id),
+        name: template.name,
+        description: template.description,
+        createdBy: String(template.createdBy),
+        createdByName: template.createdByName,
+        phases: template.phases,
+        createdAt: (template as any).createdAt,
+      },
+      { status: 201 },
+    );
   } catch (e) {
     return handleError(e);
   }

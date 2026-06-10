@@ -12,7 +12,10 @@ export const metadata = { title: 'Forgot password' };
  */
 export default function ForgotPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: '#F4F7FB' }}>
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-12"
+      style={{ background: '#F4F7FB' }}
+    >
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
           <PragatiMark size={48} />
@@ -23,8 +26,8 @@ export default function ForgotPasswordPage() {
           <div className="px-6 pt-6 pb-4 border-b border-slate-100">
             <h1 className="text-lg font-black text-slate-900">Forgot your password?</h1>
             <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-              Pragati keeps account access under your workspace’s control, so there’s no public
-              email reset. Here’s how to get back in.
+              Pragati keeps account access under your workspace’s control, so there’s no public email reset.
+              Here’s how to get back in.
             </p>
           </div>
 
@@ -37,9 +40,10 @@ export default function ForgotPasswordPage() {
               <div className="min-w-0">
                 <div className="text-sm font-bold text-slate-800">Team members &amp; leads</div>
                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  Ask your workspace admin to reset it. From <span className="font-semibold text-slate-700">People</span>,
-                  they click <span className="font-semibold text-slate-700">Reset password</span> on your row and share the
-                  temporary password — you’ll set your own on the next sign-in.
+                  Ask your workspace admin to reset it. From{' '}
+                  <span className="font-semibold text-slate-700">People</span>, they click{' '}
+                  <span className="font-semibold text-slate-700">Reset password</span> on your row and share
+                  the temporary password — you’ll set your own on the next sign-in.
                 </p>
               </div>
             </div>
@@ -52,9 +56,9 @@ export default function ForgotPasswordPage() {
               <div className="min-w-0">
                 <div className="text-sm font-bold text-slate-800">Workspace admin</div>
                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                  The admin is the single owner. If you've lost access, the platform operator
-                  needs to reset your password directly — contact your IT/QA platform team and
-                  share your workspace and email so they can restore your account.
+                  The admin is the single owner. If you've lost access, the platform operator needs to reset
+                  your password directly — contact your IT/QA platform team and share your workspace and email
+                  so they can restore your account.
                 </p>
               </div>
             </div>
@@ -62,14 +66,17 @@ export default function ForgotPasswordPage() {
             <div className="flex items-start gap-2 text-[11px] text-slate-400 leading-relaxed">
               <KeyRound size={13} className="shrink-0 mt-0.5" />
               <span>
-                For security, Pragati never emails passwords. All resets force a fresh password on the
-                next sign-in and are recorded in the admin operations log.
+                For security, Pragati never emails passwords. All resets force a fresh password on the next
+                sign-in and are recorded in the admin operations log.
               </span>
             </div>
           </div>
 
           <div className="px-5 py-4 border-t border-slate-100">
-            <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-800"
+            >
               <ArrowLeft size={14} /> Back to sign in
             </Link>
           </div>

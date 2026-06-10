@@ -10,8 +10,8 @@ import { User } from '@/models/User';
  * action you just took yourself (pass `actorId` to suppress).
  */
 export async function notify(opts: {
-  userId: string;                 // recipient
-  actorId?: string;               // who caused it (skip if same as recipient)
+  userId: string; // recipient
+  actorId?: string; // who caused it (skip if same as recipient)
   type?: 'task_assigned' | 'task_done' | 'task_waiting' | 'general';
   title: string;
   body?: string;
@@ -30,11 +30,11 @@ export async function notify(opts: {
       if (recipient && (recipient as any)[opts.preferenceKey] === false) return;
     }
     await Notification.create({
-      userId:    opts.userId,
-      type:      opts.type || 'general',
-      title:     opts.title,
-      body:      opts.body || '',
-      taskId:    opts.taskId,
+      userId: opts.userId,
+      type: opts.type || 'general',
+      title: opts.title,
+      body: opts.body || '',
+      taskId: opts.taskId,
       projectId: opts.projectId,
     });
   } catch {

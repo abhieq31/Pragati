@@ -8,23 +8,15 @@ import { Trash2, BarChart3, X, Camera } from 'lucide-react';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
 import dynamic from 'next/dynamic';
 // Heavy interactive SVG canvas — defer it until a viewer opens the modal.
-const BirdsEyeView = dynamic(
-  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
-  { ssr: false, loading: () => null },
-);
-const ActivityGraph = dynamic(
-  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
-  { ssr: false, loading: () => <div className="h-40 skeleton rounded-xl" /> },
-);
-import {
-  Card,
-  ProgressBar,
-  LifecycleTag,
-  StatusTag,
-  RoleBadge,
-  formatDate,
-  TaskLink
-} from '@/components/ui';
+const BirdsEyeView = dynamic(() => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView), {
+  ssr: false,
+  loading: () => null,
+});
+const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
+  ssr: false,
+  loading: () => <div className="h-40 skeleton rounded-xl" />,
+});
+import { Card, ProgressBar, LifecycleTag, StatusTag, RoleBadge, formatDate, TaskLink } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
 import { ExportMenu } from '@/components/ExportMenu';
@@ -62,7 +54,9 @@ export default function TeamDetailPage() {
   const isLead = me?.role === 'lead' || me?.role === 'admin';
   // An IC's team view is personal: they see their own micro-tasks only and
   // none of their teammates' progress. Default them straight to micro-tasks.
-  const [view, setView] = useState<'progress' | 'microtasks' | 'projects'>(isLead ? 'progress' : 'microtasks');
+  const [view, setView] = useState<'progress' | 'microtasks' | 'projects'>(
+    isLead ? 'progress' : 'microtasks',
+  );
 
   async function load() {
     setLoadError('');
@@ -71,14 +65,13 @@ export default function TeamDetailPage() {
       // for contributors). Only request it when the viewer can use it — if we
       // include it for an IC the whole Promise.all rejects and the page hangs
       // on the skeleton forever.
-      const [t, b] = await Promise.all([
-        api<any>(`/teams/${id}`),
-        api<any[]>(`/teams/${id}/board`),
-      ]);
+      const [t, b] = await Promise.all([api<any>(`/teams/${id}`), api<any[]>(`/teams/${id}/board`)]);
       setTeam(t);
       setBoard(b);
       if (isLead) {
-        api<any>(`/analytics/team/${id}/progress`).then(setProgress).catch(() => {});
+        api<any>(`/analytics/team/${id}/progress`)
+          .then(setProgress)
+          .catch(() => {});
       }
     } catch (e: any) {
       setLoadError(e?.message || 'This team could not be loaded.');
@@ -88,12 +81,14 @@ export default function TeamDetailPage() {
     load();
     // The user list only feeds the add-member dropdown (owner/admin only); a
     // failure here must never block the team view from rendering.
-    api<any[]>('/users').then(setUsers).catch(() => {});
+    api<any[]>('/users')
+      .then(setUsers)
+      .catch(() => {});
     // Load team avatar on mount — stored separately (select: false on the
     // model) so we always do a dedicated fetch rather than rely on the team
     // payload.
     api<{ avatarImage: string | null }>(`/teams/${id}/avatar`)
-      .then(r => setAvatarImage(r.avatarImage))
+      .then((r) => setAvatarImage(r.avatarImage))
       .catch(() => {});
   }, [id]);
 
@@ -107,13 +102,16 @@ export default function TeamDetailPage() {
         img.onerror = reject;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          canvas.width  = 128;
+          canvas.width = 128;
           canvas.height = 128;
           const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('Canvas 2d context unavailable')); return; }
+          if (!ctx) {
+            reject(new Error('Canvas 2d context unavailable'));
+            return;
+          }
           // Draw centred square crop then scale to 128×128
           const size = Math.min(img.width, img.height);
-          const sx = (img.width  - size) / 2;
+          const sx = (img.width - size) / 2;
           const sy = (img.height - size) / 2;
           ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
           resolve(canvas.toDataURL('image/jpeg', 0.85));
@@ -159,8 +157,12 @@ export default function TeamDetailPage() {
         <h1 className="text-lg font-bold text-slate-800">Team unavailable</h1>
         <p className="text-sm text-slate-500">{loadError}</p>
         <div className="flex items-center justify-center gap-2 pt-1">
-          <button onClick={() => load()} className="btn-primary">Try again</button>
-          <Link href="/teams" className="btn-secondary">Back to teams</Link>
+          <button onClick={() => load()} className="btn-primary">
+            Try again
+          </button>
+          <Link href="/teams" className="btn-secondary">
+            Back to teams
+          </Link>
         </div>
       </div>
     );
@@ -215,7 +217,9 @@ export default function TeamDetailPage() {
     load();
   }
 
-  const availableUsers = users.filter((u) => u.role !== 'admin' && !team.members.find((m: any) => m.id === u.id));
+  const availableUsers = users.filter(
+    (u) => u.role !== 'admin' && !team.members.find((m: any) => m.id === u.id),
+  );
 
   // Only the team's owner (its lead) or the workspace admin can edit the team
   // — add/remove members, etc. (mirrors the API guard).
@@ -229,8 +233,14 @@ export default function TeamDetailPage() {
       {/* Per-member activity peek — leads/admins click the graph icon on a
           member to see how they're tracking (read-only). */}
       {activityMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in" onClick={() => setActivityMember(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+          onClick={() => setActivityMember(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start gap-3 mb-5">
               <UserAvatar userId={activityMember.id} name={activityMember.name} size={44} />
               <div className="flex-1 min-w-0">
@@ -240,7 +250,12 @@ export default function TeamDetailPage() {
                 </div>
                 <div className="text-xs text-slate-400 mt-0.5">Performance overview</div>
               </div>
-              <button onClick={() => setActivityMember(null)} className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"><X size={18} /></button>
+              <button
+                onClick={() => setActivityMember(null)}
+                className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"
+              >
+                <X size={18} />
+              </button>
             </div>
             <ActivityGraph userId={activityMember.id} name={activityMember.name} />
           </div>
@@ -272,10 +287,11 @@ export default function TeamDetailPage() {
             {/* Change-avatar overlay — only for owner/admin */}
             {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
               <div className="absolute inset-0 rounded-xl bg-black/40 flex items-center justify-center">
-                {avatarUploading
-                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  : <Camera size={18} className="text-white" />
-                }
+                {avatarUploading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera size={18} className="text-white" />
+                )}
               </div>
             )}
           </div>
@@ -320,7 +336,6 @@ export default function TeamDetailPage() {
         )}
       </div>
 
-
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-4">
           <Card
@@ -339,14 +354,17 @@ export default function TeamDetailPage() {
             {/* Helper note — membership IS the access mechanism */}
             {isOwnerOrAdmin && (
               <div className="mb-3 -mt-1 text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2 leading-snug">
-                Add someone here to give them access to every project assigned to this team.
-                Membership is the tag — no separate permissions needed.
+                Add someone here to give them access to every project assigned to this team. Membership is the
+                tag — no separate permissions needed.
               </div>
             )}
             {adding && isOwnerOrAdmin && (
               <div className="flex gap-2 mb-3">
                 <Select
-                  className="flex-1" value={newMember} onChange={setNewMember} ariaLabel="Select user to add"
+                  className="flex-1"
+                  value={newMember}
+                  onChange={setNewMember}
+                  ariaLabel="Select user to add"
                   placeholder="Select user…"
                   options={[
                     { value: '', label: 'Select user…' },
@@ -373,7 +391,8 @@ export default function TeamDetailPage() {
                         {m.title || m.role}
                         {/* Per-member progress is only shown to leads/admins —
                             an IC never sees a teammate's done/overdue counts. */}
-                        {isLead && p &&
+                        {isLead &&
+                          p &&
                           ` · ${p.done}/${p.assigned} done${p.overdue ? ` · ${p.overdue} overdue` : ''}`}
                       </div>
                     </div>
@@ -404,11 +423,13 @@ export default function TeamDetailPage() {
 
         <div className="lg:col-span-3 space-y-4">
           <div className="flex gap-2">
-            {([
-              ...(isLead ? [['progress', 'Team progress']] : []),
-              ['microtasks', isLead ? 'Micro-tasks' : 'My tasks'],
-              ['projects', 'Projects'],
-            ] as [string, string][]).map(([k, l]) => (
+            {(
+              [
+                ...(isLead ? [['progress', 'Team progress']] : []),
+                ['microtasks', isLead ? 'Micro-tasks' : 'My tasks'],
+                ['projects', 'Projects'],
+              ] as [string, string][]
+            ).map(([k, l]) => (
               <button
                 key={k}
                 onClick={() => setView(k as any)}
@@ -482,42 +503,38 @@ export default function TeamDetailPage() {
               </Card>
               <Card title="Per-member load">
                 <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[460px]">
-                  <thead className="text-xs text-slate-500 uppercase">
-                    <tr>
-                      <th className="text-left font-semibold py-2">Member</th>
-                      <th className="text-right font-semibold">Assigned</th>
-                      <th className="text-right font-semibold">Done</th>
-                      <th className="text-right font-semibold">Overdue</th>
-                      <th className="text-left font-semibold pl-4">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {progress.members.map((m: any) => {
-                      const pct = m.assigned ? Math.round((m.done / m.assigned) * 100) : 0;
-                      return (
-                        <tr key={m.id} className="border-t border-slate-100">
-                          <td className="py-2">
-                            <div className="font-medium">{m.name}</div>
-                            <div className="text-xs text-slate-500">{m.title}</div>
-                          </td>
-                          <td className="text-right">{m.assigned}</td>
-                          <td className="text-right">{m.done}</td>
-                          <td
-                            className={`text-right ${
-                              m.overdue ? 'text-red-600 font-semibold' : ''
-                            }`}
-                          >
-                            {m.overdue}
-                          </td>
-                          <td className="pl-4 w-60">
-                            <ProgressBar value={pct} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                  <table className="w-full text-sm min-w-[460px]">
+                    <thead className="text-xs text-slate-500 uppercase">
+                      <tr>
+                        <th className="text-left font-semibold py-2">Member</th>
+                        <th className="text-right font-semibold">Assigned</th>
+                        <th className="text-right font-semibold">Done</th>
+                        <th className="text-right font-semibold">Overdue</th>
+                        <th className="text-left font-semibold pl-4">Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {progress.members.map((m: any) => {
+                        const pct = m.assigned ? Math.round((m.done / m.assigned) * 100) : 0;
+                        return (
+                          <tr key={m.id} className="border-t border-slate-100">
+                            <td className="py-2">
+                              <div className="font-medium">{m.name}</div>
+                              <div className="text-xs text-slate-500">{m.title}</div>
+                            </td>
+                            <td className="text-right">{m.assigned}</td>
+                            <td className="text-right">{m.done}</td>
+                            <td className={`text-right ${m.overdue ? 'text-red-600 font-semibold' : ''}`}>
+                              {m.overdue}
+                            </td>
+                            <td className="pl-4 w-60">
+                              <ProgressBar value={pct} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </Card>
             </>
@@ -545,7 +562,9 @@ export default function TeamDetailPage() {
                         </div>
                       </div>
                       <StatusTag status={t.status} />
-                      <span className={`text-xs w-24 text-right shrink-0 ${overdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                      <span
+                        className={`text-xs w-24 text-right shrink-0 ${overdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}
+                      >
                         {t.dueDate ? formatDate(t.dueDate) : '—'}
                       </span>
                     </div>
@@ -565,11 +584,7 @@ export default function TeamDetailPage() {
               {team.projects.map((p: any) => {
                 const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
                 return (
-                  <Link
-                    href={`/projects/${p.id}`}
-                    key={p.id}
-                    className="card p-4 hover:shadow-md transition"
-                  >
+                  <Link href={`/projects/${p.id}`} key={p.id} className="card p-4 hover:shadow-md transition">
                     <div className="text-xs font-mono text-slate-500">{p.code}</div>
                     <div className="font-semibold">{p.name}</div>
                     <div className="flex gap-2 mt-2">
@@ -602,7 +617,9 @@ export default function TeamDetailPage() {
             scope: 'team',
             teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
             projects: (team.projects || []).map((p: any) => ({
-              id: p.id, code: p.code, name: p.name,
+              id: p.id,
+              code: p.code,
+              name: p.name,
               teamId: team.id,
               health: 'healthy',
               taskCount: p.taskCount ?? 0,
@@ -611,7 +628,9 @@ export default function TeamDetailPage() {
               ownerName: p.ownerName ?? null,
             })),
             tasks: (board || []).map((t: any) => ({
-              id: t.id, title: t.title, projectId: t.projectId,
+              id: t.id,
+              title: t.title,
+              projectId: t.projectId,
               status: t.status,
               assigneeName: t.assigneeName ?? null,
               dueDate: (t.ccTcd || t.dueDate) ?? null,

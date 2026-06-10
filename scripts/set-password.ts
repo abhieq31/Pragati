@@ -21,7 +21,7 @@ import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 
 async function main() {
-  const email    = process.argv[2]?.toLowerCase().trim();
+  const email = process.argv[2]?.toLowerCase().trim();
   const password = process.argv[3];
   if (!email || !password) {
     console.error('usage: tsx scripts/set-password.ts <email> <new-password>');
@@ -41,7 +41,7 @@ async function main() {
     process.exit(1);
   }
 
-  user.passwordHash       = bcrypt.hashSync(password, 10);
+  user.passwordHash = bcrypt.hashSync(password, 10);
   user.mustChangePassword = true;
   await user.save();
 
@@ -55,7 +55,7 @@ async function main() {
   await mongoose.disconnect();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     // a "view audit trail" link on a project/task/user page. Either or both
     // can be set; both narrow the result.
     const targetType = searchParams.get('targetType');
-    const targetId   = searchParams.get('targetId');
-    const q          = (searchParams.get('q') || '').trim();
+    const targetId = searchParams.get('targetId');
+    const q = (searchParams.get('q') || '').trim();
     const limit = Math.min(Number(searchParams.get('limit')) || 100, 500);
     // Cursor pagination: fetch entries strictly older than this ISO timestamp.
     const before = searchParams.get('before');
@@ -30,17 +30,12 @@ export async function GET(req: NextRequest) {
     const filter: Record<string, any> = {};
     if (category && category !== 'all') filter.category = category;
     if (targetType) filter.targetType = targetType;
-    if (targetId)   filter.targetId   = targetId;
+    if (targetId) filter.targetId = targetId;
     if (q) {
       // Case-insensitive partial match across the fields a reviewer searches.
       const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const rx = new RegExp(safe, 'i');
-      filter.$or = [
-        { summary: rx },
-        { actorName: rx },
-        { targetLabel: rx },
-        { action: rx },
-      ];
+      filter.$or = [{ summary: rx }, { actorName: rx }, { targetLabel: rx }, { action: rx }];
     }
     if (before) {
       const d = new Date(before);
@@ -56,9 +51,7 @@ export async function GET(req: NextRequest) {
     // filtering) so a heavily-filtered page still advances correctly. Null once
     // fewer than `limit` raw rows come back — that's the end of the trail.
     const rawLast = rows.length === limit ? (rows[rows.length - 1] as any).createdAt : null;
-    const nextBefore = rawLast
-      ? (rawLast instanceof Date ? rawLast.toISOString() : String(rawLast))
-      : null;
+    const nextBefore = rawLast ? (rawLast instanceof Date ? rawLast.toISOString() : String(rawLast)) : null;
 
     // Never surface personal project data in the operational audit trail —
     // personal projects are private to their owners, and should not appear in
@@ -66,7 +59,8 @@ export async function GET(req: NextRequest) {
     const personalIds = new Set(personalProjects.map((p: any) => String(p._id)));
     let visible = rows.filter((r: any) => {
       if (r.targetType === 'project' && personalIds.has(r.targetId)) return false;
-      if (r.targetType === 'task' && r.meta?.projectId && personalIds.has(String(r.meta.projectId))) return false;
+      if (r.targetType === 'task' && r.meta?.projectId && personalIds.has(String(r.meta.projectId)))
+        return false;
       return true;
     });
 

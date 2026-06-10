@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const userId = jwtUser.sub;
-    const now    = new Date();
-    const in7    = new Date(now.getTime() + 7 * 86400000);
+    const now = new Date();
+    const in7 = new Date(now.getTime() + 7 * 86400000);
     const weekAgo = new Date(now.getTime() - 7 * 86400000);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const oid = new mongoose.Types.ObjectId(userId);
@@ -29,78 +29,135 @@ export async function GET(req: NextRequest) {
     // ── Everything in parallel — one DB round trip per query ─────────────
     const [tasks, allProjects, summaryAgg, statusAgg, orgData] = await Promise.all([
       Task.find({ assigneeId: userId }).sort({ status: 1, dueDate: 1 }).lean(),
-      Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] }).select('_id code name lifecycle status').lean(),
+      Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] })
+        .select('_id code name lifecycle status')
+        .lean(),
       // Summary aggregation
       Task.aggregate([
         { $match: { assigneeId: oid } },
-        { $group: {
+        {
+          $group: {
             _id: null,
             total: { $sum: 1 },
-            done:  { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } },
-            overdue: { $sum: { $cond: [{ $and: [{ $ne: ['$status', 'done'] }, { $ne: ['$dueDate', null] }, { $lt: ['$dueDate', now] }] }, 1, 0] }},
-            dueThisWeek: { $sum: { $cond: [{ $and: [{ $ne: ['$status', 'done'] }, { $ne: ['$dueDate', null] }, { $gte: ['$dueDate', now] }, { $lte: ['$dueDate', in7] }] }, 1, 0] }},
-        }}
+            done: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } },
+            overdue: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: ['$status', 'done'] },
+                      { $ne: ['$dueDate', null] },
+                      { $lt: ['$dueDate', now] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            dueThisWeek: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: ['$status', 'done'] },
+                      { $ne: ['$dueDate', null] },
+                      { $gte: ['$dueDate', now] },
+                      { $lte: ['$dueDate', in7] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
       ]),
-      Task.aggregate([
-        { $match: { assigneeId: oid } },
-        { $group: { _id: '$status', c: { $sum: 1 } } }
-      ]),
+      Task.aggregate([{ $match: { assigneeId: oid } }, { $group: { _id: '$status', c: { $sum: 1 } } }]),
       // Lead org stats — anyone with workspace-management access (lead/pm/admin)
-      (jwtUser.role === 'lead' || jwtUser.role === 'admin')
+      jwtUser.role === 'lead' || jwtUser.role === 'admin'
         ? Task.aggregate([
-            { $facet: {
-                open:          [{ $match: { status: { $ne: 'done' } } }, { $count: 'n' }],
-                overdue:       [{ $match: { status: { $ne: 'done' }, dueDate: { $ne: null, $lt: now } } }, { $count: 'n' }],
-                doneThisMonth: [{ $match: { status: 'done', completedAt: { $gte: monthStart } } }, { $count: 'n' }],
-            }}
+            {
+              $facet: {
+                open: [{ $match: { status: { $ne: 'done' } } }, { $count: 'n' }],
+                overdue: [
+                  { $match: { status: { $ne: 'done' }, dueDate: { $ne: null, $lt: now } } },
+                  { $count: 'n' },
+                ],
+                doneThisMonth: [
+                  { $match: { status: 'done', completedAt: { $gte: monthStart } } },
+                  { $count: 'n' },
+                ],
+              },
+            },
           ])
         : Promise.resolve(null),
     ]);
 
     // ── Build tasks response ───────────────────────────────────────────────
-    const pMap = new Map(allProjects.map(p => [String(p._id), p]));
+    const pMap = new Map(allProjects.map((p) => [String(p._id), p]));
     const sortedTasks = tasks.sort((a, b) => {
       const s = (STATUS_ORDER[a.status || ''] || 9) - (STATUS_ORDER[b.status || ''] || 9);
       if (s !== 0) return s;
-      return (a.dueDate ? new Date(a.dueDate).getTime() : Infinity) - (b.dueDate ? new Date(b.dueDate).getTime() : Infinity);
+      return (
+        (a.dueDate ? new Date(a.dueDate).getTime() : Infinity) -
+        (b.dueDate ? new Date(b.dueDate).getTime() : Infinity)
+      );
     });
-    const taskList = sortedTasks.map(t => {
+    const taskList = sortedTasks.map((t) => {
       const p = pMap.get(String(t.projectId));
-      return taskS(t, { projectCode: p?.code, projectName: p?.name, lifecycle: p?.lifecycle,
-        subtaskCount: ((t as any).subtasks || []).length, subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length });
+      return taskS(t, {
+        projectCode: p?.code,
+        projectName: p?.name,
+        lifecycle: p?.lifecycle,
+        subtaskCount: ((t as any).subtasks || []).length,
+        subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
+      });
     });
 
     // ── Summary ───────────────────────────────────────────────────────────
     const a = summaryAgg[0] ?? { total: 0, done: 0, overdue: 0, dueThisWeek: 0 };
     const summary = {
-      totalAssigned: a.total, completed: a.done, overdue: a.overdue,
+      totalAssigned: a.total,
+      completed: a.done,
+      overdue: a.overdue,
       dueThisWeek: a.dueThisWeek,
       completionRate: a.total ? Math.round((a.done / a.total) * 100) : 0,
-      byStatus: Object.fromEntries(statusAgg.map((x: any) => [x._id, x.c]))
+      byStatus: Object.fromEntries(statusAgg.map((x: any) => [x._id, x.c])),
     };
 
     // ── Org totals (PM only) ──────────────────────────────────────────────
     let orgTotals = null;
     if (orgData) {
       const g = orgData[0];
-      const activeCount = allProjects.filter(p => p.status === 'in_progress').length;
+      const activeCount = allProjects.filter((p) => p.status === 'in_progress').length;
       orgTotals = {
-        tasksOpen:      g.open[0]?.n ?? 0,
-        tasksOverdue:   g.overdue[0]?.n ?? 0,
-        doneThisMonth:  g.doneThisMonth[0]?.n ?? 0,
+        tasksOpen: g.open[0]?.n ?? 0,
+        tasksOverdue: g.overdue[0]?.n ?? 0,
+        doneThisMonth: g.doneThisMonth[0]?.n ?? 0,
         activeProjects: activeCount,
       };
     }
 
     return NextResponse.json({
       user: {
-        id: jwtUser.sub, name: jwtUser.name, email: jwtUser.email,
-        role: jwtUser.role, title: jwtUser.title,
+        id: jwtUser.sub,
+        name: jwtUser.name,
+        email: jwtUser.email,
+        role: jwtUser.role,
+        title: jwtUser.title,
       },
       summary,
-      tasks:    taskList,
-      subtasks: [],               // kept for API compat; subtasks remain separate
-      projects: allProjects.map(p => ({ id: String(p._id), name: p.name, code: p.code, status: p.status, lifecycle: p.lifecycle })),
+      tasks: taskList,
+      subtasks: [], // kept for API compat; subtasks remain separate
+      projects: allProjects.map((p) => ({
+        id: String(p._id),
+        name: p.name,
+        code: p.code,
+        status: p.status,
+        lifecycle: p.lifecycle,
+      })),
       orgTotals,
     });
   } catch (e) {

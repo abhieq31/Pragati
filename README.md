@@ -4,16 +4,14 @@
 
 [![CI](https://img.shields.io/badge/CI-passing-22c55e.svg)](#testing)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2014%20·%20MongoDB%20·%20TypeScript-1565C0.svg)](#stack)
-[![Compliance](https://img.shields.io/badge/21%20CFR%20Part%2011-aware-9333EA.svg)](./CLAUDE.md)
-[![License](https://img.shields.io/badge/license-Private-64748b.svg)](#license)
+[![Compliance](https://img.shields.io/badge/21%20CFR%20Part%2011-aware-9333EA.svg)](./docs/ARCHITECTURE.md)
+[![License](https://img.shields.io/badge/license-MIT-64748b.svg)](./LICENSE)
 
 ---
 
 ## What it is
 
-A lightweight project + task tracker built for QA-IT teams in the pharmaceutical sector. Invite-only — no public sign-ups, no marketing pages.
-
-Roles:
+A lightweight project + task tracker built for QA-IT teams in the pharmaceutical sector. Invite-only — no public sign-ups, no marketing pages. One workspace, real roles, and an audit trail that holds up in an inspection.
 
 | Role | What they see |
 | --- | --- |
@@ -24,23 +22,26 @@ Roles:
 
 ## Highlights
 
-- **Bird's-eye view** — a full-screen SVG tree of `team → project → task → assignee`. Opens from the dashboard, team detail, or project detail page. Export as PDF, SVG, or image.
+- **Bird's-eye view** — a full-screen, interactive SVG tree of `team → project → task → assignee`. Click any card (or the connector leading to it) to expand or hide its branch, drag cards to rearrange, sketch over the canvas with the brush, quick-edit assignee/TCD inline, and export the exact on-screen view as PDF, SVG, or image. Opens from the dashboard, team detail, or project detail page.
+- **Your reference scheme, not ours** — every project carries a user-pickable reference type (`CC#`, `SOP#`, `CAPA#`, `INC#`, …) plus your own number, shown everywhere instead of the system-generated code. Not every project is a Change Control, so the label isn't hardwired to one.
+- **Owner-gated deletions** — tasks and phases can only be deleted by the **project owner** (and workspace admins). Leads manage work; only the owner can destroy it. Deleting a phase never deletes its tasks — they move to *Unphased*, and the action lands in the audit trail.
+- **Lifecycle templates** — Change Control, CSV/GAMP 5, SOP Dev, CAPA, Deviation, Audit, Validation, Agile Sprint, plus six regulatory operations templates (Regulatory Submission, System Retirement, Incident Management, Vendor Qualification, Training Program, Product Recall) and Personal templates for ICs.
+- **ALCOA+ audit trail** — every record change carries a signed, immutable trail (who, what, when, why). Personal projects never enter the cross-user log. Editing a project's reference number writes a before/after GxP record.
 - **Mind map on My Day** — a personal node-link canvas for capturing thoughts before they become tasks. Owner-private, autosaves per user.
-- **Lifecycle templates** — Change Control, CSV/GAMP 5, SOP Dev, CAPA, Deviation, Audit, Validation, Agile Sprint, plus six regulatory operations templates (Regulatory Submission, System Retirement, Incident Management, Vendor Qualification, Training Program, Product Recall) and Personal templates for ICs. The picker is categorised and collapsed by default.
-- **ALCOA+ audit trail** — every record change carries a signed, immutable trail (who, what, when, why). Personal projects never enter the cross-user log. Editing a project's Change Control reference (`ccNo`) writes a before/after GxP record.
 - **Public profiles** — a within-workspace profile at `/<username>` with a contribution heatmap, an optional GitHub link, and Follow / Unfollow for colleagues.
 - **Sidebar calendar** — a compact month grid pinned above My Day, dotted with what's due (mine / team / overdue) and a hover card listing the day's work.
 - **Dashboard "Up Next"** — colour-coded urgency pills (overdue / today / ≤2d / future) on every due-row, with filter chips (week / next week / month / until-date).
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
-- **Productivity touches** — resizable sidebar (drag the edge, persisted), global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars (resized client-side), and per-page loading skeletons that mirror each real layout.
-- **Daily task email** — an opt-in 08:30 IST digest of the tasks each person has due that day. Delivered free via Brevo's transactional API (no SMTP, no extra dependency; inert until configured). A real email is collected when an admin adds a user, and the admin tunes what every digest contains (due today / overdue / due soon / project updates) from **Settings**, with a one-click test send. See [Daily email digest](#daily-email-digest).
+- **Productivity touches** — resizable sidebar, global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
+- **Daily task email** — an opt-in 08:30 IST digest of the tasks each person has due that day, delivered via Brevo's free transactional API (inert until configured). See [Daily email digest](#daily-email-digest).
 
 ## Security & data integrity
 
 - **Hand-rolled auth** — JWT + bcrypt + httpOnly cookie, one active session per user, idle auto-logout, brute-force lockout.
 - **Credential reuse prevention** — passwords and Quick PINs cannot repeat any of the last three used, enforced server-side on every change.
 - **E-signatures** — controlled status changes and sensitive account edits require password re-entry plus a reason, recorded verbatim in the audit trail (21 CFR Part 11 §11.10/§11.50/§11.200).
+- **Least-privilege destruction** — project deletion requires owner/admin + password re-auth; task and phase deletion is project-owner-only.
 - **Read-through cache** — optional Upstash Redis layer on hot aggregations (dashboard, projects, people), inert when the env vars are absent.
 
 ## Run locally
@@ -100,9 +101,8 @@ app builds and runs without any of these.
 3. **Collect addresses.** A real email is mandatory when an admin adds a user; for
    existing accounts, set it from **People → Edit → Notification email**.
 4. **Tune & test.** As admin, open **Settings → Daily email — workspace settings** to
-   choose what each digest contains (due today / overdue / due soon / project updates),
-   add an optional intro note, and **Send test to my email**. The panel shows a live
-   setup checklist of what's still missing.
+   choose what each digest contains, add an optional intro note, and **Send test to
+   my email**. The panel shows a live setup checklist of what's still missing.
 
 Each user controls whether they receive it from **Settings → Daily task email** (off by
 default). The digest is a read-only projection of existing task data — it creates no
@@ -133,7 +133,7 @@ src/
 │   ├── api/                  # route handlers (auth, projects, tasks, teams, users…)
 │   ├── login/                # unauthenticated entry
 │   └── globals.css           # Tailwind layer + design tokens
-├── components/               # UI — AppShell, SidebarCalendar, SkeletonScreens, ProfileView…
+├── components/               # UI — AppShell, BirdsEyeView, SidebarCalendar, ProfileView…
 ├── lib/                      # server + client logic
 │   ├── ai/                   # rule-based triage + KB (never an LLM on the scoring path)
 │   ├── flow/                 # Flow Signal meaningful-activity engine
@@ -152,12 +152,13 @@ tests/                        # unit (node:test) + e2e (Playwright)
 
 ## Architectural invariants
 
-The constraints in [`CLAUDE.md`](./CLAUDE.md) are not suggestions:
+These constraints are not suggestions:
 
 - **QA triage engine** stays rule-based — never an LLM call on the scoring path.
 - **Auth** stays hand-rolled (JWT + bcrypt + httpOnly cookie). No NextAuth, Clerk, Auth0, Supabase Auth.
 - **Persistence** stays Mongoose. No Prisma, Drizzle, TypeORM.
 - **API bodies** validate through the central Zod schemas in `src/lib/validations.ts`.
+- **Destructive actions** (project / task / phase deletion) are ownership-gated and audited.
 
 Don't relax those without talking to the QA lead first.
 
@@ -168,6 +169,7 @@ npm run dev               # local dev server
 npm run build             # production build
 npm run typecheck         # tsc --noEmit
 npm run lint              # next lint
+npm run format            # prettier --write on src, scripts, tests
 npm run e2e               # Playwright suite (needs a browser + Mongo)
 npm run smoke-prod <url>  # read-only smoke test against a live deployment
 
@@ -204,4 +206,6 @@ Pragati ships with a scaffolded master-admin / database-per-tenant runtime, curr
 
 The `/master-admin` console renders a status board explaining the steps until the runtime is active.
 
+## License
 
+[MIT](./LICENSE)

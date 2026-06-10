@@ -85,7 +85,13 @@ export async function cacheGetJSON<T>(key: string): Promise<T | null> {
 /** Store a JSON-serialisable value with a TTL (seconds). Best-effort. */
 export async function cacheSetJSON(key: string, value: unknown, ttlSeconds: number): Promise<void> {
   try {
-    await redisCmd(['SET', NS + key, JSON.stringify(value), 'EX', String(Math.max(1, Math.floor(ttlSeconds)))]);
+    await redisCmd([
+      'SET',
+      NS + key,
+      JSON.stringify(value),
+      'EX',
+      String(Math.max(1, Math.floor(ttlSeconds))),
+    ]);
   } catch {
     /* best-effort — a failed write just means the next read is a miss */
   }

@@ -1,35 +1,43 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  formatDate, daysUntil, ProgressBar,
-  LIFECYCLE_LABELS, STATUS_COLORS,
-} from '@/components/ui';
+import { formatDate, daysUntil, ProgressBar, LIFECYCLE_LABELS, STATUS_COLORS } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { useIsLead } from '@/components/CurrentUserContext';
 import dynamic from 'next/dynamic';
 // Lazy — only the lead's contributor-activity modal needs it, so it stays out
 // of the main dashboard bundle (helps FCP/LCP).
-const ActivityGraph = dynamic(
-  () => import('@/components/ActivityGraph').then(m => m.ActivityGraph),
-  { ssr: false, loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" /> },
-);
+const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
+  ssr: false,
+  loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" />,
+});
 
 function warmActivityGraph(userId?: string) {
   void import('@/components/ActivityGraph').then((m) => m.preloadActivityGraphData({ userId }));
 }
 import {
-  AlertTriangle, FolderKanban, CheckCircle2, Users as UsersIcon,
-  ChevronDown, TrendingUp, Clock, Sparkles, ArrowRight, UserPlus, Plus,
-  Maximize2, X, BarChart3,
+  AlertTriangle,
+  FolderKanban,
+  CheckCircle2,
+  Users as UsersIcon,
+  ChevronDown,
+  TrendingUp,
+  Clock,
+  Sparkles,
+  ArrowRight,
+  UserPlus,
+  Plus,
+  Maximize2,
+  X,
+  BarChart3,
 } from 'lucide-react';
 // Lazy — the bird's-eye view is a heavy SVG layout component and most
 // visits won't open it. Keep it out of the dashboard's first paint.
-const BirdsEyeView = dynamic(
-  () => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView),
-  { ssr: false, loading: () => null },
-);
+const BirdsEyeView = dynamic(() => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView), {
+  ssr: false,
+  loading: () => null,
+});
 import type { BirdsEyeData } from '@/components/BirdsEyeView';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
 import { FlowSignalStrip, type FlowSignalPayload } from '@/components/FlowSignalStrip';
@@ -56,22 +64,32 @@ interface TeamTask {
 }
 
 interface DashProject {
-  id: string; code: string; name: string;
+  id: string;
+  code: string;
+  name: string;
   lifecycle?: string;
   status: string;
-  ownerId?: string; ownerName?: string;
+  ownerId?: string;
+  ownerName?: string;
   teamName?: string | null;
   dueDate?: string | null;
-  taskCount?: number; tasksDone?: number;
-  openTasks: number; overdueCount: number;
+  taskCount?: number;
+  tasksDone?: number;
+  openTasks: number;
+  overdueCount: number;
   health: 'healthy' | 'at_risk' | 'critical';
   healthReasons?: string[];
 }
 
 interface DashPerson {
-  id: string; name: string; title: string;
-  openTasks: number; overdueCount: number; completedThisWeek: number;
-  loadScore: number; loadLevel: 'healthy' | 'busy' | 'overloaded';
+  id: string;
+  name: string;
+  title: string;
+  openTasks: number;
+  overdueCount: number;
+  completedThisWeek: number;
+  loadScore: number;
+  loadLevel: 'healthy' | 'busy' | 'overloaded';
 }
 
 interface DashResp {
@@ -92,12 +110,32 @@ interface DashResp {
 // list leans that way while still covering the universal New Year / Christmas.
 type Festival = { title: string; emoji: string; note: string };
 const FIXED_FESTIVALS: Record<string, Festival> = {
-  '01-01': { title: 'Happy New Year',          emoji: '🎆', note: 'A fresh year, a clean slate — let’s make it count.' },
-  '01-26': { title: 'Happy Republic Day',      emoji: '🇮🇳', note: 'Compliance and care — values worth celebrating today.' },
-  '08-15': { title: 'Happy Independence Day',  emoji: '🇮🇳', note: 'Freedom and discipline, hand in hand. Have a proud day.' },
-  '10-02': { title: 'Gandhi Jayanti',          emoji: '🕊️', note: 'Quality is doing it right when no one is watching.' },
-  '12-25': { title: 'Merry Christmas',         emoji: '🎄', note: 'Wishing you a warm, restful holiday.' },
-  '12-31': { title: 'Happy New Year’s Eve',    emoji: '🥂', note: 'One last push, then a well-earned celebration.' },
+  '01-01': {
+    title: 'Happy New Year',
+    emoji: '🎆',
+    note: 'A fresh year, a clean slate — let’s make it count.',
+  },
+  '01-26': {
+    title: 'Happy Republic Day',
+    emoji: '🇮🇳',
+    note: 'Compliance and care — values worth celebrating today.',
+  },
+  '08-15': {
+    title: 'Happy Independence Day',
+    emoji: '🇮🇳',
+    note: 'Freedom and discipline, hand in hand. Have a proud day.',
+  },
+  '10-02': {
+    title: 'Gandhi Jayanti',
+    emoji: '🕊️',
+    note: 'Quality is doing it right when no one is watching.',
+  },
+  '12-25': { title: 'Merry Christmas', emoji: '🎄', note: 'Wishing you a warm, restful holiday.' },
+  '12-31': {
+    title: 'Happy New Year’s Eve',
+    emoji: '🥂',
+    note: 'One last push, then a well-earned celebration.',
+  },
 };
 const MOVABLE_FESTIVALS: Record<string, Festival> = {
   // Diwali
@@ -123,7 +161,7 @@ function greeting(now = new Date()): string {
   const fest = festivalFor(now);
   if (fest) return `${fest.title}`;
   const h = now.getHours();
-  if (h < 5)  return 'Still up';
+  if (h < 5) return 'Still up';
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   if (h < 21) return 'Good evening';
@@ -131,10 +169,21 @@ function greeting(now = new Date()): string {
 }
 // A meaningful one-liner driven by the user's actual state — not filler. On a
 // festival day we lead with the festive note before nudging toward the work.
-function greetingSubline({ open, overdue, dueToday, now = new Date() }: { open: number; overdue: number; dueToday: number; now?: Date }) {
+function greetingSubline({
+  open,
+  overdue,
+  dueToday,
+  now = new Date(),
+}: {
+  open: number;
+  overdue: number;
+  dueToday: number;
+  now?: Date;
+}) {
   const fest = festivalFor(now);
   if (fest && open === 0) return fest.note;
-  if (overdue > 0) return `${overdue} task${overdue === 1 ? '' : 's'} past due — clear ${overdue === 1 ? 'it' : 'the backlog'} and move forward.`;
+  if (overdue > 0)
+    return `${overdue} task${overdue === 1 ? '' : 's'} past due — clear ${overdue === 1 ? 'it' : 'the backlog'} and move forward.`;
   if (dueToday > 0) return `${dueToday} landing today. Let's make it count.`;
   if (open === 0) return 'All clear — nothing open. Take a breath. ✦';
   const day = now.getDay();
@@ -147,14 +196,17 @@ function greetingSubline({ open, overdue, dueToday, now = new Date() }: { open: 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
 const STATUS_LABEL: Record<string, string> = {
-  todo: 'To do', in_progress: 'In progress', review: 'Review',
-  blocked: 'Blocked', done: 'Done',
+  todo: 'To do',
+  in_progress: 'In progress',
+  review: 'Review',
+  blocked: 'Blocked',
+  done: 'Done',
 };
 
 const HEALTH_META: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  healthy:  { label: 'On track',  bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-400' },
-  at_risk:  { label: 'At risk',   bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
-  critical: { label: 'Critical',  bg: 'bg-red-50',   text: 'text-red-600',   dot: 'bg-red-500'   },
+  healthy: { label: 'On track', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-400' },
+  at_risk: { label: 'At risk', bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400' },
+  critical: { label: 'Critical', bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-500' },
 };
 
 type ActionFilter = 'week' | 'nextWeek' | 'month' | 'untilDate';
@@ -184,7 +236,9 @@ function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
     scope: 'workspace',
     teams,
     projects: dash.projects.map((p) => ({
-      id: p.id, code: p.code, name: p.name,
+      id: p.id,
+      code: p.code,
+      name: p.name,
       teamId: p.teamName ? (teamIdByName.get(p.teamName) ?? null) : null,
       health: p.health,
       taskCount: p.taskCount ?? 0,
@@ -193,7 +247,9 @@ function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
       ownerName: p.ownerName ?? null,
     })),
     tasks: dash.teamTasks.map((t) => ({
-      id: t.id, title: t.title, projectId: t.projectId,
+      id: t.id,
+      title: t.title,
+      projectId: t.projectId,
       status: t.status,
       assigneeName: t.assigneeName ?? null,
       dueDate: (t.ccTcd || t.dueDate) ?? null,
@@ -205,9 +261,7 @@ function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
 }
 
 /* ── Main page ────────────────────────────────────────────────────────────── */
-export default function DashboardClient({
-  initialData,
-}: { initialData: DashResp }) {
+export default function DashboardClient({ initialData }: { initialData: DashResp }) {
   const dash = initialData;
   const isLead = useIsLead();
   const [summaryModal, setSummaryModal] = useState<null | 'open' | 'overdue'>(null);
@@ -226,22 +280,28 @@ export default function DashboardClient({
   // and admins always see everything.
   const myId = dash.user.id;
   const visibleTasks = useMemo(
-    () => (isLead ? dash.teamTasks : dash.teamTasks.filter(t => t.assigneeId === myId)),
+    () => (isLead ? dash.teamTasks : dash.teamTasks.filter((t) => t.assigneeId === myId)),
     [dash, isLead, myId],
   );
 
-  const ongoingProjects = useMemo(() =>
-    dash.projects.filter(p =>
-      p.status === 'in_progress' || p.status === 'planning' || p.status === 'on_hold',
-    ),
-  [dash]);
+  const ongoingProjects = useMemo(
+    () =>
+      dash.projects.filter(
+        (p) => p.status === 'in_progress' || p.status === 'planning' || p.status === 'on_hold',
+      ),
+    [dash],
+  );
 
-  const openTasks = useMemo(() => visibleTasks.filter(t => t.status !== 'done'), [visibleTasks]);
+  const openTasks = useMemo(() => visibleTasks.filter((t) => t.status !== 'done'), [visibleTasks]);
 
-  const overdueTasks = useMemo(() => openTasks.filter(t => {
-    const due = t.ccTcd || t.dueDate;
-    return due && new Date(due) < new Date();
-  }), [openTasks]);
+  const overdueTasks = useMemo(
+    () =>
+      openTasks.filter((t) => {
+        const due = t.ccTcd || t.dueDate;
+        return due && new Date(due) < new Date();
+      }),
+    [openTasks],
+  );
 
   // Expanded project view: everyone sees the whole project's tasks, so an IC
   // can see the path of work around their own assignments — not just their
@@ -265,18 +325,16 @@ export default function DashboardClient({
     return m;
   }, [visibleTasks]);
 
-  const firstName  = (dash.user.name || '').split(' ')[0] || 'there';
+  const firstName = (dash.user.name || '').split(' ')[0] || 'there';
 
   return (
     <div className="pb-12 max-w-[1440px]">
-
       {/* ── Greeting ────────────────────────────────────────────────────── */}
       <div className="mb-4 sm:mb-5 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="text-[1.75rem] sm:text-[1.9rem] font-black tracking-tight leading-tight text-slate-800 dark:text-white/90">
             <span suppressHydrationWarning>
-              {greeting()},{' '}
-              <span className="text-blue-700 dark:text-blue-400">{firstName}.</span>
+              {greeting()}, <span className="text-blue-700 dark:text-blue-400">{firstName}.</span>
             </span>
           </h1>
         </div>
@@ -292,10 +350,7 @@ export default function DashboardClient({
           tree gets its own scroll area regardless of where the trigger
           was clicked from. */}
       {birdsEyeOpen && (
-        <BirdsEyeView
-          onClose={() => setBirdsEyeOpen(false)}
-          data={buildBirdsEyeDataFromDash(dash)}
-        />
+        <BirdsEyeView onClose={() => setBirdsEyeOpen(false)} data={buildBirdsEyeDataFromDash(dash)} />
       )}
 
       {isFirstRun ? (
@@ -309,15 +364,39 @@ export default function DashboardClient({
 
           {/* ── Summary strip ──────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2 mb-5">
-            <SummaryChip label="Ongoing projects" value={ongoingProjects.length} accent="blue"  href="/projects" />
-            <SummaryChip label="Open tasks"       value={openTasks.length}       accent="slate" onClick={() => setSummaryModal('open')} />
-            <SummaryChip label="Overdue"          value={overdueTasks.length}    accent={overdueTasks.length > 0 ? 'red' : 'slate'} onClick={() => setSummaryModal('overdue')} />
-            <SummaryChip label={dash.teamCount === 1 ? 'Team' : 'Teams'} value={dash.teamCount} accent="green" href="/teams" />
+            <SummaryChip
+              label="Ongoing projects"
+              value={ongoingProjects.length}
+              accent="blue"
+              href="/projects"
+            />
+            <SummaryChip
+              label="Open tasks"
+              value={openTasks.length}
+              accent="slate"
+              onClick={() => setSummaryModal('open')}
+            />
+            <SummaryChip
+              label="Overdue"
+              value={overdueTasks.length}
+              accent={overdueTasks.length > 0 ? 'red' : 'slate'}
+              onClick={() => setSummaryModal('overdue')}
+            />
+            <SummaryChip
+              label={dash.teamCount === 1 ? 'Team' : 'Teams'}
+              value={dash.teamCount}
+              accent="green"
+              href="/teams"
+            />
           </div>
           {summaryModal && (
             <SummaryTaskPopup
               title={summaryModal === 'open' ? 'Open tasks' : 'Overdue tasks'}
-              subtitle={summaryModal === 'open' ? 'Everything still moving across your visible work.' : 'Work that has crossed its target/due date.'}
+              subtitle={
+                summaryModal === 'open'
+                  ? 'Everything still moving across your visible work.'
+                  : 'Work that has crossed its target/due date.'
+              }
               tone={summaryModal === 'overdue' ? 'red' : 'blue'}
               tasks={summaryModal === 'open' ? openTasks : overdueTasks}
               onClose={() => setSummaryModal(null)}
@@ -329,12 +408,8 @@ export default function DashboardClient({
       {/* ── Main layout: Projects (left) · Due Center (right, same row) ───── */}
       {!isFirstRun && (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
-
           {/* Left column — Projects */}
-          <ProjectsColumn
-            projects={ongoingProjects}
-            tasksByProject={tasksByProject}
-          />
+          <ProjectsColumn projects={ongoingProjects} tasksByProject={tasksByProject} />
 
           {/* Right column — Due Center + "My tasks" (for leads: also Contributors).
              On desktop, pad the rail so the Up Next card starts on the same
@@ -363,17 +438,33 @@ export default function DashboardClient({
    Lets the Due Center and Contributors panels expand to a distraction-free,
    full-page view (#12). Click the backdrop or the ✕ to close. */
 function FullScreenOverlay({
-  title, icon, onClose, children,
-}: { title: string; icon?: React.ReactNode; onClose: () => void; children: React.ReactNode }) {
+  title,
+  icon,
+  onClose,
+  children,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-3 sm:p-8 overflow-auto"
-      onClick={onClose}>
-      <div className="bg-white dark:bg-[#262624] rounded-2xl w-full max-w-4xl my-2 shadow-2xl dark:border dark:border-white/[0.08]" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-3 sm:p-8 overflow-auto"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-[#262624] rounded-2xl w-full max-w-4xl my-2 shadow-2xl dark:border dark:border-white/[0.08]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-white/[0.07] sticky top-0 bg-white dark:bg-[#262624] rounded-t-2xl z-10">
           {icon}
           <h3 className="text-sm font-bold text-slate-800 dark:text-white/85">{title}</h3>
-          <button onClick={onClose} title="Close"
-            className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors">
+          <button
+            onClick={onClose}
+            title="Close"
+            className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+          >
             <X size={16} />
           </button>
         </div>
@@ -386,8 +477,11 @@ function FullScreenOverlay({
 /* A small maximize affordance for panel headers. */
 function ExpandButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} title="Open full screen"
-      className="p-1 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+    <button
+      onClick={onClick}
+      title="Open full screen"
+      className="p-1 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+    >
       <Maximize2 size={12} />
     </button>
   );
@@ -401,7 +495,12 @@ function ExpandButton({ onClick }: { onClick: () => void }) {
    carries the maximize / overdue / chevron affordance. `tint` is accepted for
    call-site compatibility but no longer painted as a tile. */
 function PanelHeader({
-  icon, title, count, countSuffix, trailing, onClick,
+  icon,
+  title,
+  count,
+  countSuffix,
+  trailing,
+  onClick,
 }: {
   icon: React.ReactNode;
   tint?: { bg: string; fg: string };
@@ -415,14 +514,19 @@ function PanelHeader({
     <div
       onClick={onClick}
       className={`px-4 h-12 flex items-center gap-2 border-b border-slate-100 dark:border-white/[0.05] ${
-        onClick ? 'cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors' : ''
+        onClick
+          ? 'cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors'
+          : ''
       }`}
     >
       <span className="text-slate-400 dark:text-white/30 shrink-0 inline-flex">{icon}</span>
-      <h3 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/45">{title}</h3>
+      <h3 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/40">
+        {title}
+      </h3>
       {count != null && (
         <span className="text-[10px] font-semibold text-slate-300 dark:text-white/20 tabular-nums">
-          {count}{countSuffix}
+          {count}
+          {countSuffix}
         </span>
       )}
       <div className="ml-auto flex items-center gap-1.5">{trailing}</div>
@@ -431,18 +535,28 @@ function PanelHeader({
 }
 
 const PANEL_TINTS = {
-  blue:    { bg: 'rgba(21,101,192,0.10)',  fg: '#1565C0' },
-  emerald: { bg: 'rgba(16,185,129,0.12)',  fg: '#059669' },
-  violet:  { bg: 'rgba(124,58,237,0.12)',  fg: '#7c3aed' },
+  blue: { bg: 'rgba(21,101,192,0.10)', fg: '#1565C0' },
+  emerald: { bg: 'rgba(16,185,129,0.12)', fg: '#059669' },
+  violet: { bg: 'rgba(124,58,237,0.12)', fg: '#7c3aed' },
 } as const;
 
 /* ── Summary chip ────────────────────────────────────────────────────────── */
 function SummaryChip({
-  label, value, accent, href, onClick,
-}: { label: string; value: number; accent: 'blue' | 'red' | 'slate' | 'green'; href?: string; onClick?: () => void }) {
+  label,
+  value,
+  accent,
+  href,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  accent: 'blue' | 'red' | 'slate' | 'green';
+  href?: string;
+  onClick?: () => void;
+}) {
   const styles = {
-    blue:  'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
-    red:   'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
+    blue: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
+    red: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
     slate: 'bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55',
     green: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   }[accent];
@@ -456,13 +570,22 @@ function SummaryChip({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={className} aria-label={`Show ${label.toLowerCase()}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={className}
+        aria-label={`Show ${label.toLowerCase()}`}
+      >
         {content}
       </button>
     );
   }
 
-  return <Link href={href || '#'} className={className}>{content}</Link>;
+  return (
+    <Link href={href || '#'} className={className}>
+      {content}
+    </Link>
+  );
 }
 
 /** Compress a verbose project code (CHANGE_CONTROL-2026-0011) into a
@@ -471,36 +594,69 @@ function SummaryChip({
 function shortProjectCode(code: string): string {
   if (!code) return '';
   const PREFIX: Record<string, string> = {
-    CHANGE_CONTROL: 'CC', SOFTWARE_CHANGE: 'SC', DEVIATION: 'DEV',
-    CAPA: 'CAPA', DEVIATION_CAPA: 'DEV/CAPA', SOP: 'SOP', AUDIT: 'AUD',
-    VALIDATION: 'VAL', CSV: 'CSV', AGILE: 'AGI', SOFTWARE_RELEASE: 'REL',
-    PRODUCT_LAUNCH: 'LAU', RESEARCH: 'RES', GENERIC: 'PRJ', PRSN: 'PRSN',
+    CHANGE_CONTROL: 'CC',
+    SOFTWARE_CHANGE: 'SC',
+    DEVIATION: 'DEV',
+    CAPA: 'CAPA',
+    DEVIATION_CAPA: 'DEV/CAPA',
+    SOP: 'SOP',
+    AUDIT: 'AUD',
+    VALIDATION: 'VAL',
+    CSV: 'CSV',
+    AGILE: 'AGI',
+    SOFTWARE_RELEASE: 'REL',
+    PRODUCT_LAUNCH: 'LAU',
+    RESEARCH: 'RES',
+    GENERIC: 'PRJ',
+    PRSN: 'PRSN',
   };
   const m = code.match(/^([A-Z_]+)-?(\d{2,4})?-?(\d+)?$/);
   if (!m) return code.length > 14 ? code.slice(0, 13) + '…' : code;
-  const prefix = PREFIX[m[1]] ?? m[1].split('_').map((w) => w[0]).join('');
+  const prefix =
+    PREFIX[m[1]] ??
+    m[1]
+      .split('_')
+      .map((w) => w[0])
+      .join('');
   const year = m[2] ? m[2].slice(-2) : '';
-  const num  = m[3] || '';
+  const num = m[3] || '';
   return [prefix, year, num].filter(Boolean).join('-');
 }
 
 function SummaryTaskPopup({
-  title, subtitle, tasks, tone, onClose,
-}: { title: string; subtitle: string; tasks: TeamTask[]; tone: 'blue' | 'red'; onClose: () => void }) {
+  title,
+  subtitle,
+  tasks,
+  tone,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  tasks: TeamTask[];
+  tone: 'blue' | 'red';
+  onClose: () => void;
+}) {
   const sorted = [...tasks].sort((a, b) => {
     const ad = a.ccTcd || a.dueDate;
     const bd = b.ccTcd || b.dueDate;
     return (ad ? new Date(ad).getTime() : Infinity) - (bd ? new Date(bd).getTime() : Infinity);
   });
-  const icon = tone === 'red'
-    ? <AlertTriangle size={14} className="text-red-500" />
-    : <CheckCircle2 size={14} className="text-blue-500" />;
+  const icon =
+    tone === 'red' ? (
+      <AlertTriangle size={14} className="text-red-500" />
+    ) : (
+      <CheckCircle2 size={14} className="text-blue-500" />
+    );
 
   return (
     <FullScreenOverlay title={title} icon={icon} onClose={onClose}>
       <div className="px-5 pb-5">
-        <div className={`mb-3 rounded-xl border px-3 py-2.5 ${tone === 'red' ? 'border-red-100 bg-red-50 text-red-700' : 'border-blue-100 bg-blue-50 text-blue-700'}`}>
-          <div className="text-xs font-bold">{sorted.length} task{sorted.length === 1 ? '' : 's'}</div>
+        <div
+          className={`mb-3 rounded-xl border px-3 py-2.5 ${tone === 'red' ? 'border-red-100 bg-red-50 text-red-700' : 'border-blue-100 bg-blue-50 text-blue-700'}`}
+        >
+          <div className="text-xs font-bold">
+            {sorted.length} task{sorted.length === 1 ? '' : 's'}
+          </div>
           <div className="text-[11px] opacity-75 mt-0.5">{subtitle}</div>
         </div>
         {sorted.length === 0 ? (
@@ -513,28 +669,48 @@ function SummaryTaskPopup({
               const overdue = due && new Date(due) < new Date();
               return (
                 <li key={t.id}>
-                  <Link href={`/tasks/${t.id}`} onClick={onClose}
-                    className={`block px-4 py-3 transition-colors ${overdue ? 'hover:bg-red-50/60' : 'hover:bg-slate-50/60'}`}>
+                  <Link
+                    href={`/tasks/${t.id}`}
+                    onClick={onClose}
+                    className={`block px-4 py-3 transition-colors ${overdue ? 'hover:bg-red-50/60' : 'hover:bg-slate-50/60'}`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-bold text-slate-800 dark:text-white/80 line-clamp-1">{t.title}</div>
+                        <div className="text-sm font-bold text-slate-800 dark:text-white/80 line-clamp-1">
+                          {t.title}
+                        </div>
                         <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-white/35 flex-wrap">
-                          <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55"
-                                title={t.projectCode}>
+                          <span
+                            className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-white/55"
+                            title={t.projectCode}
+                          >
                             {shortProjectCode(t.projectCode)}
                           </span>
-                          {t.assigneeName && <><span>·</span><span>{t.assigneeName}</span></>}
+                          {t.assigneeName && (
+                            <>
+                              <span>·</span>
+                              <span>{t.assigneeName}</span>
+                            </>
+                          )}
                           {due && (
                             <>
                               <span>·</span>
                               <span className={overdue ? 'text-red-600 font-semibold' : ''}>
-                                {dueIn === null ? formatDate(due) : dueIn < 0 ? `${Math.abs(dueIn)}d overdue` : dueIn === 0 ? 'today' : `in ${dueIn}d`}
+                                {dueIn === null
+                                  ? formatDate(due)
+                                  : dueIn < 0
+                                    ? `${Math.abs(dueIn)}d overdue`
+                                    : dueIn === 0
+                                      ? 'today'
+                                      : `in ${dueIn}d`}
                               </span>
                             </>
                           )}
                         </div>
                       </div>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}
+                      >
                         {STATUS_LABEL[t.status] || t.status}
                       </span>
                     </div>
@@ -581,8 +757,8 @@ function FirstRunGuide({ hasTeam }: { hasTeam: boolean }) {
     },
   ];
   const tints: Record<'blue' | 'teal' | 'green', string> = {
-    blue:  'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
-    teal:  'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
+    blue: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    teal: 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
     green: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   };
 
@@ -611,7 +787,9 @@ function FirstRunGuide({ hasTeam }: { hasTeam: boolean }) {
                 {s.done ? (
                   <CheckCircle2 size={18} className="text-emerald-500" />
                 ) : (
-                  <span className="text-[11px] font-bold text-slate-300 dark:text-white/20">STEP {i + 1}</span>
+                  <span className="text-[11px] font-bold text-slate-300 dark:text-white/20">
+                    STEP {i + 1}
+                  </span>
                 )}
               </div>
               <div className="font-bold text-slate-800 dark:text-white/80 text-sm mb-1 flex items-center gap-1">
@@ -636,9 +814,13 @@ function FirstRunGuide({ hasTeam }: { hasTeam: boolean }) {
 /*  PROJECTS COLUMN — left side, expandable project rows with tasks inside    */
 /* ────────────────────────────────────────────────────────────────────────── */
 function ProjectsColumn({
-  projects, tasksByProject,
-}: { projects: DashProject[]; tasksByProject: Map<string, TeamTask[]> }) {
-  const isLead  = useIsLead();
+  projects,
+  tasksByProject,
+}: {
+  projects: DashProject[];
+  tasksByProject: Map<string, TeamTask[]>;
+}) {
+  const isLead = useIsLead();
   const [showExpandNudge, setShowExpandNudge] = useState(true);
 
   useEffect(() => {
@@ -649,31 +831,37 @@ function ProjectsColumn({
     <section className="min-w-0">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <FolderKanban size={14} className="text-slate-400 shrink-0" />
-          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
+          <FolderKanban size={14} className="text-slate-400 dark:text-white/30 shrink-0" />
+          <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/40 truncate">
             Your team’s projects
           </h2>
-          <span className="text-[10px] text-slate-300 font-semibold shrink-0">{projects.length}</span>
+          <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold shrink-0 tabular-nums">
+            {projects.length}
+          </span>
         </div>
-        <Link href="/projects" className="text-xs font-semibold text-blue-600 hover:text-blue-700 shrink-0 whitespace-nowrap">
+        <Link
+          href="/projects"
+          className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 shrink-0 whitespace-nowrap transition-colors"
+        >
           All projects →
         </Link>
       </div>
 
       {projects.length === 0 ? (
-        <div className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] text-center py-12 px-6"
-          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+        <div
+          className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] text-center py-12 px-6"
+          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+        >
           <FolderKanban size={26} className="mx-auto text-slate-300 dark:text-white/20 mb-3" />
-          <div className="text-sm font-semibold text-slate-600 dark:text-white/55 mb-1">No ongoing projects</div>
+          <div className="text-sm font-semibold text-slate-600 dark:text-white/55 mb-1">
+            No ongoing projects
+          </div>
           <div className="text-xs text-slate-400 dark:text-white/30 max-w-xs mx-auto leading-relaxed">
             {isLead
               ? 'Spin up a project to start tracking work — it will show up here with all its tasks.'
               : "Once a lead assigns you to a team and a project, it will show up here with the tasks you're on."}
           </div>
-          <Link
-            href={isLead ? '/projects/new' : '/my-day'}
-            className="btn-primary text-xs mt-4 inline-flex"
-          >
+          <Link href={isLead ? '/projects/new' : '/my-day'} className="btn-primary text-xs mt-4 inline-flex">
             {isLead ? '+ New project' : 'Open My Day'}
           </Link>
         </div>
@@ -693,7 +881,6 @@ function ProjectsColumn({
   );
 }
 
-
 /* Inline vertical task list inside an expanded project row. Tasks are shown in
    a single, deterministic order: by CC Target Completion Date (TCD), then due
    date, soonest first — so the most time-critical work is always at the top
@@ -709,7 +896,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
     return [...tasks].sort((a, b) => keyOf(a) - keyOf(b));
   }, [tasks]);
 
-  const visible   = sorted.slice(0, 20);
+  const visible = sorted.slice(0, 20);
   const doneCount = sorted.filter((t) => t.status === 'done').length;
 
   return (
@@ -723,8 +910,10 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
           <span className="text-[9.5px] font-bold text-slate-400 dark:text-white/28 tabular-nums">
             {doneCount}/{sorted.length} done
           </span>
-          <Link href={`/projects/${projectId}`}
-            className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+          <Link
+            href={`/projects/${projectId}`}
+            className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+          >
             Board →
           </Link>
         </div>
@@ -732,37 +921,46 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
 
       <ul>
         {visible.map((t) => {
-          const isDone    = t.status === 'done';
-          const due       = t.ccTcd || t.dueDate;
-          const dueIn     = daysUntil(due);
+          const isDone = t.status === 'done';
+          const due = t.ccTcd || t.dueDate;
+          const dueIn = daysUntil(due);
           const isOverdue = !isDone && !!due && dueIn !== null && dueIn < 0;
           const isBlocked = t.status === 'blocked';
 
           const [dotColor, dotTitle] = ((): [string, string] => {
-            if (isDone)                         return ['#10b981', 'Done'];
-            if (isBlocked)                      return ['#ef4444', 'Blocked'];
-            if (isOverdue)                      return ['#ef4444', 'Overdue'];
-            if (dueIn !== null && dueIn <= 3)   return ['#d97706', 'Due soon'];
-            if (t.status === 'in_progress')     return ['#1565C0', 'In progress'];
-            if (t.status === 'review')          return ['#7c3aed', 'In review'];
+            if (isDone) return ['#10b981', 'Done'];
+            if (isBlocked) return ['#ef4444', 'Blocked'];
+            if (isOverdue) return ['#ef4444', 'Overdue'];
+            if (dueIn !== null && dueIn <= 3) return ['#d97706', 'Due soon'];
+            if (t.status === 'in_progress') return ['#1565C0', 'In progress'];
+            if (t.status === 'review') return ['#7c3aed', 'In review'];
             return ['#94a3b8', 'To do'];
           })();
 
           const stateMeta = ((): { label: string; fg: string; bg: string } | null => {
-            if (isDone)                     return { label: 'Done',        fg: '#059669', bg: 'rgba(16,185,129,0.12)' };
-            if (t.status === 'in_progress') return { label: 'In progress', fg: '#1565C0', bg: 'rgba(21,101,192,0.12)' };
-            if (t.status === 'review')      return { label: 'In review',   fg: '#7c3aed', bg: 'rgba(124,58,237,0.12)' };
-            if (t.status === 'todo' || !t.status) return { label: 'To do', fg: '#64748b', bg: 'rgba(100,116,139,0.10)' };
+            if (isDone) return { label: 'Done', fg: '#059669', bg: 'rgba(16,185,129,0.12)' };
+            if (t.status === 'in_progress')
+              return { label: 'In progress', fg: '#1565C0', bg: 'rgba(21,101,192,0.12)' };
+            if (t.status === 'review')
+              return { label: 'In review', fg: '#7c3aed', bg: 'rgba(124,58,237,0.12)' };
+            if (t.status === 'todo' || !t.status)
+              return { label: 'To do', fg: '#64748b', bg: 'rgba(100,116,139,0.10)' };
             return null;
           })();
 
-          const dateLabel = !due ? null
-            : isDone ? formatDate(due)
-            : dueIn === null ? formatDate(due)
-            : dueIn < 0 ? `${Math.abs(dueIn)}d over`
-            : dueIn === 0 ? 'Today'
-            : dueIn <= 7 ? `in ${dueIn}d`
-            : formatDate(due);
+          const dateLabel = !due
+            ? null
+            : isDone
+              ? formatDate(due)
+              : dueIn === null
+                ? formatDate(due)
+                : dueIn < 0
+                  ? `${Math.abs(dueIn)}d over`
+                  : dueIn === 0
+                    ? 'Today'
+                    : dueIn <= 7
+                      ? `in ${dueIn}d`
+                      : formatDate(due);
           const dateTone = isDone
             ? 'text-slate-300 dark:text-white/20'
             : isOverdue
@@ -779,8 +977,10 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
               >
                 {/* Left status strip — the primary visual anchor that makes each
                     row readable at a glance; colour tracks the task's urgency/state */}
-                <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full"
-                  style={{ background: dotColor, opacity: isDone ? 0.25 : 0.75 }} />
+                <div
+                  className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full"
+                  style={{ background: dotColor, opacity: isDone ? 0.25 : 0.75 }}
+                />
 
                 {/* Status dot */}
                 <div className="shrink-0 mt-0.5">
@@ -799,17 +999,21 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                 {/* Row content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`flex-1 min-w-0 text-[13px] font-semibold line-clamp-1 leading-snug ${
-                      isDone
-                        ? 'line-through decoration-slate-300/60 dark:decoration-white/20 text-slate-400 dark:text-white/35'
-                        : 'text-slate-800 dark:text-white/85 group-hover:text-blue-700 dark:group-hover:text-blue-400'
-                    }`}>
+                    <span
+                      className={`flex-1 min-w-0 text-[13px] font-semibold line-clamp-1 leading-snug ${
+                        isDone
+                          ? 'line-through decoration-slate-300/60 dark:decoration-white/20 text-slate-400 dark:text-white/35'
+                          : 'text-slate-800 dark:text-white/85 group-hover:text-blue-700 dark:group-hover:text-blue-400'
+                      }`}
+                    >
                       {t.title}
                     </span>
 
                     {stateMeta && !isBlocked && !isOverdue && (
-                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-                        style={{ color: stateMeta.fg, background: stateMeta.bg }}>
+                      <span
+                        className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                        style={{ color: stateMeta.fg, background: stateMeta.bg }}
+                      >
                         {stateMeta.label}
                       </span>
                     )}
@@ -831,9 +1035,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                     )}
 
                     {dateLabel && (
-                      <span className={`shrink-0 text-[10.5px] tabular-nums ${dateTone}`}>
-                        {dateLabel}
-                      </span>
+                      <span className={`shrink-0 text-[10.5px] tabular-nums ${dateTone}`}>{dateLabel}</span>
                     )}
                   </div>
 
@@ -856,9 +1058,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
             href={`/projects/${projectId}`}
             className="group flex items-center justify-between gap-3 px-5 py-2.5 text-[10.5px] hover:bg-white dark:hover:bg-white/[0.04] transition-colors"
           >
-            <span className="text-slate-400 dark:text-white/28">
-              Showing 20 of {sorted.length} tasks
-            </span>
+            <span className="text-slate-400 dark:text-white/28">Showing 20 of {sorted.length} tasks</span>
             <span className="text-blue-600 dark:text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform">
               Open project board →
             </span>
@@ -870,37 +1070,53 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
 }
 
 function ProjectRow({
-  project, tasks, nudgeExpand = false,
-}: { project: DashProject; tasks: TeamTask[]; nudgeExpand?: boolean }) {
+  project,
+  tasks,
+  nudgeExpand = false,
+}: {
+  project: DashProject;
+  tasks: TeamTask[];
+  nudgeExpand?: boolean;
+}) {
   // Collapsed by default — the dashboard should land quiet. The user expands
   // only what they want to inspect.
   const [open, setOpen] = useState(false);
   const health = HEALTH_META[project.health];
-  const total  = project.taskCount ?? 0;
-  const done   = project.tasksDone ?? 0;
-  const pct    = total > 0 ? Math.round(done / total * 100) : 0;
-  const dueIn  = daysUntil(project.dueDate);
-  const cat    = project.lifecycle && project.lifecycle !== 'generic' ? (LIFECYCLE_LABELS[project.lifecycle] || project.lifecycle) : null;
+  const total = project.taskCount ?? 0;
+  const done = project.tasksDone ?? 0;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const dueIn = daysUntil(project.dueDate);
+  const cat =
+    project.lifecycle && project.lifecycle !== 'generic'
+      ? LIFECYCLE_LABELS[project.lifecycle] || project.lifecycle
+      : null;
 
   // Human-readable due summary. Renders as one short phrase that conveys
   // "when is this expected to land" without a verbose "Due Jul 3 · 30d left"
   // strip running across the row.
-  const dueLabel = !project.dueDate ? null
-    : dueIn === null ? formatDate(project.dueDate)
-    : dueIn < 0  ? `${Math.abs(dueIn)}d overdue`
-    : dueIn === 0 ? 'Due today'
-    : dueIn <= 7  ? `${dueIn}d left`
-    : `Due ${formatDate(project.dueDate)}`;
+  const dueLabel = !project.dueDate
+    ? null
+    : dueIn === null
+      ? formatDate(project.dueDate)
+      : dueIn < 0
+        ? `${Math.abs(dueIn)}d overdue`
+        : dueIn === 0
+          ? 'Due today'
+          : dueIn <= 7
+            ? `${dueIn}d left`
+            : `Due ${formatDate(project.dueDate)}`;
   const dueUrgent = dueIn !== null && (dueIn < 0 || dueIn === 0);
 
   return (
-    <article className="min-w-0 bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all"
-      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+    <article
+      className="min-w-0 bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden transition-all"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+    >
       {/* Collapsed-state header — two readable rows, never a 5-piece chip strip.
           Row 1: title + identity badges (code, lifecycle, health). Row 2: the
           essential metrics — progress, tasks-done, due, owner. */}
       <header
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors select-none"
       >
         <span
@@ -910,7 +1126,11 @@ function ProjectRow({
           {/* Points right when collapsed, down when open. The nudge ripples a
               green ring around the icon (box-shadow only) — it never animates
               the icon's transform, so the arrow keeps its orientation. */}
-          <ChevronDown size={14} className="transition-transform duration-200" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+          <ChevronDown
+            size={14}
+            className="transition-transform duration-200"
+            style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          />
         </span>
 
         {/* Three-level hierarchy:
@@ -918,8 +1138,11 @@ function ProjectRow({
              2. Reference code (small, muted — its own line)
              3. Tags + single muted metadata strip */}
         <div className="flex-1 min-w-0">
-          <Link href={`/projects/${project.id}`} onClick={e => e.stopPropagation()}
-            className="block text-[15px] font-bold text-slate-800 dark:text-white/85 hover:text-blue-700 dark:hover:text-blue-400 line-clamp-2 sm:truncate leading-snug">
+          <Link
+            href={`/projects/${project.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="block text-[15px] font-bold text-slate-800 dark:text-white/85 hover:text-blue-700 dark:hover:text-blue-400 line-clamp-2 sm:truncate leading-snug"
+          >
             {project.name}
           </Link>
           <div className="text-[10px] font-bold text-slate-400/80 dark:text-white/25 tracking-wider mt-0.5">
@@ -933,20 +1156,26 @@ function ProjectRow({
                 {cat}
               </span>
             )}
-            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}>
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${health.bg} ${health.text}`}
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${health.dot}`} aria-hidden />
               {health.label}
             </span>
             <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-600 dark:text-white/50 bg-slate-50 dark:bg-white/[0.04] px-1.5 py-0.5 rounded">
-              <span className="text-slate-800 dark:text-white/80 tabular-nums">{done}/{total}</span>
+              <span className="text-slate-800 dark:text-white/80 tabular-nums">
+                {done}/{total}
+              </span>
               <span className="text-slate-400 dark:text-white/30">tasks</span>
             </span>
             {dueLabel && (
-              <span className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-1.5 py-0.5 rounded ${
-                dueUrgent
-                  ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
-                  : 'text-slate-600 dark:text-white/50 bg-slate-50 dark:bg-white/[0.04]'
-              }`}>
+              <span
+                className={`inline-flex items-center gap-1 text-[10.5px] font-semibold px-1.5 py-0.5 rounded ${
+                  dueUrgent
+                    ? 'text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
+                    : 'text-slate-600 dark:text-white/50 bg-slate-50 dark:bg-white/[0.04]'
+                }`}
+              >
                 {dueLabel}
               </span>
             )}
@@ -967,7 +1196,9 @@ function ProjectRow({
         {/* Progress + percentage — vertically centred next to the row */}
         <div className="w-14 sm:w-28 shrink-0 flex flex-col items-end justify-center gap-1">
           <ProgressBar value={pct} />
-          <div className="text-[10px] text-slate-400 dark:text-white/30 font-semibold tabular-nums">{pct}%</div>
+          <div className="text-[10px] text-slate-400 dark:text-white/30 font-semibold tabular-nums">
+            {pct}%
+          </div>
         </div>
       </header>
 
@@ -979,7 +1210,9 @@ function ProjectRow({
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-white/[0.06] shadow-sm mb-2">
                 <CheckCircle2 size={18} className="text-slate-300 dark:text-white/25" />
               </div>
-              <div className="text-[12px] font-semibold text-slate-500 dark:text-white/45">No tasks yet for this project.</div>
+              <div className="text-[12px] font-semibold text-slate-500 dark:text-white/45">
+                No tasks yet for this project.
+              </div>
               <Link
                 href={`/projects/${project.id}`}
                 className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
@@ -997,22 +1230,28 @@ function ProjectRow({
 }
 
 function TaskTableRow({ t }: { t: TeamTask }) {
-  const due     = t.ccTcd || t.dueDate;
-  const dueIn   = daysUntil(due);
+  const due = t.ccTcd || t.dueDate;
+  const dueIn = daysUntil(due);
   const overdue = due && new Date(due) < new Date() && t.status !== 'done';
 
   return (
     <tr className="group hover:bg-slate-50/80 transition-colors">
       <td className="px-4 py-2.5">
-        <Link href={`/tasks/${t.id}`}
-          className="text-xs text-slate-800 font-medium hover:text-blue-700 line-clamp-1 group-hover:underline underline-offset-2">
+        <Link
+          href={`/tasks/${t.id}`}
+          className="text-xs text-slate-800 font-medium hover:text-blue-700 line-clamp-1 group-hover:underline underline-offset-2"
+        >
           {t.title}
         </Link>
       </td>
       <td className="px-2 py-2.5 whitespace-nowrap">
         {t.subtaskCount > 0 ? (
-          <span className="text-[11px] text-slate-500 font-medium">{t.subtasksDone}/{t.subtaskCount}</span>
-        ) : <span className="text-slate-300 text-xs">—</span>}
+          <span className="text-[11px] text-slate-500 font-medium">
+            {t.subtasksDone}/{t.subtaskCount}
+          </span>
+        ) : (
+          <span className="text-slate-300 text-xs">—</span>
+        )}
       </td>
       <td className="px-2 py-2.5 whitespace-nowrap">
         {due ? (
@@ -1020,12 +1259,17 @@ function TaskTableRow({ t }: { t: TeamTask }) {
             {formatDate(due)}
             {dueIn !== null && (
               <span className="text-[9px] text-slate-400 ml-1">
-                {dueIn < 0 && t.status !== 'done' ? `(${Math.abs(dueIn)}d late)`
-                  : dueIn === 0 && t.status !== 'done' ? '(today)' : ''}
+                {dueIn < 0 && t.status !== 'done'
+                  ? `(${Math.abs(dueIn)}d late)`
+                  : dueIn === 0 && t.status !== 'done'
+                    ? '(today)'
+                    : ''}
               </span>
             )}
           </span>
-        ) : <span className="text-slate-300 text-xs">—</span>}
+        ) : (
+          <span className="text-slate-300 text-xs">—</span>
+        )}
       </td>
       <td className="px-2 py-2.5">
         {t.assigneeName ? (
@@ -1033,17 +1277,23 @@ function TaskTableRow({ t }: { t: TeamTask }) {
             <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={18} />
             <span className="text-[11px] text-slate-600 truncate max-w-[80px]">{t.assigneeName}</span>
           </div>
-        ) : <span className="text-slate-300 text-xs">—</span>}
+        ) : (
+          <span className="text-slate-300 text-xs">—</span>
+        )}
       </td>
       <td className="px-2 py-2.5">
-        <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+        <span
+          className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}
+        >
           {STATUS_LABEL[t.status] || t.status}
         </span>
       </td>
       <td className="px-2 py-2.5 whitespace-nowrap">
-        {t.completedAt
-          ? <span className="text-[11px] text-emerald-700 font-medium">{formatDate(t.completedAt)}</span>
-          : <span className="text-slate-300 text-xs">—</span>}
+        {t.completedAt ? (
+          <span className="text-[11px] text-emerald-700 font-medium">{formatDate(t.completedAt)}</span>
+        ) : (
+          <span className="text-slate-300 text-xs">—</span>
+        )}
       </td>
     </tr>
   );
@@ -1053,9 +1303,9 @@ function TaskTableRow({ t }: { t: TeamTask }) {
 /*  MY TASKS PANEL — tasks assigned to the current user (all roles)           */
 /* ────────────────────────────────────────────────────────────────────────── */
 function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
-  const myTasks = tasks.filter(t => t.assigneeId === myId && t.status !== 'done');
-  const myDone  = tasks.filter(t => t.assigneeId === myId && t.status === 'done').length;
-  const myOverdue = myTasks.filter(t => {
+  const myTasks = tasks.filter((t) => t.assigneeId === myId && t.status !== 'done');
+  const myDone = tasks.filter((t) => t.assigneeId === myId && t.status === 'done').length;
+  const myOverdue = myTasks.filter((t) => {
     const due = t.ccTcd || t.dueDate;
     return due && new Date(due) < new Date();
   }).length;
@@ -1063,17 +1313,23 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
   if (myTasks.length === 0 && myDone === 0) return null;
 
   return (
-    <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
-      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+    <section
+      className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+    >
       <PanelHeader
         icon={<CheckCircle2 size={13} />}
         tint={PANEL_TINTS.emerald}
         title="My tasks"
         count={myTasks.length}
         countSuffix=" open"
-        trailing={myOverdue > 0
-          ? <span className="text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">{myOverdue} overdue</span>
-          : null}
+        trailing={
+          myOverdue > 0 ? (
+            <span className="text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">
+              {myOverdue} overdue
+            </span>
+          ) : null
+        }
       />
       {myTasks.length === 0 ? (
         <div className="py-7 text-center">
@@ -1082,40 +1338,55 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
         </div>
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-white/[0.06] max-h-72 overflow-y-auto">
-          {myTasks.slice(0, 15).map(t => {
+          {myTasks.slice(0, 15).map((t) => {
             const due = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
             const overdue = due && new Date(due) < new Date() && t.status !== 'done';
-            const dotColor = t.status === 'in_progress' ? '#3B82F6'
-              : t.status === 'review' ? '#8B5CF6'
-              : t.status === 'blocked' ? '#EF4444'
-              : '#94A3B8';
+            const dotColor =
+              t.status === 'in_progress'
+                ? '#3B82F6'
+                : t.status === 'review'
+                  ? '#8B5CF6'
+                  : t.status === 'blocked'
+                    ? '#EF4444'
+                    : '#94A3B8';
             return (
               <li key={t.id}>
-                <Link href={`/tasks/${t.id}`}
-                  className={`flex items-start gap-3 px-4 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.05]' : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.03]'}`}>
-                  <span className="mt-1.5 w-2 h-2 rounded-full shrink-0"
-                    style={{ background: dotColor, boxShadow: `0 0 0 3px ${dotColor}28` }} />
+                <Link
+                  href={`/tasks/${t.id}`}
+                  className={`flex items-start gap-3 px-4 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.05]' : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.03]'}`}
+                >
+                  <span
+                    className="mt-1.5 w-2 h-2 rounded-full shrink-0"
+                    style={{ background: dotColor, boxShadow: `0 0 0 3px ${dotColor}28` }}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/75 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-400">
                       {t.title}
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-400 dark:text-white/30 flex-wrap">
-                      <span className="font-mono font-bold text-slate-500 dark:text-white/40">{t.projectCode}</span>
+                      <span className="font-mono font-bold text-slate-500 dark:text-white/40">
+                        {t.projectCode}
+                      </span>
                       {due && (
                         <>
                           <span className="text-slate-300 dark:text-white/15">·</span>
                           <span className={overdue ? 'text-red-500 font-bold' : ''}>
-                            {dueIn === null ? formatDate(due)
-                              : dueIn < 0 ? `${Math.abs(dueIn)}d overdue`
-                              : dueIn === 0 ? 'today'
-                              : `in ${dueIn}d`}
+                            {dueIn === null
+                              ? formatDate(due)
+                              : dueIn < 0
+                                ? `${Math.abs(dueIn)}d overdue`
+                                : dueIn === 0
+                                  ? 'today'
+                                  : `in ${dueIn}d`}
                           </span>
                         </>
                       )}
                     </div>
                   </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}>
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0 ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'}`}
+                  >
                     {STATUS_LABEL[t.status] || t.status}
                   </span>
                 </Link>
@@ -1124,7 +1395,10 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
           })}
           {myTasks.length > 15 && (
             <li className="px-4 py-2.5 text-[10px] text-slate-400 dark:text-white/30">
-              +{myTasks.length - 15} more — <Link href="/my-day" className="text-blue-600 dark:text-blue-400 font-bold">view in My Day →</Link>
+              +{myTasks.length - 15} more —{' '}
+              <Link href="/my-day" className="text-blue-600 dark:text-blue-400 font-bold">
+                view in My Day →
+              </Link>
             </li>
           )}
         </ul>
@@ -1147,14 +1421,17 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
   const [expanded, setExpanded] = useState(false);
 
   const now = new Date();
-  const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
 
   // Compute window
   let windowEnd: Date | null = null;
   if (filter === 'week') {
-    windowEnd = new Date(startOfToday); windowEnd.setDate(windowEnd.getDate() + 7);
+    windowEnd = new Date(startOfToday);
+    windowEnd.setDate(windowEnd.getDate() + 7);
   } else if (filter === 'nextWeek') {
-    windowEnd = new Date(startOfToday); windowEnd.setDate(windowEnd.getDate() + 14);
+    windowEnd = new Date(startOfToday);
+    windowEnd.setDate(windowEnd.getDate() + 14);
   } else if (filter === 'month') {
     // End of the current calendar month, not a rolling 30-day window
     windowEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -1162,14 +1439,14 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
     windowEnd = new Date(untilDate + 'T23:59:59');
   }
 
-  const overdue = tasks.filter(t => {
+  const overdue = tasks.filter((t) => {
     if (t.status === 'done') return false;
     const due = t.ccTcd || t.dueDate;
     return due && new Date(due) < startOfToday;
   });
 
   const due = windowEnd
-    ? tasks.filter(t => {
+    ? tasks.filter((t) => {
         if (t.status === 'done') return false;
         const d = t.ccTcd || t.dueDate;
         if (!d) return false;
@@ -1188,9 +1465,9 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
   due.sort(sortByDue);
 
   const FILTERS: { key: ActionFilter; label: string }[] = [
-    { key: 'week',      label: 'This week' },
-    { key: 'nextWeek',  label: 'Next week' },
-    { key: 'month',     label: 'This month' },
+    { key: 'week', label: 'This week' },
+    { key: 'nextWeek', label: 'Next week' },
+    { key: 'month', label: 'This month' },
     { key: 'untilDate', label: 'Until…' },
   ];
 
@@ -1204,11 +1481,13 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
       {!expanded && (
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2 min-w-0">
-            <TrendingUp size={14} className="text-slate-400 shrink-0" />
-            <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 truncate">
+            <TrendingUp size={14} className="text-slate-400 dark:text-white/30 shrink-0" />
+            <h2 className="text-xs font-bold uppercase tracking-wider sm:tracking-[0.14em] text-slate-500 dark:text-white/40 truncate">
               Up Next
             </h2>
-            <span className="text-[10px] text-slate-300 font-semibold shrink-0">{totalCount}</span>
+            <span className="text-[10px] text-slate-300 dark:text-white/20 font-semibold shrink-0 tabular-nums">
+              {totalCount}
+            </span>
           </div>
           <button
             type="button"
@@ -1220,88 +1499,122 @@ function UpNextPanel({ tasks }: { tasks: TeamTask[] }) {
           </button>
         </div>
       )}
-      <div className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
-        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      <div className="overflow-y-auto" style={{ maxHeight: expanded ? 'calc(100vh - 220px)' : '60vh' }}>
-        {/* Overdue group — sits at the top: nothing to filter, just the
+      <div
+        className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
+        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+      >
+        <div className="overflow-y-auto" style={{ maxHeight: expanded ? 'calc(100vh - 220px)' : '60vh' }}>
+          {/* Overdue group — sits at the top: nothing to filter, just the
             tasks that have slipped past their date. */}
-        {overdue.length > 0 && (
-          <ActionGroup
-            title="Overdue"
-            count={overdue.length}
-            icon={<AlertTriangle size={11} className="text-red-500" />}
-            dotClass="bg-red-400"
-            tasks={overdue}
-            isOverdue
-            showAll={expanded}
-          />
-        )}
+          {overdue.length > 0 && (
+            <ActionGroup
+              title="Overdue"
+              count={overdue.length}
+              icon={<AlertTriangle size={11} className="text-red-500" />}
+              dotClass="bg-red-400"
+              tasks={overdue}
+              isOverdue
+              showAll={expanded}
+            />
+          )}
 
-        {/* Due group — header first, then the window filters (they control
+          {/* Due group — header first, then the window filters (they control
             this group), then the list. Reading order matches the question:
             "what's due, and over what window?". */}
-        <div>
-          <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
-            <div className="flex items-center gap-1.5">
-              <Clock size={11} className="text-blue-500" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">Due</span>
-              {due.length > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
-            </div>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{due.length}</span>
-          </div>
-          <div className="px-4 pt-2 pb-2 border-b border-slate-100 dark:border-white/[0.05]">
-            <div className="flex gap-1 flex-wrap">
-              {FILTERS.map(f => (
-                <button key={f.key}
-                  onClick={() => setFilter(f.key)}
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
-                    filter === f.key
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-white/35 hover:bg-slate-100 dark:hover:bg-white/[0.08]'
-                  }`}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-            {filter === 'untilDate' && (
-              <div className="mt-2.5">
-                <DatePicker
-                  value={untilDate}
-                  onChange={setUntilDate}
-                  placeholder="Pick an end date"
-                  size="sm"
-                  minDate={new Date()}
-                />
+          <div>
+            <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
+              <div className="flex items-center gap-1.5">
+                <Clock size={11} className="text-blue-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">
+                  Due
+                </span>
+                {due.length > 0 && (
+                  <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">
+                    nearest first
+                  </span>
+                )}
               </div>
-            )}
+              <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{due.length}</span>
+            </div>
+            <div className="px-4 pt-2 pb-2 border-b border-slate-100 dark:border-white/[0.05]">
+              <div className="flex gap-1 flex-wrap">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilter(f.key)}
+                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                      filter === f.key
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-white/35 hover:bg-slate-100 dark:hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              {filter === 'untilDate' && (
+                <div className="mt-2.5">
+                  <DatePicker
+                    value={untilDate}
+                    onChange={setUntilDate}
+                    placeholder="Pick an end date"
+                    size="sm"
+                    minDate={new Date()}
+                  />
+                </div>
+              )}
+            </div>
+            <ActionGroup
+              title=""
+              count={due.length}
+              icon={null}
+              dotClass="bg-blue-400"
+              tasks={due}
+              showAll={expanded}
+              emptyHint={
+                filter === 'untilDate' && !untilDate
+                  ? 'Pick a date to see upcoming work.'
+                  : 'Nothing due — all clear.'
+              }
+              hideHeader
+            />
           </div>
-          <ActionGroup
-            title=""
-            count={due.length}
-            icon={null}
-            dotClass="bg-blue-400"
-            tasks={due}
-            showAll={expanded}
-            emptyHint={filter === 'untilDate' && !untilDate ? 'Pick a date to see upcoming work.' : 'Nothing due — all clear.'}
-            hideHeader
-          />
         </div>
-      </div>
       </div>
     </section>
   );
 
-  return expanded
-    ? <FullScreenOverlay title="Up Next" icon={<TrendingUp size={14} className="text-blue-500" />}
-        onClose={() => setExpanded(false)}>{inner}</FullScreenOverlay>
-    : inner;
+  return expanded ? (
+    <FullScreenOverlay
+      title="Up Next"
+      icon={<TrendingUp size={14} className="text-blue-500" />}
+      onClose={() => setExpanded(false)}
+    >
+      {inner}
+    </FullScreenOverlay>
+  ) : (
+    inner
+  );
 }
 
 function ActionGroup({
-  title, count, icon, tasks, isOverdue, emptyHint, showAll, hideHeader,
+  title,
+  count,
+  icon,
+  tasks,
+  isOverdue,
+  emptyHint,
+  showAll,
+  hideHeader,
 }: {
-  title: string; count: number; icon: React.ReactNode; dotClass?: string;
-  tasks: TeamTask[]; isOverdue?: boolean; emptyHint?: string; showAll?: boolean;
+  title: string;
+  count: number;
+  icon: React.ReactNode;
+  dotClass?: string;
+  tasks: TeamTask[];
+  isOverdue?: boolean;
+  emptyHint?: string;
+  showAll?: boolean;
   /** When true, the small group header is suppressed — the parent has
    *  already rendered its own (e.g. the Up Next panel pulls the Due header
    *  out so the filter chips can sit between it and the list). */
@@ -1314,8 +1627,12 @@ function ActionGroup({
         <div className="flex items-center justify-between px-4 py-2 bg-slate-50/40 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.05]">
           <div className="flex items-center gap-1.5">
             {icon}
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">{title}</span>
-            {count > 0 && <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/35">
+              {title}
+            </span>
+            {count > 0 && (
+              <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">nearest first</span>
+            )}
           </div>
           <span className="text-[10px] font-bold text-slate-400 dark:text-white/25">{count}</span>
         </div>
@@ -1327,24 +1644,45 @@ function ActionGroup({
         </div>
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-white/[0.05]">
-          {tasks.slice(0, limit).map(t => {
-            const due   = t.ccTcd || t.dueDate;
+          {tasks.slice(0, limit).map((t) => {
+            const due = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
             const pill = (() => {
-              if (dueIn === null) return { label: due ? formatDate(due) : '—', cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
-              if (dueIn < 0)   return { label: `${Math.abs(dueIn)}d late`, cls: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300' };
-              if (dueIn === 0) return { label: 'Today',                    cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' };
-              if (dueIn <= 2)  return { label: `${dueIn}d`,                cls: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' };
-              return                   { label: `${dueIn}d`,                cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45' };
+              if (dueIn === null)
+                return {
+                  label: due ? formatDate(due) : '—',
+                  cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45',
+                };
+              if (dueIn < 0)
+                return {
+                  label: `${Math.abs(dueIn)}d late`,
+                  cls: 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300',
+                };
+              if (dueIn === 0)
+                return {
+                  label: 'Today',
+                  cls: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+                };
+              if (dueIn <= 2)
+                return {
+                  label: `${dueIn}d`,
+                  cls: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300',
+                };
+              return {
+                label: `${dueIn}d`,
+                cls: 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-white/45',
+              };
             })();
             return (
               <li key={t.id}>
-                <Link href={`/tasks/${t.id}`}
+                <Link
+                  href={`/tasks/${t.id}`}
                   className={`flex items-center gap-3 px-4 py-2.5 transition-colors group ${
                     isOverdue
                       ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.05]'
                       : 'hover:bg-slate-50/70 dark:hover:bg-white/[0.03]'
-                  }`}>
+                  }`}
+                >
                   <div className="min-w-0 flex-1">
                     <div className="text-[12.5px] font-semibold text-slate-700 dark:text-white/85 line-clamp-1 group-hover:text-blue-700 dark:group-hover:text-blue-300">
                       {t.title}
@@ -1391,8 +1729,12 @@ function ActionGroup({
 /*  CONTRIBUTORS PANEL — right column bottom, per-person task details          */
 /* ────────────────────────────────────────────────────────────────────────── */
 function ContributorsPanel({
-  people, tasksByAssignee,
-}: { people: DashPerson[]; tasksByAssignee: Map<string, TeamTask[]> }) {
+  people,
+  tasksByAssignee,
+}: {
+  people: DashPerson[];
+  tasksByAssignee: Map<string, TeamTask[]>;
+}) {
   // Collapsed by default — keeps the dashboard quiet on landing; the lead
   // expands when they want a contributor-by-contributor breakdown.
   const [panelOpen, setPanelOpen] = useState(false);
@@ -1408,9 +1750,15 @@ function ContributorsPanel({
 
   if (people.length === 0) {
     return (
-      <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
-        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-        <PanelHeader icon={<UsersIcon size={13} />} tint={PANEL_TINTS.violet} title="Individual Contributors" />
+      <section
+        className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
+        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+      >
+        <PanelHeader
+          icon={<UsersIcon size={13} />}
+          tint={PANEL_TINTS.violet}
+          title="Individual Contributors"
+        />
       </section>
     );
   }
@@ -1419,16 +1767,21 @@ function ContributorsPanel({
   const sorted = [...people].sort((a, b) => b.loadScore - a.loadScore);
 
   return (
-    <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
-      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+    <section
+      className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+    >
       <PanelHeader
         icon={<UsersIcon size={13} />}
         tint={PANEL_TINTS.violet}
         title="Individual Contributors"
         count={people.length}
-        onClick={() => setPanelOpen(o => !o)}
+        onClick={() => setPanelOpen((o) => !o)}
         trailing={
-          <span className={`inline-flex p-1 rounded-full text-violet-500 dark:text-violet-400 ${showExpandNudge && !panelOpen ? 'pragati-drop-ripple' : ''}`} aria-hidden>
+          <span
+            className={`inline-flex p-1 rounded-full text-violet-500 dark:text-violet-400 ${showExpandNudge && !panelOpen ? 'pragati-drop-ripple' : ''}`}
+            aria-hidden
+          >
             <ChevronDown
               size={14}
               className="transition-transform duration-200"
@@ -1440,25 +1793,38 @@ function ContributorsPanel({
 
       {panelOpen && (
         <ul className="divide-y divide-slate-50 dark:divide-white/[0.04] border-t border-slate-100 dark:border-white/[0.05]">
-          {sorted.map(p => (
-            <ContributorRow key={p.id} person={p} tasks={tasksByAssignee.get(p.id) || []}
-              onViewActivity={() => setActivityPerson(p)} />
+          {sorted.map((p) => (
+            <ContributorRow
+              key={p.id}
+              person={p}
+              tasks={tasksByAssignee.get(p.id) || []}
+              onViewActivity={() => setActivityPerson(p)}
+            />
           ))}
         </ul>
       )}
 
       {activityPerson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
-          onClick={() => setActivityPerson(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
-            onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+          onClick={() => setActivityPerson(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start gap-3 mb-5">
               <UserAvatar userId={activityPerson.id} name={activityPerson.name} size={44} />
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-black text-slate-900 truncate">{activityPerson.name}</h3>
                 <div className="text-xs text-slate-400 mt-0.5">Performance overview</div>
               </div>
-              <button onClick={() => setActivityPerson(null)} className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"><X size={18} /></button>
+              <button
+                onClick={() => setActivityPerson(null)}
+                className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"
+              >
+                <X size={18} />
+              </button>
             </div>
             <ActivityGraph userId={activityPerson.id} name={activityPerson.name} />
           </div>
@@ -1473,9 +1839,7 @@ function ContributorsPanel({
    visual shape of ContributorsPanel so the right column reads the same for
    both roles — three stacked panels, same header style, same collapse
    affordance — even though the content is role-appropriate. */
-function MyFocusPanel({
-  tasks, projects, myId,
-}: { tasks: TeamTask[]; projects: any[]; myId: string }) {
+function MyFocusPanel({ tasks, projects, myId }: { tasks: TeamTask[]; projects: any[]; myId: string }) {
   const [panelOpen, setPanelOpen] = useState(true);
   const [showExpandNudge, setShowExpandNudge] = useState(true);
 
@@ -1506,15 +1870,21 @@ function MyFocusPanel({
     .sort((a, b) => b.overdue - a.overdue || b.tasks.length - a.tasks.length);
 
   return (
-    <section className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
-      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+    <section
+      className="bg-white dark:bg-[#262624] rounded-2xl border border-slate-200/80 dark:border-white/[0.07] overflow-hidden"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+    >
       <div
         className="px-4 py-3 flex items-center gap-2 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] select-none transition-colors"
         onClick={() => setPanelOpen((o) => !o)}
       >
         <FolderKanban size={13} className="text-slate-400 dark:text-white/30" />
-        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">Focus by project</h3>
-        <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">{rows.length}</span>
+        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-white/35">
+          Focus by project
+        </h3>
+        <span className="ml-auto text-[10px] text-slate-300 dark:text-white/20 font-semibold">
+          {rows.length}
+        </span>
         <ChevronDown
           size={12}
           className={`text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform duration-200 rounded-full ${showExpandNudge && !panelOpen ? 'pragati-row-expand-blink' : ''}`}
@@ -1526,17 +1896,23 @@ function MyFocusPanel({
         <ul className="divide-y divide-slate-50 dark:divide-white/[0.04] border-t border-slate-100 dark:border-white/[0.05]">
           {rows.map((r) => (
             <li key={r.projectId}>
-              <Link href={`/projects/${r.projectId}`}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors">
+              <Link
+                href={`/projects/${r.projectId}`}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-slate-700 dark:text-white/70 truncate">
                     {r.project?.name || 'Project'}
                   </div>
                   {r.project?.code && (
-                    <div className="text-[10px] font-mono text-slate-400 dark:text-white/30 mt-0.5">{r.project.code}</div>
+                    <div className="text-[10px] font-mono text-slate-400 dark:text-white/30 mt-0.5">
+                      {r.project.code}
+                    </div>
                   )}
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 dark:text-white/35 shrink-0">{r.tasks.length} open</span>
+                <span className="text-[10px] font-bold text-slate-500 dark:text-white/35 shrink-0">
+                  {r.tasks.length} open
+                </span>
                 {r.overdue > 0 && (
                   <span className="text-[10px] font-bold text-red-500 shrink-0">{r.overdue} overdue</span>
                 )}
@@ -1549,7 +1925,15 @@ function MyFocusPanel({
   );
 }
 
-function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson; tasks: TeamTask[]; onViewActivity?: () => void }) {
+function ContributorRow({
+  person,
+  tasks,
+  onViewActivity,
+}: {
+  person: DashPerson;
+  tasks: TeamTask[];
+  onViewActivity?: () => void;
+}) {
   const [open, setOpen] = useState(false);
 
   // Sort tasks: in_progress first, then by due date
@@ -1564,8 +1948,8 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
 
   const loadBadge = {
     overloaded: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400',
-    busy:       'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400',
-    healthy:    'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    busy: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    healthy: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
   }[person.loadLevel];
 
   const loadLabel = { overloaded: 'Overloaded', busy: 'Busy', healthy: 'Steady' }[person.loadLevel];
@@ -1574,13 +1958,15 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
     <li>
       <div
         className="group px-4 py-2.5 cursor-pointer hover:bg-slate-50/60 dark:hover:bg-white/[0.03] transition-colors"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-2">
           <UserAvatar userId={person.id} name={person.name} size={26} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-800 dark:text-white/75 truncate">{person.name}</span>
+              <span className="text-xs font-semibold text-slate-800 dark:text-white/75 truncate">
+                {person.name}
+              </span>
               {/* Activity deep-dive — same gesture as the team & people pages.
                   Always visible (no hover-reveal) so a viewer doesn't need to
                   discover that the row is clickable. */}
@@ -1588,24 +1974,39 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
                 <button
                   onMouseEnter={() => warmActivityGraph(person.id)}
                   onFocus={() => warmActivityGraph(person.id)}
-                  onClick={(e) => { e.stopPropagation(); warmActivityGraph(person.id); onViewActivity(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    warmActivityGraph(person.id);
+                    onViewActivity();
+                  }}
                   title={`View ${person.name}'s activity`}
-                  className="text-slate-400 dark:text-white/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0">
+                  className="text-slate-400 dark:text-white/30 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shrink-0"
+                >
                   <BarChart3 size={13} />
                 </button>
               )}
             </div>
             <div className="text-[10px] text-slate-400 dark:text-white/30 truncate">
               {person.openTasks} open
-              {person.overdueCount > 0 && <span className="text-red-600 dark:text-red-400 font-semibold ml-1.5">· {person.overdueCount} overdue</span>}
-              {person.completedThisWeek > 0 && <span className="text-emerald-600 dark:text-emerald-400 ml-1.5">· {person.completedThisWeek} done·7d</span>}
+              {person.overdueCount > 0 && (
+                <span className="text-red-600 dark:text-red-400 font-semibold ml-1.5">
+                  · {person.overdueCount} overdue
+                </span>
+              )}
+              {person.completedThisWeek > 0 && (
+                <span className="text-emerald-600 dark:text-emerald-400 ml-1.5">
+                  · {person.completedThisWeek} done·7d
+                </span>
+              )}
             </div>
           </div>
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${loadBadge}`}>
             {loadLabel}
           </span>
-          <button className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform"
-            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <button
+            className="p-0.5 text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 transition-transform"
+            style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
             <ChevronDown size={12} />
           </button>
         </div>
@@ -1619,29 +2020,56 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
             </div>
           ) : (
             <ul className="mx-3 mb-2 divide-y divide-slate-100 dark:divide-white/[0.05] rounded-xl border border-slate-100 dark:border-white/[0.06] overflow-hidden bg-white dark:bg-white/[0.02]">
-              {sorted.slice(0, 5).map(t => {
+              {sorted.slice(0, 5).map((t) => {
                 const due = t.ccTcd || t.dueDate;
                 const dueIn = daysUntil(due);
                 const overdue = due && new Date(due) < new Date();
                 return (
                   <li key={t.id}>
-                    <Link href={`/tasks/${t.id}`}
-                      className={`flex items-start gap-2.5 px-3 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.04]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]'}`}>
-                      <span className="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ background: t.status === 'in_progress' ? '#3B82F6' : t.status === 'review' ? '#8B5CF6' : t.status === 'blocked' ? '#EF4444' : '#94A3B8' }} />
+                    <Link
+                      href={`/tasks/${t.id}`}
+                      className={`flex items-start gap-2.5 px-3 py-2.5 transition-colors group ${overdue ? 'hover:bg-red-50/40 dark:hover:bg-red-500/[0.04]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]'}`}
+                    >
+                      <span
+                        className="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{
+                          background:
+                            t.status === 'in_progress'
+                              ? '#3B82F6'
+                              : t.status === 'review'
+                                ? '#8B5CF6'
+                                : t.status === 'blocked'
+                                  ? '#EF4444'
+                                  : '#94A3B8',
+                        }}
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="text-[11.5px] font-semibold text-slate-700 dark:text-white/70 hover:text-blue-700 dark:group-hover:text-blue-400 line-clamp-1">
                           {t.title}
                         </div>
                         <div className="text-[10px] text-slate-400 dark:text-white/30 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono font-bold text-slate-500 dark:text-white/40">{t.projectCode}</span>
-                          <span className={`px-1 py-0 rounded-sm ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'} text-[9px] font-bold`}>
+                          <span className="font-mono font-bold text-slate-500 dark:text-white/40">
+                            {t.projectCode}
+                          </span>
+                          <span
+                            className={`px-1 py-0 rounded-sm ${STATUS_COLORS[t.status] || 'bg-slate-100 text-slate-500'} text-[9px] font-bold`}
+                          >
                             {STATUS_LABEL[t.status] || t.status}
                           </span>
-                          {t.subtaskCount > 0 && <span>{t.subtasksDone}/{t.subtaskCount} sub</span>}
+                          {t.subtaskCount > 0 && (
+                            <span>
+                              {t.subtasksDone}/{t.subtaskCount} sub
+                            </span>
+                          )}
                           {due && (
                             <span className={overdue ? 'text-red-500 font-semibold' : ''}>
-                              {dueIn === null ? formatDate(due) : dueIn < 0 ? `${Math.abs(dueIn)}d late` : dueIn === 0 ? 'today' : `${dueIn}d`}
+                              {dueIn === null
+                                ? formatDate(due)
+                                : dueIn < 0
+                                  ? `${Math.abs(dueIn)}d late`
+                                  : dueIn === 0
+                                    ? 'today'
+                                    : `${dueIn}d`}
                             </span>
                           )}
                         </div>
@@ -1662,4 +2090,3 @@ function ContributorRow({ person, tasks, onViewActivity }: { person: DashPerson;
     </li>
   );
 }
-

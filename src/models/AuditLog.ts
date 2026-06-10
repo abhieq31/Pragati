@@ -7,20 +7,24 @@ import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 const AuditLogSchema = new Schema(
   {
     // Dotted action key, e.g. 'project.create', 'task.status', 'user.reset'.
-    action:   { type: String, required: true },
+    action: { type: String, required: true },
     // Coarse grouping for filtering in the UI.
-    category: { type: String, enum: ['project', 'task', 'team', 'user', 'auth', 'general'], default: 'general' },
+    category: {
+      type: String,
+      enum: ['project', 'task', 'team', 'user', 'auth', 'general'],
+      default: 'general',
+    },
 
-    actorId:   { type: Schema.Types.ObjectId, ref: 'User' },
+    actorId: { type: Schema.Types.ObjectId, ref: 'User' },
     actorName: { type: String, default: '' },
 
     // What the action acted on (for linking + context).
-    targetType:  { type: String, default: '' },   // 'project' | 'task' | 'team' | 'user'
-    targetId:    { type: String, default: '' },
-    targetLabel: { type: String, default: '' },    // human label, e.g. project name
+    targetType: { type: String, default: '' }, // 'project' | 'task' | 'team' | 'user'
+    targetId: { type: String, default: '' },
+    targetLabel: { type: String, default: '' }, // human label, e.g. project name
 
-    summary: { type: String, default: '' },        // one-line description
-    meta:    { type: Schema.Types.Mixed, default: null }, // optional before/after, ids, etc.
+    summary: { type: String, default: '' }, // one-line description
+    meta: { type: Schema.Types.Mixed, default: null }, // optional before/after, ids, etc.
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );
@@ -37,5 +41,4 @@ AuditLogSchema.index({ targetId: 1, createdAt: -1 });
 export type AuditLogDoc = InferSchemaType<typeof AuditLogSchema> & { _id: mongoose.Types.ObjectId };
 
 export const AuditLog: Model<AuditLogDoc> =
-  (mongoose.models.AuditLog as Model<AuditLogDoc>) ||
-  mongoose.model<AuditLogDoc>('AuditLog', AuditLogSchema);
+  (mongoose.models.AuditLog as Model<AuditLogDoc>) || mongoose.model<AuditLogDoc>('AuditLog', AuditLogSchema);

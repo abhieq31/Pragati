@@ -9,16 +9,16 @@ import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 // authorised whom into the system.
 const InviteSchema = new Schema(
   {
-    token:            { type: String, required: true, unique: true, index: true },
-    email:            { type: String, required: true, lowercase: true, index: true },
-    invitedBy:        { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    invitedByName:    { type: String, default: '' },
-    expiresAt:        { type: Date,   required: true },
-    consumedAt:       { type: Date,   default: null },
+    token: { type: String, required: true, unique: true, index: true },
+    email: { type: String, required: true, lowercase: true, index: true },
+    invitedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    invitedByName: { type: String, default: '' },
+    expiresAt: { type: Date, required: true },
+    consumedAt: { type: Date, default: null },
     consumedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
-    revokedAt:        { type: Date,   default: null },
+    revokedAt: { type: Date, default: null },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // TTL index: MongoDB automatically deletes expired invites at the DB level,
@@ -28,5 +28,4 @@ InviteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 export type InviteDoc = InferSchemaType<typeof InviteSchema> & { _id: mongoose.Types.ObjectId };
 
 export const Invite: Model<InviteDoc> =
-  (mongoose.models.Invite as Model<InviteDoc>) ||
-  mongoose.model<InviteDoc>('Invite', InviteSchema);
+  (mongoose.models.Invite as Model<InviteDoc>) || mongoose.model<InviteDoc>('Invite', InviteSchema);

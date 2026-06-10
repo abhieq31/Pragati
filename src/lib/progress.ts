@@ -12,18 +12,16 @@
  */
 export const PRIORITY_WEIGHT: Record<string, number> = {
   critical: 4,
-  high:     3,
-  medium:   2,
-  low:      1,
+  high: 3,
+  medium: 2,
+  low: 1,
 };
 
 function weightOf(priority?: string | null): number {
   return PRIORITY_WEIGHT[priority || 'medium'] ?? 2;
 }
 
-export function weightedProgress(
-  tasks: Array<{ status?: string | null; priority?: string | null }>,
-): number {
+export function weightedProgress(tasks: Array<{ status?: string | null; priority?: string | null }>): number {
   let total = 0;
   let done = 0;
   for (const t of tasks) {

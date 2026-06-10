@@ -14,12 +14,12 @@ import { useState } from 'react';
 import { api } from '@/lib/client/api';
 
 const HEADLINE: Record<string, string> = {
-  approval:     'Waiting on approval',
+  approval: 'Waiting on approval',
   another_team: 'Waiting on another team',
-  person:       'Waiting on a person',
-  other:        'Waiting',
-  decision:     'Decision needed',
-  help:         'Help requested',
+  person: 'Waiting on a person',
+  other: 'Waiting',
+  decision: 'Decision needed',
+  help: 'Help requested',
 };
 
 export interface FlowSignalTaskStripProps {
@@ -34,7 +34,13 @@ export interface FlowSignalTaskStripProps {
 }
 
 export function FlowSignalTaskStrip({
-  taskId, pendingType, detail, confirmedAt, confirmedByName, canResolve, onChanged,
+  taskId,
+  pendingType,
+  detail,
+  confirmedAt,
+  confirmedByName,
+  canResolve,
+  onChanged,
 }: FlowSignalTaskStripProps) {
   const [busy, setBusy] = useState(false);
 
@@ -70,7 +76,8 @@ export function FlowSignalTaskStrip({
         </div>
         {(confirmedByName || confirmedAt) && (
           <div className="text-[11px] text-amber-700/70 dark:text-amber-300/60 mt-0.5">
-            Confirmed {relTime(confirmedAt)}{confirmedByName ? ` by ${confirmedByName}` : ''}
+            Confirmed {relTime(confirmedAt)}
+            {confirmedByName ? ` by ${confirmedByName}` : ''}
           </div>
         )}
       </div>
@@ -93,7 +100,7 @@ function relTime(iso?: string | null): string {
   const t = new Date(iso).getTime();
   if (!Number.isFinite(t)) return '';
   const ms = Date.now() - t;
-  const d  = Math.floor(ms / 86_400_000);
+  const d = Math.floor(ms / 86_400_000);
   if (d <= 0) return 'today';
   if (d === 1) return 'yesterday';
   if (d < 7) return `${d} days ago`;

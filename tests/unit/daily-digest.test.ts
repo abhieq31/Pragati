@@ -26,7 +26,7 @@ describe('dayWindowInTz', () => {
     // 2026-06-08T03:00:00Z is 08:30 on 8 June in IST (UTC+5:30).
     const { start, end } = dayWindowInTz(new Date('2026-06-08T03:00:00Z'), IST);
     assert.equal(start.toISOString(), '2026-06-07T18:30:00.000Z'); // 00:00 IST, 8 June
-    assert.equal(end.toISOString(), '2026-06-08T18:30:00.000Z');   // 00:00 IST, 9 June
+    assert.equal(end.toISOString(), '2026-06-08T18:30:00.000Z'); // 00:00 IST, 9 June
   });
 
   it('keeps the same window late in the IST day', () => {
@@ -116,8 +116,13 @@ describe('resolveDigestEmail', () => {
 
 describe('renderDigestEmail', () => {
   const today: DigestTask = {
-    id: 't1', title: 'Fix <A> & B', priority: 'high', projectId: 'p1',
-    bucket: 'today', label: 'Today', effDue: new Date('2026-06-08T05:00:00Z'),
+    id: 't1',
+    title: 'Fix <A> & B',
+    priority: 'high',
+    projectId: 'p1',
+    bucket: 'today',
+    label: 'Today',
+    effDue: new Date('2026-06-08T05:00:00Z'),
   };
 
   it('summarises counts in the subject and HTML-escapes the body', () => {
@@ -130,8 +135,8 @@ describe('renderDigestEmail', () => {
     });
     assert.match(out.subject, /1 due today/);
     assert.match(out.html, /Good morning, Priya/);
-    assert.match(out.html, /Fix &lt;A&gt; &amp; B/);   // escaped in HTML
-    assert.match(out.text, /Fix <A> & B/);             // raw in plain text
+    assert.match(out.html, /Fix &lt;A&gt; &amp; B/); // escaped in HTML
+    assert.match(out.text, /Fix <A> & B/); // raw in plain text
     assert.match(out.html, /https:\/\/x\.test\/tasks\/t1/);
   });
 

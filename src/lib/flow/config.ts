@@ -11,11 +11,16 @@ export type FlowMode = 'off' | 'shadow' | 'pilot' | 'live';
 
 const parseMode = (raw: string | undefined): FlowMode => {
   switch ((raw || '').toLowerCase()) {
-    case 'off':    return 'off';
-    case 'shadow': return 'shadow';
-    case 'pilot':  return 'pilot';
-    case 'live':   return 'live';
-    default:       return 'pilot';   // default: pilot — fact layer is visible, inference layers are still off
+    case 'off':
+      return 'off';
+    case 'shadow':
+      return 'shadow';
+    case 'pilot':
+      return 'pilot';
+    case 'live':
+      return 'live';
+    default:
+      return 'pilot'; // default: pilot — fact layer is visible, inference layers are still off
   }
 };
 
@@ -31,36 +36,39 @@ const parseInt0 = (raw: string | undefined, def: number): number => {
 
 const parseCsv = (raw: string | undefined): string[] => {
   if (!raw) return [];
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 };
 
 export interface FlowConfig {
   mode: FlowMode;
-  factsEnabled:           boolean;   // observable-fact path (today's launch)
-  anomalyEnabled:         boolean;   // baseline / Welford / EWMA inference  (Phase 4 — shadow by default)
-  survivalEnabled:        boolean;   // discrete-time survival model         (Phase 5 — shadow)
-  textClassifierEnabled:  boolean;   // local hashed bag-of-words classifier (Phase 6 — shadow)
-  banditEnabled:          boolean;   // safe contextual bandit               (Phase 7 — off)
-  pilotTeamIds:           string[];  // when mode=pilot, only these teams see prompts
-  modelCacheTtlSeconds:   number;
-  maxIcPromptsPerDay:     number;
-  maxLeadItems:           number;
+  factsEnabled: boolean; // observable-fact path (today's launch)
+  anomalyEnabled: boolean; // baseline / Welford / EWMA inference  (Phase 4 — shadow by default)
+  survivalEnabled: boolean; // discrete-time survival model         (Phase 5 — shadow)
+  textClassifierEnabled: boolean; // local hashed bag-of-words classifier (Phase 6 — shadow)
+  banditEnabled: boolean; // safe contextual bandit               (Phase 7 — off)
+  pilotTeamIds: string[]; // when mode=pilot, only these teams see prompts
+  modelCacheTtlSeconds: number;
+  maxIcPromptsPerDay: number;
+  maxLeadItems: number;
   stillMovingCooldownHours: number;
 }
 
 export function getFlowConfig(): FlowConfig {
   return {
-    mode:                      parseMode(process.env.FLOW_SIGNAL_MODE),
-    factsEnabled:              parseBool(process.env.FLOW_SIGNAL_FACTS_ENABLED,             true),
-    anomalyEnabled:            parseBool(process.env.FLOW_SIGNAL_ANOMALY_ENABLED,           false),
-    survivalEnabled:           parseBool(process.env.FLOW_SIGNAL_SURVIVAL_ENABLED,          false),
-    textClassifierEnabled:     parseBool(process.env.FLOW_SIGNAL_TEXT_CLASSIFIER_ENABLED,   false),
-    banditEnabled:             parseBool(process.env.FLOW_SIGNAL_BANDIT_ENABLED,            false),
-    pilotTeamIds:              parseCsv(process.env.FLOW_SIGNAL_PILOT_TEAM_IDS),
-    modelCacheTtlSeconds:      parseInt0(process.env.FLOW_SIGNAL_MODEL_CACHE_TTL_SECONDS,   600),
-    maxIcPromptsPerDay:        parseInt0(process.env.FLOW_SIGNAL_MAX_IC_PROMPTS_PER_DAY,    3),
-    maxLeadItems:              parseInt0(process.env.FLOW_SIGNAL_MAX_LEAD_ITEMS,            3),
-    stillMovingCooldownHours:  parseInt0(process.env.FLOW_SIGNAL_STILL_MOVING_COOLDOWN_HOURS, 24),
+    mode: parseMode(process.env.FLOW_SIGNAL_MODE),
+    factsEnabled: parseBool(process.env.FLOW_SIGNAL_FACTS_ENABLED, true),
+    anomalyEnabled: parseBool(process.env.FLOW_SIGNAL_ANOMALY_ENABLED, false),
+    survivalEnabled: parseBool(process.env.FLOW_SIGNAL_SURVIVAL_ENABLED, false),
+    textClassifierEnabled: parseBool(process.env.FLOW_SIGNAL_TEXT_CLASSIFIER_ENABLED, false),
+    banditEnabled: parseBool(process.env.FLOW_SIGNAL_BANDIT_ENABLED, false),
+    pilotTeamIds: parseCsv(process.env.FLOW_SIGNAL_PILOT_TEAM_IDS),
+    modelCacheTtlSeconds: parseInt0(process.env.FLOW_SIGNAL_MODEL_CACHE_TTL_SECONDS, 600),
+    maxIcPromptsPerDay: parseInt0(process.env.FLOW_SIGNAL_MAX_IC_PROMPTS_PER_DAY, 3),
+    maxLeadItems: parseInt0(process.env.FLOW_SIGNAL_MAX_LEAD_ITEMS, 3),
+    stillMovingCooldownHours: parseInt0(process.env.FLOW_SIGNAL_STILL_MOVING_COOLDOWN_HOURS, 24),
   };
 }
 

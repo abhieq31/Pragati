@@ -14,9 +14,9 @@
  *  sidebar, loading state, favicon). No external assets, no corporate logo.
  */
 export function PragatiMark({
-  size      = 96,
+  size = 96,
   /** when true, drops the glow + heavy shadow (good for inline use in the sidebar) */
-  flat      = false,
+  flat = false,
   className = '',
 }: {
   size?: number;
@@ -37,7 +37,7 @@ export function PragatiMark({
       role="img"
       className={`relative inline-flex items-center justify-center ${className}`}
       style={{
-        width:  size,
+        width: size,
         height: size,
         borderRadius: r,
         background: 'linear-gradient(135deg, #1565C0 0%, #1769C8 45%, #2B8C29 100%)',
@@ -49,9 +49,8 @@ export function PragatiMark({
         className="absolute pointer-events-none"
         style={{
           inset: Math.max(2, size * 0.04),
-          borderRadius: Math.round(r * 0.80),
-          background:
-            'linear-gradient(155deg, rgba(255,255,255,0.14) 0%, transparent 55%)',
+          borderRadius: Math.round(r * 0.8),
+          background: 'linear-gradient(155deg, rgba(255,255,255,0.14) 0%, transparent 55%)',
         }}
       />
 
@@ -67,10 +66,8 @@ export function PragatiMark({
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M14 40 L32 22 L50 40"
-          stroke="#ffffff" strokeWidth="7" />
-        <path d="M18 52 L32 38 L46 52"
-          stroke="#B7E4C2" strokeWidth="5" opacity="0.92" />
+        <path d="M14 40 L32 22 L50 40" stroke="#ffffff" strokeWidth="7" />
+        <path d="M18 52 L32 38 L46 52" stroke="#B7E4C2" strokeWidth="5" opacity="0.92" />
       </svg>
     </div>
   );

@@ -21,7 +21,7 @@ interface CalTask {
   id: string;
   title: string;
   status: string;
-  due: string;            // ISO
+  due: string; // ISO
   mine: boolean;
   assigneeName: string | null;
   teamName: string | null;
@@ -30,7 +30,20 @@ interface CalTask {
 }
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 // Local YYYY-MM-DD key (avoids UTC drift from toISOString).
 function dayKey(d: Date) {
@@ -65,12 +78,13 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   // Touch-swipe tracking for month navigation.
   const touchStartY = useRef<number | null>(null);
 
-  const isCurrentMonth = cursor.getMonth() === today.getMonth() && cursor.getFullYear() === today.getFullYear();
+  const isCurrentMonth =
+    cursor.getMonth() === today.getMonth() && cursor.getFullYear() === today.getFullYear();
 
   // Build a grid of exactly the days in the current month, with leading blank
   // cells to align to the correct day-of-week. No trailing overflow.
   const { grid, leadingBlanks } = useMemo(() => {
-    const year  = cursor.getFullYear();
+    const year = cursor.getFullYear();
     const month = cursor.getMonth();
     const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -80,21 +94,26 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
 
   // Fetch range = first and last day of the visible month.
   const rangeFrom = dayKey(grid[0]);
-  const rangeTo   = dayKey(grid[grid.length - 1]);
-  const rangeKey  = `${rangeFrom}|${rangeTo}`;
+  const rangeTo = dayKey(grid[grid.length - 1]);
+  const rangeKey = `${rangeFrom}|${rangeTo}`;
 
   useEffect(() => {
     let alive = true;
     const cached = rangeCache.get(rangeKey);
-    if (cached) { setTasks(cached); return; }
+    if (cached) {
+      setTasks(cached);
+      return;
+    }
     api<{ tasks: CalTask[] }>(`/me/calendar?from=${rangeFrom}&to=${rangeTo}`)
-      .then(d => {
+      .then((d) => {
         if (!alive) return;
         rangeCache.set(rangeKey, d.tasks);
         setTasks(d.tasks);
       })
       .catch(() => {});
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [rangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Group tasks by local day key.
@@ -111,9 +130,12 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   const todayKey = dayKey(today);
 
   function signals(list: CalTask[]) {
-    let mine = false, team = false, overdue = false;
+    let mine = false,
+      team = false,
+      overdue = false;
     for (const t of list) {
-      if (t.mine) mine = true; else team = true;
+      if (t.mine) mine = true;
+      else team = true;
       if (new Date(t.due) < new Date(todayKey) && t.status !== 'done') overdue = true;
     }
     return { mine, team, overdue };
@@ -144,13 +166,13 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   function hoverAccentColor(list: CalTask[]): string {
     const sig = signals(list);
     if (sig.overdue) return '#ef4444';
-    if (sig.mine)    return '#1976D2';
+    if (sig.mine) return '#1976D2';
     return '#22a565';
   }
 
-  const prevMonth = useCallback(() => setCursor(c => new Date(c.getFullYear(), c.getMonth() - 1, 1)), []);
-  const nextMonth = useCallback(() => setCursor(c => new Date(c.getFullYear(), c.getMonth() + 1, 1)), []);
-  const goToday   = useCallback(() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1)), [today]);
+  const prevMonth = useCallback(() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1)), []);
+  const nextMonth = useCallback(() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1)), []);
+  const goToday = useCallback(() => setCursor(new Date(today.getFullYear(), today.getMonth(), 1)), [today]);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartY.current = e.touches[0].clientY;
@@ -162,12 +184,13 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
     if (Math.abs(delta) < 30) return; // ignore tiny taps
     // Swipe down (delta > 0) → previous month (scrolling calendar feed up)
     // Swipe up  (delta < 0) → next month
-    if (delta > 0) prevMonth(); else nextMonth();
+    if (delta > 0) prevMonth();
+    else nextMonth();
   }
 
-  const monthName  = MONTHS[cursor.getMonth()];
-  const monthYear  = cursor.getFullYear();
-  const hoverList  = hover ? (byDay.get(hover.key) || []) : [];
+  const monthName = MONTHS[cursor.getMonth()];
+  const monthYear = cursor.getFullYear();
+  const hoverList = hover ? byDay.get(hover.key) || [] : [];
 
   return (
     <div
@@ -209,7 +232,12 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
       {/* Weekday header */}
       <div className="grid grid-cols-7 mb-0.5">
         {WEEKDAYS.map((d, i) => (
-          <div key={i} className={`text-center text-[8px] font-bold ${dark ? 'text-white/20' : 'text-slate-300'}`}>{d}</div>
+          <div
+            key={i}
+            className={`text-center text-[8px] font-bold ${dark ? 'text-white/20' : 'text-slate-300'}`}
+          >
+            {d}
+          </div>
         ))}
       </div>
 
@@ -244,19 +272,34 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
                 } ${
                   isToday
                     ? 'text-white'
-                    : (dark ? 'text-white/60 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100')
+                    : dark
+                      ? 'text-white/60 hover:bg-white/5'
+                      : 'text-slate-600 hover:bg-slate-100'
                 }`}
-                style={isToday
-                  ? { width: 26, height: 26, background: 'linear-gradient(135deg,#0d47a1 0%,#1565C0 45%,#1e88e5 100%)', boxShadow: '0 2px 8px rgba(21,101,192,0.45)' }
-                  : { width: 24, height: 24 }}
+                style={
+                  isToday
+                    ? {
+                        width: 26,
+                        height: 26,
+                        background: 'linear-gradient(135deg,#0d47a1 0%,#1565C0 45%,#1e88e5 100%)',
+                        boxShadow: '0 2px 8px rgba(21,101,192,0.45)',
+                      }
+                    : { width: 24, height: 24 }
+                }
               >
                 {d.getDate()}
               </button>
               {/* Dots — at most two (mine=blue, team=green); overdue paints red */}
               <div className="flex items-center gap-[2px] h-[5px] mt-[1px]">
-                {sig?.overdue && <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#ef4444' }} />}
-                {!sig?.overdue && sig?.mine && <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#1976D2' }} />}
-                {!sig?.overdue && sig?.team && <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#22a565' }} />}
+                {sig?.overdue && (
+                  <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#ef4444' }} />
+                )}
+                {!sig?.overdue && sig?.mine && (
+                  <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#1976D2' }} />
+                )}
+                {!sig?.overdue && sig?.team && (
+                  <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#22a565' }} />
+                )}
               </div>
             </div>
           );
@@ -264,69 +307,97 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
       </div>
 
       {/* Floating hover card — portalled so the sidebar's overflow never clips it */}
-      {hover && hoverList.length > 0 && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed z-[1200] -translate-y-1/2 pointer-events-auto"
-          style={{ left: hover.x, top: hover.y, transform: hover.placeLeft ? 'translate(-100%, -50%)' : 'translateY(-50%)' }}
-          onMouseEnter={() => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }}
-          onMouseLeave={closeHover}
-        >
+      {hover &&
+        hoverList.length > 0 &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
-            className="w-[248px] rounded-xl border p-2.5 shadow-2xl overflow-hidden"
+            className="fixed z-[1200] -translate-y-1/2 pointer-events-auto"
             style={{
-              background: dark ? '#2b2b29' : '#ffffff',
-              borderColor: dark ? 'rgba(255,255,255,0.10)' : '#e2e8f0',
-              boxShadow: dark ? '0 14px 36px rgba(0,0,0,0.5)' : '0 14px 36px rgba(15,23,42,0.15)',
-              borderLeft: `3px solid ${hoverAccentColor(hoverList)}`,
+              left: hover.x,
+              top: hover.y,
+              transform: hover.placeLeft ? 'translate(-100%, -50%)' : 'translateY(-50%)',
             }}
+            onMouseEnter={() => {
+              if (hoverTimer.current) clearTimeout(hoverTimer.current);
+            }}
+            onMouseLeave={closeHover}
           >
-            <div className={`text-[11px] font-black tracking-tight mb-1.5 ${dark ? 'text-white/80' : 'text-slate-700'}`}>
-              {new Date(hover.key + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-            </div>
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto no-scrollbar">
-              {hoverList.slice(0, 5).map(t => {
-                const overdue = new Date(t.due) < new Date(todayKey) && t.status !== 'done';
-                return (
-                  <button
-                    key={t.id}
-                    className="flex items-start gap-1.5 w-full text-left hover:opacity-75 transition-opacity"
-                    onClick={() => { router.push(`/tasks/${t.id}`); setHover(null); }}
+            <div
+              className="w-[248px] rounded-xl border p-2.5 shadow-2xl overflow-hidden"
+              style={{
+                background: dark ? '#2b2b29' : '#ffffff',
+                borderColor: dark ? 'rgba(255,255,255,0.10)' : '#e2e8f0',
+                boxShadow: dark ? '0 14px 36px rgba(0,0,0,0.5)' : '0 14px 36px rgba(15,23,42,0.15)',
+                borderLeft: `3px solid ${hoverAccentColor(hoverList)}`,
+              }}
+            >
+              <div
+                className={`text-[11px] font-black tracking-tight mb-1.5 ${dark ? 'text-white/80' : 'text-slate-700'}`}
+              >
+                {new Date(hover.key + 'T00:00:00').toLocaleDateString(undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </div>
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto no-scrollbar">
+                {hoverList.slice(0, 5).map((t) => {
+                  const overdue = new Date(t.due) < new Date(todayKey) && t.status !== 'done';
+                  return (
+                    <button
+                      key={t.id}
+                      className="flex items-start gap-1.5 w-full text-left hover:opacity-75 transition-opacity"
+                      onClick={() => {
+                        router.push(`/tasks/${t.id}`);
+                        setHover(null);
+                      }}
+                    >
+                      <span
+                        className="w-[5px] h-[5px] rounded-full mt-[5px] shrink-0"
+                        style={{ background: overdue ? '#ef4444' : t.mine ? '#1976D2' : '#22a565' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className={`text-[11px] font-medium leading-snug truncate ${dark ? 'text-white/80' : 'text-slate-700'}`}
+                        >
+                          {t.title}
+                        </div>
+                        <div
+                          className={`text-[9.5px] mt-px flex items-center gap-1 min-w-0 ${dark ? 'text-white/35' : 'text-slate-400'}`}
+                        >
+                          {t.mine ? (
+                            <span className="font-semibold text-blue-500 shrink-0">You</span>
+                          ) : t.assigneeName ? (
+                            <span className="font-semibold shrink-0" style={{ color: '#22a565' }}>
+                              {firstName(t.assigneeName)}
+                            </span>
+                          ) : t.teamName ? (
+                            <span className="font-semibold shrink-0" style={{ color: '#22a565' }}>
+                              {t.teamName}
+                            </span>
+                          ) : null}
+                          {t.projectRef && (
+                            <span className="font-mono truncate min-w-0 opacity-80">· {t.projectRef}</span>
+                          )}
+                          {overdue && <span className="font-semibold text-red-500 shrink-0">· overdue</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {hoverList.length > 5 && (
+                  <div
+                    className={`text-[9.5px] font-semibold pt-0.5 ${dark ? 'text-white/30' : 'text-slate-400'}`}
                   >
-                    <span
-                      className="w-[5px] h-[5px] rounded-full mt-[5px] shrink-0"
-                      style={{ background: overdue ? '#ef4444' : t.mine ? '#1976D2' : '#22a565' }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[11px] font-medium leading-snug truncate ${dark ? 'text-white/80' : 'text-slate-700'}`}>
-                        {t.title}
-                      </div>
-                      <div className={`text-[9.5px] mt-px flex items-center gap-1 min-w-0 ${dark ? 'text-white/35' : 'text-slate-400'}`}>
-                        {t.mine
-                          ? <span className="font-semibold text-blue-500 shrink-0">You</span>
-                          : t.assigneeName
-                            ? <span className="font-semibold shrink-0" style={{ color: '#22a565' }}>{firstName(t.assigneeName)}</span>
-                            : t.teamName
-                              ? <span className="font-semibold shrink-0" style={{ color: '#22a565' }}>{t.teamName}</span>
-                              : null}
-                        {t.projectRef && (
-                          <span className="font-mono truncate min-w-0 opacity-80">· {t.projectRef}</span>
-                        )}
-                        {overdue && <span className="font-semibold text-red-500 shrink-0">· overdue</span>}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              {hoverList.length > 5 && (
-                <div className={`text-[9.5px] font-semibold pt-0.5 ${dark ? 'text-white/30' : 'text-slate-400'}`}>
-                  +{hoverList.length - 5} more
-                </div>
-              )}
+                    +{hoverList.length - 5} more
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

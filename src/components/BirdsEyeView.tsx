@@ -1,7 +1,21 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ZoomIn, ZoomOut, Scan, Download, FileDown, Layers, RotateCcw, Pencil, Check, Brush, Eraser, Plus } from 'lucide-react';
+import {
+  X,
+  ZoomIn,
+  ZoomOut,
+  Scan,
+  Download,
+  FileDown,
+  Layers,
+  RotateCcw,
+  Pencil,
+  Check,
+  Brush,
+  Eraser,
+  Plus,
+} from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
@@ -66,9 +80,9 @@ export interface BirdsEyeTask {
 }
 
 export interface BirdsEyeData {
-  rootLabel: string;          // e.g. "Abhi Patel's workspace" or "BOT Automation"
+  rootLabel: string; // e.g. "Abhi Patel's workspace" or "BOT Automation"
   rootSubLabel?: string;
-  teams: BirdsEyeTeam[];      // can be empty for project-only view
+  teams: BirdsEyeTeam[]; // can be empty for project-only view
   projects: BirdsEyeProject[];
   tasks: BirdsEyeTask[];
   /** Which level the root represents — drives node-shape choices. */
@@ -80,28 +94,28 @@ export interface BirdsEyeData {
    communicated by the edge, not a loud block of colour, so a dense board reads
    as a calm executive overview rather than a developer graph. */
 const STATUS_FILL: Record<string, string> = {
-  todo:        '#f8fafc',
+  todo: '#f8fafc',
   in_progress: '#eff6ff',
-  review:      '#fffbeb',
-  blocked:     '#fef2f2',
-  done:        '#f0fdf4',
+  review: '#fffbeb',
+  blocked: '#fef2f2',
+  done: '#f0fdf4',
 };
 const STATUS_STROKE: Record<string, string> = {
-  todo:        '#94a3b8',
+  todo: '#94a3b8',
   in_progress: '#3b82f6',
-  review:      '#f59e0b',
-  blocked:     '#ef4444',
-  done:        '#22c55e',
+  review: '#f59e0b',
+  blocked: '#ef4444',
+  done: '#22c55e',
 };
 const STATUS_DOT = STATUS_STROKE;
 const HEALTH_FILL: Record<string, string> = {
-  healthy:  '#f0fdf4',
-  at_risk:  '#fffbeb',
+  healthy: '#f0fdf4',
+  at_risk: '#fffbeb',
   critical: '#fef2f2',
 };
 const HEALTH_STROKE: Record<string, string> = {
-  healthy:  '#16a34a',
-  at_risk:  '#d97706',
+  healthy: '#16a34a',
+  at_risk: '#d97706',
   critical: '#dc2626',
 };
 
@@ -122,20 +136,25 @@ interface PositionedNode {
   showSubtasks?: boolean;
 }
 
-interface Edge { from: string; to: string }
+interface Edge {
+  from: string;
+  to: string;
+}
 
 // Top-down org-chart geometry. Nodes shrink at deeper levels so a wide tree
 // stays scannable from above. Sizes tuned to keep the default (tasks-collapsed)
 // view clean — individual projects expand to show task detail on demand.
-const NODE_WIDTH  = { root: 280, team: 218, project: 206, phase: 192, task: 202, count: 192 } as const;
-const NODE_HEIGHT = { root: 68,  team: 54,  project: 60,  phase: 38,  task: 46,  count: 32  } as const;
-const LEVEL_GAP_Y = 68;   // vertical distance between depth levels
+const NODE_WIDTH = { root: 280, team: 218, project: 206, phase: 192, task: 202, count: 192 } as const;
+const NODE_HEIGHT = { root: 68, team: 54, project: 60, phase: 38, task: 46, count: 32 } as const;
+const LEVEL_GAP_Y = 68; // vertical distance between depth levels
 const SIBLING_GAP_X = 22; // horizontal distance between siblings of the same parent
 const SUBTREE_GAP_X = 40; // extra horizontal gap between sibling subtrees
-const TASK_STACK_GAP_Y = 9;   // vertical spacing inside a project's task stack
-const PADDING = 48;       // canvas padding around the whole tree
+const TASK_STACK_GAP_Y = 9; // vertical spacing inside a project's task stack
+const PADDING = 48; // canvas padding around the whole tree
 
-function nodeKey(kind: string, id: string) { return `${kind}:${id}`; }
+function nodeKey(kind: string, id: string) {
+  return `${kind}:${id}`;
+}
 
 /** Greedy word-wrap for SVG text. Returns up to `maxLines` lines, ellipsising
  *  the final line if the text overflows. Sized by an average glyph width so the
@@ -147,7 +166,10 @@ function wrapText(text: string, maxChars: number, maxLines: number): string[] {
   let cur = '';
   for (const w of words) {
     const next = cur ? `${cur} ${w}` : w;
-    if (next.length <= maxChars) { cur = next; continue; }
+    if (next.length <= maxChars) {
+      cur = next;
+      continue;
+    }
     if (cur) lines.push(cur);
     cur = w;
     if (lines.length === maxLines) break;
@@ -169,7 +191,10 @@ function wrapText(text: string, maxChars: number, maxLines: number): string[] {
  * between them. Deterministic (alphabetical) so the export and the on-screen
  * view share pixel coordinates. Direction is strictly top-down.
  */
-function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds?: ReadonlySet<string> }): {
+function layout(
+  data: BirdsEyeData,
+  opts: { collapseTasks: boolean; collapsedIds?: ReadonlySet<string> },
+): {
   nodes: PositionedNode[];
   edges: Edge[];
   width: number;
@@ -212,8 +237,12 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     if (opts.collapseTasks && tasks.length > 0) {
       const done = tasks.filter((t) => t.status === 'done').length;
       out.push({
-        kind: 'count', id: `count:${keyPrefix}`,
-        x: 0, y: 0, width: NODE_WIDTH.count, height: NODE_HEIGHT.count,
+        kind: 'count',
+        id: `count:${keyPrefix}`,
+        x: 0,
+        y: 0,
+        width: NODE_WIDTH.count,
+        height: NODE_HEIGHT.count,
         label: `${tasks.length} task${tasks.length === 1 ? '' : 's'}`,
         sub: `${done}/${tasks.length} done`,
       });
@@ -222,8 +251,12 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     const TASK_CAP = 80;
     for (const t of tasks.slice(0, TASK_CAP)) {
       out.push({
-        kind: 'task', id: nodeKey('task', t.id),
-        x: 0, y: 0, width: NODE_WIDTH.task, height: NODE_HEIGHT.task,
+        kind: 'task',
+        id: nodeKey('task', t.id),
+        x: 0,
+        y: 0,
+        width: NODE_WIDTH.task,
+        height: NODE_HEIGHT.task,
         label: t.title,
         titleLines: wrapText(t.title, 30, 2),
         sub: [t.assigneeName, t.status?.replace(/_/g, ' ')].filter(Boolean).join(' · '),
@@ -232,8 +265,12 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     }
     if (tasks.length > TASK_CAP) {
       out.push({
-        kind: 'count', id: `more:${keyPrefix}`,
-        x: 0, y: 0, width: NODE_WIDTH.count, height: NODE_HEIGHT.count,
+        kind: 'count',
+        id: `more:${keyPrefix}`,
+        x: 0,
+        y: 0,
+        width: NODE_WIDTH.count,
+        height: NODE_HEIGHT.count,
         label: `+${tasks.length - TASK_CAP} more — use Group tasks`,
       });
     }
@@ -265,14 +302,22 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
   function buildProjectSubtree(p: BirdsEyeProject): Subtree {
     const id = nodeKey('project', p.id);
     const collapsed = collapsedIds.has(id);
-    const tasks = collapsed ? [] : (tasksByProject.get(p.id) || []);
+    const tasks = collapsed ? [] : tasksByProject.get(p.id) || [];
     const taskNodes = taskStack(tasks, p.id);
-    taskNodes.forEach((t) => { if (t.kind === 'task') fitTaskHeight(t); });
+    taskNodes.forEach((t) => {
+      if (t.kind === 'task') fitTaskHeight(t);
+    });
     const projectNode: PositionedNode = {
-      kind: 'project', id,
-      x: 0, y: 0, width: NODE_WIDTH.project, height: NODE_HEIGHT.project,
-      label: p.name, titleLines: wrapText(p.name, 28, 2),
-      sub: `${p.code} · ${p.tasksDone}/${p.taskCount} done`, data: p,
+      kind: 'project',
+      id,
+      x: 0,
+      y: 0,
+      width: NODE_WIDTH.project,
+      height: NODE_HEIGHT.project,
+      label: p.name,
+      titleLines: wrapText(p.name, 28, 2),
+      sub: `${p.code} · ${p.tasksDone}/${p.taskCount} done`,
+      data: p,
     };
     return { node: projectNode, children: [], width: NODE_WIDTH.project, tasks: taskNodes };
   }
@@ -281,15 +326,22 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     const id = nodeKey('team', team.id);
     const collapsed = collapsedIds.has(id);
     const teamNode: PositionedNode = {
-      kind: 'team', id,
-      x: 0, y: 0, width: NODE_WIDTH.team, height: NODE_HEIGHT.team,
-      label: team.name, titleLines: wrapText(team.name, 26, 2),
-      sub: team.ownerName ? `Lead · ${team.ownerName}` : undefined, data: team,
+      kind: 'team',
+      id,
+      x: 0,
+      y: 0,
+      width: NODE_WIDTH.team,
+      height: NODE_HEIGHT.team,
+      label: team.name,
+      titleLines: wrapText(team.name, 26, 2),
+      sub: team.ownerName ? `Lead · ${team.ownerName}` : undefined,
+      data: team,
     };
     const children = collapsed ? [] : teamProjects.map(buildProjectSubtree);
-    const childrenW = children.length === 0
-      ? NODE_WIDTH.team
-      : children.reduce((sum, c) => sum + c.width + SIBLING_GAP_X, -SIBLING_GAP_X);
+    const childrenW =
+      children.length === 0
+        ? NODE_WIDTH.team
+        : children.reduce((sum, c) => sum + c.width + SIBLING_GAP_X, -SIBLING_GAP_X);
     return { node: teamNode, children, width: Math.max(NODE_WIDTH.team, childrenW) };
   }
 
@@ -300,7 +352,10 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     const order: string[] = [];
     for (const t of [...data.tasks].sort(sortTasks)) {
       const name = (t.phaseName && t.phaseName.trim()) || 'Unphased';
-      if (!byPhase.has(name)) { byPhase.set(name, []); order.push(name); }
+      if (!byPhase.has(name)) {
+        byPhase.set(name, []);
+        order.push(name);
+      }
       byPhase.get(name)!.push(t);
     }
     // Stable, readable order: named phases alphabetically, "Unphased" last.
@@ -311,11 +366,18 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
       const tasks = byPhase.get(name)!;
       const visibleTasks = collapsed ? [] : tasks;
       const taskNodes = taskStack(visibleTasks, `phase-${i}`);
-      taskNodes.forEach((t) => { if (t.kind === 'task') fitTaskHeight(t); });
+      taskNodes.forEach((t) => {
+        if (t.kind === 'task') fitTaskHeight(t);
+      });
       const phaseNode: PositionedNode = {
-        kind: 'phase', id: phaseId,
-        x: 0, y: 0, width: NODE_WIDTH.phase, height: NODE_HEIGHT.phase,
-        label: name, titleLines: wrapText(name, 26, 2),
+        kind: 'phase',
+        id: phaseId,
+        x: 0,
+        y: 0,
+        width: NODE_WIDTH.phase,
+        height: NODE_HEIGHT.phase,
+        label: name,
+        titleLines: wrapText(name, 26, 2),
         sub: `${tasks.length} task${tasks.length === 1 ? '' : 's'}`,
       };
       return { node: phaseNode, children: [], width: NODE_WIDTH.phase, tasks: taskNodes };
@@ -332,7 +394,8 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
       subtrees.push(buildTeamSubtree({ id: '_untethered_', name: 'Untethered projects' }, untethered));
     }
   } else if (data.scope === 'team') {
-    for (const p of [...data.projects].sort((a, b) => a.name.localeCompare(b.name))) subtrees.push(buildProjectSubtree(p));
+    for (const p of [...data.projects].sort((a, b) => a.name.localeCompare(b.name)))
+      subtrees.push(buildProjectSubtree(p));
   } else {
     subtrees.push(...buildPhaseSubtrees());
   }
@@ -368,17 +431,22 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     }
   }
 
-  const forestW = subtrees.length === 0
-    ? NODE_WIDTH.root
-    : subtrees.reduce((sum, s) => sum + s.width + SUBTREE_GAP_X, -SUBTREE_GAP_X);
+  const forestW =
+    subtrees.length === 0
+      ? NODE_WIDTH.root
+      : subtrees.reduce((sum, s) => sum + s.width + SUBTREE_GAP_X, -SUBTREE_GAP_X);
   const totalW = Math.max(NODE_WIDTH.root, forestW);
 
   const rootNode: PositionedNode = {
-    kind: 'root', id: 'root',
+    kind: 'root',
+    id: 'root',
     x: PADDING + (totalW - NODE_WIDTH.root) / 2,
     y: startY,
-    width: NODE_WIDTH.root, height: NODE_HEIGHT.root,
-    label: data.rootLabel, titleLines: wrapText(data.rootLabel, 30, 2), sub: data.rootSubLabel,
+    width: NODE_WIDTH.root,
+    height: NODE_HEIGHT.root,
+    label: data.rootLabel,
+    titleLines: wrapText(data.rootLabel, 30, 2),
+    sub: data.rootSubLabel,
   };
   nodes.push(rootNode);
 
@@ -390,9 +458,10 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
     cursorX += s.width + SUBTREE_GAP_X;
   }
 
-  let maxX = 0, maxY = 0;
+  let maxX = 0,
+    maxY = 0;
   for (const n of nodes) {
-    if (n.x + n.width  > maxX) maxX = n.x + n.width;
+    if (n.x + n.width > maxX) maxX = n.x + n.width;
     if (n.y + n.height > maxY) maxY = n.y + n.height;
   }
   return { nodes, edges, width: maxX + PADDING, height: maxY + PADDING };
@@ -403,15 +472,37 @@ function layout(data: BirdsEyeData, opts: { collapseTasks: boolean; collapsedIds
    gradient pill; teams/phases are secondary tinted cards; projects carry a
    health edge; tasks are compact status cards. A native <title> on every node
    gives the full, untruncated text on hover. */
-function MultiText({ x, lines, fontSize, lineHeight, fill, weight, anchor }: {
-  x: number; lines: string[]; fontSize: number; lineHeight: number;
-  fill: string; weight: number; anchor?: 'middle' | 'start';
+function MultiText({
+  x,
+  lines,
+  fontSize,
+  lineHeight,
+  fill,
+  weight,
+  anchor,
+}: {
+  x: number;
+  lines: string[];
+  fontSize: number;
+  lineHeight: number;
+  fill: string;
+  weight: number;
+  anchor?: 'middle' | 'start';
 }) {
   return (
     <>
       {lines.map((ln, i) => (
-        <tspan key={i} x={x} dy={i === 0 ? 0 : lineHeight} fontSize={fontSize} fontWeight={weight} fill={fill}
-          textAnchor={anchor || 'start'}>{ln}</tspan>
+        <tspan
+          key={i}
+          x={x}
+          dy={i === 0 ? 0 : lineHeight}
+          fontSize={fontSize}
+          fontWeight={weight}
+          fill={fill}
+          textAnchor={anchor || 'start'}
+        >
+          {ln}
+        </tspan>
       ))}
     </>
   );
@@ -426,13 +517,39 @@ function NodeShape({ n }: { n: PositionedNode }) {
     return (
       <g>
         <title>{fullTitle}</title>
-        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={16}
-          fill="url(#beRootGrad)" stroke="#0f5db5" strokeWidth={1.5} filter="url(#beNodeShadow)" />
+        <rect
+          x={n.x}
+          y={n.y}
+          width={n.width}
+          height={n.height}
+          rx={16}
+          fill="url(#beRootGrad)"
+          stroke="#0f5db5"
+          strokeWidth={1.5}
+          filter="url(#beNodeShadow)"
+        />
         <text textAnchor="middle" y={n.y + (n.sub ? 28 : 34)}>
-          <MultiText x={cx} lines={lines} fontSize={15} lineHeight={17} fill="#ffffff" weight={800} anchor="middle" />
+          <MultiText
+            x={cx}
+            lines={lines}
+            fontSize={15}
+            lineHeight={17}
+            fill="#ffffff"
+            weight={800}
+            anchor="middle"
+          />
         </text>
-        {n.sub && <text x={cx} y={n.y + n.height - 14} textAnchor="middle"
-          fontSize={11} fill="rgba(255,255,255,0.88)">{n.sub}</text>}
+        {n.sub && (
+          <text
+            x={cx}
+            y={n.y + n.height - 14}
+            textAnchor="middle"
+            fontSize={11}
+            fill="rgba(255,255,255,0.88)"
+          >
+            {n.sub}
+          </text>
+        )}
       </g>
     );
   }
@@ -441,13 +558,26 @@ function NodeShape({ n }: { n: PositionedNode }) {
     return (
       <g>
         <title>{fullTitle}</title>
-        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={12}
-          fill="#eef2ff" stroke="#4f46e5" strokeWidth={1.25} filter="url(#beNodeShadow)" />
+        <rect
+          x={n.x}
+          y={n.y}
+          width={n.width}
+          height={n.height}
+          rx={12}
+          fill="#eef2ff"
+          stroke="#4f46e5"
+          strokeWidth={1.25}
+          filter="url(#beNodeShadow)"
+        />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill="#4f46e5" />
         <text x={n.x + 14} y={n.y + 22}>
           <MultiText x={n.x + 14} lines={lines} fontSize={13} lineHeight={15} fill="#312e81" weight={700} />
         </text>
-        {n.sub && <text x={n.x + 14} y={n.y + n.height - 12} fontSize={10.5} fill="#6366f1">{n.sub}</text>}
+        {n.sub && (
+          <text x={n.x + 14} y={n.y + n.height - 12} fontSize={10.5} fill="#6366f1">
+            {n.sub}
+          </text>
+        )}
       </g>
     );
   }
@@ -456,13 +586,26 @@ function NodeShape({ n }: { n: PositionedNode }) {
     return (
       <g>
         <title>{fullTitle}</title>
-        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={11}
-          fill="#f1f5f9" stroke="#64748b" strokeWidth={1.1} filter="url(#beNodeShadow)" />
+        <rect
+          x={n.x}
+          y={n.y}
+          width={n.width}
+          height={n.height}
+          rx={11}
+          fill="#f1f5f9"
+          stroke="#64748b"
+          strokeWidth={1.1}
+          filter="url(#beNodeShadow)"
+        />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill="#64748b" />
         <text x={n.x + 13} y={n.y + 19}>
           <MultiText x={n.x + 13} lines={lines} fontSize={12} lineHeight={14} fill="#0f172a" weight={700} />
         </text>
-        {n.sub && <text x={n.x + 13} y={n.y + n.height - 11} fontSize={10} fill="#64748b">{n.sub}</text>}
+        {n.sub && (
+          <text x={n.x + 13} y={n.y + n.height - 11} fontSize={10} fill="#64748b">
+            {n.sub}
+          </text>
+        )}
       </g>
     );
   }
@@ -474,14 +617,32 @@ function NodeShape({ n }: { n: PositionedNode }) {
     return (
       <g>
         <title>{fullTitle}</title>
-        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={12}
-          fill={fill} stroke={stroke} strokeWidth={1.4} filter="url(#beNodeShadow)" />
+        <rect
+          x={n.x}
+          y={n.y}
+          width={n.width}
+          height={n.height}
+          rx={12}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={1.4}
+          filter="url(#beNodeShadow)"
+        />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill={stroke} />
         <text x={n.x + 14} y={n.y + 22}>
           <MultiText x={n.x + 14} lines={lines} fontSize={13} lineHeight={15} fill="#0f172a" weight={700} />
         </text>
-        {n.sub && <text x={n.x + 14} y={n.y + n.height - 12} fontSize={10} fill="#475569"
-          fontFamily="ui-monospace,monospace">{n.sub}</text>}
+        {n.sub && (
+          <text
+            x={n.x + 14}
+            y={n.y + n.height - 12}
+            fontSize={10}
+            fill="#475569"
+            fontFamily="ui-monospace,monospace"
+          >
+            {n.sub}
+          </text>
+        )}
       </g>
     );
   }
@@ -502,8 +663,17 @@ function NodeShape({ n }: { n: PositionedNode }) {
     return (
       <g>
         <title>{fullTitle}</title>
-        <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={9}
-          fill={fill} stroke={stroke} strokeWidth={1} filter="url(#beNodeShadow)" />
+        <rect
+          x={n.x}
+          y={n.y}
+          width={n.width}
+          height={n.height}
+          rx={9}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={1}
+          filter="url(#beNodeShadow)"
+        />
         {/* Status dot */}
         <circle cx={n.x + 12} cy={n.y + 14} r={3.5} fill={dot} />
         {/* Task title */}
@@ -512,23 +682,39 @@ function NodeShape({ n }: { n: PositionedNode }) {
         </text>
         {/* Assignee / date — only when there's no subtask list below */}
         {n.sub && !n.showSubtasks && (
-          <text x={n.x + 12} y={n.y + n.height - 8} fontSize={9.5} fill="#64748b">{n.sub}</text>
+          <text x={n.x + 12} y={n.y + n.height - 8} fontSize={9.5} fill="#64748b">
+            {n.sub}
+          </text>
         )}
         {/* Inline subtask list */}
         {subtaskTitles.map((st, i) => (
           <text key={i} x={n.x + 16} y={titleEndY + i * 12} fontSize={8.5} fill="#64748b">
-            <tspan fill={dot} fontSize={6} dy={0}>■</tspan>
+            <tspan fill={dot} fontSize={6} dy={0}>
+              ■
+            </tspan>
             <tspan dx={3}>{st.length > 26 ? st.slice(0, 25) + '…' : st}</tspan>
           </text>
         ))}
         {/* Subtask progress bar */}
         {hasProgress && (
           <>
-            <rect x={n.x + 12} y={n.y + n.height - 8} width={n.width - 24} height={2.5} rx={1.25}
-              fill="#e2e8f0" />
-            <rect x={n.x + 12} y={n.y + n.height - 8}
-              width={(n.width - 24) * progressRatio} height={2.5} rx={1.25}
-              fill={dot} opacity={0.75} />
+            <rect
+              x={n.x + 12}
+              y={n.y + n.height - 8}
+              width={n.width - 24}
+              height={2.5}
+              rx={1.25}
+              fill="#e2e8f0"
+            />
+            <rect
+              x={n.x + 12}
+              y={n.y + n.height - 8}
+              width={(n.width - 24) * progressRatio}
+              height={2.5}
+              rx={1.25}
+              fill={dot}
+              opacity={0.75}
+            />
           </>
         )}
       </g>
@@ -539,12 +725,32 @@ function NodeShape({ n }: { n: PositionedNode }) {
   return (
     <g>
       <title>{n.label}</title>
-      <rect x={n.x} y={n.y} width={n.width} height={n.height} rx={10}
-        fill="#f8fafc" stroke="#cbd5e1" strokeDasharray="4,3" strokeWidth={1} />
-      <text x={n.x + n.width / 2} y={n.y + (n.sub ? 17 : 24)} textAnchor="middle"
-        fontSize={11} fontWeight={700} fill="#475569">{n.label}</text>
-      {n.sub && <text x={n.x + n.width / 2} y={n.y + 31} textAnchor="middle"
-        fontSize={9.5} fill="#64748b">{n.sub}</text>}
+      <rect
+        x={n.x}
+        y={n.y}
+        width={n.width}
+        height={n.height}
+        rx={10}
+        fill="#f8fafc"
+        stroke="#cbd5e1"
+        strokeDasharray="4,3"
+        strokeWidth={1}
+      />
+      <text
+        x={n.x + n.width / 2}
+        y={n.y + (n.sub ? 17 : 24)}
+        textAnchor="middle"
+        fontSize={11}
+        fontWeight={700}
+        fill="#475569"
+      >
+        {n.label}
+      </text>
+      {n.sub && (
+        <text x={n.x + n.width / 2} y={n.y + 31} textAnchor="middle" fontSize={9.5} fill="#64748b">
+          {n.sub}
+        </text>
+      )}
     </g>
   );
 }
@@ -563,7 +769,11 @@ function edgePath(from: PositionedNode, to: PositionedNode): string {
 /* ── Component ─────────────────────────────────────────────────────────────
    Renders inside a portal so the modal sits above the app sidebar/header and
    the Bird's-eye header is never clipped. */
-export function BirdsEyeView({ data, onClose, onChange }: {
+export function BirdsEyeView({
+  data,
+  onClose,
+  onChange,
+}: {
   data: BirdsEyeData;
   onClose: () => void;
   /** Fires after a Bird's-Eye edit (assignee/TCD) persists — lets the host
@@ -576,23 +786,37 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   // view is clean. The user can expand all tasks with "Show tasks" or collapse
   // individual project task stacks with the − button on each project node.
   const [collapseTasks, setCollapseTasks] = useState(true);
-  const [editing, setEditing] = useState<{ node: PositionedNode; clientX: number; clientY: number } | null>(null);
-  const [addingTaskFor, setAddingTaskFor] = useState<{ node: PositionedNode; clientX: number; clientY: number } | null>(null);
+  const [editing, setEditing] = useState<{ node: PositionedNode; clientX: number; clientY: number } | null>(
+    null,
+  );
+  const [addingTaskFor, setAddingTaskFor] = useState<{
+    node: PositionedNode;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
   // Per-node drag overrides {id → {dx,dy}} — applied on top of the computed
   // layout. localStorage-backed per scope+root so the user's arrangement is
   // preserved across opens but doesn't bleed between views.
   const overrideKey = `pragati-bve-pos:${data.scope}:${data.rootLabel}`;
   const collapseKey = `pragati-bve-collapsed:${data.scope}:${data.rootLabel}`;
-  const brushKey    = `pragati-bve-brush:${data.scope}:${data.rootLabel}`;
+  const brushKey = `pragati-bve-brush:${data.scope}:${data.rootLabel}`;
   const [overrides, setOverrides] = useState<Record<string, { dx: number; dy: number }>>(() => {
     if (typeof window === 'undefined') return {};
-    try { return JSON.parse(localStorage.getItem(overrideKey) || '{}'); } catch { return {}; }
+    try {
+      return JSON.parse(localStorage.getItem(overrideKey) || '{}');
+    } catch {
+      return {};
+    }
   });
   // Set of collapsed node ids — when a node is collapsed its subtree (children
   // and/or tasks) is hidden. Persists per scope.
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
-    try { return new Set(JSON.parse(localStorage.getItem(collapseKey) || '[]')); } catch { return new Set(); }
+    try {
+      return new Set(JSON.parse(localStorage.getItem(collapseKey) || '[]'));
+    } catch {
+      return new Set();
+    }
   });
   // Brush / annotation layer — freeform polylines over the canvas so a lead
   // can sketch on top of the structure during a brainstorm. Persists per scope.
@@ -600,7 +824,11 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   const [brushOn, setBrushOn] = useState(false);
   const [brushStrokes, setBrushStrokes] = useState<BrushStroke[]>(() => {
     if (typeof window === 'undefined') return [];
-    try { return JSON.parse(localStorage.getItem(brushKey) || '[]'); } catch { return []; }
+    try {
+      return JSON.parse(localStorage.getItem(brushKey) || '[]');
+    } catch {
+      return [];
+    }
   });
   const [brushColor, setBrushColor] = useState('#1565C0');
   const liveStroke = useRef<BrushStroke | null>(null);
@@ -611,9 +839,13 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   // do, we keep auto-fitting on resize so the first paint always frames the tree.
   const userZoomed = useRef(false);
 
-  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') editing ? setEditing(null) : onClose(); };
+    setMounted(true);
+  }, []);
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') editing ? setEditing(null) : onClose();
+    };
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [onClose, editing]);
@@ -621,31 +853,40 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   // Persist overrides whenever they change.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try { localStorage.setItem(overrideKey, JSON.stringify(overrides)); } catch {}
+    try {
+      localStorage.setItem(overrideKey, JSON.stringify(overrides));
+    } catch {}
   }, [overrides, overrideKey]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try { localStorage.setItem(collapseKey, JSON.stringify(Array.from(collapsedIds))); } catch {}
+    try {
+      localStorage.setItem(collapseKey, JSON.stringify(Array.from(collapsedIds)));
+    } catch {}
   }, [collapsedIds, collapseKey]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try { localStorage.setItem(brushKey, JSON.stringify(brushStrokes)); } catch {}
+    try {
+      localStorage.setItem(brushKey, JSON.stringify(brushStrokes));
+    } catch {}
   }, [brushStrokes, brushKey]);
 
-  const { nodes: baseNodes, edges, width: baseWidth, height: baseHeight } = useMemo(
-    () => layout(data, { collapseTasks, collapsedIds }),
-    [data, collapseTasks, collapsedIds],
-  );
+  const {
+    nodes: baseNodes,
+    edges,
+    width: baseWidth,
+    height: baseHeight,
+  } = useMemo(() => layout(data, { collapseTasks, collapsedIds }), [data, collapseTasks, collapsedIds]);
 
   // Apply drag overrides to the computed layout (and expand canvas if dragged
   // beyond its bounds so edges & scroll still reach the moved node).
   const { nodes, width, height } = useMemo(() => {
-    let w = baseWidth, h = baseHeight;
+    let w = baseWidth,
+      h = baseHeight;
     const arr = baseNodes.map((n) => {
       const o = overrides[n.id];
       if (!o) return n;
       const moved = { ...n, x: n.x + o.dx, y: n.y + o.dy };
-      if (moved.x + moved.width  + PADDING > w) w = moved.x + moved.width  + PADDING;
+      if (moved.x + moved.width + PADDING > w) w = moved.x + moved.width + PADDING;
       if (moved.y + moved.height + PADDING > h) h = moved.y + moved.height + PADDING;
       return moved;
     });
@@ -687,7 +928,9 @@ export function BirdsEyeView({ data, onClose, onChange }: {
     if (!mounted) return;
     const el = scrollRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => { if (!userZoomed.current) fitToViewport(); });
+    const ro = new ResizeObserver(() => {
+      if (!userZoomed.current) fitToViewport();
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, [mounted, fitToViewport]);
@@ -696,7 +939,10 @@ export function BirdsEyeView({ data, onClose, onChange }: {
     userZoomed.current = true;
     setZoom((z) => Math.min(2, Math.max(0.3, Math.round((z + delta) * 100) / 100)));
   };
-  const resetView = () => { userZoomed.current = false; fitToViewport(); };
+  const resetView = () => {
+    userZoomed.current = false;
+    fitToViewport();
+  };
 
   // Pointer handling — two modes share one set of handlers:
   //   • Node drag  : press on a [data-be-node] element moves only that node.
@@ -704,7 +950,14 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   //                  isn't navigated to after a drag.
   //   • Canvas pan : press on blank space scrolls the viewport, as before.
   const pan = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
-  const drag = useRef<{ id: string; startX: number; startY: number; baseDx: number; baseDy: number; moved: boolean } | null>(null);
+  const drag = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    baseDx: number;
+    baseDy: number;
+    moved: boolean;
+  } | null>(null);
 
   // Translate viewport pointer coords into SVG coords (accounts for zoom + scroll).
   function toSvgPoint(clientX: number, clientY: number): { x: number; y: number } | null {
@@ -717,7 +970,8 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   function toggleCollapsed(id: string) {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -748,7 +1002,14 @@ export function BirdsEyeView({ data, onClose, onChange }: {
       const kind = nodeEl.getAttribute('data-be-kind');
       if (kind === 'root' || kind === 'count') return;
       const existing = overrides[id] || { dx: 0, dy: 0 };
-      drag.current = { id, startX: e.clientX, startY: e.clientY, baseDx: existing.dx, baseDy: existing.dy, moved: false };
+      drag.current = {
+        id,
+        startX: e.clientX,
+        startY: e.clientY,
+        baseDx: existing.dx,
+        baseDy: existing.dy,
+        moved: false,
+      };
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
       e.preventDefault();
       return;
@@ -776,7 +1037,10 @@ export function BirdsEyeView({ data, onClose, onChange }: {
       const dy = (e.clientY - drag.current.startY) / zoom;
       if (!drag.current.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) drag.current.moved = true;
       if (drag.current.moved) {
-        setOverrides((o) => ({ ...o, [drag.current!.id]: { dx: drag.current!.baseDx + dx, dy: drag.current!.baseDy + dy } }));
+        setOverrides((o) => ({
+          ...o,
+          [drag.current!.id]: { dx: drag.current!.baseDx + dx, dy: drag.current!.baseDy + dy },
+        }));
       }
       return;
     }
@@ -804,7 +1068,11 @@ export function BirdsEyeView({ data, onClose, onChange }: {
     // Suppress the click on the underlying <a> if the user actually dragged
     // — otherwise releasing the drag opens the task page.
     if (drag.current?.moved) {
-      const stopClick = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); window.removeEventListener('click', stopClick, true); };
+      const stopClick = (ev: MouseEvent) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+        window.removeEventListener('click', stopClick, true);
+      };
       window.addEventListener('click', stopClick, true);
     }
     drag.current = null;
@@ -856,223 +1124,474 @@ export function BirdsEyeView({ data, onClose, onChange }: {
   if (!mounted) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm overlay-in" onClick={onClose}>
-      <div className="absolute inset-2 sm:inset-6 rounded-2xl bg-white shadow-2xl flex flex-col modal-in overflow-hidden"
-        onClick={(e) => e.stopPropagation()}>
+      <div
+        className="absolute inset-2 sm:inset-6 rounded-2xl bg-white shadow-2xl flex flex-col modal-in overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header — full-width band above the canvas. Title block left, controls
             right; both wrap independently so neither is clipped on a phone. */}
         <div className="shrink-0 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between px-5 py-3.5 border-b border-slate-200 bg-white">
           <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-600">Bird&apos;s-eye view</div>
-            <div className="text-base sm:text-lg font-black text-slate-900 leading-tight break-words">{data.rootLabel}</div>
-            {data.rootSubLabel && <div className="text-[11px] text-slate-500 truncate">{data.rootSubLabel}</div>}
+            <div className="text-[10px] font-bold uppercase tracking-widest text-blue-600">
+              Bird&apos;s-eye view
+            </div>
+            <div className="text-base sm:text-lg font-black text-slate-900 leading-tight break-words">
+              {data.rootLabel}
+            </div>
+            {data.rootSubLabel && (
+              <div className="text-[11px] text-slate-500 truncate">{data.rootSubLabel}</div>
+            )}
           </div>
           <div className="flex items-center gap-1 flex-wrap sm:flex-nowrap sm:shrink-0">
-            <button onClick={() => { userZoomed.current = false; setCollapseTasks((v) => !v); }}
-              title={collapseTasks ? 'Expand all projects to show individual tasks' : 'Collapse each project to a task-count summary'}
+            <button
+              onClick={() => {
+                userZoomed.current = false;
+                setCollapseTasks((v) => !v);
+              }}
+              title={
+                collapseTasks
+                  ? 'Expand all projects to show individual tasks'
+                  : 'Collapse each project to a task-count summary'
+              }
               className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors ${
                 collapseTasks
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}>
+              }`}
+            >
               <Layers size={13} /> {collapseTasks ? 'Expand tasks' : 'Group tasks'}
             </button>
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
-            <button onClick={() => zoomBy(-0.1)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100" title="Zoom out"><ZoomOut size={15} /></button>
-            <span className="text-[11px] font-bold text-slate-600 tabular-nums w-10 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => zoomBy(0.1)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100" title="Zoom in"><ZoomIn size={15} /></button>
-            <button onClick={resetView} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100" title="Reset · fit to screen"><Scan size={15} /></button>
+            <button
+              onClick={() => zoomBy(-0.1)}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+              title="Zoom out"
+            >
+              <ZoomOut size={15} />
+            </button>
+            <span className="text-[11px] font-bold text-slate-600 tabular-nums w-10 text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={() => zoomBy(0.1)}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+              title="Zoom in"
+            >
+              <ZoomIn size={15} />
+            </button>
+            <button
+              onClick={resetView}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+              title="Reset · fit to screen"
+            >
+              <Scan size={15} />
+            </button>
             {Object.keys(overrides).length > 0 && (
-              <button onClick={resetLayout}
+              <button
+                onClick={resetLayout}
                 className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                title="Reset node positions to the computed layout">
+                title="Reset node positions to the computed layout"
+              >
                 <RotateCcw size={15} />
               </button>
             )}
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
-            <button onClick={() => setBrushOn((v) => !v)}
+            <button
+              onClick={() => setBrushOn((v) => !v)}
               title={brushOn ? 'Exit brush — back to pan/drag' : 'Brush — draw notes & arrows on the canvas'}
               className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors ${
-                brushOn ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}>
+                brushOn
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
               <Brush size={13} /> Brush
             </button>
             {brushOn && (
               <>
                 <div className="flex items-center gap-0.5 mx-0.5">
                   {['#1565C0', '#22c55e', '#f59e0b', '#ef4444', '#0f172a'].map((c) => (
-                    <button key={c} type="button" onClick={() => setBrushColor(c)} title={`Use ${c}`}
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setBrushColor(c)}
+                      title={`Use ${c}`}
                       className={`w-5 h-5 rounded-full transition-transform ${brushColor === c ? 'ring-2 ring-offset-1 ring-slate-400 scale-110' : 'hover:scale-110'}`}
-                      style={{ background: c }} aria-label={`Use ${c}`} />
+                      style={{ background: c }}
+                      aria-label={`Use ${c}`}
+                    />
                   ))}
                 </div>
                 {brushStrokes.length > 0 && (
-                  <button onClick={clearBrush} title="Erase all brush strokes"
-                    className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600">
+                  <button
+                    onClick={clearBrush}
+                    title="Erase all brush strokes"
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
+                  >
                     <Eraser size={14} />
                   </button>
                 )}
               </>
             )}
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
-            <button onClick={exportSvg} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100" title="Download SVG"><Download size={15} /></button>
-            <button onClick={printAsPdf} className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Export as PDF">
-              <FileDown size={13} /><span className="hidden sm:inline">Export PDF</span>
+            <button
+              onClick={exportSvg}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+              title="Download SVG"
+            >
+              <Download size={15} />
+            </button>
+            <button
+              onClick={printAsPdf}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              title="Export as PDF"
+            >
+              <FileDown size={13} />
+              <span className="hidden sm:inline">Export PDF</span>
             </button>
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
-            <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800" title="Close"><X size={17} /></button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              title="Close"
+            >
+              <X size={17} />
+            </button>
           </div>
         </div>
 
         {/* Canvas — scroll + drag to pan. Inner wrapper is min-w-full so a tree
             narrower than the viewport is centred; a wider one scrolls to both
             edges without clipping. */}
-        <div ref={scrollRef}
+        <div
+          ref={scrollRef}
           className={`flex-1 overflow-auto select-none bg-[radial-gradient(circle_at_1px_1px,#e2e8f0_1px,transparent_0)] [background-size:22px_22px] bg-slate-50 dark:bg-[#1f1e1d] ${
             brushOn ? 'cursor-crosshair touch-none' : 'cursor-grab active:cursor-grabbing'
           }`}
-          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endPointer} onPointerLeave={endPointer}>
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endPointer}
+          onPointerLeave={endPointer}
+        >
           <div className="inline-block min-w-full">
             <div className="flex justify-center">
               <div style={{ width: width * zoom, height: height * zoom }}>
-                <svg ref={svgRef} width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+                <svg
+                  ref={svgRef}
+                  width={width}
+                  height={height}
+                  viewBox={`0 0 ${width} ${height}`}
                   xmlns="http://www.w3.org/2000/svg"
-                  style={{ display: 'block', width: width * zoom, height: height * zoom, touchAction: brushOn ? 'none' : 'auto' }}>
+                  style={{
+                    display: 'block',
+                    width: width * zoom,
+                    height: height * zoom,
+                    touchAction: brushOn ? 'none' : 'auto',
+                  }}
+                >
                   <defs>
                     {/* Match the app's 3-stop brand gradient so the workspace
                         root reads as the same identity as the sidebar wordmark. */}
                     <linearGradient id="beRootGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%"   stopColor="#1565C0" />
-                      <stop offset="50%"  stopColor="#1976D2" />
+                      <stop offset="0%" stopColor="#1565C0" />
+                      <stop offset="50%" stopColor="#1976D2" />
                       <stop offset="100%" stopColor="#2E7D32" />
                     </linearGradient>
                     {/* Soft drop shadow lifts every card off the dotted canvas
                         so the tree reads with depth instead of as flat stickers. */}
                     <filter id="beNodeShadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodColor="#1e293b" floodOpacity="0.10" />
+                      <feDropShadow
+                        dx="0"
+                        dy="1.5"
+                        stdDeviation="2.5"
+                        floodColor="#1e293b"
+                        floodOpacity="0.10"
+                      />
                     </filter>
                   </defs>
-                  {edges.map((e, i) => {
-                    const a = nodeIndex.get(e.from); const b = nodeIndex.get(e.to);
-                    if (!a || !b) return null;
-                    // Softer, thinner connectors — calmer than a hard slate line.
-                    return <path key={i} d={edgePath(a, b)} fill="none" stroke="#cbd6e4" strokeWidth={1.25} strokeOpacity={0.85} />;
-                  })}
                   <g pointerEvents={brushOn ? 'none' : undefined}>
-                  {nodes.map((n) => {
-                    const navHref = n.kind === 'task' ? `/tasks/${(n.data as BirdsEyeTask).id}`
-                      : n.kind === 'project' ? `/projects/${(n.data as BirdsEyeProject).id}`
-                      : n.kind === 'team' ? `/teams/${(n.data as BirdsEyeTeam).id}` : null;
-                    const isTask = n.kind === 'task';
-                    // Task nodes with subtasks are also collapsible — clicking
-                    // hides/shows the inline subtask list inside the node.
-                    const canCollapse = n.kind === 'team' || n.kind === 'project' || n.kind === 'phase'
-                      || (isTask && !!((n.data as BirdsEyeTask)?.subtaskTitles?.length));
-                    const canAddTask  = n.kind === 'project' || n.kind === 'phase';
-                    const isCollapsed = collapsedIds.has(n.id);
-                    const dragProps = {
-                      'data-be-node': n.id,
-                      'data-be-kind': n.kind,
-                      style: { cursor: n.kind === 'root' || n.kind === 'count' ? 'default' : 'grab' },
-                    } as const;
-                    const shape = <NodeShape key={`s-${n.id}`} n={n} />;
+                    {edges.map((e, i) => {
+                      const a = nodeIndex.get(e.from);
+                      const b = nodeIndex.get(e.to);
+                      if (!a || !b) return null;
+                      // Clicking a connector expands/hides the subtree hanging
+                      // off it — the child's own subtree when the child is
+                      // collapsible, otherwise the parent's stack (so a
+                      // project → task edge folds the whole task column).
+                      const collapsibleChild =
+                        b.kind === 'team' || b.kind === 'project' || b.kind === 'phase';
+                      const toggleId = collapsibleChild ? b.id : a.id;
+                      const d = edgePath(a, b);
+                      return (
+                        <g
+                          key={i}
+                          data-be-action="edge-toggle"
+                          onClick={(ev) => {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            toggleCollapsed(toggleId);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <title>Expand / hide this branch</title>
+                          {/* Softer, thinner connectors — calmer than a hard slate line. */}
+                          <path d={d} fill="none" stroke="#cbd6e4" strokeWidth={1.25} strokeOpacity={0.85} />
+                          {/* Invisible wide twin of the connector — a comfortable
+                            click target without thickening the visible line. */}
+                          <path d={d} fill="none" stroke="transparent" strokeWidth={14} />
+                        </g>
+                      );
+                    })}
+                  </g>
+                  <g pointerEvents={brushOn ? 'none' : undefined}>
+                    {nodes.map((n) => {
+                      const navHref =
+                        n.kind === 'task'
+                          ? `/tasks/${(n.data as BirdsEyeTask).id}`
+                          : n.kind === 'project'
+                            ? `/projects/${(n.data as BirdsEyeProject).id}`
+                            : n.kind === 'team'
+                              ? `/teams/${(n.data as BirdsEyeTeam).id}`
+                              : null;
+                      const isTask = n.kind === 'task';
+                      // Task nodes with subtasks are also collapsible — clicking
+                      // hides/shows the inline subtask list inside the node.
+                      const canCollapse =
+                        n.kind === 'team' ||
+                        n.kind === 'project' ||
+                        n.kind === 'phase' ||
+                        (isTask && !!(n.data as BirdsEyeTask)?.subtaskTitles?.length);
+                      const canAddTask = n.kind === 'project' || n.kind === 'phase';
+                      const isCollapsed = collapsedIds.has(n.id);
+                      const dragProps = {
+                        'data-be-node': n.id,
+                        'data-be-kind': n.kind,
+                        style: { cursor: n.kind === 'root' || n.kind === 'count' ? 'default' : 'grab' },
+                      } as const;
+                      const shape = <NodeShape key={`s-${n.id}`} n={n} />;
 
-                    // Task nodes get an inline edit affordance — a tiny pencil
-                    // button in the top-right corner of the card. Clicking it
-                    // pops the inline editor with assignee + TCD fields.
-                    const editBtn = isTask ? (
-                      <g
-                        data-be-action="edit"
-                        onClick={(e) => {
-                          e.preventDefault(); e.stopPropagation();
-                          setEditing({ node: n, clientX: (e as any).clientX, clientY: (e as any).clientY });
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <circle cx={n.x + n.width - 11} cy={n.y + 11} r={8} fill="#ffffff" stroke="#cbd5e1" strokeWidth={0.8} />
-                        <path d={`M ${n.x + n.width - 14} ${n.y + 13} l 4 -4 l 2 2 l -4 4 z M ${n.x + n.width - 10} ${n.y + 9} l 1 1`}
-                          stroke="#475569" strokeWidth={0.9} fill="none" strokeLinecap="round" />
-                      </g>
-                    ) : null;
+                      // Task nodes get an inline edit affordance — a tiny pencil
+                      // button in the top-right corner of the card. Clicking it
+                      // pops the inline editor with assignee + TCD fields.
+                      const editBtn = isTask ? (
+                        <g
+                          data-be-action="edit"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditing({ node: n, clientX: (e as any).clientX, clientY: (e as any).clientY });
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <circle
+                            cx={n.x + n.width - 11}
+                            cy={n.y + 11}
+                            r={8}
+                            fill="#ffffff"
+                            stroke="#cbd5e1"
+                            strokeWidth={0.8}
+                          />
+                          <path
+                            d={`M ${n.x + n.width - 14} ${n.y + 13} l 4 -4 l 2 2 l -4 4 z M ${n.x + n.width - 10} ${n.y + 9} l 1 1`}
+                            stroke="#475569"
+                            strokeWidth={0.9}
+                            fill="none"
+                            strokeLinecap="round"
+                          />
+                        </g>
+                      ) : null;
 
-                    // Collapse/expand toggle — top-right for team/project/phase,
-                    // bottom-right for task nodes (which already have the edit
-                    // pencil in the top-right corner).
-                    const collapseCx = isTask ? n.x + n.width - 11 : n.x + n.width - 11;
-                    const collapseCy = isTask ? n.y + n.height - 11 : n.y + 11;
-                    const collapseBtn = canCollapse ? (
-                      <g
-                        data-be-action="collapse"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleCollapsed(n.id); }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <title>{isCollapsed ? 'Expand' : 'Collapse'}</title>
-                        <circle cx={collapseCx} cy={collapseCy} r={8} fill="#ffffff" stroke="#cbd5e1" strokeWidth={0.8} />
-                        {isCollapsed ? (
-                          <>
-                            <line x1={collapseCx - 4} y1={collapseCy} x2={collapseCx + 4} y2={collapseCy} stroke="#1565C0" strokeWidth={1.6} strokeLinecap="round" />
-                            <line x1={collapseCx} y1={collapseCy - 4} x2={collapseCx} y2={collapseCy + 4} stroke="#1565C0" strokeWidth={1.6} strokeLinecap="round" />
-                          </>
-                        ) : (
-                          <line x1={collapseCx - 4} y1={collapseCy} x2={collapseCx + 4} y2={collapseCy} stroke="#475569" strokeWidth={1.6} strokeLinecap="round" />
-                        )}
-                      </g>
-                    ) : null;
+                      // Collapse/expand toggle — top-right for team/project/phase,
+                      // bottom-right for task nodes (which already have the edit
+                      // pencil in the top-right corner).
+                      const collapseCx = isTask ? n.x + n.width - 11 : n.x + n.width - 11;
+                      const collapseCy = isTask ? n.y + n.height - 11 : n.y + 11;
+                      const collapseBtn = canCollapse ? (
+                        <g
+                          data-be-action="collapse"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleCollapsed(n.id);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <title>{isCollapsed ? 'Expand' : 'Collapse'}</title>
+                          <circle
+                            cx={collapseCx}
+                            cy={collapseCy}
+                            r={8}
+                            fill="#ffffff"
+                            stroke="#cbd5e1"
+                            strokeWidth={0.8}
+                          />
+                          {isCollapsed ? (
+                            <>
+                              <line
+                                x1={collapseCx - 4}
+                                y1={collapseCy}
+                                x2={collapseCx + 4}
+                                y2={collapseCy}
+                                stroke="#1565C0"
+                                strokeWidth={1.6}
+                                strokeLinecap="round"
+                              />
+                              <line
+                                x1={collapseCx}
+                                y1={collapseCy - 4}
+                                x2={collapseCx}
+                                y2={collapseCy + 4}
+                                stroke="#1565C0"
+                                strokeWidth={1.6}
+                                strokeLinecap="round"
+                              />
+                            </>
+                          ) : (
+                            <line
+                              x1={collapseCx - 4}
+                              y1={collapseCy}
+                              x2={collapseCx + 4}
+                              y2={collapseCy}
+                              stroke="#475569"
+                              strokeWidth={1.6}
+                              strokeLinecap="round"
+                            />
+                          )}
+                        </g>
+                      ) : null;
 
-                    // "+" add-task affordance — bottom-right corner of project/phase
-                    // nodes. Opens an inline new-task popover that posts to /tasks.
-                    const addBtn = canAddTask ? (
-                      <g
-                        data-be-action="add"
-                        onClick={(e) => {
-                          e.preventDefault(); e.stopPropagation();
-                          setAddingTaskFor({ node: n, clientX: (e as any).clientX, clientY: (e as any).clientY });
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <title>Add a task under this {n.kind}</title>
-                        <circle cx={n.x + n.width - 11} cy={n.y + n.height - 11} r={8.5} fill="#1565C0" />
-                        <line x1={n.x + n.width - 15} y1={n.y + n.height - 11} x2={n.x + n.width - 7} y2={n.y + n.height - 11} stroke="#ffffff" strokeWidth={1.7} strokeLinecap="round" />
-                        <line x1={n.x + n.width - 11} y1={n.y + n.height - 15} x2={n.x + n.width - 11} y2={n.y + n.height - 7}  stroke="#ffffff" strokeWidth={1.7} strokeLinecap="round" />
-                      </g>
-                    ) : null;
+                      // "+" add-task affordance — bottom-right corner of project/phase
+                      // nodes. Opens an inline new-task popover that posts to /tasks.
+                      const addBtn = canAddTask ? (
+                        <g
+                          data-be-action="add"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setAddingTaskFor({
+                              node: n,
+                              clientX: (e as any).clientX,
+                              clientY: (e as any).clientY,
+                            });
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <title>Add a task under this {n.kind}</title>
+                          <circle cx={n.x + n.width - 11} cy={n.y + n.height - 11} r={8.5} fill="#1565C0" />
+                          <line
+                            x1={n.x + n.width - 15}
+                            y1={n.y + n.height - 11}
+                            x2={n.x + n.width - 7}
+                            y2={n.y + n.height - 11}
+                            stroke="#ffffff"
+                            strokeWidth={1.7}
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1={n.x + n.width - 11}
+                            y1={n.y + n.height - 15}
+                            x2={n.x + n.width - 11}
+                            y2={n.y + n.height - 7}
+                            stroke="#ffffff"
+                            strokeWidth={1.7}
+                            strokeLinecap="round"
+                          />
+                        </g>
+                      ) : null;
 
-                    if (!navHref) {
+                      // Clicking the centre of a collapsible card expands/hides
+                      // its subtree (same as the − toggle). Navigation for those
+                      // cards moves to the dedicated ↗ button so a body click
+                      // never surprises with a new tab. Non-collapsible cards
+                      // (tasks without subtasks) keep click-to-open.
+                      const openBtn =
+                        navHref && canCollapse ? (
+                          <g
+                            data-be-action="open"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              window.open(navHref, '_blank', 'noopener,noreferrer');
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <title>
+                              Open this{' '}
+                              {n.kind === 'team' ? 'team' : n.kind === 'project' ? 'project' : 'task'} page
+                            </title>
+                            <circle
+                              cx={n.x + n.width - 30}
+                              cy={n.y + 11}
+                              r={8}
+                              fill="#ffffff"
+                              stroke="#cbd5e1"
+                              strokeWidth={0.8}
+                            />
+                            <path
+                              d={`M ${n.x + n.width - 33} ${n.y + 14} L ${n.x + n.width - 27} ${n.y + 8} M ${n.x + n.width - 31} ${n.y + 8} h 4 v 4`}
+                              stroke="#475569"
+                              strokeWidth={1.1}
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </g>
+                        ) : null;
+
+                      const body = canCollapse ? (
+                        <g
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleCollapsed(n.id);
+                          }}
+                        >
+                          {shape}
+                        </g>
+                      ) : navHref ? (
+                        <a href={navHref} target="_blank" rel="noreferrer">
+                          {shape}
+                        </a>
+                      ) : (
+                        shape
+                      );
+
                       return (
                         <g key={n.id} {...dragProps}>
-                          {shape}
+                          {body}
+                          {openBtn}
                           {collapseBtn}
                           {addBtn}
                           {editBtn}
                         </g>
                       );
-                    }
-                    return (
-                      <g key={n.id} {...dragProps}>
-                        <a href={navHref} target="_blank" rel="noreferrer">
-                          {shape}
-                        </a>
-                        {collapseBtn}
-                        {addBtn}
-                        {editBtn}
-                      </g>
-                    );
-                  })}
+                    })}
                   </g>
 
                   {/* Brush / annotation layer — painted over the tree so notes
                       sit on top. Persisted strokes + the in-progress stroke. */}
                   <g pointerEvents="none">
                     {brushStrokes.map((s, i) => (
-                      <polyline key={i}
-                        points={s.points.map(p => `${p.x},${p.y}`).join(' ')}
-                        fill="none" stroke={s.color} strokeWidth={s.width}
-                        strokeLinecap="round" strokeLinejoin="round" />
+                      <polyline
+                        key={i}
+                        points={s.points.map((p) => `${p.x},${p.y}`).join(' ')}
+                        fill="none"
+                        stroke={s.color}
+                        strokeWidth={s.width}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     ))}
                     {liveStroke.current && liveStroke.current.points.length > 1 && (
                       <polyline
-                        points={liveStroke.current.points.map(p => `${p.x},${p.y}`).join(' ')}
-                        fill="none" stroke={liveStroke.current.color} strokeWidth={liveStroke.current.width}
-                        strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
+                        points={liveStroke.current.points.map((p) => `${p.x},${p.y}`).join(' ')}
+                        fill="none"
+                        stroke={liveStroke.current.color}
+                        strokeWidth={liveStroke.current.width}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity={0.8}
+                      />
                     )}
                   </g>
                 </svg>
@@ -1085,18 +1604,23 @@ export function BirdsEyeView({ data, onClose, onChange }: {
         <div className="shrink-0 flex items-center gap-3 px-5 py-2 border-t border-slate-200 text-[10px] text-slate-500 flex-wrap bg-white">
           <span className="font-bold uppercase tracking-widest text-slate-400">Legend</span>
           {[
-            { c: STATUS_FILL.done,        s: STATUS_STROKE.done,        l: 'On track / Done' },
-            { c: STATUS_FILL.review,      s: STATUS_STROKE.review,      l: 'At risk / Review' },
-            { c: STATUS_FILL.blocked,     s: STATUS_STROKE.blocked,     l: 'Critical / Blocked' },
+            { c: STATUS_FILL.done, s: STATUS_STROKE.done, l: 'On track / Done' },
+            { c: STATUS_FILL.review, s: STATUS_STROKE.review, l: 'At risk / Review' },
+            { c: STATUS_FILL.blocked, s: STATUS_STROKE.blocked, l: 'Critical / Blocked' },
             { c: STATUS_FILL.in_progress, s: STATUS_STROKE.in_progress, l: 'In progress' },
-            { c: STATUS_FILL.todo,        s: STATUS_STROKE.todo,        l: 'To do' },
+            { c: STATUS_FILL.todo, s: STATUS_STROKE.todo, l: 'To do' },
           ].map((k) => (
             <span key={k.l} className="inline-flex items-center gap-1.5">
-              <span className="inline-block w-3 h-3 rounded" style={{ background: k.c, border: `1.5px solid ${k.s}` }} />
+              <span
+                className="inline-block w-3 h-3 rounded"
+                style={{ background: k.c, border: `1.5px solid ${k.s}` }}
+              />
               <span>{k.l}</span>
             </span>
           ))}
-          <span className="ml-auto text-slate-400 hidden sm:inline">Drag to rearrange · − to collapse · pencil to edit · tap to open.</span>
+          <span className="ml-auto text-slate-400 hidden sm:inline">
+            Click a card or its connector to expand/hide · drag to rearrange · ↗ to open · pencil to edit.
+          </span>
         </div>
 
         {editing && (
@@ -1105,31 +1629,40 @@ export function BirdsEyeView({ data, onClose, onChange }: {
             anchorX={editing.clientX}
             anchorY={editing.clientY}
             onClose={() => setEditing(null)}
-            onSaved={() => { setEditing(null); onChange?.(); }}
+            onSaved={() => {
+              setEditing(null);
+              onChange?.();
+            }}
           />
         )}
 
-        {addingTaskFor && (() => {
-          const node = addingTaskFor.node;
-          const projectId = node.kind === 'project' ? (node.data as BirdsEyeProject).id
-            : node.kind === 'phase'
-              // Phase-scope view: every task belongs to the same project as
-              // the existing tasks in this view, so we can grab the first.
-              ? (data.tasks[0]?.projectId || '')
-              : '';
-          const phaseName = node.kind === 'phase' ? node.label : undefined;
-          if (!projectId) return null;
-          return (
-            <BirdsEyeNewTaskEditor
-              projectId={projectId}
-              phaseName={phaseName}
-              anchorX={addingTaskFor.clientX}
-              anchorY={addingTaskFor.clientY}
-              onClose={() => setAddingTaskFor(null)}
-              onSaved={() => { setAddingTaskFor(null); onChange?.(); }}
-            />
-          );
-        })()}
+        {addingTaskFor &&
+          (() => {
+            const node = addingTaskFor.node;
+            const projectId =
+              node.kind === 'project'
+                ? (node.data as BirdsEyeProject).id
+                : node.kind === 'phase'
+                  ? // Phase-scope view: every task belongs to the same project as
+                    // the existing tasks in this view, so we can grab the first.
+                    data.tasks[0]?.projectId || ''
+                  : '';
+            const phaseName = node.kind === 'phase' ? node.label : undefined;
+            if (!projectId) return null;
+            return (
+              <BirdsEyeNewTaskEditor
+                projectId={projectId}
+                phaseName={phaseName}
+                anchorX={addingTaskFor.clientX}
+                anchorY={addingTaskFor.clientY}
+                onClose={() => setAddingTaskFor(null)}
+                onSaved={() => {
+                  setAddingTaskFor(null);
+                  onChange?.();
+                }}
+              />
+            );
+          })()}
       </div>
     </div>,
     document.body,
@@ -1142,7 +1675,13 @@ export function BirdsEyeView({ data, onClose, onChange }: {
    and TCD/due-date) — so a lead can rebalance work without diving into the
    task page. Persists via the same PATCH /tasks/:id endpoint the task page
    uses, so audit-trail and validation behave identically. */
-function BirdsEyeTaskEditor({ task, anchorX, anchorY, onClose, onSaved }: {
+function BirdsEyeTaskEditor({
+  task,
+  anchorX,
+  anchorY,
+  onClose,
+  onSaved,
+}: {
   task: BirdsEyeTask;
   anchorX: number;
   anchorY: number;
@@ -1177,11 +1716,14 @@ function BirdsEyeTaskEditor({ task, anchorX, anchorY, onClose, onSaved }: {
         if (!cancelled) setErr(e?.message || 'Could not load task');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [task.id]);
 
   async function save() {
-    setSaving(true); setErr('');
+    setSaving(true);
+    setErr('');
     try {
       const body: any = {};
       body.assigneeId = assigneeId || null;
@@ -1190,14 +1732,22 @@ function BirdsEyeTaskEditor({ task, anchorX, anchorY, onClose, onSaved }: {
       onSaved();
     } catch (e: any) {
       setErr(e?.message || 'Save failed');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Anchor against the viewport but keep the popover fully on-screen.
   const POP_W = 280;
   const POP_H = 260;
-  const left = Math.min(Math.max(8, anchorX - POP_W / 2), (typeof window !== 'undefined' ? window.innerWidth : 1024) - POP_W - 8);
-  const top  = Math.min(Math.max(8, anchorY + 12), (typeof window !== 'undefined' ? window.innerHeight : 768) - POP_H - 8);
+  const left = Math.min(
+    Math.max(8, anchorX - POP_W / 2),
+    (typeof window !== 'undefined' ? window.innerWidth : 1024) - POP_W - 8,
+  );
+  const top = Math.min(
+    Math.max(8, anchorY + 12),
+    (typeof window !== 'undefined' ? window.innerHeight : 768) - POP_H - 8,
+  );
 
   return (
     <>
@@ -1211,29 +1761,48 @@ function BirdsEyeTaskEditor({ task, anchorX, anchorY, onClose, onSaved }: {
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0">
             <div className="text-[9px] font-bold uppercase tracking-widest text-blue-600">Quick edit</div>
-            <div className="text-[12px] font-bold text-slate-800 truncate" title={task.title}>{task.title}</div>
+            <div className="text-[12px] font-bold text-slate-800 truncate" title={task.title}>
+              {task.title}
+            </div>
           </div>
-          <button onClick={onClose} className="p-0.5 text-slate-400 hover:text-slate-700"><X size={14} /></button>
+          <button onClick={onClose} className="p-0.5 text-slate-400 hover:text-slate-700">
+            <X size={14} />
+          </button>
         </div>
 
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2 mb-1">Assignee</label>
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2 mb-1">
+          Assignee
+        </label>
         <Select
           value={assigneeId}
           onChange={setAssigneeId}
           ariaLabel="Assignee"
           placeholder="Unassigned"
-          options={[{ value: '', label: 'Unassigned' }, ...members.map((u) => ({ value: u.id, label: u.name }))]}
+          options={[
+            { value: '', label: 'Unassigned' },
+            ...members.map((u) => ({ value: u.id, label: u.name })),
+          ]}
         />
 
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">Target completion date</label>
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">
+          Target completion date
+        </label>
         <DatePicker value={due || null} onChange={(v) => setDue(v || '')} block />
 
         {err && <div className="mt-2 text-[11px] text-red-600">{err}</div>}
 
         <div className="flex gap-2 mt-3">
-          <button onClick={onClose} className="flex-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button onClick={save} disabled={saving}
-            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+          <button
+            onClick={onClose}
+            className="flex-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
             <Check size={12} /> {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
@@ -1248,7 +1817,14 @@ function BirdsEyeTaskEditor({ task, anchorX, anchorY, onClose, onSaved }: {
    bird's-eye altitude. The new task carries the parent phase as its
    `phaseName` when added from a phase node, so it lands in the right
    column on the next render. */
-function BirdsEyeNewTaskEditor({ projectId, phaseName, anchorX, anchorY, onClose, onSaved }: {
+function BirdsEyeNewTaskEditor({
+  projectId,
+  phaseName,
+  anchorX,
+  anchorY,
+  onClose,
+  onSaved,
+}: {
   projectId: string;
   phaseName?: string;
   anchorX: number;
@@ -1275,13 +1851,19 @@ function BirdsEyeNewTaskEditor({ projectId, phaseName, anchorX, anchorY, onClose
         if (!cancelled) setErr(e?.message || 'Could not load project');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   async function save() {
     const t = title.trim();
-    if (!t) { setErr('Title is required'); return; }
-    setSaving(true); setErr('');
+    if (!t) {
+      setErr('Title is required');
+      return;
+    }
+    setSaving(true);
+    setErr('');
     try {
       const body: any = { projectId, title: t };
       if (assigneeId) body.assigneeId = assigneeId;
@@ -1294,19 +1876,29 @@ function BirdsEyeNewTaskEditor({ projectId, phaseName, anchorX, anchorY, onClose
           const proj = await api<any>(`/projects/${projectId}`);
           const phase = (proj?.phases || []).find((p: any) => p.name === phaseName);
           if (phase?.id) body.phaseId = phase.id;
-        } catch { /* phase lookup is best-effort */ }
+        } catch {
+          /* phase lookup is best-effort */
+        }
       }
       await api('/tasks', { method: 'POST', body });
       onSaved();
     } catch (e: any) {
       setErr(e?.message || 'Save failed');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   const POP_W = 300;
   const POP_H = 310;
-  const left = Math.min(Math.max(8, anchorX - POP_W / 2), (typeof window !== 'undefined' ? window.innerWidth : 1024) - POP_W - 8);
-  const top  = Math.min(Math.max(8, anchorY + 12), (typeof window !== 'undefined' ? window.innerHeight : 768) - POP_H - 8);
+  const left = Math.min(
+    Math.max(8, anchorX - POP_W / 2),
+    (typeof window !== 'undefined' ? window.innerWidth : 1024) - POP_W - 8,
+  );
+  const top = Math.min(
+    Math.max(8, anchorY + 12),
+    (typeof window !== 'undefined' ? window.innerHeight : 768) - POP_H - 8,
+  );
 
   return (
     <>
@@ -1323,10 +1915,14 @@ function BirdsEyeNewTaskEditor({ projectId, phaseName, anchorX, anchorY, onClose
               {phaseName ? `Under "${phaseName}"` : 'Under this project'}
             </div>
           </div>
-          <button onClick={onClose} className="p-0.5 text-slate-400 hover:text-slate-700"><X size={14} /></button>
+          <button onClick={onClose} className="p-0.5 text-slate-400 hover:text-slate-700">
+            <X size={14} />
+          </button>
         </div>
 
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2 mb-1">Title</label>
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2 mb-1">
+          Title
+        </label>
         <input
           autoFocus
           value={title}
@@ -1334,27 +1930,44 @@ function BirdsEyeNewTaskEditor({ projectId, phaseName, anchorX, anchorY, onClose
           maxLength={200}
           placeholder="What needs doing?"
           className="w-full text-sm px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
-          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save();
+          }}
         />
 
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">Assignee</label>
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">
+          Assignee
+        </label>
         <Select
           value={assigneeId}
           onChange={setAssigneeId}
           ariaLabel="Assignee"
           placeholder="Unassigned"
-          options={[{ value: '', label: 'Unassigned' }, ...members.map((u) => ({ value: u.id, label: u.name }))]}
+          options={[
+            { value: '', label: 'Unassigned' },
+            ...members.map((u) => ({ value: u.id, label: u.name })),
+          ]}
         />
 
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">Target completion date</label>
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">
+          Target completion date
+        </label>
         <DatePicker value={due || null} onChange={(v) => setDue(v || '')} block />
 
         {err && <div className="mt-2 text-[11px] text-red-600">{err}</div>}
 
         <div className="flex gap-2 mt-3">
-          <button onClick={onClose} className="flex-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Cancel</button>
-          <button onClick={save} disabled={saving || !title.trim()}
-            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+          <button
+            onClick={onClose}
+            className="flex-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={saving || !title.trim()}
+            className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
             <Plus size={12} /> {saving ? 'Adding…' : 'Add task'}
           </button>
         </div>

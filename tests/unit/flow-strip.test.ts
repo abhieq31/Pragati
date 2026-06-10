@@ -15,9 +15,20 @@ import { computeFlowStrip, type FlowSignalItem } from '@/lib/flow/computeStrip';
 import type { FlowConfig } from '@/lib/flow/config';
 
 const FORBIDDEN_WORDS = [
-  'AI', 'ML', 'artificial intelligence', 'machine learning', 'model',
-  'prediction', 'probability', 'confidence', 'algorithm', 'anomaly',
-  'risk score', 'Flow Signal', 'smart', 'intelligent',
+  'AI',
+  'ML',
+  'artificial intelligence',
+  'machine learning',
+  'model',
+  'prediction',
+  'probability',
+  'confidence',
+  'algorithm',
+  'anomaly',
+  'risk score',
+  'Flow Signal',
+  'smart',
+  'intelligent',
 ];
 
 function assertNoForbiddenLanguage(items: FlowSignalItem[]) {
@@ -29,10 +40,7 @@ function assertNoForbiddenLanguage(items: FlowSignalItem[]) {
       // words (e.g. "AI" inside "waiting") are fine.
       const escaped = w.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const re = new RegExp(`\\b${escaped}\\b`, 'i');
-      assert.ok(
-        !re.test(blob),
-        `Forbidden word "${w}" leaked into surface copy: ${blob}`,
-      );
+      assert.ok(!re.test(blob), `Forbidden word "${w}" leaked into surface copy: ${blob}`);
     }
   }
 }
@@ -55,7 +63,13 @@ function makeCfg(overrides: Partial<FlowConfig> = {}): FlowConfig {
 }
 
 const proj = { _id: 'proj-1', code: 'CC-2025-0001', name: 'Test', isPersonal: false, ownerId: 'lead-1' };
-const personalProj = { _id: 'proj-personal', code: 'PRSN-001', name: 'Private', isPersonal: true, ownerId: 'ic-1' };
+const personalProj = {
+  _id: 'proj-personal',
+  code: 'PRSN-001',
+  name: 'Private',
+  isPersonal: true,
+  ownerId: 'ic-1',
+};
 
 test('returns null when feature mode is off or shadow', () => {
   const args = {
@@ -83,14 +97,19 @@ test('returns null when facts flag is disabled', () => {
 test('emits a confirmed-waiting item with neutral copy and no forbidden words', () => {
   const out = computeFlowStrip({
     viewer: { id: 'lead-1', role: 'lead' },
-    tasks: [{
-      _id: 't1', title: 'Cross-functional impact assessment', projectId: 'proj-1',
-      status: 'in_progress', assigneeId: 'ic-1',
-      flowPendingType: 'approval',
-      flowPendingConfirmedAt: new Date(),
-      flowPendingConfirmedByUserId: 'ic-1',
-      flowResolvedAt: null,
-    }],
+    tasks: [
+      {
+        _id: 't1',
+        title: 'Cross-functional impact assessment',
+        projectId: 'proj-1',
+        status: 'in_progress',
+        assigneeId: 'ic-1',
+        flowPendingType: 'approval',
+        flowPendingConfirmedAt: new Date(),
+        flowPendingConfirmedByUserId: 'ic-1',
+        flowResolvedAt: null,
+      },
+    ],
     projects: [proj],
     userNameById: new Map([['ic-1', 'Abhi']]),
     cfg: makeCfg(),
@@ -131,7 +150,7 @@ test('contributor sees only their own assigned tasks', () => {
   const out = computeFlowStrip({
     viewer: { id: 'ic-1', role: 'employee' },
     tasks: [
-      { _id: 't1', title: 'Mine',     projectId: 'proj-1', status: 'blocked', assigneeId: 'ic-1' },
+      { _id: 't1', title: 'Mine', projectId: 'proj-1', status: 'blocked', assigneeId: 'ic-1' },
       { _id: 't2', title: 'Not mine', projectId: 'proj-1', status: 'blocked', assigneeId: 'ic-other' },
     ],
     projects: [proj],
@@ -145,51 +164,79 @@ test('contributor sees only their own assigned tasks', () => {
 
 test('contributor is capped at 1 item; lead is capped at maxLeadItems (3)', () => {
   const tasks = ['a', 'b', 'c', 'd', 'e'].map((c, i) => ({
-    _id: `t${i}`, title: `Task ${c}`, projectId: 'proj-1',
-    status: 'blocked', assigneeId: 'ic-1',
+    _id: `t${i}`,
+    title: `Task ${c}`,
+    projectId: 'proj-1',
+    status: 'blocked',
+    assigneeId: 'ic-1',
   }));
   const ic = computeFlowStrip({
     viewer: { id: 'ic-1', role: 'employee' },
-    tasks, projects: [proj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [proj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(ic!.items.length, 1);
   assert.equal(ic!.additionalCount, 4);
 
   const lead = computeFlowStrip({
     viewer: { id: 'lead-1', role: 'lead' },
-    tasks, projects: [proj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [proj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(lead!.items.length, 3);
   assert.equal(lead!.additionalCount, 2);
 });
 
 test('private task overlay never leaks to a different viewer', () => {
-  const tasks = [{
-    _id: 't1', title: 'Private follow-up', projectId: 'proj-1',
-    status: 'blocked', assigneeId: 'ic-1',
-    privateToUserId: 'ic-1',
-  }];
+  const tasks = [
+    {
+      _id: 't1',
+      title: 'Private follow-up',
+      projectId: 'proj-1',
+      status: 'blocked',
+      assigneeId: 'ic-1',
+      privateToUserId: 'ic-1',
+    },
+  ];
   const owner = computeFlowStrip({
     viewer: { id: 'ic-1', role: 'employee' },
-    tasks, projects: [proj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [proj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(owner!.items.length, 1);
 
   const other = computeFlowStrip({
     viewer: { id: 'lead-1', role: 'lead' },
-    tasks, projects: [proj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [proj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(other, null, 'private overlay must NOT surface to anyone else');
 });
 
 test('personal projects never surface, even to their owner', () => {
-  const tasks = [{
-    _id: 't1', title: 'Personal blocker', projectId: 'proj-personal',
-    status: 'blocked', assigneeId: 'ic-1',
-  }];
+  const tasks = [
+    {
+      _id: 't1',
+      title: 'Personal blocker',
+      projectId: 'proj-personal',
+      status: 'blocked',
+      assigneeId: 'ic-1',
+    },
+  ];
   const ownerOfPersonal = computeFlowStrip({
     viewer: { id: 'ic-1', role: 'employee' },
-    tasks, projects: [personalProj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [personalProj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(ownerOfPersonal, null, 'personal projects must never surface in the strip');
 });
@@ -197,12 +244,23 @@ test('personal projects never surface, even to their owner', () => {
 test('confirmed items rank above bare status-blocked items', () => {
   const tasks = [
     { _id: 't1', title: 'Z status-blocked', projectId: 'proj-1', status: 'blocked', assigneeId: 'ic-1' },
-    { _id: 't2', title: 'A confirmed pending', projectId: 'proj-1', status: 'in_progress', assigneeId: 'ic-1',
-      flowPendingType: 'decision', flowPendingConfirmedAt: new Date(), flowPendingConfirmedByUserId: 'ic-1' },
+    {
+      _id: 't2',
+      title: 'A confirmed pending',
+      projectId: 'proj-1',
+      status: 'in_progress',
+      assigneeId: 'ic-1',
+      flowPendingType: 'decision',
+      flowPendingConfirmedAt: new Date(),
+      flowPendingConfirmedByUserId: 'ic-1',
+    },
   ];
   const out = computeFlowStrip({
     viewer: { id: 'lead-1', role: 'lead' },
-    tasks, projects: [proj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [proj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(out!.items[0].taskTitle, 'A confirmed pending');
 });
@@ -210,15 +268,23 @@ test('confirmed items rank above bare status-blocked items', () => {
 test('a due date alone never creates a signal', () => {
   // Spec explicit: this feature must remain orthogonal to Due & Overdue.
   // A task whose only "issue" is being overdue must not surface here.
-  const tasks = [{
-    _id: 't1', title: 'Overdue but moving', projectId: 'proj-1',
-    status: 'in_progress', assigneeId: 'ic-1',
-    // No flowPendingType, no blocked status — just a past due date in
-    // some other field. computeFlowStrip should produce nothing.
-  }];
+  const tasks = [
+    {
+      _id: 't1',
+      title: 'Overdue but moving',
+      projectId: 'proj-1',
+      status: 'in_progress',
+      assigneeId: 'ic-1',
+      // No flowPendingType, no blocked status — just a past due date in
+      // some other field. computeFlowStrip should produce nothing.
+    },
+  ];
   const out = computeFlowStrip({
     viewer: { id: 'lead-1', role: 'lead' },
-    tasks, projects: [proj], userNameById: new Map(), cfg: makeCfg(),
+    tasks,
+    projects: [proj],
+    userNameById: new Map(),
+    cfg: makeCfg(),
   });
   assert.equal(out, null);
 });

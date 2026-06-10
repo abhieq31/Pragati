@@ -24,10 +24,10 @@ import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
  *     remain lead-only.
  */
 export interface TaskAccess {
-  task:       any | null;
-  visible:    boolean;
+  task: any | null;
+  visible: boolean;
   isAssignee: boolean;
-  isLead:     boolean;
+  isLead: boolean;
 }
 
 export async function getTaskAccess(
@@ -42,18 +42,15 @@ export async function getTaskAccess(
   const privateOwner = (task as any).privateToUserId;
   const canSeePrivateTask = !privateOwner || String(privateOwner) === String(userId);
   const scope = await getLeadScope(userId, role);
-  const proj  = canSeePrivateTask
-    ? await Project.findOne(
-        { _id: (task as any).projectId, ...projectsVisibleFilter(scope) },
-        '_id',
-      ).lean()
+  const proj = canSeePrivateTask
+    ? await Project.findOne({ _id: (task as any).projectId, ...projectsVisibleFilter(scope) }, '_id').lean()
     : null;
 
   return {
     task,
-    visible:    !!proj,
+    visible: !!proj,
     isAssignee: !!(task as any).assigneeId && String((task as any).assigneeId) === String(userId),
-    isLead:     !!proj && canMutate(role),
+    isLead: !!proj && canMutate(role),
   };
 }
 

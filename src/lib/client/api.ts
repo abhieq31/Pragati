@@ -65,8 +65,8 @@ export async function api<T = any>(
       // Distinguish a deactivated account from a plain expired session so the
       // login page can show a clear, actionable message rather than a generic
       // "session expired" line.
-      const isDeactivated = (res as any)._deactivated ||
-        (typeof msg === 'string' && msg.toLowerCase().includes('deactivated'));
+      const isDeactivated =
+        (res as any)._deactivated || (typeof msg === 'string' && msg.toLowerCase().includes('deactivated'));
       window.location.replace(isDeactivated ? '/login?reason=deactivated' : '/login');
       throw new Error(isDeactivated ? 'Account deactivated' : 'Session expired — please log in again');
     }

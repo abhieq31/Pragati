@@ -16,14 +16,14 @@ export const dynamic = 'force-dynamic';
 
 function serialize(n: any) {
   return {
-    id:             String(n._id),
-    title:          n.title || null,
-    content:        n.content,
-    type:           n.type,
+    id: String(n._id),
+    title: n.title || null,
+    content: n.content,
+    type: n.type,
     whiteboardData: n.whiteboardData || null,
-    pinned:         !!n.pinned,
-    createdAt:      n.createdAt,
-    updatedAt:      n.updatedAt,
+    pinned: !!n.pinned,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
   };
 }
 
@@ -43,11 +43,11 @@ export async function GET(req: NextRequest) {
 }
 
 const CreateBody = z.object({
-  title:          z.string().trim().max(200).optional(),
-  content:        z.string().trim().min(1).max(50000),
-  type:           z.enum(['text', 'whiteboard']).default('text'),
+  title: z.string().trim().max(200).optional(),
+  content: z.string().trim().min(1).max(50000),
+  type: z.enum(['text', 'whiteboard']).default('text'),
   whiteboardData: z.any().optional(),
-  pinned:         z.boolean().optional(),
+  pinned: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {

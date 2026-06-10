@@ -23,26 +23,41 @@ function clearSessionScopedCaches() {
 
 // Force-password modal — only ships when a user has mustChangePassword set.
 // Keeps the long form code (strength meter, validators) out of the main bundle.
-const ForcePasswordModal = dynamic(
-  () => import('./ForcePasswordModal').then(m => m.ForcePasswordModal),
-  { ssr: false, loading: () => null },
-);
+const ForcePasswordModal = dynamic(() => import('./ForcePasswordModal').then((m) => m.ForcePasswordModal), {
+  ssr: false,
+  loading: () => null,
+});
 // Mandatory Quick-PIN setup on first login — lazy so it stays out of the bundle
 // for everyone who already has a PIN.
-const SetPinModal = dynamic(
-  () => import('./SetPinModal').then(m => m.SetPinModal),
-  { ssr: false, loading: () => null },
-);
+const SetPinModal = dynamic(() => import('./SetPinModal').then((m) => m.SetPinModal), {
+  ssr: false,
+  loading: () => null,
+});
 // Guided "spotlight" product tour for first-time users — lazy so its portal,
 // rect-tracking, and step data stay out of the bundle for returning users.
-const FirstTimeTour = dynamic(
-  () => import('./FirstTimeTour').then(m => m.FirstTimeTour),
-  { ssr: false, loading: () => null },
-);
+const FirstTimeTour = dynamic(() => import('./FirstTimeTour').then((m) => m.FirstTimeTour), {
+  ssr: false,
+  loading: () => null,
+});
 import {
-  LayoutDashboard, FolderKanban, Users, UsersRound, NotebookPen,
-  LogOut, Menu, X, Moon, Sun, AlertTriangle, ChevronLeft, ChevronRight, ScrollText,
-  UserCircle, Layers, Globe, ExternalLink,
+  LayoutDashboard,
+  FolderKanban,
+  Users,
+  UsersRound,
+  NotebookPen,
+  LogOut,
+  Menu,
+  X,
+  Moon,
+  Sun,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  ScrollText,
+  UserCircle,
+  Layers,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -88,24 +103,37 @@ function useDarkMode(initialDark: boolean): [boolean, () => void] {
 }
 
 /* ── Main shell ─────────────────────────────────────────────────────── */
-export default function AppShell({ user, initialDark, initialSidebarCollapsed = false, initialSidebarWidth = 220, initialAvatars, initialUnread = 0, children }: { user: CurrentUser; initialDark: boolean; initialSidebarCollapsed?: boolean; initialSidebarWidth?: number; initialAvatars?: Record<string, { letter: string; bg: string; font: number }>; initialUnread?: number; children: React.ReactNode }) {
+export default function AppShell({
+  user,
+  initialDark,
+  initialSidebarCollapsed = false,
+  initialSidebarWidth = 220,
+  initialAvatars,
+  initialUnread = 0,
+  children,
+}: {
+  user: CurrentUser;
+  initialDark: boolean;
+  initialSidebarCollapsed?: boolean;
+  initialSidebarWidth?: number;
+  initialAvatars?: Record<string, { letter: string; bg: string; font: number }>;
+  initialUnread?: number;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
-  const router   = useRouter();
+  const router = useRouter();
 
-  const [open, setOpen]               = useState(false);
+  const [open, setOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [idleWarning, setIdleWarning] = useState(false);
-  const [dark, toggleDark]            = useDarkMode(initialDark);
+  const [dark, toggleDark] = useDarkMode(initialDark);
   const [mustChangePw, setMustChangePw] = useState(!!user.mustChangePassword);
   // Show the PIN modal only when ALL of these hold:
   //  • the user doesn't already have a PIN
   //  • they've completed at least 2 full logins (first visit is busy with
   //    password change + onboarding tour)
   //  • they haven't dismissed the prompt this session with "Maybe later"
-  const shouldOfferPin =
-    !user.hasPin &&
-    (user.loginCount ?? 0) >= 2 &&
-    !user.pinPromptDismissedAt;
+  const shouldOfferPin = !user.hasPin && (user.loginCount ?? 0) >= 2 && !user.pinPromptDismissedAt;
   const [needsPin, setNeedsPin] = useState(shouldOfferPin);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -117,11 +145,12 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
   // server knows the initial width on first paint — no layout shift after hydration.
   const [collapsed, setCollapsed] = useState(initialSidebarCollapsed);
   const [sidebarHovered, setSidebarHovered] = useState(false);
-  const toggleCollapsed = () => setCollapsed((c) => {
-    const next = !c;
-    document.cookie = `sidebar_collapsed=${next ? '1' : '0'}; path=/; max-age=31536000; SameSite=Lax`;
-    return next;
-  });
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      const next = !c;
+      document.cookie = `sidebar_collapsed=${next ? '1' : '0'}; path=/; max-age=31536000; SameSite=Lax`;
+      return next;
+    });
 
   // Resizable sidebar width — clamped between 180 and 340. Only applies when
   // the sidebar is expanded. Persisted in a cookie so it survives refreshes.
@@ -163,12 +192,18 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // "G then X" two-key navigation buffer
   const gPressedRef = useRef(false);
-  const gTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setOpen(false); setAccountMenuOpen(false); setMobileMenuOpen(false); }, [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setAccountMenuOpen(false);
+    setMobileMenuOpen(false);
+  }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
   useEffect(() => {
     if (!accountMenuOpen) return;
@@ -176,7 +211,9 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       if (accountMenuRef.current?.contains(e.target as Node)) return;
       setAccountMenuOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAccountMenuOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAccountMenuOpen(false);
+    };
     document.addEventListener('mousedown', close);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -208,7 +245,10 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
   useEffect(() => {
     const WARN_MS = 25 * 60 * 1000;
     const IDLE_MS = 30 * 60 * 1000;
-    const mark = () => { lastActivityRef.current = Date.now(); setIdleWarning(false); };
+    const mark = () => {
+      lastActivityRef.current = Date.now();
+      setIdleWarning(false);
+    };
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
     events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
     const iv = setInterval(() => {
@@ -262,7 +302,9 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       if (e.key === 'g' || e.key === 'G') {
         if (gTimerRef.current) clearTimeout(gTimerRef.current);
         gPressedRef.current = true;
-        gTimerRef.current = setTimeout(() => { gPressedRef.current = false; }, 500);
+        gTimerRef.current = setTimeout(() => {
+          gPressedRef.current = false;
+        }, 500);
         return;
       }
 
@@ -270,10 +312,14 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         gPressedRef.current = false;
         if (gTimerRef.current) clearTimeout(gTimerRef.current);
         const dest: Record<string, string> = {
-          d: '/', D: '/',
-          p: '/projects', P: '/projects',
-          t: '/teams', T: '/teams',
-          m: '/my-day', M: '/my-day',
+          d: '/',
+          D: '/',
+          p: '/projects',
+          P: '/projects',
+          t: '/teams',
+          T: '/teams',
+          m: '/my-day',
+          M: '/my-day',
         };
         if (dest[e.key]) {
           e.preventDefault();
@@ -286,9 +332,16 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     return () => window.removeEventListener('keydown', handleKey);
   }, [router]);
 
-  type NavItem = { href: string; label: string; icon: any; iconColor: string; iconBg: string; adminOnly?: boolean };
+  type NavItem = {
+    href: string;
+    label: string;
+    icon: any;
+    iconColor: string;
+    iconBg: string;
+    adminOnly?: boolean;
+  };
 
-  const isAdmin       = user.role === 'admin' || user.role === 'master_admin';
+  const isAdmin = user.role === 'admin' || user.role === 'master_admin';
   const isMasterAdmin = user.role === 'master_admin';
   const isLeadOrAdmin = user.role === 'lead' || isAdmin;
 
@@ -298,33 +351,64 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
   // My Day is NOT in the main nav list — it renders pinned just above the user
   // footer so it's always reachable without scrolling.
   const leadNav: NavItem[] = [
-    { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
-    { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
-    { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
+    { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
+    { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
   const adminExtra: NavItem[] = [
-    { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1', adminOnly: true },
-    { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF', adminOnly: true },
+    {
+      href: '/people',
+      label: 'People',
+      icon: UsersRound,
+      iconColor: '#00897B',
+      iconBg: '#E0F2F1',
+      adminOnly: true,
+    },
+    {
+      href: '/audit',
+      label: 'Logs',
+      icon: ScrollText,
+      iconColor: '#6366F1',
+      iconBg: '#EEF2FF',
+      adminOnly: true,
+    },
   ];
   // The master-admin item is only added when the signed-in user actually holds
   // that role. In the current single-tenant deploy no one does, so the link
   // never appears — the route itself also redirects non-master-admins.
   const masterAdminExtra: NavItem[] = isMasterAdmin
-    ? [{ href: '/master-admin', label: 'Platform', icon: Globe, iconColor: '#9333EA', iconBg: '#F3E8FF', adminOnly: true }]
+    ? [
+        {
+          href: '/master-admin',
+          label: 'Platform',
+          icon: Globe,
+          iconColor: '#9333EA',
+          iconBg: '#F3E8FF',
+          adminOnly: true,
+        },
+      ]
     : [];
 
   const contributorNav: NavItem[] = [
-    { href: '/',         label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
-    { href: '/projects', label: 'Projects',  icon: FolderKanban,    iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
-    { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
+    { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
+    { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
 
-  const myDayItem: NavItem = { href: '/my-day', label: 'My Day', icon: NotebookPen, iconColor: '#1565C0', iconBg: '#EFF6FF' };
+  const myDayItem: NavItem = {
+    href: '/my-day',
+    label: 'My Day',
+    icon: NotebookPen,
+    iconColor: '#1565C0',
+    iconBg: '#EFF6FF',
+  };
 
   const nav = isAdmin
     ? [...leadNav, ...adminExtra, ...masterAdminExtra]
-    : isLeadOrAdmin ? leadNav : contributorNav;
-  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname?.startsWith(href);
+    : isLeadOrAdmin
+      ? leadNav
+      : contributorNav;
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname?.startsWith(href));
 
   async function logout() {
     clearSessionScopedCaches();
@@ -333,16 +417,13 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     router.refresh();
   }
 
-  const roleText = user.role === 'admin'
-    ? 'Admin'
-    : user.role === 'lead' ? 'Team Lead' : 'Individual Contributor';
+  const roleText =
+    user.role === 'admin' ? 'Admin' : user.role === 'lead' ? 'Team Lead' : 'Individual Contributor';
 
   // Decluttered: a single entry into the profile (which now holds Activity and,
   // behind a disclosure, Security / Quick PIN / admin tools). Notifications and
   // their preferences live in the bell. Dark mode + Sign out follow below.
-  const accountItems = [
-    { href: '/settings', label: 'Profile & activity', icon: UserCircle },
-  ];
+  const accountItems = [{ href: '/settings', label: 'Profile & activity', icon: UserCircle }];
 
   const AccountMenu = accountMenuOpen ? (
     <div
@@ -354,11 +435,22 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         boxShadow: dark ? '0 18px 44px rgba(0,0,0,0.45)' : '0 18px 44px rgba(15,23,42,0.16)',
       }}
     >
-      <div className="px-2.5 py-2.5 flex items-center gap-3 border-b mb-1.5"
-        style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}>
-        <Avatar name={user.name} size={38} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
+      <div
+        className="px-2.5 py-2.5 flex items-center gap-3 border-b mb-1.5"
+        style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}
+      >
+        <Avatar
+          name={user.name}
+          size={38}
+          letter={user.avatarLetter}
+          bg={user.avatarBg}
+          font={user.avatarFont}
+          ring
+        />
         <div className="min-w-0">
-          <div className={`text-sm font-black truncate ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
+          <div className={`text-sm font-black truncate ${dark ? 'text-white' : 'text-slate-900'}`}>
+            {user.name}
+          </div>
           <div className={`text-[11px] truncate ${dark ? 'text-white/45' : 'text-slate-400'}`}>
             {user.username ? `@${user.username}` : roleText}
           </div>
@@ -372,7 +464,9 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
             key={item.href}
             href={item.href}
             className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              dark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              dark
+                ? 'text-white/70 hover:text-white hover:bg-white/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Icon size={16} className={dark ? 'text-white/40' : 'text-slate-400'} />
@@ -384,9 +478,14 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       <div className="my-1.5 border-t" style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }} />
       <button
         type="button"
-        onClick={() => { toggleDark(); setAccountMenuOpen(false); }}
+        onClick={() => {
+          toggleDark();
+          setAccountMenuOpen(false);
+        }}
         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-          dark ? 'text-white/70 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          dark
+            ? 'text-white/70 hover:text-white hover:bg-white/5'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
         {dark ? <Sun size={16} className="text-amber-300" /> : <Moon size={16} className="text-slate-400" />}
@@ -394,7 +493,10 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       </button>
       <button
         type="button"
-        onClick={() => { setAccountMenuOpen(false); setConfirmLogout(true); }}
+        onClick={() => {
+          setAccountMenuOpen(false);
+          setConfirmLogout(true);
+        }}
         className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
           dark ? 'text-red-300/75 hover:text-red-300 hover:bg-red-400/10' : 'text-red-600 hover:bg-red-50'
         }`}
@@ -421,15 +523,21 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
           so it can't occupy width and squeeze the 30px mark in the 68px rail.
           That double-guard is what fixes the "logo squeezed from both sides"
           in the collapsed sidebar. */}
-      <div className="relative flex items-center h-14 shrink-0 border-b overflow-hidden"
-        style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}>
-        <Link href="/"
-          className={`flex items-center min-w-0 w-full ${showCollapsed ? 'justify-center' : 'gap-2.5 pl-[18px] pr-4'}`}>
+      <div
+        className="relative flex items-center h-14 shrink-0 border-b overflow-hidden"
+        style={{ borderColor: dark ? 'rgba(255,255,255,0.07)' : '#e8edf4' }}
+      >
+        <Link
+          href="/"
+          className={`flex items-center min-w-0 w-full ${showCollapsed ? 'justify-center' : 'gap-2.5 pl-[18px] pr-4'}`}
+        >
           <span className="shrink-0">
             <PragatiMark size={30} />
           </span>
           {!showCollapsed && (
-            <span className={`brand-wordmark text-[21px] whitespace-nowrap ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}>
+            <span
+              className={`brand-wordmark text-[21px] whitespace-nowrap ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}
+            >
               Pragati
             </span>
           )}
@@ -437,8 +545,10 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         {!showCollapsed && (
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {/* Close on mobile only */}
-            <button className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
-              onClick={() => setOpen(false)}>
+            <button
+              className={`lg:hidden p-1 rounded-md ${dark ? 'text-white/40 hover:text-white/70' : 'text-slate-400 hover:text-slate-600'}`}
+              onClick={() => setOpen(false)}
+            >
               <X size={15} />
             </button>
           </div>
@@ -448,32 +558,51 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
       {/* Nav items */}
       <nav className="flex-1 px-3 py-4 overflow-auto flex flex-col">
         <div className="space-y-0.5 flex-1">
-          {nav.map(n => {
-            const Icon   = n.icon;
+          {nav.map((n) => {
+            const Icon = n.icon;
             const active = isActive(n.href);
             return (
-              <Link key={n.href} href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+              <Link
+                key={n.href}
+                href={n.href}
+                prefetch
+                title={showCollapsed ? n.label : undefined}
                 data-tour={`nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`}
                 className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                   active
                     ? 'text-brand-700 dark:text-[#faf9f5]'
                     : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
                 }`}
-                style={active ? (showCollapsed ? {
-                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                } : {
-                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                  borderLeft: `3px solid ${n.iconColor}`,
-                  paddingLeft: '9px',
-                }) : {}}
+                style={
+                  active
+                    ? showCollapsed
+                      ? {
+                          background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                        }
+                      : {
+                          background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                          borderLeft: `3px solid ${n.iconColor}`,
+                          paddingLeft: '9px',
+                        }
+                    : {}
+                }
               >
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
                   style={{
                     background: active
-                      ? (dark ? `${n.iconColor}30` : n.iconBg)
-                      : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
-                  }}>
-                  <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
+                      ? dark
+                        ? `${n.iconColor}30`
+                        : n.iconBg
+                      : dark
+                        ? `${n.iconColor}18`
+                        : `${n.iconColor}14`,
+                  }}
+                >
+                  <Icon
+                    size={14}
+                    style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }}
+                  />
                 </div>
                 {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
               </Link>
@@ -487,34 +616,55 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
         {!showCollapsed && <SidebarCalendar dark={dark} />}
 
         {/* My Day — pinned just above the footer so it's always reachable */}
-        <div className="mt-2 pt-2 border-t" style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}>
+        <div
+          className="mt-2 pt-2 border-t"
+          style={{ borderColor: dark ? 'rgba(255,255,255,0.06)' : '#eef2f7' }}
+        >
           {(() => {
             const n = myDayItem;
-            const Icon   = n.icon;
+            const Icon = n.icon;
             const active = isActive(n.href);
             return (
-              <Link href={n.href} prefetch title={showCollapsed ? n.label : undefined}
+              <Link
+                href={n.href}
+                prefetch
+                title={showCollapsed ? n.label : undefined}
                 data-tour="nav-my-day"
                 className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                   active
                     ? 'text-brand-700 dark:text-[#faf9f5]'
                     : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
                 }`}
-                style={active ? (showCollapsed ? {
-                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                } : {
-                  background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                  borderLeft: `3px solid ${n.iconColor}`,
-                  paddingLeft: '9px',
-                }) : {}}
+                style={
+                  active
+                    ? showCollapsed
+                      ? {
+                          background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                        }
+                      : {
+                          background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                          borderLeft: `3px solid ${n.iconColor}`,
+                          paddingLeft: '9px',
+                        }
+                    : {}
+                }
               >
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
                   style={{
                     background: active
-                      ? (dark ? `${n.iconColor}30` : n.iconBg)
-                      : (dark ? `${n.iconColor}18` : `${n.iconColor}14`),
-                  }}>
-                  <Icon size={14} style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }} />
+                      ? dark
+                        ? `${n.iconColor}30`
+                        : n.iconBg
+                      : dark
+                        ? `${n.iconColor}18`
+                        : `${n.iconColor}14`,
+                  }}
+                >
+                  <Icon
+                    size={14}
+                    style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }}
+                  />
                 </div>
                 {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
               </Link>
@@ -525,93 +675,127 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
 
       {/* Collapsed footer — notification + logout + account avatar. */}
       {showCollapsed ? (
-        <div className="px-2 py-3 border-t shrink-0 flex flex-col items-center gap-1.5 relative"
-          style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
+        <div
+          className="px-2 py-3 border-t shrink-0 flex flex-col items-center gap-1.5 relative"
+          style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}
+        >
           {AccountMenu}
           {/* Notifications are intentionally NOT shown on the collapsed rail —
               the bell + count live in the expanded sidebar; hover/expand to
               reach them. Keeps the narrow rail uncluttered. */}
           {/* No standalone sign-out here when collapsed — it lives inside the
               account menu (tap the avatar), keeping the rail uncluttered. */}
-          <button type="button" title="Account menu" aria-label="Account menu"
+          <button
+            type="button"
+            title="Account menu"
+            aria-label="Account menu"
             data-tour="account-menu"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => setAccountMenuOpen((v) => !v)}
-            className="relative shrink-0 rounded-full focus:outline-none mt-0.5">
-            <Avatar name={user.name} size={32} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
+            className="relative shrink-0 rounded-full focus:outline-none mt-0.5"
+          >
+            <Avatar
+              name={user.name}
+              size={32}
+              letter={user.avatarLetter}
+              bg={user.avatarBg}
+              font={user.avatarFont}
+              ring
+            />
           </button>
         </div>
       ) : (
-      /* User footer — avatar + name open the account menu; the bell sits to
+        /* User footer — avatar + name open the account menu; the bell sits to
          the side, large enough to tap on touch devices. The whole strip is a
          single subtly-tinted card so the avatar doesn't read as floating in a
          corner — it feels like a deliberate identity panel. */
-      <div className="p-3 border-t shrink-0 relative"
-        style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}>
-        {AccountMenu}
-
         <div
-          className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors cursor-pointer ${
-            dark ? 'bg-white/[0.03] hover:bg-white/[0.06]' : 'bg-slate-50 hover:bg-slate-100/80'
-          }`}
-          style={{ border: dark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e8edf4' }}
-          onClick={() => setAccountMenuOpen((v) => !v)}
-          onMouseDown={(e) => e.stopPropagation()}
+          className="p-3 border-t shrink-0 relative"
+          style={{ borderColor: dark ? 'rgba(255,255,255,0.05)' : '#e8edf4' }}
         >
-          {/* Avatar + name -> account menu */}
-          <button type="button" title="Account menu" aria-label="Account menu"
-            data-tour="account-menu"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); setAccountMenuOpen((v) => !v); }}
-            className="relative shrink-0 rounded-full focus:outline-none">
-            <Avatar name={user.name} size={34} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
-          </button>
+          {AccountMenu}
 
-          <div className="flex-1 min-w-0">
-            <div className={`text-[13px] font-bold truncate leading-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}>{user.name}</div>
-            {/* Role as plain muted metadata — no dot, no colour-coded chip. The
+          <div
+            className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-colors cursor-pointer ${
+              dark ? 'bg-white/[0.03] hover:bg-white/[0.06]' : 'bg-slate-50 hover:bg-slate-100/80'
+            }`}
+            style={{ border: dark ? '1px solid rgba(255,255,255,0.05)' : '1px solid #e8edf4' }}
+            onClick={() => setAccountMenuOpen((v) => !v)}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* Avatar + name -> account menu */}
+            <button
+              type="button"
+              title="Account menu"
+              aria-label="Account menu"
+              data-tour="account-menu"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setAccountMenuOpen((v) => !v);
+              }}
+              className="relative shrink-0 rounded-full focus:outline-none"
+            >
+              <Avatar
+                name={user.name}
+                size={34}
+                letter={user.avatarLetter}
+                bg={user.avatarBg}
+                font={user.avatarFont}
+                ring
+              />
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <div
+                className={`text-[13px] font-bold truncate leading-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}
+              >
+                {user.name}
+              </div>
+              {/* Role as plain muted metadata — no dot, no colour-coded chip. The
                 role is contextual info, not an alert, so it shouldn't compete
                 visually with the user's name above it. */}
-            <div className={`text-[10px] font-semibold uppercase tracking-wider truncate mt-0.5 ${dark ? 'text-white/45' : 'text-slate-400'}`}>
-              {roleText}
+              <div
+                className={`text-[10px] font-semibold uppercase tracking-wider truncate mt-0.5 ${dark ? 'text-white/45' : 'text-slate-400'}`}
+              >
+                {roleText}
+              </div>
             </div>
-          </div>
 
-          {/* Notifications — opens upward so it's never clipped at the bottom.
+            {/* Notifications — opens upward so it's never clipped at the bottom.
               Seeded with the SSR unread count so the badge is correct on first
               paint instead of popping in after the first poll. */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <NotificationBell dark={dark} openUp initialUnread={initialUnread} />
+            <div onClick={(e) => e.stopPropagation()}>
+              <NotificationBell dark={dark} openUp initialUnread={initialUnread} />
+            </div>
           </div>
         </div>
-      </div>
       )}
     </>
   );
 
   return (
     <CurrentUserProvider user={user}>
-    <AvatarRegistryProvider
-      seed={{ id: user.id, letter: user.avatarLetter, bg: user.avatarBg, font: user.avatarFont }}
-      initial={initialAvatars}
-    >
-    {/* Fixed-height app shell: the shell itself never scrolls (overflow-hidden),
+      <AvatarRegistryProvider
+        seed={{ id: user.id, letter: user.avatarLetter, bg: user.avatarBg, font: user.avatarFont }}
+        initial={initialAvatars}
+      >
+        {/* Fixed-height app shell: the shell itself never scrolls (overflow-hidden),
         so the sidebar stays put — only <main> scrolls. This is what keeps the
         sidebar pinned regardless of how far the page content scrolls. */}
-    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-page)' }}>
+        <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-page)' }}>
+          {/* Mobile backdrop */}
+          <div
+            className={`lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
+              open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
 
-      {/* Mobile backdrop */}
-      <div
-        className={`lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300 ${
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setOpen(false)}
-        aria-hidden="true"
-      />
-
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
-      <aside
-        className={`
+          {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+          <aside
+            className={`
           shrink-0 flex flex-col
           fixed inset-y-0 left-0 z-50
           lg:sticky lg:top-0 lg:h-screen
@@ -619,384 +803,519 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
           ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${collapsed && !open && sidebarHovered ? 'lg:fixed lg:z-50' : ''}
         `}
-        style={{
-          width: showCollapsed ? 68 : sidebarWidth,
-          background: dark ? '#262624' : '#ffffff',
-          borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4',
-          boxShadow: collapsed && !open && sidebarHovered ? (dark ? '4px 0 24px rgba(0,0,0,0.5)' : '4px 0 24px rgba(15,23,42,0.18)') : undefined,
-        }}
-        onMouseEnter={() => { if (collapsed && !open) setSidebarHovered(true); }}
-        onMouseLeave={() => setSidebarHovered(false)}
-        onClick={() => { if (collapsed && !open && sidebarHovered) { toggleCollapsed(); setSidebarHovered(false); } }}
-      >
-        {SidebarInner}
+            style={{
+              width: showCollapsed ? 68 : sidebarWidth,
+              background: dark ? '#262624' : '#ffffff',
+              borderRight: dark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8edf4',
+              boxShadow:
+                collapsed && !open && sidebarHovered
+                  ? dark
+                    ? '4px 0 24px rgba(0,0,0,0.5)'
+                    : '4px 0 24px rgba(15,23,42,0.18)'
+                  : undefined,
+            }}
+            onMouseEnter={() => {
+              if (collapsed && !open) setSidebarHovered(true);
+            }}
+            onMouseLeave={() => setSidebarHovered(false)}
+            onClick={() => {
+              if (collapsed && !open && sidebarHovered) {
+                toggleCollapsed();
+                setSidebarHovered(false);
+              }
+            }}
+          >
+            {SidebarInner}
 
-        {/* Drag-to-resize handle — shown on expanded desktop sidebar only.
+            {/* Drag-to-resize handle — shown on expanded desktop sidebar only.
             Split into top/bottom halves to leave a gap at the vertical midpoint
             where the collapse button sits, so the two never conflict. */}
-        {!showCollapsed && (
-          <>
-            <div
-              className="hidden lg:block absolute right-0 top-0 w-1 group/drag cursor-col-resize z-20"
-              style={{ bottom: 'calc(50% + 22px)' }}
-              onMouseDown={onDragHandleMouseDown}
-              aria-hidden="true"
-            >
-              <div className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag:opacity-100"
-                style={{ background: '#3b82f6', margin: '8px 0' }} />
-            </div>
-            <div
-              className="hidden lg:block absolute right-0 bottom-0 w-1 group/drag2 cursor-col-resize z-20"
-              style={{ top: 'calc(50% + 22px)' }}
-              onMouseDown={onDragHandleMouseDown}
-              aria-hidden="true"
-            >
-              <div className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag2:opacity-100"
-                style={{ background: '#3b82f6', margin: '8px 0' }} />
-            </div>
-          </>
-        )}
-
-        {/* Collapse/expand ribbon — desktop only, on the right edge of sidebar.
-            z-[25] sits above the drag handle (z-20) so hovering the button
-            never activates the resize cursor behind it. */}
-        <button
-          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[25] w-5 h-10 items-center justify-center rounded-full transition-colors cursor-pointer"
-          style={{
-            background: dark ? '#30302e' : '#ffffff',
-            border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #dde3ec',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            color: dark ? 'rgba(255,255,255,0.35)' : '#94a3b8',
-          }}
-          onClick={(e) => { e.stopPropagation(); toggleCollapsed(); setSidebarHovered(false); }}
-          title={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {showCollapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
-        </button>
-      </aside>
-
-      {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-
-        {/* Mobile-only top bar — taller for better touch targets, right side
-            shows notification bell instead of the hamburger (nav is bottom). */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14"
-          style={{
-            background: dark ? 'rgba(38,38,36,0.92)' : 'rgba(255,255,255,0.92)',
-            backdropFilter: 'saturate(180%) blur(12px)',
-            WebkitBackdropFilter: 'saturate(180%) blur(12px)',
-            borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
-            boxShadow: dark ? '0 2px 16px rgba(0,0,0,0.45)' : '0 2px 12px rgba(15,23,42,0.07)',
-          }}>
-          <Link href="/" className="flex items-center gap-2.5">
-            <PragatiMark size={26} />
-            <span className={`brand-wordmark text-[17px] ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}>Pragati</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <NotificationBell dark={dark} openUp={false} initialUnread={initialUnread} />
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(v => !v)}
-              className="relative rounded-full focus:outline-none"
-              aria-label="Account menu"
-              data-tour="account-menu"
-            >
-              <Avatar name={user.name} size={32} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
-            </button>
-          </div>
-        </div>
-
-        {/* Page content — on mobile, pad the bottom so content isn't hidden
-            behind the bottom tab bar (approx 64px + safe-area). */}
-        <main className="flex-1 min-h-0 overflow-y-auto relative">
-          {pathname === '/' && (
-            <div aria-hidden
-              className="pointer-events-none absolute top-0 left-0 right-0 h-[200px]"
-              style={{
-                zIndex: 0,
-                background: 'linear-gradient(180deg, rgba(21,101,192,0.09) 0%, rgba(21,101,192,0.04) 50%, transparent 100%)',
-              }}
-            />
-          )}
-          <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 pb-24 lg:pb-7 relative overflow-x-hidden">
-            {children}
-          </div>
-        </main>
-
-        {/* ── Mobile bottom navigation bar ──────────────────────────────── */}
-        {/* Replaces the hamburger drawer for primary navigation on touch
-            devices. The account menu is accessed via the top-bar avatar. */}
-        <nav
-          className="lg:hidden fixed bottom-0 inset-x-0 z-40 mobile-bottom-nav"
-          style={{
-            background: dark ? 'rgba(38,38,36,0.97)' : 'rgba(255,255,255,0.97)',
-            borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8edf4',
-            boxShadow: dark ? '0 -4px 20px rgba(0,0,0,0.5)' : '0 -4px 20px rgba(15,23,42,0.08)',
-            backdropFilter: 'saturate(180%) blur(12px)',
-            WebkitBackdropFilter: 'saturate(180%) blur(12px)',
-            paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
-          }}
-          aria-label="Main navigation"
-        >
-          <div className="flex items-center justify-around pt-2 px-2">
-            {/* Show up to 4 primary nav items + My Day = 5 tabs max. */}
-            {[...nav.slice(0, 4), myDayItem].map((n) => {
-              const Icon   = n.icon;
-              const active = isActive(n.href);
-              const tourKey = `nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`;
-              return (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  prefetch
-                  data-mobile-tour={tourKey}
-                  className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors min-w-[52px]"
-                  style={active ? {
-                    background: dark ? 'rgba(255,255,255,0.06)' : `${n.iconColor}12`,
-                  } : {}}
+            {!showCollapsed && (
+              <>
+                <div
+                  className="hidden lg:block absolute right-0 top-0 w-1 group/drag cursor-col-resize z-20"
+                  style={{ bottom: 'calc(50% + 22px)' }}
+                  onMouseDown={onDragHandleMouseDown}
+                  aria-hidden="true"
                 >
                   <div
-                    className="relative w-6 h-6 flex items-center justify-center"
-                  >
-                    <Icon
-                      size={active ? 20 : 18}
-                      style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.4)' : '#94a3b8' }}
-                    />
-                    {n.adminOnly && (
-                      <span
-                        className="absolute top-0 right-0 w-2 h-2 rounded-full bg-amber-400"
-                        style={{ boxShadow: `0 0 0 2px ${dark ? '#262624' : '#ffffff'}` }}
-                        title="Admin"
-                      />
-                    )}
-                  </div>
-                  <span
-                    className="text-[9px] font-semibold truncate max-w-full"
-                    style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.35)' : '#94a3b8' }}
-                  >
-                    {n.label}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-      </div>
-
-      {/* Mobile account menu — slides up from the avatar button in the top bar.
-          Uses its own mobileMenuOpen state so the desktop sidebar's mousedown
-          outside-click handler (accountMenuRef) never races with navigation. */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[55]" onClick={() => setMobileMenuOpen(false)}>
-          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl shadow-2xl p-6 space-y-1"
-            style={{
-              background: dark ? '#262624' : '#ffffff',
-              border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #dbe3ef',
-              boxShadow: dark ? '0 -20px 60px rgba(0,0,0,0.6)' : '0 -20px 60px rgba(15,23,42,0.15)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Drag handle indicator */}
-            <div className="flex justify-center mb-4">
-              <div className="w-10 h-1 rounded-full"
-                style={{ background: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }} />
-            </div>
-            {/* User identity */}
-            <div className="flex items-center gap-3 pb-4 mb-2 border-b"
-              style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}>
-              <Avatar name={user.name} size={44} letter={user.avatarLetter} bg={user.avatarBg} font={user.avatarFont} ring />
-              <div>
-                <div className={`text-sm font-black ${dark ? 'text-white' : 'text-slate-900'}`}>{user.name}</div>
-                <div className={`text-[11px] ${dark ? 'text-white/45' : 'text-slate-400'}`}>
-                  {user.username ? `@${user.username}` : roleText}
+                    className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag:opacity-100"
+                    style={{ background: '#3b82f6', margin: '8px 0' }}
+                  />
                 </div>
+                <div
+                  className="hidden lg:block absolute right-0 bottom-0 w-1 group/drag2 cursor-col-resize z-20"
+                  style={{ top: 'calc(50% + 22px)' }}
+                  onMouseDown={onDragHandleMouseDown}
+                  aria-hidden="true"
+                >
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag2:opacity-100"
+                    style={{ background: '#3b82f6', margin: '8px 0' }}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Collapse/expand ribbon — desktop only, on the right edge of sidebar.
+            z-[25] sits above the drag handle (z-20) so hovering the button
+            never activates the resize cursor behind it. */}
+            <button
+              className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[25] w-5 h-10 items-center justify-center rounded-full transition-colors cursor-pointer"
+              style={{
+                background: dark ? '#30302e' : '#ffffff',
+                border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #dde3ec',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                color: dark ? 'rgba(255,255,255,0.35)' : '#94a3b8',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleCollapsed();
+                setSidebarHovered(false);
+              }}
+              title={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={showCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {showCollapsed ? <ChevronRight size={11} /> : <ChevronLeft size={11} />}
+            </button>
+          </aside>
+
+          {/* ── Main content ─────────────────────────────────────────────────── */}
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+            {/* Mobile-only top bar — taller for better touch targets, right side
+            shows notification bell instead of the hamburger (nav is bottom). */}
+            <div
+              className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14"
+              style={{
+                background: dark ? 'rgba(38,38,36,0.92)' : 'rgba(255,255,255,0.92)',
+                backdropFilter: 'saturate(180%) blur(12px)',
+                WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                borderBottom: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e8edf4',
+                boxShadow: dark ? '0 2px 16px rgba(0,0,0,0.45)' : '0 2px 12px rgba(15,23,42,0.07)',
+              }}
+            >
+              <Link href="/" className="flex items-center gap-2.5">
+                <PragatiMark size={26} />
+                <span
+                  className={`brand-wordmark text-[17px] ${dark ? 'text-white' : 'brand-wordmark-gradient'}`}
+                >
+                  Pragati
+                </span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <NotificationBell dark={dark} openUp={false} initialUnread={initialUnread} />
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen((v) => !v)}
+                  className="relative rounded-full focus:outline-none"
+                  aria-label="Account menu"
+                  data-tour="account-menu"
+                >
+                  <Avatar
+                    name={user.name}
+                    size={32}
+                    letter={user.avatarLetter}
+                    bg={user.avatarBg}
+                    font={user.avatarFont}
+                    ring
+                  />
+                </button>
               </div>
             </div>
-            <Link href="/settings" onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
-              <UserCircle size={18} className="text-slate-400" /> Profile &amp; settings
-            </Link>
-            {/* Admin-only links — these never fit in the 4-tab bottom nav, so
-                this is the only mobile entry point for Logs (and Platform for
-                master-admins). */}
-            {isAdmin && [...adminExtra, ...masterAdminExtra].length > 0 && (
-              <>
-                <div className={`px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-amber-400/70' : 'text-amber-600/80'}`}>
-                  Admin
-                </div>
-                {[...adminExtra, ...masterAdminExtra].map(n => {
+
+            {/* Page content — on mobile, pad the bottom so content isn't hidden
+            behind the bottom tab bar (approx 64px + safe-area). */}
+            <main className="flex-1 min-h-0 overflow-y-auto relative">
+              {pathname === '/' && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute top-0 left-0 right-0 h-[200px]"
+                  style={{
+                    zIndex: 0,
+                    background:
+                      'linear-gradient(180deg, rgba(21,101,192,0.09) 0%, rgba(21,101,192,0.04) 50%, transparent 100%)',
+                  }}
+                />
+              )}
+              <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-7 py-5 lg:py-7 pb-24 lg:pb-7 relative overflow-x-hidden">
+                {children}
+              </div>
+            </main>
+
+            {/* ── Mobile bottom navigation bar ──────────────────────────────── */}
+            {/* Replaces the hamburger drawer for primary navigation on touch
+            devices. The account menu is accessed via the top-bar avatar. */}
+            <nav
+              className="lg:hidden fixed bottom-0 inset-x-0 z-40 mobile-bottom-nav"
+              style={{
+                background: dark ? 'rgba(38,38,36,0.97)' : 'rgba(255,255,255,0.97)',
+                borderTop: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e8edf4',
+                boxShadow: dark ? '0 -4px 20px rgba(0,0,0,0.5)' : '0 -4px 20px rgba(15,23,42,0.08)',
+                backdropFilter: 'saturate(180%) blur(12px)',
+                WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+                paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))',
+              }}
+              aria-label="Main navigation"
+            >
+              <div className="flex items-center justify-around pt-2 px-2">
+                {/* Show up to 4 primary nav items + My Day = 5 tabs max. */}
+                {[...nav.slice(0, 4), myDayItem].map((n) => {
                   const Icon = n.icon;
+                  const active = isActive(n.href);
+                  const tourKey = `nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`;
                   return (
-                    <Link key={n.href} href={n.href} onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
-                      <Icon size={18} style={{ color: n.iconColor }} /> {n.label}
+                    <Link
+                      key={n.href}
+                      href={n.href}
+                      prefetch
+                      data-mobile-tour={tourKey}
+                      className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors min-w-[52px]"
+                      style={
+                        active
+                          ? {
+                              background: dark ? 'rgba(255,255,255,0.06)' : `${n.iconColor}12`,
+                            }
+                          : {}
+                      }
+                    >
+                      <div className="relative w-6 h-6 flex items-center justify-center">
+                        <Icon
+                          size={active ? 20 : 18}
+                          style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.4)' : '#94a3b8' }}
+                        />
+                        {n.adminOnly && (
+                          <span
+                            className="absolute top-0 right-0 w-2 h-2 rounded-full bg-amber-400"
+                            style={{ boxShadow: `0 0 0 2px ${dark ? '#262624' : '#ffffff'}` }}
+                            title="Admin"
+                          />
+                        )}
+                      </div>
+                      <span
+                        className="text-[9px] font-semibold truncate max-w-full"
+                        style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.35)' : '#94a3b8' }}
+                      >
+                        {n.label}
+                      </span>
                     </Link>
                   );
                 })}
-              </>
-            )}
-            <button type="button" onClick={() => { toggleDark(); setMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
-              {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-400" />}
-              {dark ? 'Light mode' : 'Dark mode'}
-            </button>
-            <button type="button" onClick={() => { setMobileMenuOpen(false); setConfirmLogout(true); }}
-              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-600 hover:bg-red-50'}`}>
-              <LogOut size={18} /> Sign out
-            </button>
+              </div>
+            </nav>
           </div>
-        </div>
-      )}
 
-      {mustChangePw && (
-        <ForcePasswordModal onDone={() => { setMustChangePw(false); router.refresh(); }} />
-      )}
+          {/* Mobile account menu — slides up from the avatar button in the top bar.
+          Uses its own mobileMenuOpen state so the desktop sidebar's mousedown
+          outside-click handler (accountMenuRef) never races with navigation. */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden fixed inset-0 z-[55]" onClick={() => setMobileMenuOpen(false)}>
+              <div
+                className="absolute inset-x-0 bottom-0 rounded-t-3xl shadow-2xl p-6 space-y-1"
+                style={{
+                  background: dark ? '#262624' : '#ffffff',
+                  border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #dbe3ef',
+                  boxShadow: dark ? '0 -20px 60px rgba(0,0,0,0.6)' : '0 -20px 60px rgba(15,23,42,0.15)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Drag handle indicator */}
+                <div className="flex justify-center mb-4">
+                  <div
+                    className="w-10 h-1 rounded-full"
+                    style={{ background: dark ? 'rgba(255,255,255,0.15)' : '#e2e8f0' }}
+                  />
+                </div>
+                {/* User identity */}
+                <div
+                  className="flex items-center gap-3 pb-4 mb-2 border-b"
+                  style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}
+                >
+                  <Avatar
+                    name={user.name}
+                    size={44}
+                    letter={user.avatarLetter}
+                    bg={user.avatarBg}
+                    font={user.avatarFont}
+                    ring
+                  />
+                  <div>
+                    <div className={`text-sm font-black ${dark ? 'text-white' : 'text-slate-900'}`}>
+                      {user.name}
+                    </div>
+                    <div className={`text-[11px] ${dark ? 'text-white/45' : 'text-slate-400'}`}>
+                      {user.username ? `@${user.username}` : roleText}
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  href="/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  <UserCircle size={18} className="text-slate-400" /> Profile &amp; settings
+                </Link>
+                {/* Admin-only links — these never fit in the 4-tab bottom nav, so
+                this is the only mobile entry point for Logs (and Platform for
+                master-admins). */}
+                {isAdmin && [...adminExtra, ...masterAdminExtra].length > 0 && (
+                  <>
+                    <div
+                      className={`px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-amber-400/70' : 'text-amber-600/80'}`}
+                    >
+                      Admin
+                    </div>
+                    {[...adminExtra, ...masterAdminExtra].map((n) => {
+                      const Icon = n.icon;
+                      return (
+                        <Link
+                          key={n.href}
+                          href={n.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}
+                        >
+                          <Icon size={18} style={{ color: n.iconColor }} /> {n.label}
+                        </Link>
+                      );
+                    })}
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleDark();
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}
+                >
+                  {dark ? (
+                    <Sun size={18} className="text-amber-400" />
+                  ) : (
+                    <Moon size={18} className="text-slate-400" />
+                  )}
+                  {dark ? 'Light mode' : 'Dark mode'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setConfirmLogout(true);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-red-400 hover:bg-red-400/10' : 'text-red-600 hover:bg-red-50'}`}
+                >
+                  <LogOut size={18} /> Sign out
+                </button>
+              </div>
+            </div>
+          )}
 
-      {/* Quick-PIN prompt — only after the password step (if any) is cleared,
+          {mustChangePw && (
+            <ForcePasswordModal
+              onDone={() => {
+                setMustChangePw(false);
+                router.refresh();
+              }}
+            />
+          )}
+
+          {/* Quick-PIN prompt — only after the password step (if any) is cleared,
           and from the user's second login onward (see shouldOfferPin above).
           Dismissable: "Maybe later" records pinPromptDismissedAt so we stop
           blocking and re-offer gently next session. */}
-      {!mustChangePw && needsPin && (
-        <SetPinModal
-          onDone={() => { setNeedsPin(false); router.refresh(); }}
-          onDismiss={async () => {
-            setNeedsPin(false);
-            try { await api('/me/pin-prompt-dismissed', { method: 'POST' }); } catch { /* best-effort */ }
-          }}
-        />
-      )}
+          {!mustChangePw && needsPin && (
+            <SetPinModal
+              onDone={() => {
+                setNeedsPin(false);
+                router.refresh();
+              }}
+              onDismiss={async () => {
+                setNeedsPin(false);
+                try {
+                  await api('/me/pin-prompt-dismissed', { method: 'POST' });
+                } catch {
+                  /* best-effort */
+                }
+              }}
+            />
+          )}
 
-      {/* Guided product tour — gated behind the forced-password step so the
+          {/* Guided product tour — gated behind the forced-password step so the
           two full-screen overlays never stack on a brand-new account. The
           component is itself the source of truth on whether to open: it
           checks `alreadySeen` (server) and a localStorage fast-path, and
           POSTs /api/me/tour-seen on dismissal so it never reappears. */}
-      {!mustChangePw && (
-        <FirstTimeTour alreadySeen={!!user.hasSeenTour} />
-      )}
+          {!mustChangePw && <FirstTimeTour alreadySeen={!!user.hasSeenTour} />}
 
-      {/* Sign-out confirmation — fixed centered modal, works in both expanded and collapsed sidebar */}
-      {confirmLogout && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setConfirmLogout(false)}>
-          <div className="w-[300px] rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-2xl"
-            style={{ background: dark ? '#262624' : '#ffffff', border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0' }}
-            onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ background: dark ? 'rgba(239,68,68,0.12)' : '#FEF2F2' }}>
-              <AlertTriangle size={18} className="text-red-500" />
-            </div>
-            <div>
-              <div className={`text-sm font-bold ${dark ? 'text-white/90' : 'text-slate-800'}`}>Sign out?</div>
-              <div className={`text-xs mt-1 ${dark ? 'text-white/40' : 'text-slate-400'}`}>You'll need to sign back in.</div>
-            </div>
-            <div className="flex gap-2 w-full">
-              <button onClick={() => setConfirmLogout(false)}
-                className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                  dark ? 'text-white/60 hover:text-white/80' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`} style={dark ? { background: 'rgba(255,255,255,0.07)' } : {}}>
-                Cancel
-              </button>
-              <button onClick={logout}
-                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${
-                  dark ? 'text-red-300 hover:text-red-200' : 'text-red-600 bg-red-50 hover:bg-red-100'
-                }`} style={dark ? { background: 'rgba(239,68,68,0.18)' } : {}}>
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Keyboard shortcuts modal ─────────────────────────────────────── */}
-      {shortcutsOpen && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShortcutsOpen(false)}
-        >
-          <div
-            className="w-[340px] rounded-2xl p-5 shadow-2xl"
-            style={{
-              background: dark ? '#262624' : '#ffffff',
-              border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={`text-sm font-black mb-4 tracking-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}>
-              Keyboard shortcuts
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { keys: ['G', 'D'], label: 'Dashboard' },
-                { keys: ['G', 'P'], label: 'Projects' },
-                { keys: ['G', 'T'], label: 'Teams' },
-                { keys: ['G', 'M'], label: 'My Day' },
-                { keys: ['?'],      label: 'Shortcuts' },
-                { keys: ['Esc'],    label: 'Close dialogs' },
-              ].map(({ keys, label }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 shrink-0">
-                    {keys.map((k, i) => (
-                      <span key={i}
-                        className={`inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[11px] font-bold font-mono leading-none ${
-                          dark ? 'bg-white/10 text-white/70 border border-white/15' : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}
-                      >
-                        {k}
-                      </span>
-                    ))}
-                  </div>
-                  <span className={`text-[12px] font-medium ${dark ? 'text-white/55' : 'text-slate-500'}`}>{label}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              className={`mt-4 w-full py-2 rounded-xl text-xs font-semibold transition-colors ${
-                dark ? 'text-white/50 hover:text-white/70 bg-white/5 hover:bg-white/8' : 'text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100'
-              }`}
-              onClick={() => setShortcutsOpen(false)}
+          {/* Sign-out confirmation — fixed centered modal, works in both expanded and collapsed sidebar */}
+          {confirmLogout && (
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+              onClick={() => setConfirmLogout(false)}
             >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Idle session warning — 5 min before automatic sign-out */}
-      {idleWarning && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-[320px] rounded-2xl p-6 flex flex-col gap-4 text-center shadow-2xl"
-            style={{ background: dark ? '#262624' : '#ffffff', border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0' }}>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
-              style={{ background: dark ? 'rgba(245,158,11,0.12)' : '#FEF3C7' }}>
-              <AlertTriangle size={22} className="text-amber-500" />
-            </div>
-            <div>
-              <div className={`text-base font-bold ${dark ? 'text-white/90' : 'text-slate-800'}`}>Still there?</div>
-              <div className={`text-xs mt-1 leading-snug ${dark ? 'text-white/45' : 'text-slate-500'}`}>
-                You'll be signed out in 5 minutes due to inactivity.
+              <div
+                className="w-[300px] rounded-2xl p-6 flex flex-col items-center gap-4 text-center shadow-2xl"
+                style={{
+                  background: dark ? '#262624' : '#ffffff',
+                  border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: dark ? 'rgba(239,68,68,0.12)' : '#FEF2F2' }}
+                >
+                  <AlertTriangle size={18} className="text-red-500" />
+                </div>
+                <div>
+                  <div className={`text-sm font-bold ${dark ? 'text-white/90' : 'text-slate-800'}`}>
+                    Sign out?
+                  </div>
+                  <div className={`text-xs mt-1 ${dark ? 'text-white/40' : 'text-slate-400'}`}>
+                    You'll need to sign back in.
+                  </div>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => setConfirmLogout(false)}
+                    className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                      dark
+                        ? 'text-white/60 hover:text-white/80'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                    style={dark ? { background: 'rgba(255,255,255,0.07)' } : {}}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={logout}
+                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors ${
+                      dark ? 'text-red-300 hover:text-red-200' : 'text-red-600 bg-red-50 hover:bg-red-100'
+                    }`}
+                    style={dark ? { background: 'rgba(239,68,68,0.18)' } : {}}
+                  >
+                    Sign out
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => {
-                lastActivityRef.current = Date.now();
-                setIdleWarning(false);
-              }} className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors"
-                style={dark ? { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)' } : { background: '#F1F5F9', color: '#475569' }}>
-                Continue
-              </button>
-              <button onClick={logout}
-                className="flex-1 py-2 rounded-xl text-sm font-bold text-red-500 transition-colors"
-                style={dark ? { background: 'rgba(239,68,68,0.18)' } : { background: '#FEF2F2' }}>
-                Sign out
-              </button>
+          )}
+
+          {/* ── Keyboard shortcuts modal ─────────────────────────────────────── */}
+          {shortcutsOpen && (
+            <div
+              className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+              onClick={() => setShortcutsOpen(false)}
+            >
+              <div
+                className="w-[340px] rounded-2xl p-5 shadow-2xl"
+                style={{
+                  background: dark ? '#262624' : '#ffffff',
+                  border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className={`text-sm font-black mb-4 tracking-tight ${dark ? 'text-white/90' : 'text-slate-800'}`}
+                >
+                  Keyboard shortcuts
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { keys: ['G', 'D'], label: 'Dashboard' },
+                    { keys: ['G', 'P'], label: 'Projects' },
+                    { keys: ['G', 'T'], label: 'Teams' },
+                    { keys: ['G', 'M'], label: 'My Day' },
+                    { keys: ['?'], label: 'Shortcuts' },
+                    { keys: ['Esc'], label: 'Close dialogs' },
+                  ].map(({ keys, label }) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 shrink-0">
+                        {keys.map((k, i) => (
+                          <span
+                            key={i}
+                            className={`inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-[11px] font-bold font-mono leading-none ${
+                              dark
+                                ? 'bg-white/10 text-white/70 border border-white/15'
+                                : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}
+                          >
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                      <span
+                        className={`text-[12px] font-medium ${dark ? 'text-white/55' : 'text-slate-500'}`}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className={`mt-4 w-full py-2 rounded-xl text-xs font-semibold transition-colors ${
+                    dark
+                      ? 'text-white/50 hover:text-white/70 bg-white/5 hover:bg-white/8'
+                      : 'text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100'
+                  }`}
+                  onClick={() => setShortcutsOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Idle session warning — 5 min before automatic sign-out */}
+          {idleWarning && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div
+                className="w-[320px] rounded-2xl p-6 flex flex-col gap-4 text-center shadow-2xl"
+                style={{
+                  background: dark ? '#262624' : '#ffffff',
+                  border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
+                }}
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+                  style={{ background: dark ? 'rgba(245,158,11,0.12)' : '#FEF3C7' }}
+                >
+                  <AlertTriangle size={22} className="text-amber-500" />
+                </div>
+                <div>
+                  <div className={`text-base font-bold ${dark ? 'text-white/90' : 'text-slate-800'}`}>
+                    Still there?
+                  </div>
+                  <div className={`text-xs mt-1 leading-snug ${dark ? 'text-white/45' : 'text-slate-500'}`}>
+                    You'll be signed out in 5 minutes due to inactivity.
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      lastActivityRef.current = Date.now();
+                      setIdleWarning(false);
+                    }}
+                    className="flex-1 py-2 rounded-xl text-sm font-bold transition-colors"
+                    style={
+                      dark
+                        ? { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)' }
+                        : { background: '#F1F5F9', color: '#475569' }
+                    }
+                  >
+                    Continue
+                  </button>
+                  <button
+                    onClick={logout}
+                    className="flex-1 py-2 rounded-xl text-sm font-bold text-red-500 transition-colors"
+                    style={dark ? { background: 'rgba(239,68,68,0.18)' } : { background: '#FEF2F2' }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-    </AvatarRegistryProvider>
+      </AvatarRegistryProvider>
     </CurrentUserProvider>
   );
 }

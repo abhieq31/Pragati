@@ -8,18 +8,26 @@ import { handleError, readBody } from '@/lib/http';
 export const runtime = 'nodejs';
 
 const Body = z.object({
-  nodes: z.array(z.object({
-    id:    z.string().max(40),
-    x:     z.number().finite(),
-    y:     z.number().finite(),
-    text:  z.string().max(200).optional().default(''),
-    color: z.string().max(20).optional().default(''),
-  })).max(500),
-  edges: z.array(z.object({
-    id:   z.string().max(40),
-    from: z.string().max(40),
-    to:   z.string().max(40),
-  })).max(2000),
+  nodes: z
+    .array(
+      z.object({
+        id: z.string().max(40),
+        x: z.number().finite(),
+        y: z.number().finite(),
+        text: z.string().max(200).optional().default(''),
+        color: z.string().max(20).optional().default(''),
+      }),
+    )
+    .max(500),
+  edges: z
+    .array(
+      z.object({
+        id: z.string().max(40),
+        from: z.string().max(40),
+        to: z.string().max(40),
+      }),
+    )
+    .max(2000),
 });
 
 /**
@@ -41,7 +49,9 @@ export async function GET(req: NextRequest) {
       edges: doc?.edges || [],
       updatedAt: (doc as any)?.updatedAt || null,
     });
-  } catch (e) { return handleError(e); }
+  } catch (e) {
+    return handleError(e);
+  }
 }
 
 export async function PUT(req: NextRequest) {
@@ -65,5 +75,7 @@ export async function PUT(req: NextRequest) {
       edges: doc?.edges || [],
       updatedAt: (doc as any)?.updatedAt || null,
     });
-  } catch (e) { return handleError(e); }
+  } catch (e) {
+    return handleError(e);
+  }
 }

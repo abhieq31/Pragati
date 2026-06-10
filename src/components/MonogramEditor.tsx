@@ -22,14 +22,16 @@ interface Props {
 
 function findPresetIndex(bg: string | undefined, font: number | undefined): number {
   if (!bg) return 0;
-  const i = AVATAR_PRESETS.findIndex(p => p.bg.toLowerCase() === bg.toLowerCase() && p.font === (font ?? 0));
+  const i = AVATAR_PRESETS.findIndex(
+    (p) => p.bg.toLowerCase() === bg.toLowerCase() && p.font === (font ?? 0),
+  );
   return i >= 0 ? i : 0;
 }
 
 export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
   const defaultLetter = (name || '').trim().charAt(0).toUpperCase() || 'A';
   const [letter, setLetter] = useState((initial.letter || defaultLetter).slice(0, 2).toUpperCase());
-  const [idx, setIdx]       = useState<number>(findPresetIndex(initial.bg, initial.font));
+  const [idx, setIdx] = useState<number>(findPresetIndex(initial.bg, initial.font));
   const [saving, setSaving] = useState(false);
   const preset = AVATAR_PRESETS[idx] || AVATAR_PRESETS[0];
 
@@ -45,7 +47,9 @@ export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
 
   // Esc to dismiss.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -72,9 +76,11 @@ export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-white/5">
           <h3 className="text-sm font-bold text-slate-800 dark:text-white/90">Your avatar</h3>
-          <button onClick={onClose}
+          <button
+            onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-            aria-label="Close">
+            aria-label="Close"
+          >
             <X size={16} />
           </button>
         </div>
@@ -88,7 +94,10 @@ export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
             value={letter}
             maxLength={2}
             onChange={(e) => {
-              const v = e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase();
+              const v = e.target.value
+                .replace(/[^A-Za-z0-9]/g, '')
+                .slice(0, 2)
+                .toUpperCase();
               setLetter(v);
             }}
             placeholder={defaultLetter}
@@ -123,7 +132,13 @@ export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
                   className="relative transition-transform hover:scale-110 active:scale-95"
                   style={{ outline: 'none' }}
                 >
-                  <Avatar name={letter || defaultLetter} letter={letter || defaultLetter} bg={p.bg} font={p.font} size={26} />
+                  <Avatar
+                    name={letter || defaultLetter}
+                    letter={letter || defaultLetter}
+                    bg={p.bg}
+                    font={p.font}
+                    size={26}
+                  />
                   {active && (
                     <span
                       className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full"
@@ -138,8 +153,10 @@ export function MonogramEditor({ initial, name, onSave, onClose }: Props) {
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-2">
-          <button onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg text-sm font-semibold text-slate-500 dark:text-white/60 hover:text-slate-700 dark:hover:text-white/80 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+          <button
+            onClick={onClose}
+            className="px-3.5 py-1.5 rounded-lg text-sm font-semibold text-slate-500 dark:text-white/60 hover:text-slate-700 dark:hover:text-white/80 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+          >
             Cancel
           </button>
           <button

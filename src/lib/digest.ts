@@ -43,9 +43,14 @@ export function appBaseUrl(): string {
 /** Milliseconds to add to a UTC instant to get the wall-clock time in `tz`. */
 function tzOffsetMs(date: Date, tz: string): number {
   const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZone: tz,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   });
   const parts = dtf.formatToParts(date).reduce<Record<string, string>>((a, p) => {
     if (p.type !== 'literal') a[p.type] = p.value;
@@ -53,10 +58,7 @@ function tzOffsetMs(date: Date, tz: string): number {
   }, {});
   // 'en-US' renders midnight as hour "24"; normalise to 00 so Date.UTC is sane.
   const hour = parts.hour === '24' ? '00' : parts.hour;
-  const asUTC = Date.UTC(
-    +parts.year, +parts.month - 1, +parts.day,
-    +hour, +parts.minute, +parts.second,
-  );
+  const asUTC = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +hour, +parts.minute, +parts.second);
   return asUTC - date.getTime();
 }
 
@@ -102,7 +104,14 @@ export interface DigestSections {
   projectUpdates: { name: string; count: number }[];
 }
 
-interface RawTask { _id: any; title: string; priority?: string | null; dueDate?: any; ccTcd?: any; projectId?: any; }
+interface RawTask {
+  _id: any;
+  title: string;
+  priority?: string | null;
+  dueDate?: any;
+  ccTcd?: any;
+  projectId?: any;
+}
 
 /** Split a user's open, due-bearing tasks into overdue / today / soon buckets
  *  relative to the day window. Pure — no DB, no settings side-effects. */
@@ -156,13 +165,17 @@ export function digestHasContent(s: DigestSections): boolean {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
-  ));
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string,
+  );
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
-  critical: '#dc2626', high: '#ea580c', medium: '#2563eb', low: '#64748b',
+  critical: '#dc2626',
+  high: '#ea580c',
+  medium: '#2563eb',
+  low: '#64748b',
 };
 
 function renderTaskRow(t: DigestTask, projectName: string | null, appUrl: string): string {
@@ -217,7 +230,10 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       ? renderSection(
           'Project updates (last 24h)',
           sections.projectUpdates
-            .map((p) => `<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0f172a;">${escapeHtml(p.name)}</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right;color:#16a34a;font-size:13px;font-weight:700;">${p.count} done</td></tr>`)
+            .map(
+              (p) =>
+                `<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0f172a;">${escapeHtml(p.name)}</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;text-align:right;color:#16a34a;font-size:13px;font-weight:700;">${p.count} done</td></tr>`,
+            )
             .join(''),
           '#16a34a',
         )
@@ -228,15 +244,18 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     ? ''
     : `<div style="font-size:15px;color:#16a34a;font-weight:600;margin:6px 0 18px;">You're all clear — nothing due today. 🎉</div>`;
 
-  const intro = introNote && introNote.trim()
-    ? `<div style="font-size:14px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin:0 0 20px;">${escapeHtml(introNote.trim())}</div>`
-    : '';
+  const intro =
+    introNote && introNote.trim()
+      ? `<div style="font-size:14px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin:0 0 20px;">${escapeHtml(introNote.trim())}</div>`
+      : '';
 
   const openBtn = appUrl
     ? `<a href="${appUrl}/my-day" style="display:inline-block;background:#1565C0;color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:10px;">Open My Day</a>`
     : '';
 
-  const manage = appUrl ? `<a href="${appUrl}/settings" style="color:#64748b;">your profile settings</a>` : 'your profile settings';
+  const manage = appUrl
+    ? `<a href="${appUrl}/settings" style="color:#64748b;">your profile settings</a>`
+    : 'your profile settings';
 
   const html = `<!doctype html><html><body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
@@ -263,7 +282,12 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
 </body></html>`;
 
   // Plain-text fallback.
-  const lines: string[] = [`Pragati — ${dateLabel}${test ? ' (test)' : ''}`, '', `Good morning, ${first}.`, ''];
+  const lines: string[] = [
+    `Pragati — ${dateLabel}${test ? ' (test)' : ''}`,
+    '',
+    `Good morning, ${first}.`,
+    '',
+  ];
   const textSection = (heading: string, items: DigestTask[]) => {
     if (!items.length) return;
     lines.push(heading.toUpperCase());
@@ -281,7 +305,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     for (const p of sections.projectUpdates) lines.push(`  • ${p.name} — ${p.count} done`);
     lines.push('');
   }
-  if (!digestHasContent(sections)) lines.push('You\'re all clear — nothing due today.');
+  if (!digestHasContent(sections)) lines.push("You're all clear — nothing due today.");
   if (appUrl) lines.push('', `Open My Day: ${appUrl}/my-day`);
 
   return { subject, html, text: lines.join('\n') };
@@ -339,12 +363,21 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
   const settings = await loadDigestSettings();
   const appUrl = appBaseUrl();
   const dateLabel = new Intl.DateTimeFormat('en-GB', {
-    timeZone: tz, weekday: 'long', day: 'numeric', month: 'long',
+    timeZone: tz,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
   }).format(now);
 
   const summary: RunSummary = {
-    ok: true, tz, dateLabel,
-    considered: 0, sent: 0, skippedNoEmail: 0, skippedNoTasks: 0, failed: 0,
+    ok: true,
+    tz,
+    dateLabel,
+    considered: 0,
+    sent: 0,
+    skippedNoEmail: 0,
+    skippedNoTasks: 0,
+    failed: 0,
     mailerConfigured: mailerConfigured(),
   };
 
@@ -357,16 +390,16 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     ? { _id: new mongoose.Types.ObjectId(opts.onlyUserId) }
     : { active: { $ne: false }, notifDailyDigest: true };
 
-  const users = await User.find(recipientFilter)
-    .select('_id name email notifyEmail')
-    .limit(1000)
-    .lean();
+  const users = await User.find(recipientFilter).select('_id name email notifyEmail').limit(1000).lean();
 
   const recipients = users
     .map((u) => ({ user: u, email: resolveDigestEmail(u as any) }))
     .filter((r) => {
       summary.considered += 1;
-      if (!r.email) { summary.skippedNoEmail += 1; return false; }
+      if (!r.email) {
+        summary.skippedNoEmail += 1;
+        return false;
+      }
       return true;
     });
 
@@ -402,7 +435,9 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
   for (const t of openTasks as any[]) if (t.projectId) projectIds.add(String(t.projectId));
   for (const list of projectUpdatesByUser.values()) for (const p of list) projectIds.add(p.projectId);
   const projDocs = projectIds.size
-    ? await Project.find({ _id: { $in: [...projectIds] } }).select('_id name').lean()
+    ? await Project.find({ _id: { $in: [...projectIds] } })
+        .select('_id name')
+        .lean()
     : [];
   const projName = new Map<string, string>(projDocs.map((p: any) => [String(p._id), p.name]));
 
@@ -457,9 +492,18 @@ async function computeProjectUpdates(
   const dayAgo = new Date(now.getTime() - DAY_MS);
 
   const [doneTasks, userTasks, owned] = await Promise.all([
-    Task.find({ status: 'done', completedAt: { $gte: dayAgo } }).select('projectId').limit(10000).lean(),
-    Task.find({ assigneeId: { $in: ids } }).select('assigneeId projectId').limit(20000).lean(),
-    Project.find({ ownerId: { $in: ids } }).select('_id ownerId').limit(5000).lean(),
+    Task.find({ status: 'done', completedAt: { $gte: dayAgo } })
+      .select('projectId')
+      .limit(10000)
+      .lean(),
+    Task.find({ assigneeId: { $in: ids } })
+      .select('assigneeId projectId')
+      .limit(20000)
+      .lean(),
+    Project.find({ ownerId: { $in: ids } })
+      .select('_id ownerId')
+      .limit(5000)
+      .lean(),
   ]);
 
   const completionsByProject = new Map<string, number>();

@@ -21,10 +21,10 @@ export default async function PeoplePage() {
     <PeopleClient
       initialUsers={initialUsers}
       me={{
-        id:    jwt.sub,
-        name:  jwt.name,
+        id: jwt.sub,
+        name: jwt.name,
         email: jwt.email,
-        role:  jwt.role,
+        role: jwt.role,
       }}
     />
   );

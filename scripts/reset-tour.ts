@@ -39,7 +39,7 @@ async function main() {
   await mongoose.disconnect();
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

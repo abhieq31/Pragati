@@ -16,7 +16,11 @@ export async function GET(req: NextRequest) {
     const in7 = new Date(now.getTime() + 7 * 86400000);
     const agg = await Task.aggregate([
       { $match: { assigneeId: { $exists: true } } },
-      { $match: { assigneeId: { $eq: (await import('mongoose')).default.Types.ObjectId.createFromHexString(userId) } } },
+      {
+        $match: {
+          assigneeId: { $eq: (await import('mongoose')).default.Types.ObjectId.createFromHexString(userId) },
+        },
+      },
       {
         $group: {
           _id: null,
@@ -29,13 +33,13 @@ export async function GET(req: NextRequest) {
                   $and: [
                     { $ne: ['$status', 'done'] },
                     { $ne: ['$dueDate', null] },
-                    { $lt: ['$dueDate', now] }
-                  ]
+                    { $lt: ['$dueDate', now] },
+                  ],
                 },
                 1,
-                0
-              ]
-            }
+                0,
+              ],
+            },
           },
           dueThisWeek: {
             $sum: {
@@ -45,24 +49,24 @@ export async function GET(req: NextRequest) {
                     { $ne: ['$status', 'done'] },
                     { $ne: ['$dueDate', null] },
                     { $gte: ['$dueDate', now] },
-                    { $lte: ['$dueDate', in7] }
-                  ]
+                    { $lte: ['$dueDate', in7] },
+                  ],
                 },
                 1,
-                0
-              ]
-            }
-          }
-        }
-      }
+                0,
+              ],
+            },
+          },
+        },
+      },
     ]);
     const byStatus = await Task.aggregate([
       {
         $match: {
-          assigneeId: (await import('mongoose')).default.Types.ObjectId.createFromHexString(userId)
-        }
+          assigneeId: (await import('mongoose')).default.Types.ObjectId.createFromHexString(userId),
+        },
       },
-      { $group: { _id: '$status', c: { $sum: 1 } } }
+      { $group: { _id: '$status', c: { $sum: 1 } } },
     ]);
     const a = agg[0] || { total: 0, done: 0, overdue: 0, dueThisWeek: 0 };
     return NextResponse.json({
@@ -71,7 +75,7 @@ export async function GET(req: NextRequest) {
       overdue: a.overdue,
       dueThisWeek: a.dueThisWeek,
       completionRate: a.total ? Math.round((a.done / a.total) * 100) : 0,
-      byStatus: Object.fromEntries(byStatus.map((x) => [x._id, x.c]))
+      byStatus: Object.fromEntries(byStatus.map((x) => [x._id, x.c])),
     });
   } catch (e) {
     return handleError(e);

@@ -4,17 +4,17 @@ import { APIRequestContext, Page, expect } from '@playwright/test';
 const RUN_ID = String(Date.now()).slice(-6);
 
 export const TEST_LEAD = {
-  email:    `lead-${RUN_ID}@pragati.test`,
+  email: `lead-${RUN_ID}@pragati.test`,
   password: 'TestPass!23',
-  name:     'Test Lead',
-  title:    'Team Lead',
+  name: 'Test Lead',
+  title: 'Team Lead',
 };
 
 export const TEST_LEAD_2 = {
-  email:    `lead2-${RUN_ID}@pragati.test`,
+  email: `lead2-${RUN_ID}@pragati.test`,
   password: 'TestPass!23',
-  name:     'Second Lead',
-  title:    'Team Lead',
+  name: 'Second Lead',
+  title: 'Team Lead',
 };
 
 /** First-run only: register the bootstrap lead. Idempotent — returns true if
@@ -26,10 +26,10 @@ export async function ensureBootstrapLead(api: APIRequestContext) {
 
   const res = await api.post('/api/auth/register', {
     data: {
-      email:    TEST_LEAD.email,
+      email: TEST_LEAD.email,
       password: TEST_LEAD.password,
-      name:     TEST_LEAD.name,
-      title:    TEST_LEAD.title,
+      name: TEST_LEAD.name,
+      title: TEST_LEAD.title,
     },
   });
   if (!res.ok()) {
@@ -55,8 +55,9 @@ export async function clickEverySidebarLink(page: Page) {
     if (await link.count()) {
       await link.click();
       // Page must not be in an error state.
-      await expect(page.locator('text=/internal server error|application error|something went wrong/i'))
-        .toHaveCount(0, { timeout: 5_000 });
+      await expect(
+        page.locator('text=/internal server error|application error|something went wrong/i'),
+      ).toHaveCount(0, { timeout: 5_000 });
     }
   }
 }

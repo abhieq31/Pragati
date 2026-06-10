@@ -15,7 +15,7 @@ export const runtime = 'nodejs';
 const Body = z.object({
   title: z.string().min(1).max(300),
   assigneeId: z.string().optional(),
-  dueDate: z.string().optional()
+  dueDate: z.string().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       assigneeId: body.assigneeId,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
       status: 'todo' as const,
-      position: (t as any).subtasks?.length || 0
+      position: (t as any).subtasks?.length || 0,
     };
     (t as any).subtasks.push(sub);
     await t.save();
@@ -64,8 +64,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Structural change to a (possibly GxP) record → audit trail.
     await logOperation({
-      action: 'task.subtask.add', category: 'task', actor: user,
-      targetType: 'task', targetId: params.id, targetLabel: (t as any).title || '',
+      action: 'task.subtask.add',
+      category: 'task',
+      actor: user,
+      targetType: 'task',
+      targetId: params.id,
+      targetLabel: (t as any).title || '',
       summary: `Added subtask "${body.title}"`,
       meta: { subtaskId: String(sub._id), title: body.title, gxpCritical: !!(t as any).gxpCritical },
     });

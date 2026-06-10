@@ -44,10 +44,10 @@ export function u(user: any) {
     // Directory facets — surfaced so people-pickers can group/filter by them
     // as the workspace grows. Empty strings mean "ungrouped" and the picker
     // bundles them under a fall-back heading.
-    title:        user.title        || '',
-    department:   user.department   || '',
+    title: user.title || '',
+    department: user.department || '',
     organisation: user.organisation || '',
-    location:     user.location     || '',
+    location: user.location || '',
     // Lock state — surfaced on the People page so admin/lead can see
     // who can't sign in and click Unlock. Not credential data.
     lockedAt: date(user.lockedAt),
@@ -64,8 +64,8 @@ export function u(user: any) {
     // Monogram avatar — empty strings/0 mean "no override, use the
     // legacy name-derived initials + hashed gradient".
     avatarLetter: user.avatarLetter || '',
-    avatarBg:     user.avatarBg     || '',
-    avatarFont:   typeof user.avatarFont === 'number' ? user.avatarFont : 0,
+    avatarBg: user.avatarBg || '',
+    avatarFont: typeof user.avatarFont === 'number' ? user.avatarFont : 0,
     soundDropEnabled: user.soundDropEnabled !== false,
     githubUrl: user.githubUrl || '',
     following: (user.following || []).map((id: any) => String(id)),
@@ -88,7 +88,7 @@ export function team(t: any, extras: Any = {}) {
     leadId: id(t.leadId),
     function: t.function,
     memberIds: (t.memberIds || []).map((m: any) => id(m)),
-    ...extras
+    ...extras,
   };
 }
 
@@ -112,16 +112,17 @@ export function project(p: any, extras: Any = {}) {
     phases: (p.phases || []).map((ph: any) => ({
       id: id(ph._id),
       name: ph.name,
-      position: ph.position
+      position: ph.position,
     })),
-    archived:   !!p.archived,
+    archived: !!p.archived,
     archivedAt: date(p.archivedAt),
     archivedBy: id(p.archivedBy),
     isPersonal: !!(p.isPersonal || p.personal),
     personal: !!(p.isPersonal || p.personal),
-    ccNo:      p.ccNo || '',
+    ccNo: p.ccNo || '',
+    refLabel: p.refLabel || '',
     createdAt: date(p.createdAt),
-    ...extras
+    ...extras,
   };
 }
 
@@ -133,7 +134,7 @@ export function subtask(s: any) {
     status: s.status,
     dueDate: date(s.dueDate),
     completedAt: date(s.completedAt),
-    position: s.position
+    position: s.position,
   };
 }
 
@@ -169,13 +170,13 @@ export function task(t: any, extras: Any = {}) {
     estimatedHours: t.estimatedHours,
     actualHours: t.actualHours,
     // Pharma fields
-    ccNo:           t.ccNo     || '',
-    ccTcd:          date(t.ccTcd),
-    documentNo:     t.documentNo || '',
+    ccNo: t.ccNo || '',
+    ccTcd: date(t.ccTcd),
+    documentNo: t.documentNo || '',
     applicableSite: t.applicableSite || 'na',
-    deployStage:    t.deployStage   || 'na',
-    remarks:        t.remarks  || '',
-    pendingWith:    t.pendingWith || '',
+    deployStage: t.deployStage || 'na',
+    remarks: t.remarks || '',
+    pendingWith: t.pendingWith || '',
     privateToUserId: id(t.privateToUserId),
     isPrivate: !!t.privateToUserId,
     aiTriage: t.aiTriage
@@ -186,7 +187,7 @@ export function task(t: any, extras: Any = {}) {
           rationale: t.aiTriage.rationale,
           suggestedCapa: t.aiTriage.suggestedCapa,
           similarTaskIds: (t.aiTriage.similarTaskIds || []).map((x: any) => id(x)),
-          computedAt: date(t.aiTriage.computedAt)
+          computedAt: date(t.aiTriage.computedAt),
         }
       : null,
     subtasks: (t.subtasks || []).map(subtask),
@@ -205,14 +206,14 @@ export function task(t: any, extras: Any = {}) {
     // Flow Signal — confirmed waiting state. Only the *confirmed* fields are
     // exposed to the client; raw prompt-history fields (cooldowns, last-shown
     // reason codes) stay server-side per the spec's privacy contract.
-    flowPendingType:       t.flowPendingType || null,
-    flowPendingDetail:     t.flowPendingDetail || '',
+    flowPendingType: t.flowPendingType || null,
+    flowPendingDetail: t.flowPendingDetail || '',
     flowPendingConfirmedAt: date(t.flowPendingConfirmedAt),
     flowPendingConfirmedByUserId: id(t.flowPendingConfirmedByUserId),
-    flowResolvedAt:        date(t.flowResolvedAt),
+    flowResolvedAt: date(t.flowResolvedAt),
     position: t.position ?? 0,
     createdAt: date(t.createdAt),
     updatedAt: date(t.updatedAt),
-    ...extras
+    ...extras,
   };
 }

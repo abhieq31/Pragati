@@ -4,25 +4,47 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/client/api';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
-  Plus, Check, Trash2, ArrowRight, X, Sparkles, Calendar, Zap,
-  ChevronDown, ChevronUp, Target, BookmarkCheck, Shield, PenLine,
-  Pencil, Pin, PinOff, FileText, Layers,
+  Plus,
+  Check,
+  Trash2,
+  ArrowRight,
+  X,
+  Sparkles,
+  Calendar,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Target,
+  BookmarkCheck,
+  Shield,
+  PenLine,
+  Pencil,
+  Pin,
+  PinOff,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import { WhiteboardIcon } from '@/components/WhiteboardIcon';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import dynamicImport from 'next/dynamic';
 
-const Whiteboard = dynamicImport(
-  () => import('@/components/Whiteboard').then((m) => m.Whiteboard),
-  { ssr: false, loading: () => (
+const Whiteboard = dynamicImport(() => import('@/components/Whiteboard').then((m) => m.Whiteboard), {
+  ssr: false,
+  loading: () => (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 h-[460px] flex items-center justify-center text-xs text-slate-400">
       Loading whiteboard…
     </div>
-  ) },
-);
+  ),
+});
 
-interface Note { id: string; text: string; done: boolean; promotedTaskId: string | null; createdAt: string; }
+interface Note {
+  id: string;
+  text: string;
+  done: boolean;
+  promotedTaskId: string | null;
+  createdAt: string;
+}
 interface UserNote {
   id: string;
   title: string | null;
@@ -55,8 +77,21 @@ function useDateLabel() {
   useEffect(() => {
     const fmt = () => {
       const d = new Date();
-      const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
       setLabel(`${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`);
     };
     fmt();
@@ -69,17 +104,29 @@ function useDateLabel() {
 function ProgressRing({ done, total }: { done: number; total: number }) {
   const r = 22;
   const circ = 2 * Math.PI * r;
-  const pct  = total ? done / total : 0;
+  const pct = total ? done / total : 0;
   const offset = circ * (1 - pct);
   const allDone = total > 0 && done === total;
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: 60, height: 60 }}>
       <svg width={60} height={60} className="-rotate-90">
-        <circle cx={30} cy={30} r={r} fill="none" strokeWidth={3.5}
-          className="stroke-slate-200 dark:stroke-white/[0.08]" />
-        <circle cx={30} cy={30} r={r} fill="none" strokeWidth={3.5}
-          strokeDasharray={circ} strokeDashoffset={offset}
+        <circle
+          cx={30}
+          cy={30}
+          r={r}
+          fill="none"
+          strokeWidth={3.5}
+          className="stroke-slate-200 dark:stroke-white/[0.08]"
+        />
+        <circle
+          cx={30}
+          cy={30}
+          r={r}
+          fill="none"
+          strokeWidth={3.5}
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
           strokeLinecap="round"
           className="transition-all duration-700 ease-out"
           style={{ stroke: allDone ? '#22c55e' : '#1769C8' }}
@@ -92,8 +139,12 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
           <Check size={16} className="text-green-500" strokeWidth={3} />
         ) : (
           <>
-            <span className="text-[14px] font-black leading-none text-slate-700 dark:text-white/85 tabular-nums">{done}</span>
-            <span className="text-[9px] font-bold text-slate-400 dark:text-white/30 leading-none mt-px tabular-nums">/{total}</span>
+            <span className="text-[14px] font-black leading-none text-slate-700 dark:text-white/85 tabular-nums">
+              {done}
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 dark:text-white/30 leading-none mt-px tabular-nums">
+              /{total}
+            </span>
           </>
         )}
       </div>
@@ -103,25 +154,29 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
 
 /* ── Notes panel (collapsible section) ───────────────────────────────────── */
 function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () => void }) {
-  const [notes, setNotes]       = useState<UserNote[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [text, setText]         = useState('');
-  const [title, setTitle]       = useState('');
+  const [notes, setNotes] = useState<UserNote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState('');
+  const [title, setTitle] = useState('');
   const [showTitle, setShowTitle] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editText, setEditText]   = useState('');
+  const [editText, setEditText] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // Notes are secondary to the day's todos — collapsed by default so the page
   // reads as a clean todo surface first. The choice is remembered per browser.
   const [open, setOpen] = useState<boolean>(false);
   useEffect(() => {
-    try { setOpen(localStorage.getItem('pragati-notes-open') === '1'); } catch {}
+    try {
+      setOpen(localStorage.getItem('pragati-notes-open') === '1');
+    } catch {}
   }, []);
   function toggleOpen() {
     setOpen((v) => {
       const next = !v;
-      try { localStorage.setItem('pragati-notes-open', next ? '1' : '0'); } catch {}
+      try {
+        localStorage.setItem('pragati-notes-open', next ? '1' : '0');
+      } catch {}
       return next;
     });
   }
@@ -130,11 +185,15 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
     try {
       const data = await api<UserNote[]>('/scratch/notes');
       setNotes(data);
-    } catch {}
-    finally { setLoading(false); }
+    } catch {
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function addNote(e: React.FormEvent) {
     e.preventDefault();
@@ -146,19 +205,27 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
         body: { content, title: title.trim() || undefined, type: 'text' },
       });
       setNotes((n) => [note, ...n]);
-      setText(''); setTitle(''); setShowTitle(false);
+      setText('');
+      setTitle('');
+      setShowTitle(false);
     } catch {}
   }
 
   async function removeNote(id: string) {
     setNotes((n) => n.filter((x) => x.id !== id));
-    try { await api(`/scratch/notes/${id}`, { method: 'DELETE' }); } catch {}
+    try {
+      await api(`/scratch/notes/${id}`, { method: 'DELETE' });
+    } catch {}
   }
 
   async function togglePin(note: UserNote) {
     const updated = { ...note, pinned: !note.pinned };
-    setNotes((n) => n.map((x) => x.id === note.id ? updated : x).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)));
-    try { await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { pinned: !note.pinned } }); } catch {}
+    setNotes((n) =>
+      n.map((x) => (x.id === note.id ? updated : x)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)),
+    );
+    try {
+      await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { pinned: !note.pinned } });
+    } catch {}
   }
 
   function startEdit(note: UserNote) {
@@ -169,11 +236,19 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
 
   async function saveEdit(note: UserNote) {
     const content = editText.trim();
-    if (!content) { setEditingId(null); return; }
+    if (!content) {
+      setEditingId(null);
+      return;
+    }
     const updated = { ...note, content, title: editTitle.trim() || null };
-    setNotes((n) => n.map((x) => x.id === note.id ? updated : x));
+    setNotes((n) => n.map((x) => (x.id === note.id ? updated : x)));
     setEditingId(null);
-    try { await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { content, title: editTitle.trim() || undefined } }); } catch {}
+    try {
+      await api(`/scratch/notes/${note.id}`, {
+        method: 'PATCH',
+        body: { content, title: editTitle.trim() || undefined },
+      });
+    } catch {}
   }
 
   return (
@@ -189,9 +264,13 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
         <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-500/15 flex items-center justify-center">
           <FileText size={13} className="text-amber-600 dark:text-amber-400" />
         </div>
-        <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600 dark:text-white/50">Notes</h2>
+        <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600 dark:text-white/50">
+          Notes
+        </h2>
         {!loading && notes.length > 0 && (
-          <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 tabular-nums">{notes.length}</span>
+          <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 tabular-nums">
+            {notes.length}
+          </span>
         )}
         <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">permanent</span>
         <span className="ml-auto text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/50 transition-colors">
@@ -205,157 +284,195 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
           onClick={toggleOpen}
           className="rounded-xl border border-dashed border-slate-200 dark:border-white/[0.08] px-3 py-2.5 text-left text-[12px] text-slate-400 dark:text-white/30 hover:border-amber-300 hover:text-slate-600 dark:hover:text-white/50 transition-colors"
         >
-          {loading ? 'Loading notes…'
+          {loading
+            ? 'Loading notes…'
             : notes.length > 0
               ? `${notes.length} note${notes.length === 1 ? '' : 's'} — tap to open`
               : 'Tap to jot a permanent note'}
         </button>
       )}
 
-      {open && (<>
-      {/* Add note form */}
-      <form onSubmit={addNote} className="mb-4">
-        <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] overflow-hidden focus-within:border-amber-400/60 dark:focus-within:border-amber-500/40 focus-within:shadow-[0_0_0_3px_rgba(245,158,11,0.08)] transition-all">
-          {showTitle && (
-            <input
-              className="w-full bg-transparent text-[13px] font-semibold text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/25 border-0 border-b border-slate-100 dark:border-white/[0.06] outline-none px-3 py-2"
-              placeholder="Title (optional)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={200}
-            />
-          )}
-          <textarea
-            className="w-full bg-transparent text-[13px] text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/25 border-0 outline-none resize-none px-3 py-2.5 leading-relaxed"
-            placeholder="Jot a permanent note — ideas, links, decisions…"
-            rows={2}
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              // auto-grow
-              const t = e.target;
-              t.style.height = 'auto';
-              t.style.height = t.scrollHeight + 'px';
-            }}
-            maxLength={50000}
-          />
-          <div className="flex items-center gap-1 px-2 pb-2">
-            <button type="button"
-              onClick={() => setShowTitle((v) => !v)}
-              className="text-[10px] font-semibold text-slate-400 dark:text-white/25 hover:text-slate-600 dark:hover:text-white/50 px-1.5 py-1 rounded transition-colors">
-              {showTitle ? '− title' : '+ title'}
-            </button>
-            <span className="flex-1" />
-            {text.trim() && (
-              <button type="submit"
-                className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold px-2.5 py-1.5 transition-colors fade-in-soft">
-                Save note
-              </button>
-            )}
-          </div>
-        </div>
-      </form>
-
-      {/* Notes list */}
-      {loading && (
-        <div className="space-y-2">
-          {[1,2,3].map((i) => (
-            <div key={i} className="rounded-xl border border-slate-100 dark:border-white/[0.06] p-3 space-y-1.5">
-              <div className="skeleton h-3 w-2/3" />
-              <div className="skeleton h-2.5 w-full" />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {!loading && notes.length === 0 && (
-        <div className="rounded-xl border border-dashed border-slate-200 dark:border-white/[0.07] p-6 text-center">
-          <FileText size={16} className="mx-auto mb-2 text-slate-300 dark:text-white/15" />
-          <div className="text-[11px] text-slate-400 dark:text-white/25">No notes yet. Save anything you want to keep.</div>
-        </div>
-      )}
-
-      <div className="space-y-2 pr-0.5">
-        {notes.map((note) => (
-          <div key={note.id}
-            className={`group rounded-xl border transition-all cursor-pointer ${
-              note.pinned
-                ? 'border-amber-200/80 dark:border-amber-500/25 bg-amber-50/60 dark:bg-amber-500/[0.06]'
-                : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12'
-            }`}
-            onClick={() => setExpandedId(expandedId === note.id ? null : note.id)}
-          >
-            {editingId === note.id ? (
-              <div className="p-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+      {open && (
+        <>
+          {/* Add note form */}
+          <form onSubmit={addNote} className="mb-4">
+            <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] overflow-hidden focus-within:border-amber-400/60 dark:focus-within:border-amber-500/40 focus-within:shadow-[0_0_0_3px_rgba(245,158,11,0.08)] transition-all">
+              {showTitle && (
                 <input
-                  className="w-full bg-transparent text-[12px] font-semibold text-slate-600 dark:text-white/70 placeholder-slate-300 border-b border-slate-100 dark:border-white/[0.07] outline-none pb-1.5"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full bg-transparent text-[13px] font-semibold text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/25 border-0 border-b border-slate-100 dark:border-white/[0.06] outline-none px-3 py-2"
                   placeholder="Title (optional)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  maxLength={200}
                 />
-                <textarea
-                  autoFocus
-                  className="w-full bg-transparent text-[13px] text-slate-700 dark:text-white/80 border-0 outline-none resize-none leading-relaxed"
-                  rows={3}
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') { setEditingId(null); }
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { void saveEdit(note); }
-                  }}
-                />
-                <div className="flex gap-1.5">
-                  <button onClick={() => setEditingId(null)}
-                    className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors">
-                    Cancel
+              )}
+              <textarea
+                className="w-full bg-transparent text-[13px] text-slate-700 dark:text-white/80 placeholder-slate-300 dark:placeholder-white/25 border-0 outline-none resize-none px-3 py-2.5 leading-relaxed"
+                placeholder="Jot a permanent note — ideas, links, decisions…"
+                rows={2}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  // auto-grow
+                  const t = e.target;
+                  t.style.height = 'auto';
+                  t.style.height = t.scrollHeight + 'px';
+                }}
+                maxLength={50000}
+              />
+              <div className="flex items-center gap-1 px-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTitle((v) => !v)}
+                  className="text-[10px] font-semibold text-slate-400 dark:text-white/25 hover:text-slate-600 dark:hover:text-white/50 px-1.5 py-1 rounded transition-colors"
+                >
+                  {showTitle ? '− title' : '+ title'}
+                </button>
+                <span className="flex-1" />
+                {text.trim() && (
+                  <button
+                    type="submit"
+                    className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold px-2.5 py-1.5 transition-colors fade-in-soft"
+                  >
+                    Save note
                   </button>
-                  <button onClick={() => void saveEdit(note)}
-                    className="text-[10px] font-semibold text-amber-600 hover:text-amber-700 transition-colors">
-                    Save
-                  </button>
-                </div>
+                )}
               </div>
-            ) : (
-              <div className="px-3 py-2.5">
-                {note.type === 'whiteboard' && (
-                  <div className="flex items-center gap-1 mb-1">
-                    <Layers size={10} className="text-blue-400" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">Whiteboard</span>
+            </div>
+          </form>
+
+          {/* Notes list */}
+          {loading && (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-xl border border-slate-100 dark:border-white/[0.06] p-3 space-y-1.5"
+                >
+                  <div className="skeleton h-3 w-2/3" />
+                  <div className="skeleton h-2.5 w-full" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && notes.length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-200 dark:border-white/[0.07] p-6 text-center">
+              <FileText size={16} className="mx-auto mb-2 text-slate-300 dark:text-white/15" />
+              <div className="text-[11px] text-slate-400 dark:text-white/25">
+                No notes yet. Save anything you want to keep.
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2 pr-0.5">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className={`group rounded-xl border transition-all cursor-pointer ${
+                  note.pinned
+                    ? 'border-amber-200/80 dark:border-amber-500/25 bg-amber-50/60 dark:bg-amber-500/[0.06]'
+                    : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12'
+                }`}
+                onClick={() => setExpandedId(expandedId === note.id ? null : note.id)}
+              >
+                {editingId === note.id ? (
+                  <div className="p-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="w-full bg-transparent text-[12px] font-semibold text-slate-600 dark:text-white/70 placeholder-slate-300 border-b border-slate-100 dark:border-white/[0.07] outline-none pb-1.5"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Title (optional)"
+                    />
+                    <textarea
+                      autoFocus
+                      className="w-full bg-transparent text-[13px] text-slate-700 dark:text-white/80 border-0 outline-none resize-none leading-relaxed"
+                      rows={3}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setEditingId(null);
+                        }
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          void saveEdit(note);
+                        }
+                      }}
+                    />
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => void saveEdit(note)}
+                        className="text-[10px] font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-3 py-2.5">
+                    {note.type === 'whiteboard' && (
+                      <div className="flex items-center gap-1 mb-1">
+                        <Layers size={10} className="text-blue-400" />
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400">
+                          Whiteboard
+                        </span>
+                      </div>
+                    )}
+                    {note.title && (
+                      <div className="text-[12px] font-bold text-slate-700 dark:text-white/75 mb-0.5 line-clamp-1">
+                        {note.title}
+                      </div>
+                    )}
+                    <p
+                      className={`text-[12px] text-slate-600 dark:text-white/60 leading-relaxed whitespace-pre-wrap break-words ${expandedId === note.id ? '' : 'line-clamp-4'}`}
+                    >
+                      {note.content}
+                    </p>
+                    {expandedId !== note.id && note.content.length > 200 && (
+                      <span className="text-[10px] text-amber-500 font-semibold">show more</span>
+                    )}
+                    <div
+                      className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="flex-1 text-[9px] text-slate-300 dark:text-white/20">
+                        {new Date(note.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                      </span>
+                      <button
+                        onClick={() => startEdit(note)}
+                        title="Edit"
+                        className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-slate-600 dark:hover:text-white/60 transition-colors"
+                      >
+                        <Pencil size={11} />
+                      </button>
+                      <button
+                        onClick={() => void togglePin(note)}
+                        title={note.pinned ? 'Unpin' : 'Pin'}
+                        className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
+                      >
+                        {note.pinned ? <PinOff size={11} /> : <Pin size={11} />}
+                      </button>
+                      <button
+                        onClick={() => void removeNote(note.id)}
+                        title="Delete"
+                        className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
                   </div>
                 )}
-                {note.title && (
-                  <div className="text-[12px] font-bold text-slate-700 dark:text-white/75 mb-0.5 line-clamp-1">{note.title}</div>
-                )}
-                <p className={`text-[12px] text-slate-600 dark:text-white/60 leading-relaxed whitespace-pre-wrap break-words ${expandedId === note.id ? '' : 'line-clamp-4'}`}>
-                  {note.content}
-                </p>
-                {expandedId !== note.id && note.content.length > 200 && (
-                  <span className="text-[10px] text-amber-500 font-semibold">show more</span>
-                )}
-                <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => e.stopPropagation()}>
-                  <span className="flex-1 text-[9px] text-slate-300 dark:text-white/20">
-                    {new Date(note.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </span>
-                  <button onClick={() => startEdit(note)} title="Edit"
-                    className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-slate-600 dark:hover:text-white/60 transition-colors">
-                    <Pencil size={11} />
-                  </button>
-                  <button onClick={() => void togglePin(note)} title={note.pinned ? 'Unpin' : 'Pin'}
-                    className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-amber-500 dark:hover:text-amber-400 transition-colors">
-                    {note.pinned ? <PinOff size={11} /> : <Pin size={11} />}
-                  </button>
-                  <button onClick={() => void removeNote(note.id)} title="Delete"
-                    className="p-1 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-                    <Trash2 size={11} />
-                  </button>
-                </div>
               </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
-      </>)}
+        </>
+      )}
     </div>
   );
 }
@@ -387,16 +504,23 @@ function WhiteboardFAB() {
         <div className="fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
           <div className="relative ml-auto w-full max-w-4xl h-full bg-white dark:bg-[#1e1e1c] shadow-2xl flex flex-col fade-in-soft">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-white/[0.07] shrink-0"
-              style={{ background: 'linear-gradient(to right, rgba(21,101,192,0.06), transparent)' }}>
+            <div
+              className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-white/[0.07] shrink-0"
+              style={{ background: 'linear-gradient(to right, rgba(21,101,192,0.06), transparent)' }}
+            >
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
                 <WhiteboardIcon size={16} className="text-white" filled />
               </div>
               <div>
                 <div className="text-sm font-black text-slate-800 dark:text-white/90">Whiteboard</div>
-                <div className="text-[10px] text-slate-400 dark:text-white/30">Drag to draw · shapes · text · export PNG</div>
+                <div className="text-[10px] text-slate-400 dark:text-white/30">
+                  Drag to draw · shapes · text · export PNG
+                </div>
               </div>
-              <button onClick={() => setOpen(false)} className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors">
+              <button
+                onClick={() => setOpen(false)}
+                className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -410,43 +534,58 @@ function WhiteboardFAB() {
   );
 }
 
-export default function MyDayClient({ initialData }: {
-  initialData: { open: Note[]; done: Note[] };
-}) {
-  const isLead  = useIsLead();
-  const me      = useCurrentUser();
+export default function MyDayClient({ initialData }: { initialData: { open: Note[]; done: Note[] } }) {
+  const isLead = useIsLead();
+  const me = useCurrentUser();
   const firstName = (me?.name || '').trim().split(/\s+/)[0] || '';
   const dateLabel = useDateLabel();
 
-  const [open, setOpen]   = useState<Note[]>(initialData.open);
-  const [done, setDone]   = useState<Note[]>(initialData.done);
-  const [text, setText]   = useState('');
+  const [open, setOpen] = useState<Note[]>(initialData.open);
+  const [done, setDone] = useState<Note[]>(initialData.done);
+  const [text, setText] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [promote, setPromote] = useState<Note | null>(null);
-  const [editingId, setEditingId]   = useState<string | null>(null);
-  const [editText,  setEditText]    = useState('');
-  const [savedAt,   setSavedAt]     = useState<Date | null>(null);
-  const [justDone,  setJustDone]    = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [justDone, setJustDone] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const total = open.length + done.length;
 
-  function markSaved() { setSavedAt(new Date()); }
-  function startEdit(n: Note) { setEditingId(n.id); setEditText(n.text); }
-  function cancelEdit()       { setEditingId(null); setEditText(''); }
+  function markSaved() {
+    setSavedAt(new Date());
+  }
+  function startEdit(n: Note) {
+    setEditingId(n.id);
+    setEditText(n.text);
+  }
+  function cancelEdit() {
+    setEditingId(null);
+    setEditText('');
+  }
 
   async function saveEdit(n: Note) {
     const t = editText.trim();
-    if (!t || t === n.text) { cancelEdit(); return; }
+    if (!t || t === n.text) {
+      cancelEdit();
+      return;
+    }
     setOpen((o) => o.map((x) => (x.id === n.id ? { ...x, text: t } : x)));
     cancelEdit();
-    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { text: t } }); markSaved(); } finally { load(); }
+    try {
+      await api(`/scratch/${n.id}`, { method: 'PATCH', body: { text: t } });
+      markSaved();
+    } finally {
+      load();
+    }
   }
 
   const load = useCallback(async () => {
     try {
       const res = await api<{ open: Note[]; done: Note[] }>('/scratch');
-      setOpen(res.open); setDone(res.done);
+      setOpen(res.open);
+      setDone(res.done);
     } catch {}
   }, []);
 
@@ -455,9 +594,20 @@ export default function MyDayClient({ initialData }: {
     const t = text.trim();
     if (!t) return;
     setText('');
-    const temp: Note = { id: `tmp-${Date.now()}`, text: t, done: false, promotedTaskId: null, createdAt: new Date().toISOString() };
+    const temp: Note = {
+      id: `tmp-${Date.now()}`,
+      text: t,
+      done: false,
+      promotedTaskId: null,
+      createdAt: new Date().toISOString(),
+    };
     setOpen((o) => [temp, ...o]);
-    try { await api('/scratch', { method: 'POST', body: { text: t } }); markSaved(); } finally { load(); }
+    try {
+      await api('/scratch', { method: 'POST', body: { text: t } });
+      markSaved();
+    } finally {
+      load();
+    }
     inputRef.current?.focus();
   }
 
@@ -473,18 +623,27 @@ export default function MyDayClient({ initialData }: {
       setOpen((o) => o.filter((x) => x.id !== n.id));
       setDone((d) => [{ ...n, done: true }, ...d]);
     }
-    try { await api(`/scratch/${n.id}`, { method: 'PATCH', body: { done: !n.done } }); markSaved(); } finally { load(); }
+    try {
+      await api(`/scratch/${n.id}`, { method: 'PATCH', body: { done: !n.done } });
+      markSaved();
+    } finally {
+      load();
+    }
   }
 
   async function remove(n: Note) {
     setOpen((o) => o.filter((x) => x.id !== n.id));
     setDone((d) => d.filter((x) => x.id !== n.id));
-    try { await api(`/scratch/${n.id}`, { method: 'DELETE' }); markSaved(); } finally { load(); }
+    try {
+      await api(`/scratch/${n.id}`, { method: 'DELETE' });
+      markSaved();
+    } finally {
+      load();
+    }
   }
 
   return (
     <div className="max-w-6xl mx-auto pb-14">
-
       {/* ── Hero header ──────────────────────────────────────────────── */}
       <div className="mb-7 pt-1">
         <div className="flex items-start justify-between gap-4">
@@ -494,7 +653,8 @@ export default function MyDayClient({ initialData }: {
                 My Day
               </span>
               {savedAt && (
-                <span key={savedAt.getTime()}
+                <span
+                  key={savedAt.getTime()}
                   className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400/80 fade-in-soft"
                   title={`Last saved ${savedAt.toLocaleTimeString()}`}
                 >
@@ -503,7 +663,10 @@ export default function MyDayClient({ initialData }: {
               )}
             </div>
             <h1 className="text-[1.7rem] font-black tracking-tight leading-tight text-slate-800 dark:text-white/90">
-              <span suppressHydrationWarning>{encouragement()}{firstName ? ', ' : '.'}</span>
+              <span suppressHydrationWarning>
+                {encouragement()}
+                {firstName ? ', ' : '.'}
+              </span>
               {firstName && (
                 <span className="text-blue-700 dark:text-blue-400" suppressHydrationWarning>
                   {firstName}.
@@ -513,9 +676,7 @@ export default function MyDayClient({ initialData }: {
             {dateLabel && (
               <div className="flex items-center gap-1.5 mt-1.5">
                 <Calendar size={11} className="text-slate-400 dark:text-white/25 shrink-0" />
-                <span className="text-[12px] text-slate-500 dark:text-white/40 font-medium">
-                  {dateLabel}
-                </span>
+                <span className="text-[12px] text-slate-500 dark:text-white/40 font-medium">{dateLabel}</span>
               </div>
             )}
           </div>
@@ -531,17 +692,21 @@ export default function MyDayClient({ initialData }: {
 
       {/* ── 2-column layout: tasks (left) + notes (right) ────────────── */}
       <div className="lg:grid lg:gap-6" style={{ gridTemplateColumns: '1fr 300px' }}>
-
         {/* ── Left: capture + todo list ────────────────────────────── */}
         <div className="min-w-0">
-
           {/* ── Capture bar ────────────────────────────────────────── */}
           <form onSubmit={add} className="mb-6">
             <div className="relative rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm hover:border-slate-300/80 focus-within:border-blue-500/60 dark:focus-within:border-blue-500/50 focus-within:shadow-[0_0_0_3px_rgba(21,101,192,0.10)] transition-all">
               <div className="flex items-center gap-3">
                 {/* Capture icon — a pen, matching the "empty your mind" prompt */}
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'linear-gradient(135deg, rgba(21,101,192,0.15) 0%, rgba(34,197,94,0.12) 100%)', boxShadow: '0 0 0 1px rgba(21,101,192,0.12)' }}>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, rgba(21,101,192,0.15) 0%, rgba(34,197,94,0.12) 100%)',
+                    boxShadow: '0 0 0 1px rgba(21,101,192,0.12)',
+                  }}
+                >
                   <PenLine size={18} className="text-blue-600 dark:text-blue-400" />
                 </div>
                 <input
@@ -554,12 +719,16 @@ export default function MyDayClient({ initialData }: {
                   maxLength={2000}
                 />
                 {text.trim() ? (
-                  <button type="submit"
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors">
+                  <button
+                    type="submit"
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 fade-in-soft transition-colors"
+                  >
                     <Plus size={13} /> Add ↵
                   </button>
                 ) : (
-                  <span className="shrink-0 hidden sm:inline text-[11px] text-slate-400 dark:text-white/25 font-medium pr-1">Enter ↵</span>
+                  <span className="shrink-0 hidden sm:inline text-[11px] text-slate-400 dark:text-white/25 font-medium pr-1">
+                    Enter ↵
+                  </span>
                 )}
               </div>
             </div>
@@ -571,7 +740,9 @@ export default function MyDayClient({ initialData }: {
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 flex items-center justify-center mx-auto mb-3">
                 <Sparkles size={22} className="text-blue-400 dark:text-blue-400/70" />
               </div>
-              <div className="text-sm font-bold text-slate-700 dark:text-white/60 mb-1">A clear head starts here</div>
+              <div className="text-sm font-bold text-slate-700 dark:text-white/60 mb-1">
+                A clear head starts here
+              </div>
               <div className="text-xs text-slate-400 dark:text-white/25 max-w-xs mx-auto leading-relaxed">
                 Jot anything — ideas, blockers, follow-ups. Unfinished notes carry over automatically.
               </div>
@@ -589,9 +760,10 @@ export default function MyDayClient({ initialData }: {
                     className={`
                       group flex items-center min-w-0 gap-3 rounded-xl px-3.5 py-2.5 border
                       transition-all duration-200
-                      ${isChecking
-                        ? 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/80 dark:bg-emerald-500/[0.08] scale-[0.995]'
-                        : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12 hover:shadow-sm dark:hover:bg-white/[0.045]'
+                      ${
+                        isChecking
+                          ? 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/80 dark:bg-emerald-500/[0.08] scale-[0.995]'
+                          : 'border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025] hover:border-slate-300 dark:hover:border-white/12 hover:shadow-sm dark:hover:bg-white/[0.045]'
                       }
                     `}
                   >
@@ -601,9 +773,10 @@ export default function MyDayClient({ initialData }: {
                       className={`
                         w-[18px] h-[18px] rounded-[5px] border flex items-center justify-center shrink-0
                         transition-all duration-200
-                        ${isChecking
-                          ? 'border-emerald-500 bg-emerald-500'
-                          : 'border-slate-300 dark:border-white/20 hover:border-emerald-400 dark:hover:border-emerald-400/50 hover:bg-emerald-50 dark:hover:bg-emerald-400/[0.08]'
+                        ${
+                          isChecking
+                            ? 'border-emerald-500 bg-emerald-500'
+                            : 'border-slate-300 dark:border-white/20 hover:border-emerald-400 dark:hover:border-emerald-400/50 hover:bg-emerald-50 dark:hover:bg-emerald-400/[0.08]'
                         }
                       `}
                       style={isChecking ? { transform: 'scale(1.15)' } : {}}
@@ -630,7 +803,10 @@ export default function MyDayClient({ initialData }: {
                           e.target.style.height = e.target.scrollHeight + 'px';
                         }}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(n); }
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            saveEdit(n);
+                          }
                           if (e.key === 'Escape') cancelEdit();
                         }}
                         onBlur={() => saveEdit(n)}
@@ -647,8 +823,10 @@ export default function MyDayClient({ initialData }: {
 
                     <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       {n.promotedTaskId ? (
-                        <a href={`/tasks/${n.promotedTaskId}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
+                        <a
+                          href={`/tasks/${n.promotedTaskId}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                        >
                           <BookmarkCheck size={12} strokeWidth={2.5} /> tracked
                         </a>
                       ) : editingId !== n.id ? (
@@ -660,8 +838,11 @@ export default function MyDayClient({ initialData }: {
                           <Zap size={11} strokeWidth={2.5} /> track
                         </button>
                       ) : null}
-                      <button onClick={() => remove(n)} aria-label="Delete"
-                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                      <button
+                        onClick={() => remove(n)}
+                        aria-label="Delete"
+                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                      >
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -691,8 +872,10 @@ export default function MyDayClient({ initialData }: {
               {showDone && (
                 <div className="space-y-0.5 mt-1.5 fade-in-soft">
                   {done.map((n) => (
-                    <div key={n.id}
-                      className="group flex items-center gap-3 px-3.5 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors">
+                    <div
+                      key={n.id}
+                      className="group flex items-center gap-3 px-3.5 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors"
+                    >
                       <button
                         onClick={() => toggle(n)}
                         aria-label="Reopen"
@@ -703,8 +886,11 @@ export default function MyDayClient({ initialData }: {
                       <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-400 dark:text-white/25 line-through leading-relaxed">
                         {n.text}
                       </span>
-                      <button onClick={() => remove(n)} aria-label="Delete"
-                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => remove(n)}
+                        aria-label="Delete"
+                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -730,7 +916,10 @@ export default function MyDayClient({ initialData }: {
           note={promote}
           canCreateShared={isLead}
           onClose={() => setPromote(null)}
-          onDone={() => { setPromote(null); load(); }}
+          onDone={() => {
+            setPromote(null);
+            load();
+          }}
         />
       )}
     </div>
@@ -738,32 +927,54 @@ export default function MyDayClient({ initialData }: {
 }
 
 /* ── Promote modal ────────────────────────────────────────────────────── */
-function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; canCreateShared: boolean; onClose: () => void; onDone: () => void }) {
-  const [projects,    setProjects]  = useState<any[]>([]);
-  const [projectId,   setProjectId] = useState('');
-  const [phases,      setPhases]    = useState<{ id: string; name: string }[]>([]);
-  const [members,     setMembers]   = useState<any[]>([]);
-  const [phaseId,     setPhaseId]   = useState('');
-  const [priority,    setPriority]  = useState('medium');
-  const [assigneeId,  setAssignee]  = useState('');
-  const [due,         setDue]       = useState('');
+function PromoteModal({
+  note,
+  canCreateShared,
+  onClose,
+  onDone,
+}: {
+  note: Note;
+  canCreateShared: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectId, setProjectId] = useState('');
+  const [phases, setPhases] = useState<{ id: string; name: string }[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [phaseId, setPhaseId] = useState('');
+  const [priority, setPriority] = useState('medium');
+  const [assigneeId, setAssignee] = useState('');
+  const [due, setDue] = useState('');
   const [privateToMe, setPrivateToMe] = useState(!canCreateShared);
   const [loadingMeta, setLoadingMeta] = useState(false);
-  const [saving,      setSaving]    = useState(false);
-  const [err,         setErr]       = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     api<any[]>('/projects')
-      .then((p) => { setProjects(p); if (p[0]) setProjectId(p[0].id); })
+      .then((p) => {
+        setProjects(p);
+        if (p[0]) setProjectId(p[0].id);
+      })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (!projectId) { setPhases([]); setMembers([]); return; }
-    setPhaseId(''); setAssignee('');
+    if (!projectId) {
+      setPhases([]);
+      setMembers([]);
+      return;
+    }
+    setPhaseId('');
+    setAssignee('');
     const proj = projects.find((p) => p.id === projectId);
     setPhases((proj?.phases || []).map((ph: any) => ({ id: ph.id, name: ph.name })));
-    if (privateToMe || !canCreateShared) { setMembers([]); setLoadingMeta(false); return; }
+    if (privateToMe || !canCreateShared) {
+      setMembers([]);
+      setLoadingMeta(false);
+      return;
+    }
     setLoadingMeta(true);
     api<any[]>(`/users${proj?.teamId ? `?teamId=${proj.teamId}` : ''}`)
       .then((r) => setMembers(r))
@@ -772,24 +983,33 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
   }, [projectId, projects, privateToMe, canCreateShared]);
 
   async function go() {
-    if (!projectId) { setErr('Pick a project.'); return; }
-    setSaving(true); setErr('');
+    if (!projectId) {
+      setErr('Pick a project.');
+      return;
+    }
+    setSaving(true);
+    setErr('');
     try {
       const body: any = { projectId, title: note.text, priority, privateToMe };
-      if (phaseId)    body.phaseId    = phaseId;
+      if (phaseId) body.phaseId = phaseId;
       if (!privateToMe && assigneeId) body.assigneeId = assigneeId;
-      if (due)        body.dueDate    = due;
+      if (due) body.dueDate = due;
       const task = await api<{ id: string }>('/tasks', { method: 'POST', body });
       await api(`/scratch/${note.id}`, { method: 'PATCH', body: { done: true, promotedTaskId: task.id } });
       onDone();
     } catch (e: any) {
       setErr(e.message || 'Could not create the task.');
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto overlay-in" style={{ background: 'rgba(0,0,0,0.45)' }}
-      onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overlay-in"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+      onClick={onClose}
+    >
       <div className="flex min-h-full items-center justify-center p-4">
         <div
           className="w-full max-w-sm modal-in rounded-2xl border p-6 shadow-2xl"
@@ -804,23 +1024,31 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
                 </div>
                 <span className="text-base font-bold text-slate-900 dark:text-white/90">Add to project</span>
               </div>
-              <p className="text-xs text-slate-400 dark:text-white/35 ml-8">Turn this thought into project work — or keep it private to you.</p>
+              <p className="text-xs text-slate-400 dark:text-white/35 ml-8">
+                Turn this thought into project work — or keep it private to you.
+              </p>
             </div>
-            <button onClick={onClose}
-              className="text-slate-300 dark:text-white/25 hover:text-slate-500 dark:hover:text-white/50 transition-colors p-0.5 rounded">
+            <button
+              onClick={onClose}
+              className="text-slate-300 dark:text-white/25 hover:text-slate-500 dark:hover:text-white/50 transition-colors p-0.5 rounded"
+            >
               <X size={18} />
             </button>
           </div>
 
           <div className="rounded-lg border-l-4 border-blue-300 dark:border-blue-500/50 bg-blue-50/70 dark:bg-blue-500/[0.08] px-3 py-2.5 mb-4">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400/70 mb-0.5">Note</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400/70 mb-0.5">
+              Note
+            </div>
             <p className="text-sm text-slate-700 dark:text-white/75 leading-relaxed">{note.text}</p>
           </div>
 
           <label className="label">Project</label>
           <div className="mb-3">
             <Select
-              value={projectId} onChange={setProjectId} ariaLabel="Project"
+              value={projectId}
+              onChange={setProjectId}
+              ariaLabel="Project"
               placeholder={projects.length === 0 ? 'No projects available' : 'Select a project'}
               options={projects.map((p) => ({ value: p.id, label: p.name }))}
             />
@@ -837,12 +1065,18 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
                 <div>
                   <div className="text-xs font-black">Track this task as private</div>
                   <div className="text-[10px] opacity-70 mt-0.5">
-                    {canCreateShared ? 'Visible only to you, while linked to the selected project.' : 'Contributor notes are tracked privately and stay visible only to you.'}
+                    {canCreateShared
+                      ? 'Visible only to you, while linked to the selected project.'
+                      : 'Contributor notes are tracked privately and stay visible only to you.'}
                   </div>
                 </div>
               </div>
-              <span className={`w-9 h-5 rounded-full p-0.5 transition-colors ${privateToMe ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                <span className={`block w-4 h-4 rounded-full bg-white transition-transform ${privateToMe ? 'translate-x-4' : ''}`} />
+              <span
+                className={`w-9 h-5 rounded-full p-0.5 transition-colors ${privateToMe ? 'bg-emerald-500' : 'bg-slate-200'}`}
+              >
+                <span
+                  className={`block w-4 h-4 rounded-full bg-white transition-transform ${privateToMe ? 'translate-x-4' : ''}`}
+                />
               </span>
             </div>
           </button>
@@ -851,7 +1085,9 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
             <div>
               <label className="label">Phase</label>
               <Select
-                value={phaseId} onChange={setPhaseId} ariaLabel="Phase"
+                value={phaseId}
+                onChange={setPhaseId}
+                ariaLabel="Phase"
                 disabled={loadingMeta || phases.length === 0}
                 placeholder={phases.length === 0 ? 'No phases' : 'Unassigned'}
                 options={[
@@ -863,11 +1099,13 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
             <div className={privateToMe ? 'hidden' : ''}>
               <label className="label">Priority</label>
               <Select
-                value={priority} onChange={setPriority} ariaLabel="Priority"
+                value={priority}
+                onChange={setPriority}
+                ariaLabel="Priority"
                 options={[
-                  { value: 'low',      label: 'Low' },
-                  { value: 'medium',   label: 'Medium' },
-                  { value: 'high',     label: 'High' },
+                  { value: 'low', label: 'Low' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High' },
                   { value: 'critical', label: 'Critical' },
                 ]}
               />
@@ -878,7 +1116,9 @@ function PromoteModal({ note, canCreateShared, onClose, onDone }: { note: Note; 
             <div className={privateToMe ? 'hidden' : ''}>
               <label className="label">Assign to</label>
               <Select
-                value={assigneeId} onChange={setAssignee} ariaLabel="Assign to"
+                value={assigneeId}
+                onChange={setAssignee}
+                ariaLabel="Assign to"
                 disabled={loadingMeta}
                 placeholder="Unassigned"
                 options={[

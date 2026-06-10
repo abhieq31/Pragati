@@ -15,13 +15,7 @@ import { z } from 'zod';
 
 export const PriorityEnum = z.enum(['low', 'medium', 'high', 'critical']);
 
-export const ProjectStatusEnum = z.enum([
-  'planning',
-  'in_progress',
-  'on_hold',
-  'completed',
-  'cancelled',
-]);
+export const ProjectStatusEnum = z.enum(['planning', 'in_progress', 'on_hold', 'completed', 'cancelled']);
 
 export const ProjectLifecycleEnum = z.enum([
   'csv',
@@ -67,13 +61,7 @@ export const ProjectLifecycleEnum = z.enum([
 
 export const GxpImpactEnum = z.enum(['none', 'low', 'medium', 'high']);
 
-export const TaskStatusEnum = z.enum([
-  'todo',
-  'in_progress',
-  'review',
-  'blocked',
-  'done',
-]);
+export const TaskStatusEnum = z.enum(['todo', 'in_progress', 'review', 'blocked', 'done']);
 
 export const TaskTypeEnum = z.enum([
   'task',
@@ -97,11 +85,9 @@ export const DeployStageEnum = z.enum(['dev', 'int', 'prd', 'na']);
 // ISO-date or empty/null. We accept strings here and let the API route turn
 // them into Date objects right before they hit Mongoose, so the schema stays
 // JSON-friendly.
-const dateString = z
-  .string()
-  .refine((s) => s === '' || !Number.isNaN(Date.parse(s)), {
-    message: 'Invalid date string (expected ISO-8601)',
-  });
+const dateString = z.string().refine((s) => s === '' || !Number.isNaN(Date.parse(s)), {
+  message: 'Invalid date string (expected ISO-8601)',
+});
 
 const optionalObjectId = z
   .string()
@@ -123,9 +109,12 @@ export const UsernameSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .min(3,  'Username must be at least 3 characters.')
+  .min(3, 'Username must be at least 3 characters.')
   .max(30, 'Username must be 30 characters or fewer.')
-  .regex(/^[a-z][a-z0-9_.]{1,28}[a-z0-9_]$/, 'Use letters, digits, underscores or dots. Must start with a letter.');
+  .regex(
+    /^[a-z][a-z0-9_.]{1,28}[a-z0-9_]$/,
+    'Use letters, digits, underscores or dots. Must start with a letter.',
+  );
 
 /* ── Project schemas ─────────────────────────────────────────────────────── */
 
@@ -135,6 +124,10 @@ export const ProjectCreateSchema = z.object({
   // User-defined reference number (e.g. "CC-2025-042"). Stored as ccNo;
   // distinct from the auto-generated `code` system identifier.
   ccNo: z.string().max(60).optional(),
+  // User-pickable label describing what the reference number is for THIS
+  // project ("CC#", "SOP#", "CAPA#", …) — not every project is a Change
+  // Control. Empty renders as the generic "Ref #".
+  refLabel: z.string().max(20).optional(),
   description: z.string().max(5000).optional(),
   lifecycle: ProjectLifecycleEnum.default('generic'),
   priority: PriorityEnum.optional(),
@@ -173,9 +166,11 @@ export const ProjectUpdateSchema = z.object({
   startDate: dateString.nullable().optional(),
   dueDate: dateString.nullable().optional(),
   gxpImpact: GxpImpactEnum.optional(),
-  // Project-level Change Control reference number — a GxP identifier whose
-  // every change must be logged with a before/after record.
+  // Project-level reference number — a GxP identifier whose every change
+  // must be logged with a before/after record. `refLabel` is the
+  // user-pickable name of the reference scheme ("CC#", "SOP#", "CAPA#", …).
   ccNo: z.string().max(60).optional(),
+  refLabel: z.string().max(20).optional(),
   // E-signature fields for controlled status changes on shared projects
   // (21 CFR Part 11 §11.10/§11.50). The route re-verifies `password` and
   // records `remarks` (the reason) verbatim in the audit trail. Optional here
@@ -233,9 +228,7 @@ export type DeleteTeamInput = z.infer<typeof DeleteTeamSchema>;
 /* ── Task schemas ────────────────────────────────────────────────────────── */
 
 export const TaskCreateSchema = z.object({
-  projectId: z
-    .string()
-    .regex(/^[a-f\d]{24}$/i, 'Invalid project ObjectId'),
+  projectId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid project ObjectId'),
   phaseId: optionalObjectId,
   title: z.string().min(1, 'Task title is required').max(300),
   description: z.string().max(10_000).optional(),
@@ -257,11 +250,11 @@ export const TaskCreateSchema = z.object({
   // These mirror what QA teams already record in Change Control IDP sheets;
   // they must stay explicit on every Task payload so the system can rebuild
   // an audit trail joinable back to source CC documentation.
-  ccNo: z.string().max(60).optional(),            // e.g. "CC-2025-042"
-  ccTcd: dateString.optional(),                   // CC Target Completion Date
-  documentNo: z.string().max(120).optional(),     // SOP / protocol reference
-  applicableSite: ApplicableSiteEnum.optional(),  // val / prd / val_prd / na
-  deployStage: DeployStageEnum.optional(),        // dev / int / prd / na
+  ccNo: z.string().max(60).optional(), // e.g. "CC-2025-042"
+  ccTcd: dateString.optional(), // CC Target Completion Date
+  documentNo: z.string().max(120).optional(), // SOP / protocol reference
+  applicableSite: ApplicableSiteEnum.optional(), // val / prd / val_prd / na
+  deployStage: DeployStageEnum.optional(), // dev / int / prd / na
   remarks: z.string().max(5000).optional(),
   privateToMe: z.boolean().optional(),
 });
@@ -274,14 +267,24 @@ export type TaskCreateInput = z.infer<typeof TaskCreateSchema>;
    path). Validated here per the API-boundary rule even though it doesn't
    persist, so the shape stays explicit and bounded. */
 export const MindmapToTasksSchema = z.object({
-  nodes: z.array(z.object({
-    id: z.string().max(64),
-    text: z.string().max(500),
-  })).max(120),
-  edges: z.array(z.object({
-    from: z.string().max(64),
-    to: z.string().max(64),
-  })).max(240).optional().default([]),
+  nodes: z
+    .array(
+      z.object({
+        id: z.string().max(64),
+        text: z.string().max(500),
+      }),
+    )
+    .max(120),
+  edges: z
+    .array(
+      z.object({
+        from: z.string().max(64),
+        to: z.string().max(64),
+      }),
+    )
+    .max(240)
+    .optional()
+    .default([]),
 });
 export type MindmapToTasksInput = z.infer<typeof MindmapToTasksSchema>;
 

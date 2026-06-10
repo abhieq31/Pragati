@@ -23,41 +23,44 @@ import mongoose, { Schema, InferSchemaType } from 'mongoose';
  * scoping note: billing + auth lookups stay in this registry so they keep
  * working even if a tenant's operational DB is briefly unavailable.
  */
-const TenantSchema = new Schema({
-  // Stable slug used in URLs and as the routing key. Lowercased + sanitized.
-  slug:        { type: String, required: true, unique: true, lowercase: true, trim: true },
-  // Human-readable name (the customer's organisation).
-  displayName: { type: String, required: true },
-  // Where the operational data lives. Either:
-  //   - dbName       : same cluster, separate database (small tenants)
-  //   - connectionUri: dedicated cluster for high-compliance customers
-  // Both are NEVER returned to the client — they're registry-internal.
-  dbName:        { type: String, default: '' },
-  connectionUri: { type: String, default: '' },
-  // Custom hostname mapping (acme.pragati.app). Optional; falls back to the
-  // default app domain with the slug as a query parameter.
-  customDomain: { type: String, default: '' },
-  // Plan tier — controls feature gating + quotas. Free for the default
-  // single-tenant deployment; paid tiers added later.
-  plan: {
-    type: String,
-    enum: ['free', 'starter', 'pro', 'enterprise'],
-    default: 'free',
+const TenantSchema = new Schema(
+  {
+    // Stable slug used in URLs and as the routing key. Lowercased + sanitized.
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // Human-readable name (the customer's organisation).
+    displayName: { type: String, required: true },
+    // Where the operational data lives. Either:
+    //   - dbName       : same cluster, separate database (small tenants)
+    //   - connectionUri: dedicated cluster for high-compliance customers
+    // Both are NEVER returned to the client — they're registry-internal.
+    dbName: { type: String, default: '' },
+    connectionUri: { type: String, default: '' },
+    // Custom hostname mapping (acme.pragati.app). Optional; falls back to the
+    // default app domain with the slug as a query parameter.
+    customDomain: { type: String, default: '' },
+    // Plan tier — controls feature gating + quotas. Free for the default
+    // single-tenant deployment; paid tiers added later.
+    plan: {
+      type: String,
+      enum: ['free', 'starter', 'pro', 'enterprise'],
+      default: 'free',
+    },
+    // Soft quota for safety; the operational DB rejects writes once a tenant
+    // exceeds the cap by 10% (warning surface below that).
+    userQuota: { type: Number, default: 25 },
+    projectQuota: { type: Number, default: 200 },
+    // Lifecycle. `active: false` blocks all sign-ins for the tenant; useful
+    // for billing-suspended customers without deleting their data.
+    active: { type: Boolean, default: true },
+    // Master-admin notes (visible only on the master admin console).
+    notes: { type: String, default: '' },
   },
-  // Soft quota for safety; the operational DB rejects writes once a tenant
-  // exceeds the cap by 10% (warning surface below that).
-  userQuota:    { type: Number, default: 25 },
-  projectQuota: { type: Number, default: 200 },
-  // Lifecycle. `active: false` blocks all sign-ins for the tenant; useful
-  // for billing-suspended customers without deleting their data.
-  active:       { type: Boolean, default: true },
-  // Master-admin notes (visible only on the master admin console).
-  notes:        { type: String, default: '' },
-}, { timestamps: true });
+  { timestamps: true },
+);
 
 TenantSchema.index({ customDomain: 1 });
 TenantSchema.index({ active: 1 });
 
 export type TenantDoc = InferSchemaType<typeof TenantSchema>;
-export const Tenant = (mongoose.models.Tenant as mongoose.Model<TenantDoc>) ||
-  mongoose.model<TenantDoc>('Tenant', TenantSchema);
+export const Tenant =
+  (mongoose.models.Tenant as mongoose.Model<TenantDoc>) || mongoose.model<TenantDoc>('Tenant', TenantSchema);

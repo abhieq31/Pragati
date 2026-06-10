@@ -23,13 +23,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       unread,
       items: items.map((n: any) => ({
-        id:        String(n._id),
-        type:      n.type,
-        title:     n.title,
-        body:      n.body,
-        taskId:    n.taskId ? String(n.taskId) : null,
+        id: String(n._id),
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        taskId: n.taskId ? String(n.taskId) : null,
         projectId: n.projectId ? String(n.projectId) : null,
-        read:      !!n.read,
+        read: !!n.read,
         createdAt: n.createdAt,
       })),
     });

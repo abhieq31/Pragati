@@ -10,22 +10,24 @@ export const dynamic = 'force-dynamic';
 
 function serialize(n: any) {
   return {
-    id:             String(n._id),
-    title:          n.title || null,
-    content:        n.content,
-    type:           n.type,
+    id: String(n._id),
+    title: n.title || null,
+    content: n.content,
+    type: n.type,
     whiteboardData: n.whiteboardData || null,
-    pinned:         !!n.pinned,
-    createdAt:      n.createdAt,
-    updatedAt:      n.updatedAt,
+    pinned: !!n.pinned,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
   };
 }
 
-const PatchBody = z.object({
-  title:   z.string().trim().max(200).optional(),
-  content: z.string().trim().min(1).max(50000).optional(),
-  pinned:  z.boolean().optional(),
-}).strict();
+const PatchBody = z
+  .object({
+    title: z.string().trim().max(200).optional(),
+    content: z.string().trim().min(1).max(50000).optional(),
+    pinned: z.boolean().optional(),
+  })
+  .strict();
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {

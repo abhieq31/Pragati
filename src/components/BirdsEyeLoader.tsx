@@ -9,8 +9,8 @@ import { PragatiMark } from '@/components/PragatiMark';
  * `inline` drops the tall min-height so it can sit inside a card or modal.
  */
 export function BirdsEyeLoader({
-  label = "Ascending…",
-  sublabel = 'Getting your bird\'s-eye view ready.',
+  label = 'Ascending…',
+  sublabel = "Getting your bird's-eye view ready.",
   size = 'md',
   inline = false,
 }: {
@@ -42,7 +42,9 @@ export function BirdsEyeLoader({
       {(label || sublabel) && (
         <div className="text-center">
           {label && (
-            <div className={`font-bold text-slate-800 tracking-tight ${size === 'sm' ? 'text-sm' : 'text-base'}`}>
+            <div
+              className={`font-bold text-slate-800 tracking-tight ${size === 'sm' ? 'text-sm' : 'text-base'}`}
+            >
               {label}
             </div>
           )}

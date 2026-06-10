@@ -65,7 +65,9 @@ function CardGridSkeleton({ count = 6, avatar = false }: { count?: number; avata
                 <Skel className="h-3.5 w-full rounded" />
                 <Skel className="h-3.5 w-2/3 rounded" />
                 <div className="flex items-center -space-x-2 pt-1">
-                  {[0, 1, 2, 3].map((n) => <Skel key={n} className="h-8 w-8 rounded-full ring-2 ring-white" />)}
+                  {[0, 1, 2, 3].map((n) => (
+                    <Skel key={n} className="h-8 w-8 rounded-full ring-2 ring-white" />
+                  ))}
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <Skel className="h-3.5 w-28 rounded" />
@@ -106,7 +108,17 @@ function CardGridSkeleton({ count = 6, avatar = false }: { count?: number; avata
   );
 }
 
-function RowListSkeleton({ count = 8, avatar = false, tall = false, action = false }: { count?: number; avatar?: boolean; tall?: boolean; action?: boolean }) {
+function RowListSkeleton({
+  count = 8,
+  avatar = false,
+  tall = false,
+  action = false,
+}: {
+  count?: number;
+  avatar?: boolean;
+  tall?: boolean;
+  action?: boolean;
+}) {
   return (
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
@@ -157,7 +169,15 @@ function DetailHeaderSkeleton() {
   );
 }
 
-function SectionCard({ titleW = 40, rows = 4, rowH = 20 }: { titleW?: number; rows?: number; rowH?: number }) {
+function SectionCard({
+  titleW = 40,
+  rows = 4,
+  rowH = 20,
+}: {
+  titleW?: number;
+  rows?: number;
+  rowH?: number;
+}) {
   return (
     <div className="card p-4 space-y-3">
       <Skel className={`h-5 w-${titleW} rounded`} />
@@ -175,7 +195,9 @@ export function DashboardSkeleton() {
         <Skel className="h-9 w-72 max-w-full rounded-xl" />
       </div>
       <div className="flex flex-wrap gap-2 mb-5">
-        {[0, 1, 2, 3].map((i) => <Skel key={i} className="h-8 w-28 rounded-lg" />)}
+        {[0, 1, 2, 3].map((i) => (
+          <Skel key={i} className="h-8 w-28 rounded-lg" />
+        ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
         <section className="min-w-0 space-y-3">
@@ -316,7 +338,10 @@ export function ProjectDetailSkeleton() {
             </div>
             <div className="p-3 space-y-2">
               {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-100">
+                <div
+                  key={j}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-100"
+                >
                   <Skel className="h-3.5 w-3.5 rounded-full shrink-0" />
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <Skel className="h-3.5 w-2/3 rounded" />
@@ -503,7 +528,10 @@ export function MyDaySkeleton() {
       </div>
       <div className="space-y-1">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 bg-white">
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 bg-white"
+          >
             <Skel className="h-[18px] w-[18px] rounded-[5px] shrink-0" />
             <Skel className="h-4 flex-1 max-w-[380px] rounded" />
             <Skel className="h-4 w-20 rounded-full shrink-0" />
@@ -516,7 +544,10 @@ export function MyDaySkeleton() {
           <Skel className="h-3 w-8 rounded-full" />
         </div>
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 bg-white">
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 bg-white"
+          >
             <Skel className="h-[18px] w-[18px] rounded-[5px] shrink-0" />
             <Skel className="h-4 flex-1 max-w-[300px] rounded" />
             <Skel className="h-4 w-16 rounded-full shrink-0" />
@@ -567,7 +598,9 @@ export function AuditSkeleton() {
     <div className="max-w-5xl space-y-5 pb-12" role="status" aria-label="Loading audit log">
       <HeaderSkeleton action={false} />
       <div className="flex gap-1.5 flex-wrap">
-        {Array.from({ length: 6 }).map((_, i) => <Skel key={i} className="h-7 w-20 rounded-full" />)}
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skel key={i} className="h-7 w-20 rounded-full" />
+        ))}
       </div>
       <RowListSkeleton count={10} />
     </div>

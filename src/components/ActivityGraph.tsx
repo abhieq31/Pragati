@@ -3,25 +3,40 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '@/lib/client/api';
 import {
-  Flame, Clock3, CheckCircle2, Target, FolderCheck, CalendarCheck,
-  Trophy, Zap, Users, Lightbulb, Award, GraduationCap, Scale, Gauge,
-  UserPlus, ShieldCheck, Database, ScrollText,
+  Flame,
+  Clock3,
+  CheckCircle2,
+  Target,
+  FolderCheck,
+  CalendarCheck,
+  Trophy,
+  Zap,
+  Users,
+  Lightbulb,
+  Award,
+  GraduationCap,
+  Scale,
+  Gauge,
+  UserPlus,
+  ShieldCheck,
+  Database,
+  ScrollText,
 } from 'lucide-react';
 
 /* Map each achievement id to a lucide icon. Keeps the renderer pure. */
 const ACHIEVEMENT_ICON: Record<string, any> = {
-  ic_milestone:  Trophy,
-  ic_on_time:    Zap,
-  ic_collab:     Users,
-  ic_ideas:      Lightbulb,
+  ic_milestone: Trophy,
+  ic_on_time: Zap,
+  ic_collab: Users,
+  ic_ideas: Lightbulb,
   lead_finisher: Award,
-  lead_mentor:   GraduationCap,
-  lead_balance:  Scale,
+  lead_mentor: GraduationCap,
+  lead_balance: Scale,
   lead_velocity: Gauge,
-  adm_onboard:   UserPlus,
-  adm_guardian:  ShieldCheck,
-  adm_steward:   Database,
-  adm_audit:     ScrollText,
+  adm_onboard: UserPlus,
+  adm_guardian: ShieldCheck,
+  adm_steward: Database,
+  adm_audit: ScrollText,
 };
 
 /* Tier visual language. 0 = locked grey, 1/2/3 = bronze / silver / gold.
@@ -30,7 +45,7 @@ const TIER_STYLE: Record<0 | 1 | 2 | 3, { ring: string; fg: string; bg: string; 
   0: { ring: '#e2e8f0', fg: '#94a3b8', bg: '#f8fafc', label: 'Locked' },
   1: { ring: '#b45309', fg: '#92400e', bg: '#fef3c7', label: 'Bronze' },
   2: { ring: '#64748b', fg: '#334155', bg: '#e2e8f0', label: 'Silver' },
-  3: { ring: '#b8860b', fg: '#854d0e', bg: '#fef9c3', label: 'Gold'   },
+  3: { ring: '#b8860b', fg: '#854d0e', bg: '#fef9c3', label: 'Gold' },
 };
 
 /**
@@ -68,7 +83,7 @@ function useIsDark() {
 function cellColor(n: number, dark: boolean): string {
   if (!n) return dark ? 'rgba(255,255,255,0.06)' : '#ebedf0';
   if (dark) {
-    if (n <= 5)  return '#0e4429';
+    if (n <= 5) return '#0e4429';
     if (n <= 12) return '#006d32';
     if (n <= 22) return '#26a641';
     return '#39d353';
@@ -80,7 +95,6 @@ function cellColor(n: number, dark: boolean): string {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 
 const ACTIVITY_GRAPH_CACHE_MS = 2 * 60_000;
 const activityGraphCache = new Map<string, { at: number; data: ActivityData }>();
@@ -108,10 +122,14 @@ function loadActivity(who: string, year: number) {
   if (cached && Date.now() - cached.at < ACTIVITY_GRAPH_CACHE_MS) return Promise.resolve(cached.data);
   const pending = activityGraphInflight.get(key);
   if (pending) return pending;
-  const req = api<ActivityData>(`/${who}?year=${year}`).then((data) => {
-    activityGraphCache.set(key, { at: Date.now(), data });
-    return data;
-  }).finally(() => { activityGraphInflight.delete(key); });
+  const req = api<ActivityData>(`/${who}?year=${year}`)
+    .then((data) => {
+      activityGraphCache.set(key, { at: Date.now(), data });
+      return data;
+    })
+    .finally(() => {
+      activityGraphInflight.delete(key);
+    });
   activityGraphInflight.set(key, req);
   return req;
 }
@@ -125,13 +143,21 @@ function loadActivity(who: string, year: number) {
  */
 export function preloadActivityGraphData(opts: { userId?: string; year?: number } = {}): void {
   const year = opts.year ?? new Date().getFullYear();
-  const who  = opts.userId ? `users/${opts.userId}/activity` : 'users/me/activity';
-  void loadActivity(who, year).catch(() => { /* best-effort */ });
+  const who = opts.userId ? `users/${opts.userId}/activity` : 'users/me/activity';
+  void loadActivity(who, year).catch(() => {
+    /* best-effort */
+  });
 }
 
 type ContribItem = {
-  id: string; title: string; projectName: string; projectCode: string;
-  completedAt: string | null; points: number; gxpCritical: boolean; priority: string;
+  id: string;
+  title: string;
+  projectName: string;
+  projectCode: string;
+  completedAt: string | null;
+  points: number;
+  gxpCritical: boolean;
+  priority: string;
   kind: 'task' | 'subtask' | 'comment' | 'first_day';
 };
 
@@ -166,9 +192,12 @@ function timeAgo(iso: string | null): string {
   if (!iso) return '';
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return 'just now';
-  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24); if (d < 30) return `${d}d ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
@@ -181,7 +210,7 @@ function AchievementTile({ a }: { a: Achievement }) {
   const Icon = ACHIEVEMENT_ICON[a.id] || CheckCircle2;
   const style = TIER_STYLE[a.tier];
   const earned = a.tier > 0;
-  const next   = a.target;
+  const next = a.target;
   return (
     <div
       className="flex items-center gap-2.5 rounded-xl border bg-white dark:bg-white/[0.02] px-3 py-2.5 transition-all hover:shadow-sm"
@@ -199,7 +228,9 @@ function AchievementTile({ a }: { a: Achievement }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <div className="text-[12px] font-bold leading-none text-slate-800 dark:text-slate-100 truncate">{a.label}</div>
+          <div className="text-[12px] font-bold leading-none text-slate-800 dark:text-slate-100 truncate">
+            {a.label}
+          </div>
           {earned && (
             <span
               className="text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded shrink-0"
@@ -243,10 +274,36 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
       setLoading(true);
     }
     loadActivity(who, year)
-      .then((next) => { if (alive) { setData(next); } })
-      .catch(() => { if (alive) setData({ year, firstYear: year, days: {}, total: 0, streak: 0, totalTasksDone: 0, onTimeTasks: 0, onTimeRate: 0, projectsCompleted: 0, projectsOnTime: 0, badges: [], recent: [], achievements: [], role: 'ic' }); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+      .then((next) => {
+        if (alive) {
+          setData(next);
+        }
+      })
+      .catch(() => {
+        if (alive)
+          setData({
+            year,
+            firstYear: year,
+            days: {},
+            total: 0,
+            streak: 0,
+            totalTasksDone: 0,
+            onTimeTasks: 0,
+            onTimeRate: 0,
+            projectsCompleted: 0,
+            projectsOnTime: 0,
+            badges: [],
+            recent: [],
+            achievements: [],
+            role: 'ic',
+          });
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
   }, [who, year]);
 
   const days = useMemo(() => data?.days || {}, [data?.days]);
@@ -276,10 +333,12 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
     const labels: (string | null)[] = [];
     let lastMonth = -1;
     for (const col of weeks) {
-      const firstInYear = col.find(c => c.inYear) || col[0];
+      const firstInYear = col.find((c) => c.inYear) || col[0];
       const m = new Date(firstInYear.key + 'T00:00:00').getMonth();
-      if (m !== lastMonth) { labels.push(MONTHS[m]); lastMonth = m; }
-      else labels.push(null);
+      if (m !== lastMonth) {
+        labels.push(MONTHS[m]);
+        lastMonth = m;
+      } else labels.push(null);
     }
     return labels;
   }, [weeks]);
@@ -296,7 +355,7 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
   const timeline = useMemo(() => {
     const groups: { date: string; label: string; items: ContribItem[] }[] = [];
     const map = new Map<string, ContribItem[]>();
-    for (const it of (data?.recent || [])) {
+    for (const it of data?.recent || []) {
       const key = (it.completedAt || '').slice(0, 10);
       if (!key) continue;
       if (!map.has(key)) map.set(key, []);
@@ -314,8 +373,8 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
   }, [data?.recent]);
 
   const achievements = data?.achievements || [];
-  const role         = data?.role || 'ic';
-  const roleLabel    = role === 'admin' ? 'Admin' : role === 'lead' ? 'Team Lead' : 'Individual Contributor';
+  const role = data?.role || 'ic';
+  const roleLabel = role === 'admin' ? 'Admin' : role === 'lead' ? 'Team Lead' : 'Individual Contributor';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[210px_1fr] gap-5">
@@ -324,23 +383,30 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
           `transform: scale()` for its entrance animation, `position: fixed`
           descendants are positioned relative to the modal, not the viewport,
           which is what was throwing the tooltip "to the far right".) */}
-      {tip && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed z-[1000] pointer-events-none -translate-x-1/2 -translate-y-full"
-          style={{ left: tip.x, top: tip.y - 8 }}
-        >
-          <div className="rounded-lg bg-slate-900 text-white px-2.5 py-1.5 shadow-xl text-center whitespace-nowrap">
-            <div className="text-[11px] font-bold leading-tight">
-              {tip.count} contribution point{tip.count === 1 ? '' : 's'}
+      {tip &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed z-[1000] pointer-events-none -translate-x-1/2 -translate-y-full"
+            style={{ left: tip.x, top: tip.y - 8 }}
+          >
+            <div className="rounded-lg bg-slate-900 text-white px-2.5 py-1.5 shadow-xl text-center whitespace-nowrap">
+              <div className="text-[11px] font-bold leading-tight">
+                {tip.count} contribution point{tip.count === 1 ? '' : 's'}
+              </div>
+              <div className="text-[10px] text-white/60 leading-tight">
+                {new Date(tip.date + 'T00:00:00').toLocaleDateString(undefined, {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </div>
             </div>
-            <div className="text-[10px] text-white/60 leading-tight">
-              {new Date(tip.date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-            </div>
-          </div>
-          <div className="mx-auto w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-slate-900" />
-        </div>,
-        document.body,
-      )}
+            <div className="mx-auto w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-slate-900" />
+          </div>,
+          document.body,
+        )}
       {/* ── Milestones rail (left) — role-based achievements ───────────────
           Each tile is a discrete recognition tied to a traceable metric. The
           set adapts to the viewed user's role (IC / TL / Admin) so the
@@ -365,7 +431,13 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
         {/* Stats line */}
         <div className="flex items-center gap-2.5 mb-3 flex-wrap">
           <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">
-            {loading ? 'Loading…' : <>{total} contribution point{total === 1 ? '' : 's'} in {year}</>}
+            {loading ? (
+              'Loading…'
+            ) : (
+              <>
+                {total} contribution point{total === 1 ? '' : 's'} in {year}
+              </>
+            )}
           </span>
           {!loading && (data?.streak ?? 0) > 0 && (
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-full">
@@ -386,7 +458,9 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
             <div className="inline-block">
               <div className="flex gap-[3px] mb-1">
                 {monthLabels.map((m, i) => (
-                  <div key={i} style={{ width: 11 }} className="text-[8px] text-slate-400 leading-none">{m || ''}</div>
+                  <div key={i} style={{ width: 11 }} className="text-[8px] text-slate-400 leading-none">
+                    {m || ''}
+                  </div>
                 ))}
               </div>
               <div className="flex gap-[3px]">
@@ -405,7 +479,9 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
                           onMouseLeave={() => setTip(null)}
                           className="cursor-default transition-transform hover:scale-[1.6] hover:z-10"
                           style={{
-                            width: 11, height: 11, borderRadius: 2,
+                            width: 11,
+                            height: 11,
+                            borderRadius: 2,
                             background: cellColor(count, dark),
                             outline: count ? '1px solid rgba(0,0,0,0.04)' : 'none',
                           }}
@@ -419,7 +495,10 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
               <div className="flex items-center gap-1.5 mt-2 justify-end">
                 <span className="text-[9px] text-slate-400">Less</span>
                 {[0, 4, 10, 18, 28].map((n) => (
-                  <div key={n} style={{ width: 10, height: 10, borderRadius: 2, background: cellColor(n, dark) }} />
+                  <div
+                    key={n}
+                    style={{ width: 10, height: 10, borderRadius: 2, background: cellColor(n, dark) }}
+                  />
                 ))}
                 <span className="text-[9px] text-slate-400">More</span>
               </div>
@@ -446,7 +525,9 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
 
         {/* ── Contribution activity timeline ────────────────────────────── */}
         <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">Contribution activity</h4>
+          <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">
+            Contribution activity
+          </h4>
           {loading ? (
             <div className="text-xs text-slate-400">Loading…</div>
           ) : timeline.length === 0 ? (
@@ -454,7 +535,10 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
           ) : (
             <div className="relative pl-4">
               {/* vertical rail */}
-              <span className="absolute left-[5px] top-1 bottom-1 w-px dark:bg-slate-800" style={{ background: '#e2e8f0' }} />
+              <span
+                className="absolute left-[5px] top-1 bottom-1 w-px dark:bg-slate-800"
+                style={{ background: '#e2e8f0' }}
+              />
               <div className="space-y-4">
                 {timeline.map((g) => (
                   <div key={g.date} className="relative">
@@ -462,31 +546,49 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
                     <div className="text-[11px] font-bold text-slate-500 mb-1.5">{g.label}</div>
                     <ul className="space-y-1">
                       {g.items.map((it) => {
-                        const verb = it.kind === 'subtask' ? 'Checked off'
-                          : it.kind === 'comment' ? 'Commented on'
-                          : it.kind === 'first_day' ? '🎉'
-                          : 'Completed';
-                        const glyph = it.kind === 'subtask' ? '☑️'
-                          : it.kind === 'comment' ? '💬'
-                          : it.kind === 'first_day' ? '🌱'
-                          : '✅';
+                        const verb =
+                          it.kind === 'subtask'
+                            ? 'Checked off'
+                            : it.kind === 'comment'
+                              ? 'Commented on'
+                              : it.kind === 'first_day'
+                                ? '🎉'
+                                : 'Completed';
+                        const glyph =
+                          it.kind === 'subtask'
+                            ? '☑️'
+                            : it.kind === 'comment'
+                              ? '💬'
+                              : it.kind === 'first_day'
+                                ? '🌱'
+                                : '✅';
                         return (
-                        <li key={it.id} className="flex items-center gap-2 text-xs">
-                          <span className="text-[11px]">{glyph}</span>
-                          <span className="text-slate-700 dark:text-slate-300 truncate">
-                            {it.kind === 'first_day'
-                              ? <span className="font-medium">{it.title}</span>
-                              : <>{verb} <span className="font-medium">{it.title}</span></>}
-                          </span>
-                          {it.projectCode && (
-                            <span className="text-[10px] font-mono text-slate-400 shrink-0">{it.projectCode}</span>
-                          )}
-                          {it.gxpCritical && (
-                            <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>
-                          )}
-                          <span className="ml-auto text-[10px] font-semibold text-emerald-600 shrink-0">+{it.points}</span>
-                          <span className="text-[10px] text-slate-300 shrink-0 w-12 text-right">{timeAgo(it.completedAt)}</span>
-                        </li>
+                          <li key={it.id} className="flex items-center gap-2 text-xs">
+                            <span className="text-[11px]">{glyph}</span>
+                            <span className="text-slate-700 dark:text-slate-300 truncate">
+                              {it.kind === 'first_day' ? (
+                                <span className="font-medium">{it.title}</span>
+                              ) : (
+                                <>
+                                  {verb} <span className="font-medium">{it.title}</span>
+                                </>
+                              )}
+                            </span>
+                            {it.projectCode && (
+                              <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                                {it.projectCode}
+                              </span>
+                            )}
+                            {it.gxpCritical && (
+                              <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>
+                            )}
+                            <span className="ml-auto text-[10px] font-semibold text-emerald-600 shrink-0">
+                              +{it.points}
+                            </span>
+                            <span className="text-[10px] text-slate-300 shrink-0 w-12 text-right">
+                              {timeAgo(it.completedAt)}
+                            </span>
+                          </li>
                         );
                       })}
                     </ul>

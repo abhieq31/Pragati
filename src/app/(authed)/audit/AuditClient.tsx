@@ -50,23 +50,32 @@ function fmt(ts: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
 }
 
-interface AuditPage { rows: LogRow[]; nextBefore: string | null }
+interface AuditPage {
+  rows: LogRow[];
+  nextBefore: string | null;
+}
 
-export default function AuditClient({ initialRows, initialNextBefore = null }: { initialRows: LogRow[]; initialNextBefore?: string | null }) {
+export default function AuditClient({
+  initialRows,
+  initialNextBefore = null,
+}: {
+  initialRows: LogRow[];
+  initialNextBefore?: string | null;
+}) {
   const isAdmin = useIsAdmin();
   const params = useSearchParams();
   // Deep-link filter — a "View audit trail" link on a project/task/user opens
   // this page pre-scoped to that entity. The chip near the search input lets
   // the admin lift the filter without going back.
   const initialTargetType = params.get('targetType') || '';
-  const initialTargetId   = params.get('targetId') || '';
+  const initialTargetId = params.get('targetId') || '';
 
   const [rows, setRows] = useState<LogRow[]>(initialRows);
   const [nextBefore, setNextBefore] = useState<string | null>(initialNextBefore);
   const [category, setCategory] = useState('all');
   const [targetType, setTargetType] = useState(initialTargetType);
-  const [targetId,   setTargetId]   = useState(initialTargetId);
-  const [q, setQ]   = useState('');
+  const [targetId, setTargetId] = useState(initialTargetId);
+  const [q, setQ] = useState('');
   const [qDeb, setQDeb] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,16 +93,22 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
   const query = useMemo(() => {
     const parts = [`category=${encodeURIComponent(category)}`];
     if (targetType) parts.push(`targetType=${encodeURIComponent(targetType)}`);
-    if (targetId)   parts.push(`targetId=${encodeURIComponent(targetId)}`);
-    if (qDeb)       parts.push(`q=${encodeURIComponent(qDeb)}`);
+    if (targetId) parts.push(`targetId=${encodeURIComponent(targetId)}`);
+    if (qDeb) parts.push(`q=${encodeURIComponent(qDeb)}`);
     return parts.join('&');
   }, [category, targetType, targetId, qDeb]);
 
   function load() {
     setBusy(true);
     api<AuditPage>(`/audit?${query}`)
-      .then((res) => { setRows(res.rows); setNextBefore(res.nextBefore); })
-      .catch(() => { setRows([]); setNextBefore(null); })
+      .then((res) => {
+        setRows(res.rows);
+        setNextBefore(res.nextBefore);
+      })
+      .catch(() => {
+        setRows([]);
+        setNextBefore(null);
+      })
       .finally(() => setBusy(false));
   }
 
@@ -114,9 +129,12 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
 
   useEffect(() => {
     if (!isAdmin) return;
-    if (skipNext.current) { skipNext.current = false; return; }
+    if (skipNext.current) {
+      skipNext.current = false;
+      return;
+    }
     load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, isAdmin]);
 
   if (!isAdmin) {
@@ -145,12 +163,17 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap mt-0.5">
-            <Link href="/audit/changelog"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg transition-colors">
+            <Link
+              href="/audit/changelog"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
               <Sparkles size={13} /> Changelog
             </Link>
-            <button onClick={load} disabled={busy}
-              className="btn-secondary flex items-center gap-1.5 text-xs">
+            <button
+              onClick={load}
+              disabled={busy}
+              className="btn-secondary flex items-center gap-1.5 text-xs"
+            >
               <RefreshCw size={13} className={busy ? 'animate-spin' : ''} /> Refresh
             </button>
           </div>
@@ -161,10 +184,15 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
       <div className="flex flex-col gap-2.5">
         <div className="flex gap-1.5 flex-wrap">
           {CATEGORIES.map((c) => (
-            <button key={c.key} onClick={() => setCategory(c.key)}
+            <button
+              key={c.key}
+              onClick={() => setCategory(c.key)}
               className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
-                category === c.key ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-              }`}>
+                category === c.key
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
               {c.label}
             </button>
           ))}
@@ -173,26 +201,33 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
           <div className="relative flex-1 min-w-0 w-full max-w-md">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
-              value={q} onChange={(e) => setQ(e.target.value)}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
               placeholder="Search by activity, who, or target…"
               className="input text-sm pl-9"
             />
           </div>
           {(targetType || targetId) && (
             <button
-              onClick={() => { setTargetType(''); setTargetId(''); }}
+              onClick={() => {
+                setTargetType('');
+                setTargetId('');
+              }}
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors"
               title="Clear the entity-specific filter"
             >
-              Filtered to {targetType || 'entity'}: <span className="font-mono">{(targetId || '').slice(-6)}</span>
+              Filtered to {targetType || 'entity'}:{' '}
+              <span className="font-mono">{(targetId || '').slice(-6)}</span>
               <X size={12} />
             </button>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
-        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+      <div
+        className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden"
+        style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+      >
         {rows.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-400">No activity recorded yet.</div>
         ) : (
@@ -200,16 +235,27 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
             <table className="w-full text-sm table-mobile-cards">
               <thead>
                 <tr className="bg-slate-50/60 border-b border-slate-100 text-left">
-                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-4 py-2.5">When</th>
-                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2.5">Who</th>
-                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2.5">Area</th>
-                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2.5">Activity</th>
+                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-4 py-2.5">
+                    When
+                  </th>
+                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2.5">
+                    Who
+                  </th>
+                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2.5">
+                    Area
+                  </th>
+                  <th className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-2.5">
+                    Activity
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {rows.map((r) => {
                   const href = targetHref(r);
-                  const hasDetail = !!(r.meta && (r.meta.changes || r.meta.reason || r.meta.deactivationReason));
+                  const hasDetail = !!(
+                    r.meta &&
+                    (r.meta.changes || r.meta.reason || r.meta.deactivationReason)
+                  );
                   const isOpen = expanded === r.id;
                   return (
                     <Fragment key={r.id}>
@@ -217,31 +263,59 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                         onClick={() => hasDetail && setExpanded(isOpen ? null : r.id)}
                         className={`hover:bg-slate-50/70 transition-colors ${hasDetail ? 'cursor-pointer' : ''}`}
                       >
-                        <td data-label="When" className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500">
+                        <td
+                          data-label="When"
+                          className="px-4 py-2.5 whitespace-nowrap text-xs text-slate-500"
+                        >
                           <div className="flex items-center gap-1.5">
                             {hasDetail && (
-                              <ChevronRight size={11}
-                                className={`text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                              <ChevronRight
+                                size={11}
+                                className={`text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                              />
                             )}
                             {!hasDetail && <span className="w-[11px]" />}
                             {fmt(r.createdAt)}
                           </div>
                         </td>
-                        <td data-label="Who" className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap">{r.actorName}</td>
+                        <td
+                          data-label="Who"
+                          className="px-2 py-2.5 text-xs font-medium text-slate-700 whitespace-nowrap"
+                        >
+                          {r.actorName}
+                        </td>
                         <td data-label="Area" className="px-2 py-2.5">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[r.category] || CATEGORY_TONE.general}`}>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${CATEGORY_TONE[r.category] || CATEGORY_TONE.general}`}
+                          >
                             {r.category}
                           </span>
                         </td>
                         <td data-label="Activity" className="px-2 py-2.5 text-xs text-slate-700">
                           {r.summary}
                           {r.targetLabel && href && (
-                            <> · <Link onClick={(e) => e.stopPropagation()} href={href} className="text-blue-600 hover:underline font-medium">{r.targetLabel}</Link></>
+                            <>
+                              {' '}
+                              ·{' '}
+                              <Link
+                                onClick={(e) => e.stopPropagation()}
+                                href={href}
+                                className="text-blue-600 hover:underline font-medium"
+                              >
+                                {r.targetLabel}
+                              </Link>
+                            </>
                           )}
-                          {r.targetLabel && !href && <span className="text-slate-400"> · {r.targetLabel}</span>}
+                          {r.targetLabel && !href && (
+                            <span className="text-slate-400"> · {r.targetLabel}</span>
+                          )}
                           {r.targetType && r.targetId && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); setTargetType(r.targetType); setTargetId(r.targetId); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTargetType(r.targetType);
+                                setTargetId(r.targetId);
+                              }}
                               className="ml-2 text-[10px] font-semibold text-slate-400 hover:text-blue-600 transition-colors"
                               title="Scope to this entity's full trail"
                             >
@@ -255,19 +329,25 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                           <td colSpan={4} className="px-4 py-3 text-xs">
                             {r.meta?.reason && (
                               <div className="mb-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reason</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  Reason
+                                </span>
                                 <div className="text-slate-700 mt-0.5">{r.meta.reason}</div>
                               </div>
                             )}
                             {r.meta?.deactivationReason && !r.meta?.reason && (
                               <div className="mb-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Deactivation reason</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  Deactivation reason
+                                </span>
                                 <div className="text-slate-700 mt-0.5">{r.meta.deactivationReason}</div>
                               </div>
                             )}
                             {r.meta?.changes && (
                               <div>
-                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Changes</div>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                  Changes
+                                </div>
                                 <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
                                   <table className="w-full text-[11px]">
                                     <thead>
@@ -278,11 +358,17 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                      {Object.entries(r.meta.changes as Record<string, { before: any; after: any }>).map(([k, v]) => (
+                                      {Object.entries(
+                                        r.meta.changes as Record<string, { before: any; after: any }>,
+                                      ).map(([k, v]) => (
                                         <tr key={k}>
                                           <td className="px-2 py-1.5 font-mono text-slate-600">{k}</td>
-                                          <td className="px-2 py-1.5 text-slate-500 line-through decoration-red-300">{String(v.before ?? '—')}</td>
-                                          <td className="px-2 py-1.5 text-emerald-700 font-medium">{String(v.after ?? '—')}</td>
+                                          <td className="px-2 py-1.5 text-slate-500 line-through decoration-red-300">
+                                            {String(v.before ?? '—')}
+                                          </td>
+                                          <td className="px-2 py-1.5 text-emerald-700 font-medium">
+                                            {String(v.after ?? '—')}
+                                          </td>
                                         </tr>
                                       ))}
                                     </tbody>
@@ -304,8 +390,11 @@ export default function AuditClient({ initialRows, initialNextBefore = null }: {
 
       {nextBefore && (
         <div className="flex justify-center">
-          <button onClick={loadMore} disabled={loadingMore}
-            className="btn-secondary flex items-center gap-1.5 text-xs">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="btn-secondary flex items-center gap-1.5 text-xs"
+          >
             <RefreshCw size={13} className={loadingMore ? 'animate-spin' : ''} />
             {loadingMore ? 'Loading…' : 'Load older activity'}
           </button>

@@ -69,7 +69,15 @@ export async function PATCH(req: NextRequest) {
     const body = await readBody(req, Body);
 
     const $set: Record<string, any> = { updatedByName: caller.name || '' };
-    for (const k of ['enabled', 'dueToday', 'overdue', 'dueSoonDays', 'projectUpdates', 'sendWhenEmpty', 'introNote'] as const) {
+    for (const k of [
+      'enabled',
+      'dueToday',
+      'overdue',
+      'dueSoonDays',
+      'projectUpdates',
+      'sendWhenEmpty',
+      'introNote',
+    ] as const) {
       if (body[k] !== undefined) $set[k] = body[k];
     }
 
@@ -81,8 +89,12 @@ export async function PATCH(req: NextRequest) {
 
     // Operational provenance — who tuned the workspace-wide digest config.
     await logOperation({
-      action: 'settings.digest_update', category: 'general', actor: caller,
-      targetType: 'setting', targetId: 'digest', targetLabel: 'Daily email digest',
+      action: 'settings.digest_update',
+      category: 'general',
+      actor: caller,
+      targetType: 'setting',
+      targetId: 'digest',
+      targetLabel: 'Daily email digest',
       summary: 'Updated daily email digest settings',
       meta: { changed: Object.keys($set).filter((k) => k !== 'updatedByName') },
     });

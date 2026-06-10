@@ -92,26 +92,31 @@ export function FlowSignalStrip({ data, onChange }: StripProps) {
 
   // Re-sync if a fresh server payload arrives (e.g. parent re-fetched).
   // We deliberately don't merge — the server is authoritative.
-  useMemo(() => { setItems(initial); }, [data]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useMemo(() => {
+    setItems(initial);
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeItemLocally = useCallback((taskId: string) => {
     setItems((prev) => prev.filter((i) => i.taskId !== taskId));
   }, []);
 
-  const doAction = useCallback(async (taskId: string, action: FlowAction) => {
-    setBusyId(taskId);
-    try {
-      await api(`/tasks/${taskId}/flow-check`, { method: 'POST', body: { action } });
-      removeItemLocally(taskId);
-      onChange?.();
-    } catch {
-      // Soft-fail: leave the row visible so the user can retry. We
-      // deliberately don't surface a toast here — the strip is a quiet
-      // affordance and shouldn't bark on a transient blip.
-    } finally {
-      setBusyId(null);
-    }
-  }, [onChange, removeItemLocally]);
+  const doAction = useCallback(
+    async (taskId: string, action: FlowAction) => {
+      setBusyId(taskId);
+      try {
+        await api(`/tasks/${taskId}/flow-check`, { method: 'POST', body: { action } });
+        removeItemLocally(taskId);
+        onChange?.();
+      } catch {
+        // Soft-fail: leave the row visible so the user can retry. We
+        // deliberately don't surface a toast here — the strip is a quiet
+        // affordance and shouldn't bark on a transient blip.
+      } finally {
+        setBusyId(null);
+      }
+    },
+    [onChange, removeItemLocally],
+  );
 
   if (!data || items.length === 0) return null;
 
@@ -132,9 +137,11 @@ export function FlowSignalStrip({ data, onChange }: StripProps) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap text-[12.5px] leading-tight">
             <span className="font-bold text-slate-500 dark:text-white/55 tracking-tight">
-              {data.mode === 'quick_check' ? 'Quick check' :
-               data.mode === 'check_needed' ? 'Check needed' :
-               'Needs attention'}
+              {data.mode === 'quick_check'
+                ? 'Quick check'
+                : data.mode === 'check_needed'
+                  ? 'Check needed'
+                  : 'Needs attention'}
             </span>
             <span className="text-slate-300 dark:text-white/15">·</span>
             <span className="text-slate-800 dark:text-white/80">
@@ -176,23 +183,32 @@ export function FlowSignalStrip({ data, onChange }: StripProps) {
         )}
       </div>
 
-      {expanded && extraItems.map((it) => (
-        <div key={it.taskId} className="flex items-start gap-2.5 px-1 py-1.5 mt-1 border-t border-slate-100 dark:border-white/[0.05]">
-          <span className="mt-[7px] inline-block w-2 h-2 rounded-full shrink-0"
-            style={{ background: dotColorFor(it, data.mode) }} aria-hidden />
-          <div className="flex-1 min-w-0">
-            <div className="text-[12.5px] leading-tight text-slate-800 dark:text-white/80">
-              <span className="font-semibold">{it.headline}</span>
-              {' · '}
-              <Link href={`/tasks/${it.taskId}`}
-                className="font-semibold text-blue-700 dark:text-blue-400 hover:underline">
-                {it.taskTitle}
-              </Link>
+      {expanded &&
+        extraItems.map((it) => (
+          <div
+            key={it.taskId}
+            className="flex items-start gap-2.5 px-1 py-1.5 mt-1 border-t border-slate-100 dark:border-white/[0.05]"
+          >
+            <span
+              className="mt-[7px] inline-block w-2 h-2 rounded-full shrink-0"
+              style={{ background: dotColorFor(it, data.mode) }}
+              aria-hidden
+            />
+            <div className="flex-1 min-w-0">
+              <div className="text-[12.5px] leading-tight text-slate-800 dark:text-white/80">
+                <span className="font-semibold">{it.headline}</span>
+                {' · '}
+                <Link
+                  href={`/tasks/${it.taskId}`}
+                  className="font-semibold text-blue-700 dark:text-blue-400 hover:underline"
+                >
+                  {it.taskTitle}
+                </Link>
+              </div>
+              <FlowActionsRow item={it} busy={busyId === it.taskId} onAction={doAction} />
             </div>
-            <FlowActionsRow item={it} busy={busyId === it.taskId} onAction={doAction} />
           </div>
-        </div>
-      ))}
+        ))}
 
       {/* One-shot pulse animation. Plays twice over ~2.1s then halts; CSS
           keyframes do the work so no JS timeout is needed. Reduced-motion
@@ -217,7 +233,9 @@ export function FlowSignalStrip({ data, onChange }: StripProps) {
  *  the item is a confirmed blocker (resolve) or an unconfirmed quick check
  *  (still moving / waiting / decision / help). */
 function FlowActionsRow({
-  item, busy, onAction,
+  item,
+  busy,
+  onAction,
 }: {
   item: FlowSignalItem;
   busy: boolean;
@@ -250,10 +268,10 @@ function FlowActionsRow({
   return (
     <div className="mt-1 flex items-center gap-1 flex-wrap">
       {[
-        { label: 'Still moving',       action: 'still_moving'     as const },
-        { label: 'Waiting on someone', action: 'waiting_other'    as const },
-        { label: 'Need a decision',    action: 'decision_needed'  as const },
-        { label: 'Need help',          action: 'help_needed'      as const },
+        { label: 'Still moving', action: 'still_moving' as const },
+        { label: 'Waiting on someone', action: 'waiting_other' as const },
+        { label: 'Need a decision', action: 'decision_needed' as const },
+        { label: 'Need help', action: 'help_needed' as const },
       ].map((b) => (
         <button
           key={b.action}
@@ -274,7 +292,7 @@ function relTime(iso: string): string {
   const t = new Date(iso).getTime();
   if (!Number.isFinite(t)) return '';
   const ms = Date.now() - t;
-  const d  = Math.floor(ms / 86_400_000);
+  const d = Math.floor(ms / 86_400_000);
   if (d <= 0) return 'today';
   if (d === 1) return 'yesterday';
   if (d < 7) return `${d} days ago`;

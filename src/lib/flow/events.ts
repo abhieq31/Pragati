@@ -106,26 +106,23 @@ export async function recordTaskFlowEvent(args: RecordEventArgs): Promise<void> 
     const shouldTouch = args.touchActivity ?? MEANINGFUL.has(args.eventType);
 
     await TaskFlowEvent.create({
-      taskId:    args.taskId,
+      taskId: args.taskId,
       projectId: args.projectId,
-      teamId:    args.teamId || undefined,
-      actorId:   args.actorId || undefined,
+      teamId: args.teamId || undefined,
+      actorId: args.actorId || undefined,
       eventType: args.eventType,
-      stateBefore:      args.stateBefore || undefined,
-      stateAfter:       args.stateAfter || undefined,
-      taskType:         args.taskType || undefined,
+      stateBefore: args.stateBefore || undefined,
+      stateAfter: args.stateAfter || undefined,
+      taskType: args.taskType || undefined,
       projectLifecycle: args.projectLifecycle || undefined,
       occurredAt,
-      source:           args.source || 'live',
-      metadata:         args.metadata ?? null,
-      schemaVersion:    1,
+      source: args.source || 'live',
+      metadata: args.metadata ?? null,
+      schemaVersion: 1,
     });
 
     if (shouldTouch) {
-      await Task.updateOne(
-        { _id: args.taskId },
-        { $max: { lastMeaningfulActivityAt: occurredAt } },
-      );
+      await Task.updateOne({ _id: args.taskId }, { $max: { lastMeaningfulActivityAt: occurredAt } });
     }
   } catch (e) {
     // Never let analytics failure break the operation it accompanies.
@@ -142,10 +139,7 @@ export async function recordTaskFlowEvent(args: RecordEventArgs): Promise<void> 
 export async function touchMeaningfulActivity(taskId: Oid, at?: Date): Promise<void> {
   if (!taskId) return;
   try {
-    await Task.updateOne(
-      { _id: taskId },
-      { $max: { lastMeaningfulActivityAt: at || new Date() } },
-    );
+    await Task.updateOne({ _id: taskId }, { $max: { lastMeaningfulActivityAt: at || new Date() } });
   } catch (e) {
     console.error('[flow] touchMeaningfulActivity failed', e);
   }

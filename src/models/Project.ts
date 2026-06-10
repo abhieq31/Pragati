@@ -9,9 +9,9 @@ const LIFECYCLE_KEYS = Object.keys(LIFECYCLES);
 const PhaseSchema = new Schema(
   {
     name: { type: String, required: true },
-    position: { type: Number, default: 0 }
+    position: { type: Number, default: 0 },
   },
-  { _id: true }
+  { _id: true },
 );
 
 const ProjectSchema = new Schema(
@@ -22,17 +22,17 @@ const ProjectSchema = new Schema(
     lifecycle: {
       type: String,
       enum: LIFECYCLE_KEYS,
-      default: 'generic'
+      default: 'generic',
     },
     status: {
       type: String,
       enum: ['planning', 'in_progress', 'on_hold', 'completed', 'cancelled'],
-      default: 'planning'
+      default: 'planning',
     },
     priority: {
       type: String,
       enum: ['low', 'medium', 'high', 'critical'],
-      default: 'medium'
+      default: 'medium',
     },
     teamId: { type: Schema.Types.ObjectId, ref: 'Team' },
     ownerId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -53,8 +53,8 @@ const ProjectSchema = new Schema(
     // and audit trails remain intact — only the default project list
     // and dashboard hide it. Toggleable from the project header by
     // lead/admin. archivedAt also stamps the moment for the audit log.
-    archived:   { type: Boolean, default: false },
-    archivedAt: { type: Date,    default: null   },
+    archived: { type: Boolean, default: false },
+    archivedAt: { type: Date, default: null },
     archivedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 
     // ── Personal projects ───────────────────────────────────────────────
@@ -63,14 +63,21 @@ const ProjectSchema = new Schema(
     // can create one; it carries no team.
     personal: { type: Boolean, default: false },
 
-    // ── GxP / Change-Control project reference ──────────────────────────
-    // A project-level Change Control reference that ties this project to a
-    // formal CC document (e.g. "CC-2025-042"). Distinct from the per-task
-    // ccNo — this is the project-wide regulatory identifier. Every change is
-    // audited (before/after) because it is a regulated GxP record identifier.
+    // ── Project reference number ─────────────────────────────────────────
+    // A project-level reference that ties this project to a formal source
+    // document (e.g. "CC-2025-042", "SOP-2026-0004", "CAPA-2025-118").
+    // Stored in `ccNo` for backward compatibility, but the *kind* of
+    // reference is user-pickable per project via `refLabel` — not every
+    // project is a Change Control. Distinct from the per-task ccNo — this is
+    // the project-wide regulatory identifier. Every change is audited
+    // (before/after) because it is a regulated GxP record identifier.
     ccNo: { type: String, default: '' },
+    // What the reference number IS for this project — e.g. "CC#", "SOP#",
+    // "CAPA#", "INC#". Free text so each team can match its own document
+    // numbering scheme. Empty string renders as the generic "Ref #".
+    refLabel: { type: String, default: '' },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 ProjectSchema.index({ teamId: 1 });
@@ -86,5 +93,4 @@ ProjectSchema.index({ lifecycle: 1, archived: 1 });
 export type ProjectDoc = InferSchemaType<typeof ProjectSchema> & { _id: mongoose.Types.ObjectId };
 
 export const Project: Model<ProjectDoc> =
-  (mongoose.models.Project as Model<ProjectDoc>) ||
-  mongoose.model<ProjectDoc>('Project', ProjectSchema);
+  (mongoose.models.Project as Model<ProjectDoc>) || mongoose.model<ProjectDoc>('Project', ProjectSchema);

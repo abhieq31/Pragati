@@ -56,10 +56,10 @@ export async function listProjectsForUser(
   const visibility = projectsVisibleFilter(scope);
   const q: any = { ...visibility };
 
-  if (filters.archivedOnly)         q.archived = true;
+  if (filters.archivedOnly) q.archived = true;
   else if (!filters.includeArchived) q.archived = { $ne: true };
 
-  if (filters.teamId)    q.teamId    = filters.teamId;
+  if (filters.teamId) q.teamId = filters.teamId;
   if (filters.lifecycle) q.lifecycle = filters.lifecycle;
   if (filters.statuses?.length) {
     q.status = filters.statuses.length === 1 ? filters.statuses[0] : { $in: filters.statuses };
@@ -68,17 +68,21 @@ export async function listProjectsForUser(
     const safe = filters.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     q.$and = [
       visibility,
-      { $or: [
-        { name:        { $regex: safe, $options: 'i' } },
-        { code:        { $regex: safe, $options: 'i' } },
-        { description: { $regex: safe, $options: 'i' } },
-      ] },
+      {
+        $or: [
+          { name: { $regex: safe, $options: 'i' } },
+          { code: { $regex: safe, $options: 'i' } },
+          { description: { $regex: safe, $options: 'i' } },
+        ],
+      },
     ];
     delete q.$or;
   }
 
   const projects = await Project.find(q)
-    .select('code name description lifecycle status priority teamId ownerId startDate dueDate completedAt gxpImpact archived archivedAt archivedBy isPersonal personal createdAt')
+    .select(
+      'code name description lifecycle status priority teamId ownerId startDate dueDate completedAt gxpImpact archived archivedAt archivedBy isPersonal personal createdAt',
+    )
     .sort({ createdAt: -1 })
     .limit(200)
     .lean();
@@ -93,8 +97,8 @@ export async function listProjectsForUser(
       {
         $group: {
           _id: '$projectId',
-          taskCount:    { $sum: 1 },
-          tasksDone:    { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } },
+          taskCount: { $sum: 1 },
+          tasksDone: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } },
           tasksOverdue: {
             $sum: {
               $cond: [
@@ -115,19 +119,19 @@ export async function listProjectsForUser(
     ]),
   ]);
 
-  const teamMap  = new Map(teams.map((t)  => [String(t._id), t.name]));
+  const teamMap = new Map(teams.map((t) => [String(t._id), t.name]));
   const ownerMap = new Map(owners.map((o) => [String(o._id), o.name]));
-  const taskMap  = new Map(taskAgg.map((a: any) => [String(a._id), a]));
+  const taskMap = new Map(taskAgg.map((a: any) => [String(a._id), a]));
 
   return projects.map((p) => {
     const t = taskMap.get(String(p._id)) || { taskCount: 0, tasksDone: 0, tasksOverdue: 0 };
     return {
       ...projectS(p, {
-        teamName:  p.teamId  ? teamMap.get(String(p.teamId))  || null : null,
+        teamName: p.teamId ? teamMap.get(String(p.teamId)) || null : null,
         ownerName: p.ownerId ? ownerMap.get(String(p.ownerId)) || null : null,
       }),
-      taskCount:    t.taskCount,
-      tasksDone:    t.tasksDone,
+      taskCount: t.taskCount,
+      tasksDone: t.tasksDone,
       tasksOverdue: t.tasksOverdue,
     } as ProjectListItem;
   });
@@ -143,8 +147,8 @@ export async function listProjectsForUser(
 const PROJECTS_PAGE_TTL_SECONDS = 15;
 
 export interface ProjectsPagePayload {
-  projects:   ProjectListItem[];
-  teams:      Array<{ id: string; name: string }>;
+  projects: ProjectListItem[];
+  teams: Array<{ id: string; name: string }>;
   lifecycles: Array<{ key: string; label: string }>;
 }
 

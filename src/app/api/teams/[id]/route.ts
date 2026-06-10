@@ -31,14 +31,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         ((t as any).memberIds || []).some((m: any) => String(m) === me);
       if (!isMember) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-    const memberIds = ((t as any).memberIds || []);
+    const memberIds = (t as any).memberIds || [];
     const [users, projects] = await Promise.all([
       User.find({ _id: { $in: memberIds } }).lean(),
       Project.find({ teamId: params.id }).lean(),
     ]);
     const taskCounts = await Task.aggregate([
       { $match: { projectId: { $in: projects.map((p) => p._id) } } },
-      { $group: { _id: { projectId: '$projectId', status: '$status' }, c: { $sum: 1 } } }
+      { $group: { _id: { projectId: '$projectId', status: '$status' }, c: { $sum: 1 } } },
     ]);
     const projectAgg = new Map<string, { total: number; done: number }>();
     for (const c of taskCounts) {
@@ -58,9 +58,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         const agg = projectAgg.get(String(p._id));
         return projectS(p, {
           taskCount: agg?.total || 0,
-          tasksDone: agg?.done || 0
+          tasksDone: agg?.done || 0,
         });
-      })
+      }),
     });
   } catch (e) {
     return handleError(e);
@@ -96,8 +96,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await Team.updateOne({ _id: params.id }, { $set: patch });
     const fresh = await Team.findById(params.id).lean();
     await logOperation({
-      action: 'team.update', category: 'team', actor: user,
-      targetType: 'team', targetId: params.id, targetLabel: (fresh as any)?.name || '',
+      action: 'team.update',
+      category: 'team',
+      actor: user,
+      targetType: 'team',
+      targetId: params.id,
+      targetLabel: (fresh as any)?.name || '',
       summary: 'Updated team',
     });
     return NextResponse.json(teamS(fresh));
@@ -129,8 +133,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await Team.deleteOne({ _id: params.id });
 
     await logOperation({
-      action: 'team.delete', category: 'team', actor: user,
-      targetType: 'team', targetId: params.id, targetLabel: (doomed as any)?.name || '',
+      action: 'team.delete',
+      category: 'team',
+      actor: user,
+      targetType: 'team',
+      targetId: params.id,
+      targetLabel: (doomed as any)?.name || '',
       summary: `Deleted team ${(doomed as any)?.name || ''}`.trim(),
     });
 

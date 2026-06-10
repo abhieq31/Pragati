@@ -44,14 +44,16 @@ export function ProfileHero({
   showMemberId?: boolean;
 }) {
   const meta = [
-    title        ? { icon: Briefcase, text: title } : null,
-    department   ? { icon: Building2, text: department } : null,
-    location     ? { icon: MapPin,    text: location } : null,
+    title ? { icon: Briefcase, text: title } : null,
+    department ? { icon: Building2, text: department } : null,
+    location ? { icon: MapPin, text: location } : null,
   ].filter(Boolean) as { icon: any; text: string }[];
 
   const handle = username ? (
     linkUsername ? (
-      <Link href={`/${username}`} className="font-mono break-all hover:text-white transition-colors">@{username}</Link>
+      <Link href={`/${username}`} className="font-mono break-all hover:text-white transition-colors">
+        @{username}
+      </Link>
     ) : (
       <span className="font-mono break-all">@{username}</span>
     )
@@ -65,27 +67,37 @@ export function ProfileHero({
       <div className="absolute inset-0 profile-hero-shimmer" />
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(120% 140% at 12% 0%, rgba(255,255,255,0.20) 0%, transparent 45%)' }}
+        style={{
+          background: 'radial-gradient(120% 140% at 12% 0%, rgba(255,255,255,0.20) 0%, transparent 45%)',
+        }}
       />
 
       <div className="relative px-5 py-6 sm:px-8 sm:py-7">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div className="shrink-0 rounded-3xl bg-white p-1.5" style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}>
+            <div
+              className="shrink-0 rounded-3xl bg-white p-1.5"
+              style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}
+            >
               {avatar}
             </div>
             <div className="min-w-0 pb-1">
               <div className="mb-3 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white backdrop-blur">
                 <span className="font-display">Pragati</span>&nbsp;profile
               </div>
-              <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl break-words">{name}</h1>
+              <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl break-words">
+                {name}
+              </h1>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
                 {handle}
               </div>
               {meta.length > 0 && (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {meta.map((m, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur">
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur"
+                    >
                       <m.icon size={11} className="opacity-80" /> {m.text}
                     </span>
                   ))}
@@ -94,7 +106,9 @@ export function ProfileHero({
             </div>
           </div>
 
-          <div className={`grid w-full gap-2 lg:w-auto ${showMemberId ? 'grid-cols-2 lg:min-w-[260px]' : 'grid-cols-1 lg:min-w-[140px]'}`}>
+          <div
+            className={`grid w-full gap-2 lg:w-auto ${showMemberId ? 'grid-cols-2 lg:min-w-[260px]' : 'grid-cols-1 lg:min-w-[140px]'}`}
+          >
             <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
               <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Access</div>
               <div className="mt-1 text-sm font-black">{roleText}</div>

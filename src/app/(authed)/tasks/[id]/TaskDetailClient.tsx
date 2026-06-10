@@ -11,24 +11,35 @@ import { Select } from '@/components/Select';
 import { UserPicker } from '@/components/UserPicker';
 import { useIsLead, useIsAdmin } from '@/components/CurrentUserContext';
 import { chimeIfEnabled } from '@/lib/sound';
-import { ChevronRight, Shield, FileText, MessageSquare, Clock, Trash2, ScrollText, Pencil, Check, X } from 'lucide-react';
+import {
+  ChevronRight,
+  Shield,
+  FileText,
+  MessageSquare,
+  Clock,
+  Trash2,
+  ScrollText,
+  Pencil,
+  Check,
+  X,
+} from 'lucide-react';
 import { FlowSignalTaskStrip } from '@/components/FlowSignalTaskStrip';
 
 // TaskCompletePop is only shown on task completion — off the critical render
 // path so deferring it improves FCP/LCP.
-const TaskCompletePop = dynamic(
-  () => import('@/components/TaskCompletePop').then(m => m.TaskCompletePop),
-  { ssr: false, loading: () => null },
-);
+const TaskCompletePop = dynamic(() => import('@/components/TaskCompletePop').then((m) => m.TaskCompletePop), {
+  ssr: false,
+  loading: () => null,
+});
 
 const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
 const STATUS_META: Record<string, { label: string; dot: string; ring: string }> = {
-  todo:        { label: 'To do',       dot: '#94a3b8', ring: '#e2e8f0' },
+  todo: { label: 'To do', dot: '#94a3b8', ring: '#e2e8f0' },
   in_progress: { label: 'In progress', dot: '#3b82f6', ring: '#bfdbfe' },
-  review:      { label: 'Review',      dot: '#f59e0b', ring: '#fde68a' },
-  blocked:     { label: 'Blocked',     dot: '#ef4444', ring: '#fecaca' },
-  done:        { label: 'Done',        dot: '#22c55e', ring: '#bbf7d0' },
+  review: { label: 'Review', dot: '#f59e0b', ring: '#fde68a' },
+  blocked: { label: 'Blocked', dot: '#ef4444', ring: '#fecaca' },
+  done: { label: 'Done', dot: '#22c55e', ring: '#bbf7d0' },
 };
 /** "1h 30m" / "45m" / "2h" — compact display for effort-log minutes. */
 function fmtMins(mins: number): string {
@@ -40,11 +51,28 @@ function fmtMins(mins: number): string {
   return `${h}h ${rem}m`;
 }
 
-const TASK_TYPES = ['task','review','approval','test','issue','corrective_action','finding','data_review'] as const;
+const TASK_TYPES = [
+  'task',
+  'review',
+  'approval',
+  'test',
+  'issue',
+  'corrective_action',
+  'finding',
+  'data_review',
+] as const;
 const TASK_TYPE_LABELS: Record<string, string> = {
-  task: 'Task', review: 'Review', approval: 'Approval', test: 'Test',
-  issue: 'Issue', corrective_action: 'Corrective Action', finding: 'Finding', data_review: 'Data Review',
-  deviation: 'Issue', capa: 'Corrective Action', audit_finding: 'Finding',
+  task: 'Task',
+  review: 'Review',
+  approval: 'Approval',
+  test: 'Test',
+  issue: 'Issue',
+  corrective_action: 'Corrective Action',
+  finding: 'Finding',
+  data_review: 'Data Review',
+  deviation: 'Issue',
+  capa: 'Corrective Action',
+  audit_finding: 'Finding',
 };
 
 interface TaskDetailClientProps {
@@ -100,7 +128,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     // follow-up calls.
     (async () => {
       try {
-        const t = task || await api<any>(`/tasks/${id}`);
+        const t = task || (await api<any>(`/tasks/${id}`));
         if (!task) setTask(t);
         if (!me) {
           const m = await api<any>('/auth/me');
@@ -116,7 +144,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
         setLoadErr(e?.message || 'Could not load this task.');
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loadErr) {
@@ -127,14 +155,26 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
         </div>
         <div className="text-sm font-bold text-slate-800 mb-1">We couldn&rsquo;t load this task</div>
         <div className="text-xs text-slate-500 mb-4">{loadErr}</div>
-        <button onClick={() => { setLoadErr(null); load(); }} className="btn-primary text-xs justify-center">Retry</button>
+        <button
+          onClick={() => {
+            setLoadErr(null);
+            load();
+          }}
+          className="btn-primary text-xs justify-center"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   if (!task) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl page-enter" aria-busy="true" aria-live="polite">
+      <div
+        className="grid grid-cols-1 lg:grid-cols-3 gap-5 max-w-6xl page-enter"
+        aria-busy="true"
+        aria-live="polite"
+      >
         <div className="lg:col-span-2 space-y-4">
           <div className="space-y-2">
             <div className="skeleton h-3 w-40" />
@@ -195,8 +235,11 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
         // The mini-pop replaces the dry "Task marked done ✓" toast — it reads
         // the task's type and priority so the message feels personal.
         setCelebrate({
-          id: task.id, title: task.title, taskType: task.taskType,
-          gxpCritical: task.gxpCritical, priority: task.priority,
+          id: task.id,
+          title: task.title,
+          taskType: task.taskType,
+          gxpCritical: task.gxpCritical,
+          priority: task.priority,
         });
       }
       load();
@@ -211,13 +254,17 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     if (!newSub.trim()) return;
     try {
       await api(`/tasks/${id}/subtasks`, { method: 'POST', body: { title: newSub.trim() } });
-      setNewSub(''); load();
+      setNewSub('');
+      load();
     } catch (e: any) {
       showToast(e?.message || 'Failed to add subtask', 'err');
     }
   }
   async function toggleSub(sub: any) {
-    await api(`/tasks/${id}/subtasks/${sub.id}`, { method: 'PATCH', body: { status: sub.status === 'done' ? 'todo' : 'done' } });
+    await api(`/tasks/${id}/subtasks/${sub.id}`, {
+      method: 'PATCH',
+      body: { status: sub.status === 'done' ? 'todo' : 'done' },
+    });
     load();
   }
   async function deleteSub(sub: any) {
@@ -231,7 +278,8 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     if (!comment.trim()) return;
     try {
       await api(`/tasks/${id}/comments`, { method: 'POST', body: { body: comment.trim() } });
-      setComment(''); load();
+      setComment('');
+      load();
     } catch (e: any) {
       showToast(e?.message || 'Failed to post comment', 'err');
     }
@@ -239,8 +287,13 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
   async function saveCommentEdit(commentId: string) {
     if (!editingCommentBody.trim()) return;
     try {
-      await api(`/tasks/${id}/comments/${commentId}`, { method: 'PATCH', body: { body: editingCommentBody.trim() } });
-      setEditingCommentId(null); setEditingCommentBody(''); load();
+      await api(`/tasks/${id}/comments/${commentId}`, {
+        method: 'PATCH',
+        body: { body: editingCommentBody.trim() },
+      });
+      setEditingCommentId(null);
+      setEditingCommentBody('');
+      load();
     } catch (e: any) {
       showToast(e?.message || 'Failed to update comment', 'err');
     }
@@ -254,15 +307,25 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
       showToast(e?.message || 'Failed to delete comment', 'err');
     }
   }
-  async function signoff() { await api(`/tasks/${id}/signoff`, { method: 'POST' }); load(); }
+  async function signoff() {
+    await api(`/tasks/${id}/signoff`, { method: 'POST' });
+    load();
+  }
   async function logEffort() {
     const hours = parseFloat(effortHours);
-    if (!hours || hours <= 0) { showToast('Enter the time spent (e.g. 1.5 for 1h 30m).', 'err'); return; }
+    if (!hours || hours <= 0) {
+      showToast('Enter the time spent (e.g. 1.5 for 1h 30m).', 'err');
+      return;
+    }
     const minutes = Math.round(hours * 60);
     setLoggingEffort(true);
     try {
-      await api(`/tasks/${id}/effort`, { method: 'POST', body: { minutes, note: effortNote.trim() || undefined } });
-      setEffortHours(''); setEffortNote('');
+      await api(`/tasks/${id}/effort`, {
+        method: 'POST',
+        body: { minutes, note: effortNote.trim() || undefined },
+      });
+      setEffortHours('');
+      setEffortNote('');
       load();
     } catch (e: any) {
       showToast(e?.message || 'Failed to log effort', 'err');
@@ -271,15 +334,17 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     }
   }
 
-  const canSignoff = task.requiresQaSignoff && !task.qaSignoffAt && (me?.role === 'lead' || me?.role === 'admin');
-  const hasReferenceData = task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
+  const canSignoff =
+    task.requiresQaSignoff && !task.qaSignoffAt && (me?.role === 'lead' || me?.role === 'admin');
+  const hasReferenceData =
+    task.ccNo || task.documentNo || task.applicableSite !== 'na' || task.deployStage !== 'na';
 
   // IC edit contract: a contributor may edit ONLY the description and due date,
   // and ONLY on a task assigned to them. Everything else — status, assignee,
   // priority, reference/compliance fields — is lead-owned. A task assigned to
   // someone else (or unassigned) is fully read-only for an IC, and the inputs
   // are disabled so no save is even attempted. Leads/admins keep full control.
-  const isAssignee  = !!(me && task.assigneeId && String(task.assigneeId) === String(me.id));
+  const isAssignee = !!(me && task.assigneeId && String(task.assigneeId) === String(me.id));
   // Description + due date: editable by leads or the assignee.
   const canEditBasics = isLead || isAssignee;
   // Reference/tracking fields, status, assignee, priority, etc.: leads only.
@@ -294,7 +359,6 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
 
       {/* ── Left: main content ─────────────────────────────────────────── */}
       <div className="lg:col-span-2 space-y-4">
-
         {/* Breadcrumb + title */}
         <div>
           <div className="text-xs text-slate-400 flex items-center gap-1 mb-2">
@@ -317,8 +381,8 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
           <div className="flex flex-wrap gap-2 mt-2.5">
             <StatusTag status={task.status} />
             <PriorityTag priority={task.priority} />
-            {task.requiresQaSignoff && (
-              task.qaSignoffAt ? (
+            {task.requiresQaSignoff &&
+              (task.qaSignoffAt ? (
                 <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25 px-2 py-0.5 rounded">
                   Approved ✓ {task.qaSignoffName} · {formatDate(task.qaSignoffAt)}
                 </span>
@@ -326,8 +390,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                 <span className="text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/25 px-2 py-0.5 rounded">
                   Approval required
                 </span>
-              )
-            )}
+              ))}
             {task.taskType && task.taskType !== 'task' && (
               <span className="text-xs font-medium text-slate-600 bg-slate-100 dark:bg-white/5 dark:text-white/60 px-2 py-0.5 rounded capitalize">
                 {TASK_TYPE_LABELS[task.taskType] ?? task.taskType.replace(/_/g, ' ')}
@@ -374,11 +437,12 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             <FileText size={14} className="text-blue-500" />
             <h3 className="text-sm font-semibold text-slate-700">Reference & Tracking</h3>
             {hasReferenceData && (
-              <span className="ml-auto text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Filled</span>
+              <span className="ml-auto text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                Filled
+              </span>
             )}
           </div>
           <div className="p-4 space-y-4">
-
             {/* Ref No. + Target Date */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -454,12 +518,16 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                   onClick={() => canComment && toggleSub(s)}
                   disabled={!canComment}
                   className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                    s.status === 'done' ? 'border-green-500 bg-green-500' : 'border-slate-300 hover:border-blue-400'
+                    s.status === 'done'
+                      ? 'border-green-500 bg-green-500'
+                      : 'border-slate-300 hover:border-blue-400'
                   } ${canComment ? '' : 'opacity-60 cursor-default'}`}
                 >
                   {s.status === 'done' && <span className="text-white text-[8px] font-black">✓</span>}
                 </button>
-                <span className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400 dark:text-white/35' : 'text-slate-700'}`}>
+                <span
+                  className={`flex-1 ${s.status === 'done' ? 'line-through text-slate-400 dark:text-white/35' : 'text-slate-700'}`}
+                >
                   {s.title}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(s.dueDate)}</span>
@@ -484,10 +552,16 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             )}
           </div>
           <div className="flex gap-2 mt-3">
-            <input className="input text-sm" placeholder="Add a subtask…"
-              value={newSub} onChange={(e) => setNewSub(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addSubtask()} />
-            <button className="btn-primary text-sm" onClick={addSubtask}>Add</button>
+            <input
+              className="input text-sm"
+              placeholder="Add a subtask…"
+              value={newSub}
+              onChange={(e) => setNewSub(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addSubtask()}
+            />
+            <button className="btn-primary text-sm" onClick={addSubtask}>
+              Add
+            </button>
           </div>
         </Card>
 
@@ -497,7 +571,10 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             {task.comments.map((c: any) => {
               const isAuthor = !!(me && String(c.userId) === String(me.id));
               const isEditing = editingCommentId === c.id;
-              const edited = c.updatedAt && c.createdAt && new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime() > 1000;
+              const edited =
+                c.updatedAt &&
+                c.createdAt &&
+                new Date(c.updatedAt).getTime() - new Date(c.createdAt).getTime() > 1000;
               return (
                 <div key={c.id} className="group/comment flex gap-3">
                   <UserAvatar userId={c.userId} name={c.userName} size={28} />
@@ -510,7 +587,10 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                       {isAuthor && !isEditing && (
                         <span className="ml-auto flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
                           <button
-                            onClick={() => { setEditingCommentId(c.id); setEditingCommentBody(c.body); }}
+                            onClick={() => {
+                              setEditingCommentId(c.id);
+                              setEditingCommentBody(c.body);
+                            }}
                             className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-colors"
                             title="Edit comment"
                           >
@@ -536,36 +616,54 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                           onChange={(e) => setEditingCommentBody(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveCommentEdit(c.id);
-                            if (e.key === 'Escape') { setEditingCommentId(null); setEditingCommentBody(''); }
+                            if (e.key === 'Escape') {
+                              setEditingCommentId(null);
+                              setEditingCommentBody('');
+                            }
                           }}
                           maxLength={4000}
                         />
-                        <button onClick={() => saveCommentEdit(c.id)}
-                          className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors" title="Save">
+                        <button
+                          onClick={() => saveCommentEdit(c.id)}
+                          className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                          title="Save"
+                        >
                           <Check size={13} />
                         </button>
-                        <button onClick={() => { setEditingCommentId(null); setEditingCommentBody(''); }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Cancel">
+                        <button
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditingCommentBody('');
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                          title="Cancel"
+                        >
                           <X size={13} />
                         </button>
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-700 mt-0.5 whitespace-pre-wrap break-words">{c.body}</div>
+                      <div className="text-sm text-slate-700 mt-0.5 whitespace-pre-wrap break-words">
+                        {c.body}
+                      </div>
                     )}
                   </div>
                 </div>
               );
             })}
-            {task.comments.length === 0 && (
-              <div className="text-xs text-slate-400">No comments yet.</div>
-            )}
+            {task.comments.length === 0 && <div className="text-xs text-slate-400">No comments yet.</div>}
           </div>
           {canComment ? (
             <div className="flex gap-2">
-              <input className="input text-sm" placeholder="Add a comment…"
-                value={comment} onChange={(e) => setComment(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addComment()} />
-              <button className="btn-primary text-sm" onClick={addComment}>Post</button>
+              <input
+                className="input text-sm"
+                placeholder="Add a comment…"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addComment()}
+              />
+              <button className="btn-primary text-sm" onClick={addComment}>
+                Post
+              </button>
             </div>
           ) : (
             <div className="text-xs text-slate-400 italic">
@@ -587,44 +685,63 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               {!canEditStatus ? (
                 <div className="mt-1">
                   <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 capitalize">
-                    <span className="w-2 h-2 rounded-full"
-                      style={{ background: STATUS_META[task.status]?.dot || '#94a3b8' }} />
-                    {(STATUS_META[task.status]?.label) || String(task.status || '').replace(/_/g, ' ')}
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ background: STATUS_META[task.status]?.dot || '#94a3b8' }}
+                    />
+                    {STATUS_META[task.status]?.label || String(task.status || '').replace(/_/g, ' ')}
                   </span>
                 </div>
               ) : (
-              <div className="flex flex-col gap-1 mt-1">
-                {STATUSES.map(s => {
-                  const meta  = STATUS_META[s];
-                  const active = task.status === s;
-                  return (
-                    <button key={s} type="button"
-                      disabled={savingStatus}
-                      onClick={() => updateStatus(s)}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
-                        active
-                          ? 'border-transparent font-bold'
-                          : 'border-transparent hover:bg-slate-50 text-slate-500 hover:text-slate-700'
-                      }`}
-                      style={active ? {
-                        background: `${meta.ring}55`,
-                        border: `1px solid ${meta.ring}`,
-                        color: s === 'done' ? '#15803d' : s === 'blocked' ? '#dc2626' : s === 'in_progress' ? '#1565C0' : s === 'review' ? '#92400e' : '#475569',
-                      } : {}}
-                    >
-                      <span className={`w-2 h-2 rounded-full shrink-0 transition-all ${active ? 'scale-125' : ''}`}
-                        style={{ background: meta.dot }} />
-                      {meta.label}
-                      {active && savingStatus && (
-                        <span className="ml-auto w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin opacity-60" />
-                      )}
-                      {active && !savingStatus && (
-                        <span className="ml-auto text-[10px] font-bold opacity-60">✓</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                <div className="flex flex-col gap-1 mt-1">
+                  {STATUSES.map((s) => {
+                    const meta = STATUS_META[s];
+                    const active = task.status === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        disabled={savingStatus}
+                        onClick={() => updateStatus(s)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                          active
+                            ? 'border-transparent font-bold'
+                            : 'border-transparent hover:bg-slate-50 text-slate-500 hover:text-slate-700'
+                        }`}
+                        style={
+                          active
+                            ? {
+                                background: `${meta.ring}55`,
+                                border: `1px solid ${meta.ring}`,
+                                color:
+                                  s === 'done'
+                                    ? '#15803d'
+                                    : s === 'blocked'
+                                      ? '#dc2626'
+                                      : s === 'in_progress'
+                                        ? '#1565C0'
+                                        : s === 'review'
+                                          ? '#92400e'
+                                          : '#475569',
+                              }
+                            : {}
+                        }
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 transition-all ${active ? 'scale-125' : ''}`}
+                          style={{ background: meta.dot }}
+                        />
+                        {meta.label}
+                        {active && savingStatus && (
+                          <span className="ml-auto w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin opacity-60" />
+                        )}
+                        {active && !savingStatus && (
+                          <span className="ml-auto text-[10px] font-bold opacity-60">✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
             <div>
@@ -643,7 +760,8 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                a department). Editable by the assignee or a lead. */}
             <div>
               <label className="label flex items-center gap-1">
-                <Clock size={11} /> Waiting on <span className="text-slate-300 font-normal normal-case">(if stuck)</span>
+                <Clock size={11} /> Waiting on{' '}
+                <span className="text-slate-300 font-normal normal-case">(if stuck)</span>
               </label>
               <input
                 className="input text-sm"
@@ -667,7 +785,10 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                   disabled={!isLead}
                   ariaLabel="Priority"
                   onChange={(v) => isLead && update({ priority: v })}
-                  options={['low', 'medium', 'high', 'critical'].map((p) => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))}
+                  options={['low', 'medium', 'high', 'critical'].map((p) => ({
+                    value: p,
+                    label: p.charAt(0).toUpperCase() + p.slice(1),
+                  }))}
                 />
               </div>
               <div>
@@ -677,7 +798,10 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                   disabled={!isLead}
                   ariaLabel="Task type"
                   onChange={(v) => isLead && update({ taskType: v })}
-                  options={TASK_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }))}
+                  options={TASK_TYPES.map((t) => ({
+                    value: t,
+                    label: t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                  }))}
                 />
               </div>
             </div>
@@ -715,31 +839,45 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
            is appended by the assignee (or a lead) via POST /effort, which
            rolls actualHours up from the log server-side. */}
         {(() => {
-          const effortMins  = task.effortMins || 0;
-          const entries     = [...(task.effortLog || [])].reverse(); // newest first
-          const estimated   = task.estimatedHours;
-          const pct         = estimated > 0 ? Math.min(100, (effortMins / 60 / estimated) * 100) : 0;
-          const overBudget  = estimated > 0 && effortMins / 60 > estimated;
+          const effortMins = task.effortMins || 0;
+          const entries = [...(task.effortLog || [])].reverse(); // newest first
+          const estimated = task.estimatedHours;
+          const pct = estimated > 0 ? Math.min(100, (effortMins / 60 / estimated) * 100) : 0;
+          const overBudget = estimated > 0 && effortMins / 60 > estimated;
           const canLogEffort = isLead || isAssignee;
           return (
             <Card
               title="Effort"
-              action={effortMins > 0 ? (
-                <span className="text-xs text-slate-400">{fmtMins(effortMins)} logged</span>
-              ) : undefined}
+              action={
+                effortMins > 0 ? (
+                  <span className="text-xs text-slate-400">{fmtMins(effortMins)} logged</span>
+                ) : undefined
+              }
             >
               <div className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="label">Estimated (h)</label>
                     <input
-                      type="number" min={0} step={0.5}
+                      type="number"
+                      min={0}
+                      step={0.5}
                       className="input text-sm disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="—"
                       value={task.estimatedHours ?? ''}
                       disabled={!canEditAll}
-                      onChange={(e) => setTask({ ...task, estimatedHours: e.target.value === '' ? null : Number(e.target.value) })}
-                      onBlur={(e) => canEditAll && update({ estimatedHours: e.target.value === '' ? null : Math.max(0, Number(e.target.value)) })}
+                      onChange={(e) =>
+                        setTask({
+                          ...task,
+                          estimatedHours: e.target.value === '' ? null : Number(e.target.value),
+                        })
+                      }
+                      onBlur={(e) =>
+                        canEditAll &&
+                        update({
+                          estimatedHours: e.target.value === '' ? null : Math.max(0, Number(e.target.value)),
+                        })
+                      }
                     />
                   </div>
                   <div>
@@ -755,10 +893,15 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                     <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/[0.07] overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all"
-                        style={{ width: `${pct}%`, background: overBudget ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#3b82f6' }}
+                        style={{
+                          width: `${pct}%`,
+                          background: overBudget ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#3b82f6',
+                        }}
                       />
                     </div>
-                    <div className={`mt-1 text-[11px] font-medium ${overBudget ? 'text-red-600' : 'text-slate-400'}`}>
+                    <div
+                      className={`mt-1 text-[11px] font-medium ${overBudget ? 'text-red-600' : 'text-slate-400'}`}
+                    >
                       {overBudget
                         ? `${fmtMins(effortMins - estimated * 60)} over the ${estimated}h estimate`
                         : `${Math.round(pct)}% of ${estimated}h estimate`}
@@ -771,7 +914,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                     <label className="label">Log time</label>
                     <div className="flex gap-2">
                       <input
-                        type="number" min={0} step={0.25}
+                        type="number"
+                        min={0}
+                        step={0.25}
                         className="input text-sm w-20 shrink-0"
                         placeholder="1.5"
                         value={effortHours}
@@ -806,16 +951,28 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                         <UserAvatar userId={e.userId} name={e.userName} size={22} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline gap-1.5 text-xs">
-                            <span className="font-semibold text-slate-700 dark:text-white/80 truncate">{e.userName}</span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400 shrink-0">{fmtMins(e.minutes)}</span>
-                            <span className="ml-auto text-slate-400 dark:text-white/35 shrink-0">{e.onDate ? formatDate(e.onDate) : formatDate(e.createdAt)}</span>
+                            <span className="font-semibold text-slate-700 dark:text-white/80 truncate">
+                              {e.userName}
+                            </span>
+                            <span className="font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                              {fmtMins(e.minutes)}
+                            </span>
+                            <span className="ml-auto text-slate-400 dark:text-white/35 shrink-0">
+                              {e.onDate ? formatDate(e.onDate) : formatDate(e.createdAt)}
+                            </span>
                           </div>
-                          {e.note && <div className="text-[11px] text-slate-500 dark:text-white/45 truncate">{e.note}</div>}
+                          {e.note && (
+                            <div className="text-[11px] text-slate-500 dark:text-white/45 truncate">
+                              {e.note}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
                     {entries.length > 8 && (
-                      <div className="text-[11px] text-slate-400">+ {entries.length - 8} earlier entr{entries.length - 8 === 1 ? 'y' : 'ies'}</div>
+                      <div className="text-[11px] text-slate-400">
+                        + {entries.length - 8} earlier entr{entries.length - 8 === 1 ? 'y' : 'ies'}
+                      </div>
                     )}
                   </div>
                 )}
@@ -836,35 +993,49 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               {task.ccNo && (
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400 dark:text-white/35">Ref No.</span>
-                  <span className="font-mono font-semibold text-slate-700 dark:text-white/80">{task.ccNo}</span>
+                  <span className="font-mono font-semibold text-slate-700 dark:text-white/80">
+                    {task.ccNo}
+                  </span>
                 </div>
               )}
               {task.ccTcd && (
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400 dark:text-white/35">Target Date</span>
-                  <span className="font-medium text-slate-700 dark:text-white/80">{formatDate(task.ccTcd)}</span>
+                  <span className="font-medium text-slate-700 dark:text-white/80">
+                    {formatDate(task.ccTcd)}
+                  </span>
                 </div>
               )}
               {task.documentNo && (
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400 dark:text-white/35">Doc No.</span>
-                  <span className="font-mono font-semibold text-slate-700 dark:text-white/80">{task.documentNo}</span>
+                  <span className="font-mono font-semibold text-slate-700 dark:text-white/80">
+                    {task.documentNo}
+                  </span>
                 </div>
               )}
               {task.applicableSite && task.applicableSite !== 'na' && (
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400 dark:text-white/35">Site</span>
-                  <span className="font-medium text-slate-700 dark:text-white/80 uppercase">{task.applicableSite.replace('_', ' + ')}</span>
+                  <span className="font-medium text-slate-700 dark:text-white/80 uppercase">
+                    {task.applicableSite.replace('_', ' + ')}
+                  </span>
                 </div>
               )}
               {task.deployStage && task.deployStage !== 'na' && (
                 <div className="flex justify-between text-xs items-center">
                   <span className="text-slate-400 dark:text-white/35">Stage</span>
-                  <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
-                    task.deployStage === 'prd' ? 'bg-green-50 text-green-700' :
-                    task.deployStage === 'int' ? 'bg-blue-50 text-blue-700' :
-                    'bg-purple-50 text-purple-700'
-                  }`}>{task.deployStage.toUpperCase()}</span>
+                  <span
+                    className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                      task.deployStage === 'prd'
+                        ? 'bg-green-50 text-green-700'
+                        : task.deployStage === 'int'
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'bg-purple-50 text-purple-700'
+                    }`}
+                  >
+                    {task.deployStage.toUpperCase()}
+                  </span>
                 </div>
               )}
             </div>
@@ -881,9 +1052,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
             </button>
           </Card>
         )}
-
       </div>
     </div>
   );
 }
-

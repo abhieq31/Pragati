@@ -40,10 +40,7 @@ function isInfraError(msg: string) {
 // bogus "Dynamic server usage" entries.
 function isNextControlFlow(e: unknown): boolean {
   const digest = (e as any)?.digest;
-  return (
-    typeof digest === 'string' &&
-    (digest === 'DYNAMIC_SERVER_USAGE' || digest.startsWith('NEXT_'))
-  );
+  return typeof digest === 'string' && (digest === 'DYNAMIC_SERVER_USAGE' || digest.startsWith('NEXT_'));
 }
 
 export function handleError(e: unknown) {

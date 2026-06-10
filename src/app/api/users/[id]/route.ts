@@ -18,15 +18,20 @@ const Body = z.object({
   // 'admin' is intentionally NOT assignable here — there is a single
   // workspace admin (the owner), provisioned via env/bootstrap, never
   // through a generic PATCH.
-  role:       z.enum(['contributor', 'lead']).optional(),
-  title:      z.string().max(120).optional(),
-  name:       z.string().max(120).optional(),
+  role: z.enum(['contributor', 'lead']).optional(),
+  title: z.string().max(120).optional(),
+  name: z.string().max(120).optional(),
   // Identity fields — only the admin can change these, and only with a
   // password sign-off + justification (21 CFR Part 11 §11.200). Username,
   // email, and employee ID are the identifiers downstream systems use to
   // reconcile an account, so changes leave a full before/after audit trail.
-  username:   z.string().min(3).max(80).regex(/^[a-z0-9._-]+$/, 'lowercase letters, digits, dot, dash, underscore').optional(),
-  email:      z.string().email().max(200).optional(),
+  username: z
+    .string()
+    .min(3)
+    .max(80)
+    .regex(/^[a-z0-9._-]+$/, 'lowercase letters, digits, dot, dash, underscore')
+    .optional(),
+  email: z.string().email().max(200).optional(),
   employeeId: z.string().max(80).optional(),
   // Real notification address (distinct from the login `email`). Admin-managed
   // contact metadata — editable here to backfill existing accounts. Not an
@@ -36,15 +41,15 @@ const Body = z.object({
   // Soft organisational grouping (business unit, plant, sub-company). Used by
   // people-pickers to group/filter at scale; not a tenant boundary.
   organisation: z.string().max(120).optional(),
-  phone:      z.string().max(40).optional(),
-  location:   z.string().max(120).optional(),
+  phone: z.string().max(40).optional(),
+  location: z.string().max(120).optional(),
   // Admin operations lock — true suspends the account (blocks sign-in),
   // false lifts the lock and clears the failed-login counter.
-  locked:     z.boolean().optional(),
+  locked: z.boolean().optional(),
   // Account lifecycle. `active: false` deactivates (professional removal
   // with a preserved record); `active: true` reactivates AND unlocks. A
   // reason is recorded on deactivation for the audit trail.
-  active:     z.boolean().optional(),
+  active: z.boolean().optional(),
   deactivationReason: z.string().max(500).optional(),
   // Force the user to set a new password on their next sign-in.
   mustChangePassword: z.boolean().optional(),
@@ -53,8 +58,8 @@ const Body = z.object({
   // any identity-field edit (name/username/email/employeeId). The handler
   // validates the admin's *own* password and the reason becomes part of the
   // immutable audit row.
-  password:   z.string().min(1).optional(),
-  reason:     z.string().max(1000).optional(),
+  password: z.string().min(1).optional(),
+  reason: z.string().max(1000).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -115,8 +120,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       const dupe = await User.findOne({ username: body.username, _id: { $ne: params.id } }, '_id').lean();
       if (dupe) return NextResponse.json({ error: 'That username is already taken.' }, { status: 409 });
     }
-    if (body.email !== undefined && body.email.toLowerCase() !== String((target as any).email || '').toLowerCase()) {
-      const dupe = await User.findOne({ email: body.email.toLowerCase(), _id: { $ne: params.id } }, '_id').lean();
+    if (
+      body.email !== undefined &&
+      body.email.toLowerCase() !== String((target as any).email || '').toLowerCase()
+    ) {
+      const dupe = await User.findOne(
+        { email: body.email.toLowerCase(), _id: { $ne: params.id } },
+        '_id',
+      ).lean();
       if (dupe) return NextResponse.json({ error: 'That email is already in use.' }, { status: 409 });
     }
 
@@ -135,8 +146,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Demoting the last lead, or deactivating the last lead, would leave the
     // workspace with no one able to manage it.
     const willLoseLeadSeat =
-      body.role === 'contributor' ||
-      (body.active === false && isLead((target as any).role));
+      body.role === 'contributor' || (body.active === false && isLead((target as any).role));
     if (willLoseLeadSeat) {
       const leadCount = await User.countDocuments({
         role: { $in: ['pm', 'lead', 'admin'] },
@@ -144,7 +154,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       });
       if (leadCount <= 1) {
         const what = body.active === false ? 'deactivate' : 'demote';
-        return NextResponse.json({ error: `Cannot ${what} the last lead. Promote another user first.` }, { status: 409 });
+        return NextResponse.json(
+          { error: `Cannot ${what} the last lead. Promote another user first.` },
+          { status: 409 },
+        );
       }
     }
 
@@ -195,35 +208,60 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!updated) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const action =
-      lifecycleAction === 'deactivate' ? 'user.deactivate'
-      : lifecycleAction === 'reactivate' ? 'user.reactivate'
-      : body.role ? 'user.role'
-      : 'user.update';
+      lifecycleAction === 'deactivate'
+        ? 'user.deactivate'
+        : lifecycleAction === 'reactivate'
+          ? 'user.reactivate'
+          : body.role
+            ? 'user.role'
+            : 'user.update';
 
     // Build a before/after diff of just the fields the admin actually changed
     // — the audit row's `meta` is what a reviewer scans to answer "what
     // exactly did they change?" without trawling through the user document.
-    const AUDIT_FIELDS = ['name', 'username', 'email', 'notifyEmail', 'employeeId', 'title',
-      'department', 'organisation', 'phone', 'location', 'role', 'active',
-      'locked', 'mustChangePassword'] as const;
+    const AUDIT_FIELDS = [
+      'name',
+      'username',
+      'email',
+      'notifyEmail',
+      'employeeId',
+      'title',
+      'department',
+      'organisation',
+      'phone',
+      'location',
+      'role',
+      'active',
+      'locked',
+      'mustChangePassword',
+    ] as const;
     const diff: Record<string, { before: any; after: any }> = {};
     for (const k of AUDIT_FIELDS) {
       if ((body as any)[k] === undefined) continue;
       const before = (target as any)[k];
-      const after  = k === 'email' ? (set.email ?? (body as any).email) : (set as any)[k] ?? (body as any)[k];
+      const after =
+        k === 'email' ? (set.email ?? (body as any).email) : ((set as any)[k] ?? (body as any)[k]);
       if (String(before ?? '') !== String(after ?? '')) diff[k] = { before, after };
     }
     const changeWords = Object.keys(diff).join(', ');
     const summary =
       lifecycleAction === 'deactivate'
         ? `Deactivated account${set.deactivationReason ? ` — ${set.deactivationReason}` : ''}`
-        : lifecycleAction === 'reactivate' ? 'Reactivated account (lock cleared)'
-        : body.role ? `Changed role → ${body.role}`
-        : changeWords ? `Updated ${changeWords}` : 'Updated user account';
+        : lifecycleAction === 'reactivate'
+          ? 'Reactivated account (lock cleared)'
+          : body.role
+            ? `Changed role → ${body.role}`
+            : changeWords
+              ? `Updated ${changeWords}`
+              : 'Updated user account';
 
     await logOperation({
-      action, category: 'user', actor: caller,
-      targetType: 'user', targetId: params.id, targetLabel: (updated as any)?.name || '',
+      action,
+      category: 'user',
+      actor: caller,
+      targetType: 'user',
+      targetId: params.id,
+      targetLabel: (updated as any)?.name || '',
       summary,
       meta: {
         ...(Object.keys(diff).length ? { changes: diff } : {}),
@@ -277,8 +315,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await User.findByIdAndDelete(params.id);
 
     await logOperation({
-      action: 'user.delete', category: 'user', actor: caller,
-      targetType: 'user', targetId: params.id, targetLabel: (target as any)?.name || '',
+      action: 'user.delete',
+      category: 'user',
+      actor: caller,
+      targetType: 'user',
+      targetId: params.id,
+      targetLabel: (target as any)?.name || '',
       summary: `Removed user ${(target as any)?.name || ''}`.trim(),
     });
 

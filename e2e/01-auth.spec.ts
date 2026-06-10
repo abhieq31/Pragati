@@ -10,7 +10,7 @@ test.describe('Authentication', () => {
 
   test('login page renders Pragati mark + form, no broken images', async ({ page }) => {
     const broken: string[] = [];
-    page.on('response', r => {
+    page.on('response', (r) => {
       const t = r.headers()['content-type'] || '';
       if (t.startsWith('image/') && r.status() >= 400) broken.push(r.url());
     });
@@ -50,9 +50,15 @@ test.describe('Authentication', () => {
     // Open the profile popover (trigger row in the sidebar footer).
     const profileTrigger = page.locator(`text=${TEST_LEAD.name}`).first();
     await profileTrigger.click();
-    await page.getByRole('button', { name: /sign out/i }).first().click();
+    await page
+      .getByRole('button', { name: /sign out/i })
+      .first()
+      .click();
     // Confirm modal
-    await page.getByRole('button', { name: /^sign out$/i }).last().click();
+    await page
+      .getByRole('button', { name: /^sign out$/i })
+      .last()
+      .click();
     await page.waitForURL(/\/login/, { timeout: 8_000 });
   });
 });

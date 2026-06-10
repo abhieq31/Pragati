@@ -42,10 +42,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const scope = await getLeadScope(user!.sub, user!.role);
     const body = await readBody(req, ProjectUpdateSchema);
     const { password, remarks, ...updates } = body;
-    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) }).select('status isPersonal code ccNo').lean();
+    const current = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) })
+      .select('status isPersonal code ccNo refLabel')
+      .lean();
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    const isShared = !((current as any).isPersonal || String((current as any).code || '').startsWith('PRSN-'));
+    const isShared = !(
+      (current as any).isPersonal || String((current as any).code || '').startsWith('PRSN-')
+    );
     const statusChanging = !!updates.status && updates.status !== (current as any).status;
 
     // A status change on a shared (GxP) project is a controlled action: it
@@ -53,10 +57,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // immutable audit trail (21 CFR Part 11 §11.10/§11.50).
     if (statusChanging && isShared) {
       if (!password) {
-        return NextResponse.json({ error: 'Your password is required to sign this status change.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'Your password is required to sign this status change.' },
+          { status: 400 },
+        );
       }
       if (!remarks || !remarks.trim()) {
-        return NextResponse.json({ error: 'A reason is required to sign this status change.' }, { status: 400 });
+        return NextResponse.json(
+          { error: 'A reason is required to sign this status change.' },
+          { status: 400 },
+        );
       }
       const signer = await User.findById(user!.sub).select('passwordHash').lean();
       if (!signer || !bcrypt.compareSync(password, (signer as any).passwordHash)) {
@@ -94,6 +104,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const ccNoChanging = updates.ccNo !== undefined && updates.ccNo !== ((current as any).ccNo || '');
     if (isShared) {
+      // The reference label is per-project ("CC#", "SOP#", …) so the audit
+      // entry names the scheme the team actually uses.
+      const refLabel = (updates.refLabel ?? (current as any).refLabel) || 'Ref #';
       const meta: Record<string, any> = {};
       if (ccNoChanging) {
         // GxP identifier change: record exact before/after values.
@@ -102,10 +115,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (remarks) meta.remarks = remarks.trim();
       await logOperation({
         action: ccNoChanging ? 'project.ccno' : statusChanging ? 'project.status' : 'project.update',
-        category: 'project', actor: user,
-        targetType: 'project', targetId: params.id, targetLabel: (fresh as any)?.name || '',
+        category: 'project',
+        actor: user,
+        targetType: 'project',
+        targetId: params.id,
+        targetLabel: (fresh as any)?.name || '',
         summary: ccNoChanging
-          ? `Project CC# changed: "${(current as any).ccNo || '—'}" → "${updates.ccNo}"`
+          ? `Project ${refLabel} changed: "${(current as any).ccNo || '—'}" → "${updates.ccNo}"`
           : statusChanging
             ? `Project status → ${updates.status}${remarks ? ` — ${remarks.trim()}` : ''}`
             : 'Updated project details',
@@ -132,7 +148,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     const scope = await getLeadScope(user!.sub, user!.role);
     const existing = await Project.findOne({ _id: params.id, ...projectsVisibleFilter(scope) })
-      .select('_id name isPersonal personal ownerId').lean();
+      .select('_id name isPersonal personal ownerId')
+      .lean();
     if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const isOwner = String((existing as any).ownerId) === user!.sub;
@@ -140,7 +157,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     // Admins can delete any project; project owners (including leads) can
     // delete their own project (shared or personal) after password re-auth.
     if (!isAdminRole && !isOwner) {
-      return NextResponse.json({ error: 'Only the project owner or an admin can delete this project.' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Only the project owner or an admin can delete this project.' },
+        { status: 403 },
+      );
     }
 
     const body = await readBody(req, DeleteProjectSchema);
@@ -153,10 +173,16 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await Task.deleteMany({ projectId: params.id });
     await Project.deleteOne({ _id: params.id });
 
-    if (!((existingFull as any)?.isPersonal || String((existingFull as any)?.code || '').startsWith('PRSN-'))) {
+    if (
+      !((existingFull as any)?.isPersonal || String((existingFull as any)?.code || '').startsWith('PRSN-'))
+    ) {
       await logOperation({
-        action: 'project.delete', category: 'project', actor: user!,
-        targetType: 'project', targetId: params.id, targetLabel: (existing as any)?.name || '',
+        action: 'project.delete',
+        category: 'project',
+        actor: user!,
+        targetType: 'project',
+        targetId: params.id,
+        targetLabel: (existing as any)?.name || '',
         summary: `Deleted project ${(existing as any)?.name || ''}`.trim(),
       });
     }

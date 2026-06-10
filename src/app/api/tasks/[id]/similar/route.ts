@@ -31,9 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const [pastCases, effectiveness] = await Promise.all([
       findPastCases(params.id),
-      isClosed
-        ? checkCapaEffectiveness(params.id, new Date(task.completedAt))
-        : Promise.resolve(null),
+      isClosed ? checkCapaEffectiveness(params.id, new Date(task.completedAt)) : Promise.resolve(null),
     ]);
 
     return NextResponse.json({ pastCases, effectiveness });
