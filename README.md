@@ -11,11 +11,11 @@
 
 ## What it is
 
-A lightweight project + task tracker built for QA-IT teams in the pharmaceutical sector. Invite-only — no public sign-ups, no marketing pages. One workspace, real roles, and an audit trail that holds up in an inspection.
+**One promise: everyone sees the whole board.** Pragati gives every person — contributor, lead, or admin — a bird's-eye view of everything moving in the team, plus a private space only they can see. It was forged in pharma QA-IT (so it carries a 21 CFR Part 11-grade audit trail and GxP lifecycles out of the box), but the model is universal: any team that wants total clarity without total surveillance. Invite-only — no public sign-ups, no marketing pages.
 
 | Role | What they see |
 | --- | --- |
-| **Contributor** | Their own tasks, their My Day, their personal projects. |
+| **Contributor** | Their own tasks, their My Day, and truly private personal projects (invisible to everyone — including admins). |
 | **Team Lead** | Their teams, projects and tasks; assigns work; tracks progress. |
 | **Admin** | Full workspace control, user management, operations + audit log. |
 | **Master Admin** (dormant) | Cross-tenant provisioning, when multi-tenant runtime is enabled. |
@@ -27,6 +27,7 @@ A lightweight project + task tracker built for QA-IT teams in the pharmaceutical
 - **Owner-gated deletions** — tasks and phases can only be deleted by the **project owner** (and workspace admins). Leads manage work; only the owner can destroy it. Deleting a phase never deletes its tasks — they move to *Unphased*, and the action lands in the audit trail.
 - **Lifecycle templates** — Change Control, CSV/GAMP 5, SOP Dev, CAPA, Deviation, Audit, Validation, Agile Sprint, plus six regulatory operations templates (Regulatory Submission, System Retirement, Incident Management, Vendor Qualification, Training Program, Product Recall) and Personal templates for ICs.
 - **ALCOA+ audit trail** — every record change carries a signed, immutable trail (who, what, when, why). Personal projects never enter the cross-user log. Editing a project's reference number writes a before/after GxP record.
+- **Private projects that stay private** — a personal project is invisible to every other account, **admins included**: excluded from rollups, audit logs, briefs, and exports at the query layer, not the UI layer. Personal lifecycle templates (goals, study, fitness, job search, side projects, …) plus a progress-aware encouragement line make it a space you actually want to return to.
 - **Mind map on My Day** — a personal node-link canvas for capturing thoughts before they become tasks. Owner-private, autosaves per user.
 - **Public profiles** — a within-workspace profile at `/<username>` with a contribution heatmap, an optional GitHub link, and Follow / Unfollow for colleagues.
 - **Sidebar calendar** — a compact month grid pinned above My Day, dotted with what's due (mine / team / overdue) and a hover card listing the day's work.
@@ -34,6 +35,8 @@ A lightweight project + task tracker built for QA-IT teams in the pharmaceutical
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
 - **Productivity touches** — resizable sidebar, global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
+- **A living login screen** — attributed wisdom from Jobs, Naval, Bezos, Musk, Franklin, Jensen Huang, and Ellison, daily-seeded, refreshable forever via `QUOTES_FEED_URL` (a public JSON you host) with the built-in library as permanent fallback.
+- **AI, deep but minimal** — the rule-based engine decides everything (an architectural invariant); Gemini may only *rephrase* the already-decided Morning Brief headline (one cached call per user per day, instant fallback without a key). Plus the conversational Copilot and mind-map→tasks suggestions.
 - **Daily rundown, four channels, free forever** — every user gets a role-aware **Morning Brief** (contributors: what's on my plate; leads: team pulse; admins: workspace rundown) rendered on the dashboard, as an optional **Web Push** notification (VAPID — no vendor, no cost), as a personal **calendar feed** (subscribe once in Outlook/Google/Apple), and as an opt-in **08:30 IST email** capped to the provider's free tier. Mail is provider-agnostic (`MAIL_PROVIDER=brevo|resend|webhook`) so an org can bring its own relay. See [Daily email digest](#daily-email-digest) and [`docs/SCALING.md`](./docs/SCALING.md).
 
 ## Security & data integrity
