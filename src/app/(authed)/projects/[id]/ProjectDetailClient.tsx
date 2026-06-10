@@ -1573,7 +1573,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     : 'Complete. Take a moment — you did this for you.'}
             </p>
           )}
-          {!project.isPersonal && (
+          {/* The reference row earns its place only when there IS a reference —
+              or when the owner could set one. Empty dashes are clutter. */}
+          {!project.isPersonal && (project.ccNo || isOwner) && (
             <div className="flex items-center gap-1 mt-0.5">
               {editingCcNo ? (
                 <>
