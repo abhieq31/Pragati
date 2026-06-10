@@ -1717,6 +1717,17 @@ function ActionGroup({
                           <span>{formatDate(due)}</span>
                         </>
                       )}
+                      {t.slipRisk && dueIn !== null && dueIn >= 0 && (
+                        <>
+                          <span className="text-slate-200 dark:text-white/15">·</span>
+                          <span
+                            className="font-bold text-orange-600 dark:text-orange-400 cursor-help"
+                            title={`Early warning: ${t.slipRisk.reason}`}
+                          >
+                            may slip
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${pill.cls}`}>

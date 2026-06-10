@@ -1112,7 +1112,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             <button
               type="button"
               onClick={() => setEditingProfile((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur transition hover:bg-white/25"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-slate-600 dark:text-white/70 transition hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
             >
               <Pencil size={12} /> {editingProfile ? 'Close' : 'Edit'}
             </button>

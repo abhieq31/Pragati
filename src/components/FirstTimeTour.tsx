@@ -73,7 +73,7 @@ function buildSteps(role: string): Step[] {
       mobileTarget: '[data-mobile-tour="nav-projects"]',
       title: isLead ? 'Run projects' : 'Your projects',
       body: isLead
-        ? 'Create shared projects from lifecycle templates (Change Control, CAPA, CSV…), run the Kanban board, and assign work. Drag a card to change status — it saves instantly.'
+        ? 'Create shared projects from ready-made lifecycle templates or your own, run the Kanban board, and assign work. Drag a card to change status — it saves instantly.'
         : 'Tasks assigned to you live here, on Kanban boards. You also get private personal projects — a space only you can see, ever.',
       icon: Kanban,
       iconBg: '#F3E5F5',
@@ -150,7 +150,7 @@ function buildSteps(role: string): Step[] {
               yours: [
                 'Create teams & shared projects; assign and rebalance work',
                 "Bird's-eye any team or project; export Excel / PDF reports",
-                'Edit any task in your scope; e-sign controlled status changes',
+                'Edit any task in your scope; spot work that may slip before it does',
                 'My Day, mind map & personal projects — private to you',
               ],
               context: [

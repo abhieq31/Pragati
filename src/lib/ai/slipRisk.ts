@@ -3,10 +3,16 @@
  * learns each person's actual delivery behaviour from history and flags open
  * tasks that are *likely to miss their date* before they do.
  *
+ * The real problem this solves: every tracker can show you what's already
+ * late — by then the conversation is an apology. The useful moment is the
+ * one BEFORE that, when a date can still be saved by rebalancing, trimming
+ * scope, or just starting earlier. Leads get that moment for their people;
+ * contributors get it for their own plate.
+ *
  * Deliberately not an LLM, and deliberately unbranded in the UI: the user
- * just sees a quiet "May slip" cue with a plain-language reason. Like the
- * QA triage engine, every score is traceable to a line of code (GAMP 5
- * mindset) — the model is a hand-calibrated logistic over three features:
+ * just sees a quiet "May slip" cue with a plain-language reason. Every
+ * score is traceable to a line of code — a hand-calibrated logistic over
+ * three features:
  *
  *   runway   — how the time left compares to the assignee's real median
  *              cycle time for the work they complete (learned per person)
