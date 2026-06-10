@@ -1,7 +1,8 @@
 name: CI
 
 # Gate every push / PR on the same checks we run locally: TypeScript types,
-# ESLint, and a full production build. Keeps the default branch releasable.
+# ESLint, unit tests, and a full production build. Keeps the default branch
+# releasable.
 
 on:
   push:
@@ -28,6 +29,8 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: Unit tests
+        run: npm test
       - name: Build
         run: npm run build
         env:

@@ -60,16 +60,30 @@ flowchart TD
 | My Day + personal projects + Mind map | ✅ | ✅ | ✅ | ✅ |
 | Bird's-eye view (team / project) | — | ✅ | ✅ | ✅ |
 | Create shared projects / teams, assign work | — | ✅ | ✅ | ✅ |
-| Manage users (People), audit log (Logs) | — | — | ✅ | ✅ |
+| See **every** team, shared project and task (workspace scope) | — | — | ✅ | ✅ |
+| Admin console (`/admin`), manage users (People), audit log (Logs) | — | — | ✅ | ✅ |
+| Bulk user actions, force logout, delete any shared record | — | — | ✅ | ✅ |
 | Tenant registry, cross-tenant provisioning | — | — | — | ✅ (dormant) |
 
-Role checks live in `lib/auth.ts` (`isLead`, `isAdmin`, `isMasterAdmin`,
-`canMutate`, `requireRole`) and are enforced **server-side** on every
-mutating route. The UI also hides privileged controls (e.g. contributors
+**`lib/permissions.ts` is the single source of truth for this table** — a
+dependency-free capability matrix (`can(role, capability)`, `rolesWith()`)
+importable from client components, server components, and route handlers
+alike, so the UI and the API can never disagree about who may do what.
+Route guards spread it into `requireRole(req, ...rolesWith('users.manage'))`;
+scope filters ask `can(role, 'workspace.view_all')`. The thin helpers in
+`lib/auth.ts` (`isLead`, `isAdmin`, `isMasterAdmin`, `canMutate`) remain for
+simple hierarchy checks, and every mutating route is enforced
+**server-side**. The UI also hides privileged controls (e.g. contributors
 are locked to personal projects on `/projects/new`) so the role boundary
-is felt, not just enforced. The `master_admin` role is dormant: it's
-recognised everywhere but no one is promoted to it until the multi-tenant
-runtime is activated.
+is felt, not just enforced.
+
+Two deliberate carve-outs survive even `workspace.view_all`: **personal
+projects** stay visible only to their owner (never to admins, never in the
+audit trail), and lead-initiated **destructive actions** (task/phase
+deletion) stay owner-gated — admins may always act, but everything lands in
+the audit trail. The `master_admin` role is dormant: it's recognised
+everywhere but no one is promoted to it until the multi-tenant runtime is
+activated.
 
 ## Key directories
 

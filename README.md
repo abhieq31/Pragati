@@ -1,32 +1,34 @@
 # Pragati
 
-> Project intelligence for QA-IT teams in pharma. A bird's-eye view of every project, every action, every contributor — minus the noise.
+> The project tracker that sees the whole organisation as one living tree — and learns how your people actually deliver. Every project, every action, every contributor, minus the noise.
 
 [![CI](https://img.shields.io/badge/CI-passing-22c55e.svg)](#testing)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2014%20·%20MongoDB%20·%20TypeScript-1565C0.svg)](#stack)
-[![Compliance](https://img.shields.io/badge/21%20CFR%20Part%2011-aware-9333EA.svg)](./docs/ARCHITECTURE.md)
+[![Audit trail](https://img.shields.io/badge/audit%20trail-signed%20%26%20immutable-9333EA.svg)](./docs/ARCHITECTURE.md)
 [![License](https://img.shields.io/badge/license-MIT-64748b.svg)](./LICENSE)
 
 ---
 
 ## What it is
 
-A lightweight project + task tracker built for QA-IT teams in the pharmaceutical sector. Invite-only — no public sign-ups, no marketing pages. One workspace, real roles, and an audit trail that holds up in an inspection.
+Most trackers are flat lists wearing different clothes. Pragati is built around two convictions instead: **work is a tree** (org → team → project → task → person — and you should be able to *see* that tree, live, at any altitude), and **work has a memory** (a workspace should learn how its people actually deliver and warn you *before* a date slips, not report it after). Invite-only — no public sign-ups, no marketing pages. One workspace, two real roles, and an audit trail that holds up under any scrutiny.
 
 | Role | What they see |
 | --- | --- |
-| **Contributor** | Their own tasks, their My Day, their personal projects. |
-| **Team Lead** | Their teams, projects and tasks; assigns work; tracks progress. |
-| **Admin** | Full workspace control, user management, operations + audit log. |
+| **Individual Contributor** | Their own tasks, their My Day, their personal projects — their work, their pace, their progress. |
+| **Team Lead** | Their teams, projects and tasks; assigns work; sees who's loaded and what may slip. |
+| **Admin** | Everything — every team, every shared project, the admin console, user management, audit log. |
 | **Master Admin** (dormant) | Cross-tenant provisioning, when multi-tenant runtime is enabled. |
 
 ## Highlights
 
+- **Admin console** — `/admin` puts the whole workspace on one server-rendered page: people/team/project/task counts, an attention queue (locked accounts, pending invites, forced password resets), the latest audit activity, and one-click entry into every admin surface. Admins see *everything* (every team, every shared project) — except personal projects, which stay private to their owners by design. One capability matrix (`src/lib/permissions.ts`) drives both the UI and the API, so what a role sees is exactly what it can do.
 - **Bird's-eye view** — a full-screen, interactive SVG tree of `team → project → task → assignee`. Click any card (or the connector leading to it) to expand or hide its branch, drag cards to rearrange, sketch over the canvas with the brush, quick-edit assignee/TCD inline, and export the exact on-screen view as PDF, SVG, or image. Opens from the dashboard, team detail, or project detail page.
-- **Your reference scheme, not ours** — every project carries a user-pickable reference type (`CC#`, `SOP#`, `CAPA#`, `INC#`, …) plus your own number, shown everywhere instead of the system-generated code. Not every project is a Change Control, so the label isn't hardwired to one.
+- **Early warning, learned per person** — the dashboard quietly flags open work that is *likely to miss its date* before it does: a tiny model learns each person's real median cycle time and past-due rate from their own history and weighs it against the runway left and competing open work. No external AI service, no extra queries — computed in-process over data already loaded, every score traceable to a line of code (`src/lib/ai/slipRisk.ts`).
+- **Your reference scheme, not ours** — every project carries a user-pickable reference type plus your own number, shown everywhere instead of the system-generated code. Your numbering scheme survives the tool; the tool doesn't impose one.
 - **Owner-gated deletions** — tasks and phases can only be deleted by the **project owner** (and workspace admins). Leads manage work; only the owner can destroy it. Deleting a phase never deletes its tasks — they move to *Unphased*, and the action lands in the audit trail.
-- **Lifecycle templates** — Change Control, CSV/GAMP 5, SOP Dev, CAPA, Deviation, Audit, Validation, Agile Sprint, plus six regulatory operations templates (Regulatory Submission, System Retirement, Incident Management, Vendor Qualification, Training Program, Product Recall) and Personal templates for ICs.
-- **ALCOA+ audit trail** — every record change carries a signed, immutable trail (who, what, when, why). Personal projects never enter the cross-user log. Editing a project's reference number writes a before/after GxP record.
+- **Lifecycle templates** — a library of structured workflows (engineering change, incident management, audits, validation, sprints, training programs, vendor qualification, …) plus Personal templates for ICs — or define your own.
+- **Signed, immutable audit trail** — every record change carries who, what, when, and why. Personal projects never enter the cross-user log. Editing a project's reference number writes a before/after record.
 - **Mind map on My Day** — a personal node-link canvas for capturing thoughts before they become tasks. Owner-private, autosaves per user.
 - **Public profiles** — a within-workspace profile at `/<username>` with a contribution heatmap, an optional GitHub link, and Follow / Unfollow for colleagues.
 - **Sidebar calendar** — a compact month grid pinned above My Day, dotted with what's due (mine / team / overdue) and a hover card listing the day's work.
@@ -40,7 +42,7 @@ A lightweight project + task tracker built for QA-IT teams in the pharmaceutical
 
 - **Hand-rolled auth** — JWT + bcrypt + httpOnly cookie, one active session per user, idle auto-logout, brute-force lockout.
 - **Credential reuse prevention** — passwords and Quick PINs cannot repeat any of the last three used, enforced server-side on every change.
-- **E-signatures** — controlled status changes and sensitive account edits require password re-entry plus a reason, recorded verbatim in the audit trail (21 CFR Part 11 §11.10/§11.50/§11.200).
+- **Password-signed sign-offs** — controlled status changes and sensitive account edits require password re-entry plus a reason, recorded verbatim in the audit trail.
 - **Least-privilege destruction** — project deletion requires owner/admin + password re-auth; task and phase deletion is project-owner-only.
 - **Read-through cache** — optional Upstash Redis layer on hot aggregations (dashboard, projects, people), inert when the env vars are absent.
 
@@ -106,11 +108,11 @@ app builds and runs without any of these.
 
 Each user controls whether they receive it from **Settings → Daily task email** (off by
 default). The digest is a read-only projection of existing task data — it creates no
-records and sits outside the 21 CFR Part 11 e-record scope.
+records and never touches the audit trail.
 
 ## Stack
 
-Next.js 14 (App Router) · TypeScript · MongoDB / Mongoose · Zod · Tailwind · JWT + bcrypt + httpOnly cookie. No NextAuth, no Prisma, no third-party identity provider — by design, for 21 CFR Part 11 §11.10(d) traceability.
+Next.js 14 (App Router) · TypeScript · MongoDB / Mongoose · Zod · Tailwind · JWT + bcrypt + httpOnly cookie. No NextAuth, no Prisma, no third-party identity provider — by design, so every line of the auth and persistence path is owned, auditable code.
 
 Server-rendered detail pages with streaming Suspense skeletons; an Edge middleware cookie pre-filter for auth; an optional Upstash Redis read-through cache on hot aggregations (inert without env vars); and Vercel serverless functions pinned to `bom1` (Mumbai) to co-locate with the Atlas `ap-south-1` cluster.
 

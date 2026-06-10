@@ -1,9 +1,25 @@
 'use client';
 import { useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, Kanban, Sun, Users, ArrowRight, X, UserCircle, LayoutDashboard } from 'lucide-react';
+import {
+  Sparkles,
+  Kanban,
+  Sun,
+  Users,
+  ArrowRight,
+  X,
+  UserCircle,
+  LayoutDashboard,
+  ShieldCheck,
+  Check,
+  Info,
+} from 'lucide-react';
 
-const STORAGE_KEY = 'pragati-tour-v3';
+const STORAGE_KEY = 'pragati-tour-v4';
+
+/* Hand-written accents (step counter, "you are here" captions) use a casual
+   system stack — no webfont download, so the tour stays weightless. */
+const SCRIBBLE_FONT = "'Segoe Print', 'Bradley Hand', 'Marker Felt', 'Comic Sans MS', cursive";
 
 interface Step {
   target?: string;
@@ -14,70 +30,155 @@ interface Step {
   iconColor: string;
   side?: 'right' | 'bottom' | 'top' | 'left';
   mobileTarget?: string;
+  /** Final recap card: the role's rights, two columns — so the mental map of
+   *  "what's mine to drive here" is explicit before the tour lets go. */
+  cheat?: { yours: string[]; context: string[] };
 }
 
-const STEPS: Step[] = [
-  {
-    title: 'Welcome to Pragati!',
-    body: 'A quick tour of where things live. Takes about 30 seconds — skip whenever you like.',
-    icon: Sparkles,
-    iconBg: '#DBEAFE',
-    iconColor: '#1565C0',
-  },
-  {
-    target: '[data-tour="nav-dashboard"]',
-    mobileTarget: '[data-mobile-tour="nav-dashboard"]',
-    title: 'Your Dashboard',
-    body: "Everything at a glance — tasks on your plate today, recent activity, and every project you're part of.",
-    icon: LayoutDashboard,
-    iconBg: '#E3F2FD',
-    iconColor: '#1565C0',
-    side: 'right',
-  },
-  {
-    target: '[data-tour="nav-projects"]',
-    mobileTarget: '[data-mobile-tour="nav-projects"]',
-    title: 'Open a project',
-    body: 'Each project has a Kanban board. Drag a card between columns to change its status — it saves instantly.',
-    icon: Kanban,
-    iconBg: '#F3E5F5',
-    iconColor: '#7B1FA2',
-    side: 'right',
-  },
-  {
-    target: '[data-tour="nav-teams"]',
-    mobileTarget: '[data-mobile-tour="nav-teams"]',
-    title: 'Teams',
-    body: 'Cross-functional groups of people who deliver projects together. Leads can create teams; everyone can see who they work with.',
-    icon: Users,
-    iconBg: '#E8F5E9',
-    iconColor: '#2E7D32',
-    side: 'right',
-  },
-  {
-    target: '[data-tour="nav-my-day"]',
-    mobileTarget: '[data-mobile-tour="nav-my-day"]',
-    title: 'My Day is yours alone',
-    body: 'A private scratchpad to empty your head, then turn the lines that matter into tracked tasks. Only you can see it.',
-    icon: Sun,
-    iconBg: '#FEF9C3',
-    iconColor: '#A16207',
-    side: 'right',
-  },
-  {
-    target: '[data-tour="account-menu"]',
-    title: 'Profile & settings',
-    body: 'Customise your avatar, set your Quick PIN, toggle dark mode and notifications — all here.',
-    icon: UserCircle,
-    iconBg: '#FCE4EC',
-    iconColor: '#C2185B',
-    side: 'right',
-  },
-];
+/**
+ * Role-aware steps. Same skeleton for everyone (the app's shape shouldn't
+ * change per role), but the words describe what THIS role will actually do
+ * on each surface, and the closing cheat-sheet spells out their rights.
+ * All targets anchor to the AppShell nav, which exists on every page.
+ */
+function buildSteps(role: string): Step[] {
+  const isAdmin = role === 'admin' || role === 'master_admin';
+  const isLead = role === 'lead' || isAdmin;
+  const roleLabel = isAdmin ? 'Admin' : isLead ? 'Team Lead' : 'Individual Contributor';
+
+  const steps: Step[] = [
+    {
+      title: 'Welcome to Pragati!',
+      body: `A 40-second walk through where things live — tuned to what you can do as ${
+        isAdmin ? 'the workspace admin' : isLead ? 'a team lead' : 'a contributor'
+      }. Skip whenever you like.`,
+      icon: Sparkles,
+      iconBg: '#DBEAFE',
+      iconColor: '#1565C0',
+    },
+    {
+      target: '[data-tour="nav-dashboard"]',
+      mobileTarget: '[data-mobile-tour="nav-dashboard"]',
+      title: 'Your Dashboard',
+      body: isLead
+        ? "Your whole scope at a glance — project health, who's loaded, what's overdue or about to slip, and the Bird's-eye button for the full tree."
+        : "Your work at a glance — what's due today, what's coming up next, and the projects you're part of.",
+      icon: LayoutDashboard,
+      iconBg: '#E3F2FD',
+      iconColor: '#1565C0',
+      side: 'right',
+    },
+    {
+      target: '[data-tour="nav-projects"]',
+      mobileTarget: '[data-mobile-tour="nav-projects"]',
+      title: isLead ? 'Run projects' : 'Your projects',
+      body: isLead
+        ? 'Create shared projects from ready-made lifecycle templates or your own, run the Kanban board, and assign work. Drag a card to change status — it saves instantly.'
+        : 'Tasks assigned to you live here, on Kanban boards. You also get private personal projects — a space only you can see, ever.',
+      icon: Kanban,
+      iconBg: '#F3E5F5',
+      iconColor: '#7B1FA2',
+      side: 'right',
+    },
+    {
+      target: '[data-tour="nav-teams"]',
+      mobileTarget: '[data-mobile-tour="nav-teams"]',
+      title: isLead ? 'Lead your teams' : 'Your teams',
+      body: isLead
+        ? "Create teams, pick members, and steer delivery. Every team page opens its own bird's-eye view and exports reports."
+        : 'See the teams you belong to and the colleagues you deliver with.',
+      icon: Users,
+      iconBg: '#E8F5E9',
+      iconColor: '#2E7D32',
+      side: 'right',
+    },
+  ];
+
+  if (isAdmin) {
+    steps.push({
+      target: '[data-tour="nav-console"]',
+      title: 'Administration',
+      body: 'The Console shows the whole workspace — counts, locked accounts, pending invites, recent audit activity. People manages accounts; Logs is the immutable trail.',
+      icon: ShieldCheck,
+      iconBg: '#FEF3C7',
+      iconColor: '#B45309',
+      side: 'right',
+    });
+  }
+
+  steps.push(
+    {
+      target: '[data-tour="nav-my-day"]',
+      mobileTarget: '[data-mobile-tour="nav-my-day"]',
+      title: 'My Day is yours alone',
+      body: 'A private scratchpad (plus a mind-map canvas) to empty your head, then turn the lines that matter into tracked tasks. Only you can see it.',
+      icon: Sun,
+      iconBg: '#FEF9C3',
+      iconColor: '#A16207',
+      side: 'right',
+    },
+    {
+      target: '[data-tour="account-menu"]',
+      title: 'Profile & settings',
+      body: 'Your avatar, Quick PIN, dark mode, notifications — and your public profile with its activity heatmap and streak.',
+      icon: UserCircle,
+      iconBg: '#FCE4EC',
+      iconColor: '#C2185B',
+      side: 'right',
+    },
+    {
+      title: `Your map as ${roleLabel}`,
+      body: 'Pin this mental model — it covers 90% of what you’ll do here.',
+      icon: isAdmin ? ShieldCheck : isLead ? Users : Check,
+      iconBg: isAdmin ? '#FEF3C7' : '#DCFCE7',
+      iconColor: isAdmin ? '#B45309' : '#16A34A',
+      cheat: isAdmin
+        ? {
+            yours: [
+              'Everything a lead can do — plus every team & shared project is visible to you',
+              'Console / People / Logs: accounts, roles, resets, audit trail',
+              'Bulk actions & sign-out-everywhere for incident response',
+              'Delete any shared project (password sign-off, fully audited)',
+            ],
+            context: [
+              'Personal projects stay private to their owners — even from you',
+              'Sensitive changes need your password + a reason (e-signature)',
+            ],
+          }
+        : isLead
+          ? {
+              yours: [
+                'Create teams & shared projects; assign and rebalance work',
+                "Bird's-eye any team or project; export Excel / PDF reports",
+                'Edit any task in your scope; spot work that may slip before it does',
+                'My Day, mind map & personal projects — private to you',
+              ],
+              context: [
+                'Deleting tasks & phases is for the project owner (and admins)',
+                'People & Logs are admin surfaces — ask your admin for accounts',
+              ],
+            }
+          : {
+              yours: [
+                'Work your assigned tasks; drag Kanban cards to update status',
+                'Personal projects + mind map + My Day — private to you',
+                'Follow colleagues; grow your streak & contribution graph',
+                'Press ? anywhere for keyboard shortcuts',
+              ],
+              context: [
+                'Leads create teams & shared projects and assign the work',
+                'Your profile (/your-username) shows what you deliver',
+              ],
+            },
+    },
+  );
+
+  return steps;
+}
 
 const SPOTLIGHT_PAD = 8;
-const TOOLTIP_GAP = 16;
-const TOOLTIP_W = 330;
+const TOOLTIP_GAP = 56; // generous gap — the curved arrow lives in it
+const TOOLTIP_W = 340;
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(false);
@@ -150,27 +251,60 @@ function ScribbleUnderline({ color = '#1565C0' }: { color?: string }) {
   );
 }
 
-// Hand-drawn arrow indicator pointing at the target
-function ScribbleArrow({ side }: { side: 'right' | 'left' | 'top' | 'bottom' }) {
-  const paths: Record<string, string> = {
-    left: 'M 40 20 C 28 20, 14 20, 4 20 M 4 20 L 14 13 M 4 20 L 14 27',
-    right: 'M 4 20 C 16 20, 30 20, 40 20 M 40 20 L 30 13 M 40 20 L 30 27',
-    top: 'M 20 40 C 20 28, 20 14, 20 4 M 20 4 L 13 14 M 20 4 L 27 14',
-    bottom: 'M 20 4 C 20 16, 20 30, 20 40 M 20 40 L 13 30 M 20 40 L 27 30',
+/* Curved, dotted, hand-drawn arrow from the card toward the target. The dots
+   crawl along the path (dashoffset animation) so the line itself points the
+   eye in the right direction. Each side gets its own swing so the arrow
+   always bows outward like a quick marker stroke. */
+function ScribbleCurvedArrow({ side }: { side: 'right' | 'left' | 'top' | 'bottom' }) {
+  // Paths are drawn FROM the card edge TO the target, so the crawl animation
+  // (negative dashoffset) flows toward what we're pointing at.
+  const geo: Record<string, { vb: string; w: number; h: number; d: string; head: string }> = {
+    left: {
+      vb: '0 0 84 64',
+      w: 84,
+      h: 64,
+      d: 'M 80 16 C 56 8, 26 14, 10 40',
+      head: 'M 10 40 L 13 26 M 10 40 L 24 38',
+    },
+    right: {
+      vb: '0 0 84 64',
+      w: 84,
+      h: 64,
+      d: 'M 4 16 C 28 8, 58 14, 74 40',
+      head: 'M 74 40 L 71 26 M 74 40 L 60 38',
+    },
+    top: {
+      vb: '0 0 64 84',
+      w: 64,
+      h: 84,
+      d: 'M 16 80 C 8 56, 14 26, 40 10',
+      head: 'M 40 10 L 26 13 M 40 10 L 38 24',
+    },
+    bottom: {
+      vb: '0 0 64 84',
+      w: 64,
+      h: 84,
+      d: 'M 16 4 C 8 28, 14 58, 40 74',
+      head: 'M 40 74 L 26 71 M 40 74 L 38 60',
+    },
   };
-  const isHoriz = side === 'left' || side === 'right';
+  const g = geo[side];
   return (
-    <svg
-      viewBox={isHoriz ? '0 0 44 40' : '0 0 40 44'}
-      width={isHoriz ? 22 : 20}
-      height={isHoriz ? 20 : 22}
-      aria-hidden
-    >
+    <svg viewBox={g.vb} width={g.w} height={g.h} aria-hidden style={{ overflow: 'visible' }}>
       <path
-        d={paths[side]}
+        d={g.d}
         fill="none"
-        stroke="rgba(255,255,255,0.7)"
-        strokeWidth="2.5"
+        stroke="rgba(255,255,255,0.9)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray="0.5 9"
+        style={{ animation: 'tour-dot-crawl 1.4s linear infinite' }}
+      />
+      <path
+        d={g.head}
+        fill="none"
+        stroke="rgba(255,255,255,0.9)"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -178,11 +312,18 @@ function ScribbleArrow({ side }: { side: 'right' | 'left' | 'top' | 'bottom' }) 
   );
 }
 
-export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }) {
+export function FirstTimeTour({
+  alreadySeen = false,
+  role = 'contributor',
+}: {
+  alreadySeen?: boolean;
+  role?: string;
+}) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const isMobile = useIsMobile();
+  const STEPS = buildSteps(role);
 
   useEffect(() => {
     setMounted(true);
@@ -228,7 +369,7 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
 
   // Tooltip position
   let tip: { top: number; left: number } = {
-    top: vh / 2 - 160,
+    top: vh / 2 - 180,
     left: Math.max(16, vw / 2 - TOOLTIP_W / 2),
   };
 
@@ -236,12 +377,12 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
     const side = s.side || 'right';
     if (side === 'right') {
       tip = {
-        top: Math.max(16, Math.min(vh - 300, effectiveHole.top + effectiveHole.height / 2 - 130)),
+        top: Math.max(16, Math.min(vh - 320, effectiveHole.top + effectiveHole.height / 2 - 130)),
         left: Math.min(vw - TOOLTIP_W - 16, effectiveHole.left + effectiveHole.width + TOOLTIP_GAP),
       };
       if (tip.left + TOOLTIP_W > vw - 16) {
         tip = {
-          top: Math.min(vh - 300, effectiveHole.top + effectiveHole.height + TOOLTIP_GAP),
+          top: Math.min(vh - 320, effectiveHole.top + effectiveHole.height + TOOLTIP_GAP),
           left: Math.max(
             16,
             Math.min(vw - TOOLTIP_W - 16, effectiveHole.left + effectiveHole.width / 2 - TOOLTIP_W / 2),
@@ -250,7 +391,7 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
       }
     } else if (side === 'bottom') {
       tip = {
-        top: Math.min(vh - 300, effectiveHole.top + effectiveHole.height + TOOLTIP_GAP),
+        top: Math.min(vh - 320, effectiveHole.top + effectiveHole.height + TOOLTIP_GAP),
         left: Math.max(
           16,
           Math.min(vw - TOOLTIP_W - 16, effectiveHole.left + effectiveHole.width / 2 - TOOLTIP_W / 2),
@@ -258,7 +399,7 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
       };
     } else if (side === 'top') {
       tip = {
-        top: Math.max(16, effectiveHole.top - 260 - TOOLTIP_GAP),
+        top: Math.max(16, effectiveHole.top - 280 - TOOLTIP_GAP),
         left: Math.max(
           16,
           Math.min(vw - TOOLTIP_W - 16, effectiveHole.left + effectiveHole.width / 2 - TOOLTIP_W / 2),
@@ -266,7 +407,7 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
       };
     } else {
       tip = {
-        top: Math.max(16, Math.min(vh - 300, effectiveHole.top + effectiveHole.height / 2 - 130)),
+        top: Math.max(16, Math.min(vh - 320, effectiveHole.top + effectiveHole.height / 2 - 130)),
         left: Math.max(16, effectiveHole.left - TOOLTIP_W - TOOLTIP_GAP),
       };
     }
@@ -275,9 +416,8 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
   // On mobile, always center the tooltip vertically if near bottom
   if (isMobile) {
     tip.left = Math.max(12, Math.min(vw - TOOLTIP_W - 12, tip.left));
-    // If no target or target off screen, place in the middle
     if (!effectiveHole) {
-      tip.top = Math.max(80, vh / 2 - 160);
+      tip.top = Math.max(80, vh / 2 - 180);
       tip.left = Math.max(12, vw / 2 - TOOLTIP_W / 2);
     }
   }
@@ -295,7 +435,8 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
 
   return createPortal(
     <div role="dialog" aria-modal aria-label="Product tour" className="fixed inset-0 z-[9998]">
-      {/* SVG filter for subtle sketch wobble on the spotlight ring */}
+      {/* Sketch wobble filter + the dot-crawl keyframes used by the ring and
+          the curved arrows. */}
       <svg width="0" height="0" className="absolute" aria-hidden>
         <defs>
           <filter id="tour-rough" x="-10%" y="-10%" width="120%" height="120%">
@@ -310,6 +451,12 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
           </filter>
         </defs>
       </svg>
+      <style>{`
+        @keyframes tour-dot-crawl { to { stroke-dashoffset: -19; } }
+        @media (prefers-reduced-motion: reduce) {
+          [style*='tour-dot-crawl'] { animation: none !important; }
+        }
+      `}</style>
 
       {/* Dim overlay */}
       {hasTarget && effectiveHole ? (
@@ -344,20 +491,45 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
             }}
             onClick={close}
           />
-          {/* Sketch-style spotlight ring */}
-          <div
-            className="absolute pointer-events-none rounded-xl"
+          {/* Dotted spotlight ring — round dots crawling slowly around the
+              target, with a hand-sketch wobble. Replaces the old static
+              dashed outline. */}
+          <svg
+            className="absolute pointer-events-none"
             style={{
-              top: effectiveHole.top - 4,
-              left: effectiveHole.left - 4,
-              width: effectiveHole.width + 8,
-              height: effectiveHole.height + 8,
+              top: effectiveHole.top - 9,
+              left: effectiveHole.left - 9,
               filter: 'url(#tour-rough)',
-              outline: '2.5px dashed rgba(255,255,255,0.6)',
-              outlineOffset: '2px',
-              boxShadow: '0 0 0 2px rgba(21,101,192,0.4), 0 0 20px rgba(21,101,192,0.15)',
             }}
-          />
+            width={effectiveHole.width + 18}
+            height={effectiveHole.height + 18}
+            aria-hidden
+          >
+            <rect
+              x={5}
+              y={5}
+              width={effectiveHole.width + 8}
+              height={effectiveHole.height + 8}
+              rx={16}
+              fill="none"
+              stroke="rgba(21,101,192,0.45)"
+              strokeWidth={6}
+              opacity={0.5}
+            />
+            <rect
+              x={5}
+              y={5}
+              width={effectiveHole.width + 8}
+              height={effectiveHole.height + 8}
+              rx={16}
+              fill="none"
+              stroke="rgba(255,255,255,0.95)"
+              strokeWidth={3}
+              strokeLinecap="round"
+              strokeDasharray="0.5 9"
+              style={{ animation: 'tour-dot-crawl 1.8s linear infinite' }}
+            />
+          </svg>
         </>
       ) : (
         <div className="absolute inset-0 tour-overlay-bg" onClick={close} />
@@ -374,21 +546,21 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Connector arrow (visible only when there's a target) */}
+        {/* Curved dotted connector arrow (visible only when there's a target) */}
         {effectiveHole && (
           <div
-            className="absolute"
+            className="absolute pointer-events-none"
             style={{
               ...(arrowSide === 'left'
-                ? { right: '100%', top: '50%', transform: 'translateY(-50%) translateX(-2px)' }
+                ? { right: '100%', top: 8, transform: 'translateX(6px)' }
                 : arrowSide === 'right'
-                  ? { left: '100%', top: '50%', transform: 'translateY(-50%) translateX(2px)' }
+                  ? { left: '100%', top: 8, transform: 'translateX(-6px)' }
                   : arrowSide === 'top'
-                    ? { bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-2px)' }
-                    : { top: '100%', left: '50%', transform: 'translateX(-50%) translateY(2px)' }),
+                    ? { bottom: '100%', left: 14, transform: 'translateY(6px)' }
+                    : { top: '100%', left: 14, transform: 'translateY(-6px)' }),
             }}
           >
-            <ScribbleArrow side={arrowSide} />
+            <ScribbleCurvedArrow side={arrowSide} />
           </div>
         )}
 
@@ -415,12 +587,9 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
               <X size={13} />
             </button>
 
-            {/* Step counter — handwritten style */}
-            <div
-              className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 mb-3"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-            >
-              Step {step + 1} of {STEPS.length}
+            {/* Step counter — handwritten */}
+            <div className="text-[11px] text-slate-400 mb-3 -rotate-1" style={{ fontFamily: SCRIBBLE_FONT }}>
+              step {step + 1} of {STEPS.length}
             </div>
 
             <div
@@ -441,6 +610,50 @@ export function FirstTimeTour({ alreadySeen = false }: { alreadySeen?: boolean }
               <ScribbleUnderline color={s.iconColor} />
             </div>
             <p className="text-[13px] text-slate-500 mt-2 leading-relaxed">{s.body}</p>
+
+            {/* Role cheat-sheet — the closing mental map */}
+            {s.cheat && (
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div
+                    className="text-[12px] text-green-700 mb-1.5 -rotate-1"
+                    style={{ fontFamily: SCRIBBLE_FONT }}
+                  >
+                    yours to drive
+                  </div>
+                  <ul className="space-y-1">
+                    {s.cheat.yours.map((line) => (
+                      <li
+                        key={line}
+                        className="flex items-start gap-2 text-[12px] text-slate-600 leading-snug"
+                      >
+                        <Check size={12} className="text-green-600 shrink-0 mt-0.5" />
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div
+                    className="text-[12px] text-slate-400 mb-1.5 -rotate-1"
+                    style={{ fontFamily: SCRIBBLE_FONT }}
+                  >
+                    worth knowing
+                  </div>
+                  <ul className="space-y-1">
+                    {s.cheat.context.map((line) => (
+                      <li
+                        key={line}
+                        className="flex items-start gap-2 text-[12px] text-slate-500 leading-snug"
+                      >
+                        <Info size={12} className="text-slate-300 shrink-0 mt-0.5" />
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer */}
