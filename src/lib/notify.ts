@@ -1,4 +1,5 @@
 import { Notification } from '@/models/Notification';
+import { User } from '@/models/User';
 
 /**
  * Fire-and-forget notification creation, called from API routes after an
@@ -16,10 +17,18 @@ export async function notify(opts: {
   body?: string;
   taskId?: string;
   projectId?: string;
+  // When set, the recipient's matching preference flag on User is checked
+  // before creating the notification — if it's explicitly false, the
+  // notification is skipped entirely.
+  preferenceKey?: 'notifTaskAssigned' | 'notifTaskDueSoon' | 'notifTaskOverdue' | 'notifProjectUpdate';
 }): Promise<void> {
   try {
     if (!opts.userId) return;
     if (opts.actorId && String(opts.actorId) === String(opts.userId)) return;
+    if (opts.preferenceKey) {
+      const recipient = await User.findById(opts.userId).select(opts.preferenceKey).lean();
+      if (recipient && (recipient as any)[opts.preferenceKey] === false) return;
+    }
     await Notification.create({
       userId:    opts.userId,
       type:      opts.type || 'general',

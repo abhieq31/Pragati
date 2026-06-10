@@ -124,6 +124,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         body:      (fresh as any)?.title || '',
         taskId:    params.id,
         projectId: String((fresh as any)?.projectId || ''),
+        preferenceKey: 'notifTaskAssigned',
       });
     }
     if (!isPrivateTask && body.status === 'done' && current.status !== 'done') {
@@ -137,6 +138,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           body:      (fresh as any)?.title || '',
           taskId:    params.id,
           projectId: String((fresh as any)?.projectId || ''),
+          preferenceKey: 'notifProjectUpdate',
         });
       }
     }

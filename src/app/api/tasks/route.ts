@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
         body:      task.title,
         taskId:    String(task._id),
         projectId: String(body.projectId),
+        preferenceKey: 'notifTaskAssigned',
       });
     }
 

@@ -1,27 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { connectDB } from '@/lib/db';
 import { WorkflowTemplate } from '@/models/WorkflowTemplate';
 import { requireUser } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
+import { WorkflowTemplateCreateSchema } from '@/lib/validations';
 
 export const runtime = 'nodejs';
-
-const TaskSchema = z.object({
-  title: z.string(),
-  type: z.string().optional(),
-});
-
-const PhaseSchema = z.object({
-  name: z.string(),
-  tasks: z.array(TaskSchema).default([]),
-});
-
-const CreateTemplate = z.object({
-  name: z.string().min(1).max(120),
-  description: z.string().max(500).optional(),
-  phases: z.array(PhaseSchema).default([]),
-});
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,7 +34,7 @@ export async function POST(req: NextRequest) {
     const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const body = await readBody(req, CreateTemplate);
+    const body = await readBody(req, WorkflowTemplateCreateSchema);
     const template = await WorkflowTemplate.create({
       name: body.name,
       description: body.description || '',
