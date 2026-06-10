@@ -61,6 +61,10 @@ interface TeamTask {
   subtasksDone: number;
   subtaskTitles?: string[];
   gxpCritical?: boolean;
+  /** Early warning from the server's delivery model — present only when the
+   *  task is judged likely to miss its date; `reason` is the plain-language
+   *  factor behind the call (shown as the chip's tooltip). */
+  slipRisk?: { reason: string } | null;
 }
 
 interface DashProject {
@@ -1026,6 +1030,14 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                     {isBlocked && !isOverdue && (
                       <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-md">
                         Blocked
+                      </span>
+                    )}
+                    {t.slipRisk && !isDone && !isOverdue && !isBlocked && (
+                      <span
+                        title={`Early warning: ${t.slipRisk.reason}`}
+                        className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-md cursor-help"
+                      >
+                        May slip
                       </span>
                     )}
                     {!t.assigneeName && !isDone && (
