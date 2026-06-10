@@ -17,11 +17,12 @@ A lightweight project + task tracker built for QA-IT teams in the pharmaceutical
 | --- | --- |
 | **Contributor** | Their own tasks, their My Day, their personal projects. |
 | **Team Lead** | Their teams, projects and tasks; assigns work; tracks progress. |
-| **Admin** | Full workspace control, user management, operations + audit log. |
+| **Admin** | Everything — every team, every shared project, the admin console, user management, audit log. |
 | **Master Admin** (dormant) | Cross-tenant provisioning, when multi-tenant runtime is enabled. |
 
 ## Highlights
 
+- **Admin console** — `/admin` puts the whole workspace on one server-rendered page: people/team/project/task counts, an attention queue (locked accounts, pending invites, forced password resets), the latest audit activity, and one-click entry into every admin surface. Admins see *everything* (every team, every shared project) — except personal projects, which stay private to their owners by design. One capability matrix (`src/lib/permissions.ts`) drives both the UI and the API, so what a role sees is exactly what it can do.
 - **Bird's-eye view** — a full-screen, interactive SVG tree of `team → project → task → assignee`. Click any card (or the connector leading to it) to expand or hide its branch, drag cards to rearrange, sketch over the canvas with the brush, quick-edit assignee/TCD inline, and export the exact on-screen view as PDF, SVG, or image. Opens from the dashboard, team detail, or project detail page.
 - **Your reference scheme, not ours** — every project carries a user-pickable reference type (`CC#`, `SOP#`, `CAPA#`, `INC#`, …) plus your own number, shown everywhere instead of the system-generated code. Not every project is a Change Control, so the label isn't hardwired to one.
 - **Owner-gated deletions** — tasks and phases can only be deleted by the **project owner** (and workspace admins). Leads manage work; only the owner can destroy it. Deleting a phase never deletes its tasks — they move to *Unphased*, and the action lands in the audit trail.
