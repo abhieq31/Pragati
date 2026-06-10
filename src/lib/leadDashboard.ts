@@ -9,6 +9,7 @@ import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStri
 import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
 import { cached, cacheBust } from '@/lib/cache';
 import { normalizeRole } from '@/lib/auth';
+import { buildDeliveryProfiles, buildOpenLoad, scoreSlipRisk } from '@/lib/ai/slipRisk';
 
 const STATUS_ORDER: Record<string, number> = { in_progress: 0, review: 1, blocked: 2, todo: 3, done: 4 };
 
@@ -164,6 +165,12 @@ async function computeLeadDashboardData(jwtUser: {
       .lean(),
   ]);
 
+  // Delivery profiles + open load for the slip-risk early warning — computed
+  // once over rows already in memory (done tasks teach the model; open tasks
+  // supply the pressure feature).
+  const deliveryProfiles = buildDeliveryProfiles(teamTasksRaw as any);
+  const openLoadByAssignee = buildOpenLoad(teamTasksRaw as any);
+
   const assigneeIds = [
     ...new Set(
       teamTasksRaw
@@ -303,6 +310,20 @@ async function computeLeadDashboardData(jwtUser: {
       subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
       subtaskTitles: ((t as any).subtasks || []).slice(0, 3).map((s: any) => s.title),
       gxpCritical: !!(t as any).gxpCritical,
+      // Slip-risk early warning — learned from each assignee's delivery
+      // history in the SAME rows we already loaded (no extra queries; see
+      // lib/ai/slipRisk). Null for most tasks; a {reason} object when the
+      // model judges the date likely to be missed.
+      slipRisk: ((): { reason: string } | null => {
+        if (!t.assigneeId) return null;
+        const sig = scoreSlipRisk(
+          t as any,
+          deliveryProfiles.get(String(t.assigneeId)),
+          openLoadByAssignee.get(String(t.assigneeId)) || 0,
+          now,
+        );
+        return sig ? { reason: sig.reason } : null;
+      })(),
     };
   });
 

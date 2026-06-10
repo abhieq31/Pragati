@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -9,6 +9,7 @@ import { CurrentUserProvider } from './CurrentUserContext';
 import { AvatarRegistryProvider } from './AvatarRegistry';
 import { NotificationBell } from './NotificationBell';
 import { SidebarCalendar, clearSidebarCalendarCache } from './SidebarCalendar';
+import { MomentumStrip, clearMomentumCache } from './MomentumStrip';
 import { clearActivityGraphCache } from './ActivityGraph';
 import { api } from '@/lib/client/api';
 
@@ -19,6 +20,7 @@ import { api } from '@/lib/client/api';
 function clearSessionScopedCaches() {
   clearSidebarCalendarCache();
   clearActivityGraphCache();
+  clearMomentumCache();
 }
 
 // Force-password modal — only ships when a user has mustChangePassword set.
@@ -44,6 +46,7 @@ import {
   FolderKanban,
   Users,
   UsersRound,
+  ShieldCheck,
   NotebookPen,
   LogOut,
   Menu,
@@ -357,6 +360,14 @@ export default function AppShell({
   ];
   const adminExtra: NavItem[] = [
     {
+      href: '/admin',
+      label: 'Console',
+      icon: ShieldCheck,
+      iconColor: '#B45309',
+      iconBg: '#FEF3C7',
+      adminOnly: true,
+    },
+    {
       href: '/people',
       label: 'People',
       icon: UsersRound,
@@ -561,51 +572,67 @@ export default function AppShell({
           {nav.map((n) => {
             const Icon = n.icon;
             const active = isActive(n.href);
+            // Visually separate the admin surfaces from everyday navigation —
+            // a small section label before the first admin-only item makes
+            // the role boundary legible at a glance.
+            const startsAdminSection = n.adminOnly && nav.find((x) => x.adminOnly) === n;
             return (
-              <Link
-                key={n.href}
-                href={n.href}
-                prefetch
-                title={showCollapsed ? n.label : undefined}
-                data-tour={`nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`}
-                className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
-                  active
-                    ? 'text-brand-700 dark:text-[#faf9f5]'
-                    : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
-                }`}
-                style={
-                  active
-                    ? showCollapsed
-                      ? {
-                          background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                        }
-                      : {
-                          background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
-                          borderLeft: `3px solid ${n.iconColor}`,
-                          paddingLeft: '9px',
-                        }
-                    : {}
-                }
-              >
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
-                  style={{
-                    background: active
-                      ? dark
-                        ? `${n.iconColor}30`
-                        : n.iconBg
-                      : dark
-                        ? `${n.iconColor}18`
-                        : `${n.iconColor}14`,
-                  }}
-                >
-                  <Icon
-                    size={14}
-                    style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }}
+              <Fragment key={n.href}>
+                {startsAdminSection && !showCollapsed && (
+                  <div className="px-2.5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/30">
+                    Administration
+                  </div>
+                )}
+                {startsAdminSection && showCollapsed && (
+                  <div
+                    className="my-2 mx-2 border-t"
+                    style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#e8edf4' }}
                   />
-                </div>
-                {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
-              </Link>
+                )}
+                <Link
+                  href={n.href}
+                  prefetch
+                  title={showCollapsed ? n.label : undefined}
+                  data-tour={`nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  className={`flex items-center gap-2.5 ${showCollapsed ? 'justify-center px-0' : 'px-2.5'} py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
+                    active
+                      ? 'text-brand-700 dark:text-[#faf9f5]'
+                      : 'text-slate-600 dark:text-white/55 hover:text-slate-900 dark:hover:text-white/90 hover:bg-slate-50 dark:hover:bg-white/5'
+                  }`}
+                  style={
+                    active
+                      ? showCollapsed
+                        ? {
+                            background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                          }
+                        : {
+                            background: dark ? 'rgba(255,255,255,0.08)' : '#EEF4FD',
+                            borderLeft: `3px solid ${n.iconColor}`,
+                            paddingLeft: '9px',
+                          }
+                      : {}
+                  }
+                >
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all"
+                    style={{
+                      background: active
+                        ? dark
+                          ? `${n.iconColor}30`
+                          : n.iconBg
+                        : dark
+                          ? `${n.iconColor}18`
+                          : `${n.iconColor}14`,
+                    }}
+                  >
+                    <Icon
+                      size={14}
+                      style={{ color: active ? n.iconColor : dark ? n.iconColor + 'bb' : n.iconColor + '99' }}
+                    />
+                  </div>
+                  {!showCollapsed && <span className="flex-1 truncate">{n.label}</span>}
+                </Link>
+              </Fragment>
             );
           })}
         </div>
@@ -614,6 +641,10 @@ export default function AppShell({
             the collapsed icon rail; sits just above "My Day" so My Day stays
             pinned closest to the footer. */}
         {!showCollapsed && <SidebarCalendar dark={dark} />}
+
+        {/* Momentum — streak + this week's completions, visible on every page
+            so progress is always one glance away. */}
+        {!showCollapsed && <MomentumStrip dark={dark} username={user.username} />}
 
         {/* My Day — pinned just above the footer so it's always reachable */}
         <div
@@ -1143,7 +1174,7 @@ export default function AppShell({
           component is itself the source of truth on whether to open: it
           checks `alreadySeen` (server) and a localStorage fast-path, and
           POSTs /api/me/tour-seen on dismissal so it never reappears. */}
-          {!mustChangePw && <FirstTimeTour alreadySeen={!!user.hasSeenTour} />}
+          {!mustChangePw && <FirstTimeTour alreadySeen={!!user.hasSeenTour} role={user.role} />}
 
           {/* Sign-out confirmation — fixed centered modal, works in both expanded and collapsed sidebar */}
           {confirmLogout && (

@@ -1,16 +1,18 @@
 'use client';
 import Link from 'next/link';
 import { ReactNode } from 'react';
-import { MapPin, Building2, Briefcase } from 'lucide-react';
+import { MapPin, Building2, Briefcase, Fingerprint } from 'lucide-react';
 
 /**
- * Shared profile hero — the gradient banner used on both the editable
- * settings page (self) and the read-only public profile at /[username].
+ * Shared profile hero — used on both the editable settings page (self) and
+ * the read-only public profile at /[username].
  *
- * Keeping one component means a user's profile looks identical whether they're
- * editing their own or viewing a colleague's, and any future polish lands in
- * one place. The avatar is passed in as a node so the settings page can hand
- * over its click-to-edit button while the public view passes a plain Avatar.
+ * Design: a flat identity row, not a cover banner. The old gradient-banner
+ * treatment read as a social-network relic; this one leads with the person —
+ * a brand-ring avatar, name + role side by side, and quiet metadata — so the
+ * page gets to the substance (impact numbers, activity) one beat sooner.
+ * Keeping one component means a user's profile looks identical whether
+ * they're editing their own or viewing a colleague's.
  */
 export function ProfileHero({
   name,
@@ -36,7 +38,7 @@ export function ProfileHero({
   organisation?: string | null;
   /** The avatar node (editable button on settings, plain Avatar on public). */
   avatar: ReactNode;
-  /** Top-right action slot — Edit (self) or View public profile. */
+  /** Right-side action slot — Edit (self) or nothing (public). */
   actions?: ReactNode;
   /** When true, @username links to the public profile route. */
   linkUsername?: boolean;
@@ -45,85 +47,68 @@ export function ProfileHero({
 }) {
   const meta = [
     title ? { icon: Briefcase, text: title } : null,
-    department ? { icon: Building2, text: department } : null,
+    department || organisation
+      ? { icon: Building2, text: [department, organisation].filter(Boolean).join(' · ') }
+      : null,
     location ? { icon: MapPin, text: location } : null,
+    showMemberId && employeeId ? { icon: Fingerprint, text: `ID ${employeeId}` } : null,
   ].filter(Boolean) as { icon: any; text: string }[];
 
   const handle = username ? (
     linkUsername ? (
-      <Link href={`/${username}`} className="font-mono break-all hover:text-white transition-colors">
+      <Link
+        href={`/${username}`}
+        className="font-mono text-[13px] text-slate-400 dark:text-white/40 break-all hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
+      >
         @{username}
       </Link>
     ) : (
-      <span className="font-mono break-all">@{username}</span>
+      <span className="font-mono text-[13px] text-slate-400 dark:text-white/40 break-all">@{username}</span>
     )
   ) : null;
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white"
-      style={{ boxShadow: '0 16px 48px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.05)' }}
-    >
-      <div className="absolute inset-0 profile-hero-shimmer" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(120% 140% at 12% 0%, rgba(255,255,255,0.20) 0%, transparent 45%)',
-        }}
-      />
-
-      <div className="relative px-5 py-6 sm:px-8 sm:py-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-            <div
-              className="shrink-0 rounded-3xl bg-white p-1.5"
-              style={{ boxShadow: '0 14px 34px rgba(15,23,42,0.22)' }}
-            >
-              {avatar}
-            </div>
-            <div className="min-w-0 pb-1">
-              <div className="mb-3 inline-flex rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white backdrop-blur">
-                <span className="font-display">Pragati</span>&nbsp;profile
-              </div>
-              <h1 className="text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl break-words">
-                {name}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/75">
-                {handle}
-              </div>
-              {meta.length > 0 && (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {meta.map((m, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur"
-                    >
-                      <m.icon size={11} className="opacity-80" /> {m.text}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div
-            className={`grid w-full gap-2 lg:w-auto ${showMemberId ? 'grid-cols-2 lg:min-w-[260px]' : 'grid-cols-1 lg:min-w-[140px]'}`}
-          >
-            <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
-              <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Access</div>
-              <div className="mt-1 text-sm font-black">{roleText}</div>
-            </div>
-            {showMemberId && (
-              <div className="rounded-2xl border border-white/25 bg-white/15 px-4 py-3 text-white backdrop-blur">
-                <div className="text-[10px] font-black uppercase tracking-wider text-white/60">Member ID</div>
-                <div className="mt-1 text-sm font-black">{employeeId || '—'}</div>
-              </div>
-            )}
-          </div>
+    <section className="card p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+        {/* Brand-ring avatar — the one decorative element the hero keeps. */}
+        <div
+          className="shrink-0 self-start sm:self-auto rounded-full p-[3px]"
+          style={{
+            background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
+          }}
+        >
+          <div className="rounded-full p-[3px] bg-white dark:bg-[#262624]">{avatar}</div>
         </div>
-      </div>
 
-      {actions && <div className="absolute top-4 right-4">{actions}</div>}
-    </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
+              {name}
+            </h1>
+            <span className="inline-flex items-center rounded-full border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-white/55">
+              {roleText}
+            </span>
+          </div>
+
+          {handle && <div className="mt-1">{handle}</div>}
+
+          {meta.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {meta.map((m, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 text-[12px] text-slate-500 dark:text-white/45"
+                >
+                  <m.icon size={12} className="text-slate-300 dark:text-white/25 shrink-0" />
+                  {m.text}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {actions && <div className="shrink-0 self-start flex items-center gap-1.5">{actions}</div>}
+      </div>
+    </section>
   );
 }

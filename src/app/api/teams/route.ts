@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/db';
 import { Team } from '@/models/Team';
 import { Project } from '@/models/Project';
 import { isLead, requireUser } from '@/lib/auth';
+import { can } from '@/lib/permissions';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
 import { User } from '@/models/User';
@@ -26,10 +27,13 @@ export async function GET(req: NextRequest) {
     if (error) return error;
     await connectDB();
 
-    // Every role — admin included — sees only the teams they lead or belong to.
-    // Team membership is the access boundary: an admin who needs to see a team
-    // is added to it, rather than getting blanket visibility into every group.
-    const filter = { $or: [{ leadId: user.sub }, { memberIds: user.sub }] };
+    // Leads and contributors see only the teams they lead or belong to —
+    // membership is their access boundary. Admins hold workspace.view_all
+    // and see every team: workspace oversight shouldn't require joining
+    // each team one by one.
+    const filter = can(user.role, 'workspace.view_all')
+      ? {}
+      : { $or: [{ leadId: user.sub }, { memberIds: user.sub }] };
 
     const teams = await Team.find(filter).sort({ name: 1 }).lean();
     const teamIds = teams.map((t: any) => t._id).filter(Boolean);

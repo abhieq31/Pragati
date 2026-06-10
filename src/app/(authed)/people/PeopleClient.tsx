@@ -30,6 +30,7 @@ import {
   CheckSquare,
   Square,
   MinusSquare,
+  LogOut,
 } from 'lucide-react';
 
 /* ── Activity peek modal — team leaders click a teammate to see how they're
@@ -1230,6 +1231,27 @@ export default function PeopleClient({
     }
   }
 
+  // Revoke every active session immediately — incident-response gesture.
+  // The account stays usable (no lock, no password change); the user just
+  // has to sign in again.
+  async function forceLogout(user: any) {
+    if (
+      !confirm(
+        `Sign ${user.name} out of all sessions?\nTheir password stays valid — they simply have to sign in again.`,
+      )
+    )
+      return;
+    setSaving(user.id);
+    try {
+      await api(`/users/${user.id}/force-logout`, { method: 'POST' });
+      setRoleErr('');
+    } catch (e: any) {
+      setRoleErr(e.message || 'Failed to sign the user out.');
+    } finally {
+      setSaving(null);
+    }
+  }
+
   // Admin-driven password reset. Avoids the SMTP round-trip entirely:
   // we generate a temp password server-side and surface it through the
   // same CredentialsModal used after creating a new user.
@@ -1651,6 +1673,16 @@ export default function PeopleClient({
                     Reset password
                   </button>
                 )}
+                {isAdmin && me?.id !== u.id && (
+                  <button
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    onClick={() => forceLogout(u)}
+                    disabled={saving === u.id}
+                    title="Sign out everywhere (revokes all active sessions)"
+                  >
+                    <LogOut size={13} />
+                  </button>
+                )}
                 {/* Demote a lead to contributor. Never offered for the
                    admin row or the admin's own row. */}
                 {me?.id !== u.id && u.role !== 'admin' && (
@@ -1827,6 +1859,16 @@ export default function PeopleClient({
                 >
                   Promote to Lead
                 </button>
+                {isAdmin && me?.id !== u.id && (
+                  <button
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                    onClick={() => forceLogout(u)}
+                    disabled={saving === u.id}
+                    title="Sign out everywhere (revokes all active sessions)"
+                  >
+                    <LogOut size={13} />
+                  </button>
+                )}
                 <button
                   className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
                   onClick={() => setDeactivateTarget(u)}

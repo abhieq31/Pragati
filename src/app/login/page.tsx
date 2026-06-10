@@ -24,6 +24,31 @@ function getInitials(name: string) {
    in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
    without a redeploy. Daily-seeded start so the day has "a quote of the day". */
 
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
+
+/** Indices not yet shown on this device; resets when the set is exhausted. */
+function unseenQuoteIndices(): number[] {
+  try {
+    const seen: number[] = JSON.parse(localStorage.getItem(QUOTES_SEEN_KEY) || '[]');
+    const valid = new Set(seen.filter((n) => Number.isInteger(n) && n >= 0 && n < QUOTES.length));
+    const unseen = QUOTES.map((_, i) => i).filter((i) => !valid.has(i));
+    if (unseen.length > 0) return unseen;
+    localStorage.removeItem(QUOTES_SEEN_KEY);
+    return QUOTES.map((_, i) => i);
+  } catch {
+    return QUOTES.map((_, i) => i);
+  }
+}
+
+function markQuoteSeen(i: number) {
+  try {
+    const seen: number[] = JSON.parse(localStorage.getItem(QUOTES_SEEN_KEY) || '[]');
+    if (!seen.includes(i)) localStorage.setItem(QUOTES_SEEN_KEY, JSON.stringify([...seen, i]));
+  } catch {
+    /* private mode — quotes simply rotate without the ledger */
+  }
+}
+
 function RotatingQuote() {
   const [quotes, setQuotes] = useState<Quote[]>(BUILTIN_QUOTES);
   const [i, setI] = useState(() => dailyQuoteOffset(BUILTIN_QUOTES.length));
@@ -42,6 +67,7 @@ function RotatingQuote() {
   }, []);
 
   useEffect(() => {
+    if (queue.length < 2) return;
     const t = setInterval(() => {
       setShow(false);
       setTimeout(() => {
@@ -61,7 +87,7 @@ function RotatingQuote() {
         opacity: show ? 1 : 0,
         minHeight: 30,
       }}
-      className="text-white/40 tracking-wide max-w-[300px] mx-auto leading-snug"
+      className="max-w-[320px] mx-auto"
     >
       <span style={{ fontStyle: 'italic' }}>“{q.text}”</span>
       <span className="block text-[10px] text-white/25 mt-0.5 not-italic">— {q.author}</span>
@@ -148,6 +174,12 @@ export default function LoginPage() {
     font: 0,
   });
   const [pin, setPin] = useState('');
+  // Wrong-PIN shake + success takeover. `unlocked` swaps the PIN pad for a
+  // full-screen welcome veil that stays up while the dashboard route loads,
+  // so the post-PIN moment reads as one continuous transition instead of
+  // "boxes → blank → skeleton".
+  const [shake, setShake] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
   const pinInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -217,14 +249,19 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await api('/auth/unlock', { method: 'POST', body: { pin: pinValue } });
-      // `replace` triggers a soft client-side navigation; the dashboard route
-      // re-renders with the freshly-set auth cookie. We *don't* call
-      // `router.refresh()` here — it triggers a hard re-render of every
-      // server tree which made the post-PIN wait feel sluggish (1–2s of
-      // visual blank). The dashboard's loading skeleton covers the swap.
-      router.replace('/');
+      // Success: flash the boxes green, then raise the welcome veil and
+      // navigate underneath it. `replace` triggers a soft client-side
+      // navigation; the dashboard route re-renders with the freshly-set auth
+      // cookie. We *don't* call `router.refresh()` here — it triggers a hard
+      // re-render of every server tree which made the post-PIN wait feel
+      // sluggish (1–2s of visual blank). The veil (and then the dashboard's
+      // skeleton) covers the swap.
+      setUnlocked(true);
+      setTimeout(() => router.replace('/'), 450);
     } catch (e: any) {
       setPin('');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       if (e?.data?.needPassword || /password/i.test(e?.message || '')) {
         setErr(e.message || 'Please sign in with your password.');
         setMode('login');
@@ -312,6 +349,35 @@ export default function LoginPage() {
         @keyframes spin-ccw { to { transform: rotate(-360deg); } }
         .pin-orbit-a { animation: spin-cw 22s linear infinite; }
         .pin-orbit-b { animation: spin-ccw 16s linear infinite; }
+        /* Wrong-PIN feedback: one decisive horizontal shake of the box row —
+           the universal "nope" gesture — instead of only a red message below. */
+        @keyframes pin-shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-7px); }
+          40% { transform: translateX(6px); }
+          60% { transform: translateX(-4px); }
+          80% { transform: translateX(3px); }
+        }
+        .pin-shake { animation: pin-shake 0.45s ease-in-out; }
+        /* Correct-PIN feedback: dots pop green before the welcome veil rises. */
+        @keyframes pin-pop {
+          0% { transform: scale(1); }
+          45% { transform: scale(1.35); }
+          100% { transform: scale(1); }
+        }
+        .pin-pop { animation: pin-pop 0.3s ease-out; }
+        /* Post-unlock welcome veil — fades up over everything and holds while
+           the dashboard loads behind it. */
+        @keyframes veil-in {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .veil-in { animation: veil-in 0.35s ease-out both; }
+        @keyframes veil-bar {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(250%); }
+        }
+        .veil-bar { animation: veil-bar 1.1s ease-in-out infinite; }
         /* Aurora — three large, slow-drifting colour blobs behind the brand
            panel. Gives the login a living, premium backdrop without the busy
            orbiting dots. GPU-friendly (transform + opacity only). */
@@ -323,8 +389,9 @@ export default function LoginPage() {
         .aurora-3 { animation: aurora-3 24s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
           .logo-float, .pulse-ring, .pulse-ring-2, .pulse-ring-3, .shimmer-line::after,
-          .pin-orbit-a, .pin-orbit-b, .aurora-1, .aurora-2, .aurora-3 { animation: none !important; }
-          .fade-up, .fade-up-1, .fade-up-2, .fade-up-3, .fade-in-soft, .form-swap { animation-duration: 0.01ms !important; }
+          .pin-orbit-a, .pin-orbit-b, .aurora-1, .aurora-2, .aurora-3,
+          .pin-shake, .pin-pop, .veil-bar { animation: none !important; }
+          .fade-up, .fade-up-1, .fade-up-2, .fade-up-3, .fade-in-soft, .form-swap, .veil-in { animation-duration: 0.01ms !important; }
         }
       `}</style>
 
@@ -560,9 +627,10 @@ export default function LoginPage() {
                     </p>
                   </div>
 
-                  {/* 4-box PIN input — keyboard plus touch keypad, so it works on every device */}
+                  {/* 4-box PIN input — keyboard plus touch keypad, so it works on every device.
+                    The row shakes on a wrong PIN and the dots pop green on success. */}
                   <div
-                    className="relative flex justify-center gap-3 mb-4 cursor-text"
+                    className={`relative flex justify-center gap-3 mb-4 cursor-text ${shake ? 'pin-shake' : ''}`}
                     onClick={() => pinInputRef.current?.focus()}
                   >
                     {[0, 1, 2, 3].map((i) => (
@@ -570,13 +638,36 @@ export default function LoginPage() {
                         key={i}
                         className="w-[54px] h-[62px] rounded-2xl border-2 flex items-center justify-center transition-all duration-200"
                         style={{
-                          borderColor: pin.length === i ? '#1565C0' : pin.length > i ? '#93c5fd' : '#e2e8f0',
-                          background: pin.length > i ? '#eff6ff' : pin.length === i ? '#f0f9ff' : 'white',
-                          boxShadow: pin.length === i ? '0 0 0 3px rgba(21,101,192,0.13)' : 'none',
+                          borderColor: unlocked
+                            ? '#16a34a'
+                            : shake
+                              ? '#ef4444'
+                              : pin.length === i
+                                ? '#1565C0'
+                                : pin.length > i
+                                  ? '#93c5fd'
+                                  : '#e2e8f0',
+                          background: unlocked
+                            ? '#f0fdf4'
+                            : shake
+                              ? '#fef2f2'
+                              : pin.length > i
+                                ? '#eff6ff'
+                                : pin.length === i
+                                  ? '#f0f9ff'
+                                  : 'white',
+                          boxShadow:
+                            !unlocked && !shake && pin.length === i
+                              ? '0 0 0 3px rgba(21,101,192,0.13)'
+                              : 'none',
                           transform: pin.length > i ? 'scale(1.04)' : 'scale(1)',
                         }}
                       >
-                        {pin.length > i && <div className="w-3 h-3 rounded-full bg-blue-600" />}
+                        {pin.length > i && (
+                          <div
+                            className={`w-3 h-3 rounded-full ${unlocked ? 'bg-green-600 pin-pop' : 'bg-blue-600'}`}
+                          />
+                        )}
                       </div>
                     ))}
 
@@ -619,7 +710,7 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  {loading && (
+                  {loading && !unlocked && (
                     <div className="mt-2 fade-in-soft">
                       <BirdsEyeLoader
                         size="sm"
@@ -821,6 +912,55 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Post-unlock welcome veil ─────────────────────────────────────
+          Raised the instant the PIN verifies and held while the dashboard
+          route loads underneath, so unlocking reads as one continuous
+          motion: dots pop green → veil rises → workspace appears. */}
+      {unlocked && (
+        <div
+          className="fixed inset-0 z-[80] veil-in flex flex-col items-center justify-center"
+          style={{
+            background: 'linear-gradient(160deg, #050E1D 0%, #091828 40%, #0B1F3A 70%, #0C2347 100%)',
+          }}
+          aria-live="polite"
+        >
+          <div className="relative mb-6" style={{ width: 88, height: 88 }}>
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(66,165,245,0.30) 0%, transparent 68%)',
+                animation: 'glow-pulse 2.4s ease-in-out infinite',
+              }}
+            />
+            <div
+              className="absolute inset-[10px] rounded-[22px] flex items-center justify-center text-xl select-none"
+              style={{
+                background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
+                fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
+                fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
+                boxShadow: '0 14px 36px rgba(21,101,192,0.45)',
+              }}
+            >
+              {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+            </div>
+          </div>
+          <div className="font-display text-2xl font-black text-white tracking-tight fade-up-1">
+            Welcome back{deviceName ? `, ${deviceName.split(/\s+/)[0]}` : ''}
+          </div>
+          <div className="text-[13px] text-white/50 mt-2 fade-up-2">
+            Taking you to your bird&apos;s-eye view…
+          </div>
+          <div className="mt-7 w-44 h-1 rounded-full overflow-hidden bg-white/10 fade-up-3">
+            <div
+              className="h-full w-1/2 rounded-full veil-bar"
+              style={{ background: 'linear-gradient(90deg, #1769C8, #43A047)' }}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

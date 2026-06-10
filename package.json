@@ -19,6 +19,7 @@
     "migrate-roles": "tsx scripts/migrate-roles.ts",
     "smoke-prod": "tsx scripts/smoke-prod.ts",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/unit/*.test.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"e2e/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"e2e/**/*.ts\"",
     "e2e": "playwright test",

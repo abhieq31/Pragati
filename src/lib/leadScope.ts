@@ -1,31 +1,37 @@
 import { Team } from '@/models/Team';
 import mongoose from 'mongoose';
+import { can } from '@/lib/permissions';
 
 // Scope of records visible to the current viewer.
 //
-// All roles use actual team memberships — a user sees only projects where
-// they are the owner or assigned to a team they lead/belong to. This applies
-// to every role including admin: the admin role grants access to the People,
-// Audit, and Teams management surfaces, but not blanket project visibility.
+// Leads and contributors use actual team memberships — they see only projects
+// where they are the owner or assigned to a team they lead/belong to. Admins
+// hold `workspace.view_all` and get an unrestricted scope: every team, every
+// shared project, every task. Personal projects remain invisible to everyone
+// but their owner (enforced in projectsVisibleFilter), admin included.
 export interface LeadScope {
   userOid: mongoose.Types.ObjectId;
-  teamOids: mongoose.Types.ObjectId[]; // teams the user leads or belongs to
+  teamOids: mongoose.Types.ObjectId[]; // teams in scope (all teams for admin)
   memberOids: mongoose.Types.ObjectId[]; // union of memberIds across those teams (incl. the user themselves)
-  unrestricted: boolean; // always false — kept for interface stability
+  unrestricted: boolean; // true for workspace.view_all roles (admin/master_admin)
 }
 
-export async function getLeadScope(userId: string, _role?: string | null): Promise<LeadScope> {
+export async function getLeadScope(userId: string, role?: string | null): Promise<LeadScope> {
   const userOid = new mongoose.Types.ObjectId(userId);
 
-  // A user can see projects for any team they lead OR belong to as a member.
+  // Admins see the whole workspace; everyone else sees the teams they lead
+  // OR belong to as a member. Both paths fill teamOids/memberOids the same
+  // way so every downstream consumer (dashboards, pickers, scope guards)
+  // works unchanged.
+  const unrestricted = can(role, 'workspace.view_all');
   const teams = await Team.find(
-    { $or: [{ leadId: userOid }, { memberIds: userOid }] },
+    unrestricted ? {} : { $or: [{ leadId: userOid }, { memberIds: userOid }] },
     '_id memberIds',
   ).lean();
 
   const teamOids = teams.map((t) => t._id);
 
-  // Build the member set — include the lead themselves so their own tasks
+  // Build the member set — include the viewer themselves so their own tasks
   // always surface even before anyone is assigned to their team.
   const memberSet = new Set<string>([String(userOid)]);
   for (const t of teams) {
@@ -33,7 +39,7 @@ export async function getLeadScope(userId: string, _role?: string | null): Promi
   }
   const memberOids = [...memberSet].map((id) => new mongoose.Types.ObjectId(id));
 
-  return { userOid, teamOids, memberOids, unrestricted: false as const };
+  return { userOid, teamOids, memberOids, unrestricted };
 }
 
 // Matches projects that are NOT someone's private personal to-do list.

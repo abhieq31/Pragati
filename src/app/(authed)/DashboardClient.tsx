@@ -62,6 +62,10 @@ interface TeamTask {
   subtasksDone: number;
   subtaskTitles?: string[];
   gxpCritical?: boolean;
+  /** Early warning from the server's delivery model — present only when the
+   *  task is judged likely to miss its date; `reason` is the plain-language
+   *  factor behind the call (shown as the chip's tooltip). */
+  slipRisk?: { reason: string } | null;
 }
 
 interface DashProject {
@@ -1033,6 +1037,14 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                         Blocked
                       </span>
                     )}
+                    {t.slipRisk && !isDone && !isOverdue && !isBlocked && (
+                      <span
+                        title={`Early warning: ${t.slipRisk.reason}`}
+                        className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-md cursor-help"
+                      >
+                        May slip
+                      </span>
+                    )}
                     {!t.assigneeName && !isDone && (
                       <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-1.5 py-0.5 rounded-md">
                         Unassigned
@@ -1708,6 +1720,17 @@ function ActionGroup({
                         <>
                           <span className="text-slate-200 dark:text-white/15">·</span>
                           <span>{formatDate(due)}</span>
+                        </>
+                      )}
+                      {t.slipRisk && dueIn !== null && dueIn >= 0 && (
+                        <>
+                          <span className="text-slate-200 dark:text-white/15">·</span>
+                          <span
+                            className="font-bold text-orange-600 dark:text-orange-400 cursor-help"
+                            title={`Early warning: ${t.slipRisk.reason}`}
+                          >
+                            may slip
+                          </span>
                         </>
                       )}
                     </div>
