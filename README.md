@@ -11,13 +11,13 @@
 
 ## What it is
 
-Most trackers are flat lists wearing different clothes. Pragati is built around two convictions instead: **work is a tree** (org → team → project → task → person — and you should be able to *see* that tree, live, at any altitude), and **work has a memory** (a workspace should learn how its people actually deliver and warn you *before* a date slips, not report it after). Invite-only — no public sign-ups, no marketing pages. One workspace, two real roles, and an audit trail that holds up under any scrutiny.
+**One promise: everyone sees the whole board.** Pragati gives every person — contributor, lead, or admin — a bird's-eye view of everything moving in the team, plus a private space only they can see. It was forged in pharma QA-IT (so it carries a 21 CFR Part 11-grade audit trail and GxP lifecycles out of the box), but the model is universal: any team that wants total clarity without total surveillance. Invite-only — no public sign-ups, no marketing pages.
 
 | Role | What they see |
 | --- | --- |
-| **Individual Contributor** | Their own tasks, their My Day, their personal projects — their work, their pace, their progress. |
-| **Team Lead** | Their teams, projects and tasks; assigns work; sees who's loaded and what may slip. |
-| **Admin** | Everything — every team, every shared project, the admin console, user management, audit log. |
+| **Contributor** | Their own tasks, their My Day, and truly private personal projects (invisible to everyone — including admins). |
+| **Team Lead** | Their teams, projects and tasks; assigns work; tracks progress. |
+| **Admin** | Full workspace control, user management, operations + audit log. |
 | **Master Admin** (dormant) | Cross-tenant provisioning, when multi-tenant runtime is enabled. |
 
 ## Highlights
@@ -36,7 +36,9 @@ Most trackers are flat lists wearing different clothes. Pragati is built around 
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
 - **Productivity touches** — resizable sidebar, global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
-- **Daily task email** — an opt-in 08:30 IST digest of the tasks each person has due that day, delivered via Brevo's free transactional API (inert until configured). See [Daily email digest](#daily-email-digest).
+- **A living login screen** — attributed wisdom from Jobs, Naval, Bezos, Musk, Franklin, Jensen Huang, and Ellison, daily-seeded, refreshable forever via `QUOTES_FEED_URL` (a public JSON you host) with the built-in library as permanent fallback.
+- **AI, deep but minimal** — the rule-based engine decides everything (an architectural invariant); Gemini may only *rephrase* the already-decided Morning Brief headline (one cached call per user per day, instant fallback without a key). Plus the conversational Copilot and mind-map→tasks suggestions.
+- **Daily rundown, four channels, free forever** — every user gets a role-aware **Morning Brief** (contributors: what's on my plate; leads: team pulse; admins: workspace rundown) rendered on the dashboard, as an optional **Web Push** notification (VAPID — no vendor, no cost), as a personal **calendar feed** (subscribe once in Outlook/Google/Apple), and as an opt-in **08:30 IST email** capped to the provider's free tier. Mail is provider-agnostic (`MAIL_PROVIDER=brevo|resend|webhook`) so an org can bring its own relay. See [Daily email digest](#daily-email-digest) and [`docs/SCALING.md`](./docs/SCALING.md).
 
 ## Security & data integrity
 
@@ -116,7 +118,7 @@ Next.js 14 (App Router) · TypeScript · MongoDB / Mongoose · Zod · Tailwind �
 
 Server-rendered detail pages with streaming Suspense skeletons; an Edge middleware cookie pre-filter for auth; an optional Upstash Redis read-through cache on hot aggregations (inert without env vars); and Vercel serverless functions pinned to `bom1` (Mumbai) to co-locate with the Atlas `ap-south-1` cluster.
 
-Architecture deep-dive: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+Architecture deep-dive: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). Growth plan to web scale: [`docs/SCALING.md`](./docs/SCALING.md).
 
 ## Project structure
 

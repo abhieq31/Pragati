@@ -1,0 +1,94 @@
+/**
+ * Personal agenda → iCalendar (RFC 5545) — the pull-based, zero-cost channel.
+ * Calendar clients (Outlook, Google, Apple) poll the tokened feed themselves;
+ * we never send anything, so this scales for free by definition.
+ *
+ * Pure functions only — unit-testable without a database.
+ */
+
+export interface IcsTask {
+  id: string;
+  title: string;
+  projectName?: string | null;
+  /** Effective due date (ccTcd || dueDate), already resolved by the caller. */
+  due: Date;
+  status?: string;
+  priority?: string | null;
+}
+
+/** RFC 5545 text escaping: backslash, semicolon, comma, newline. */
+export function escapeIcsText(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+}
+
+function icsDate(d: Date): string {
+  return d.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+function icsStamp(d: Date): string {
+  return d
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
+}
+
+/** Fold long content lines at 75 octets per RFC 5545 §3.1. */
+export function foldIcsLine(line: string): string {
+  if (line.length <= 75) return line;
+  const parts: string[] = [];
+  let rest = line;
+  parts.push(rest.slice(0, 75));
+  rest = rest.slice(75);
+  while (rest.length > 0) {
+    parts.push(' ' + rest.slice(0, 74));
+    rest = rest.slice(74);
+  }
+  return parts.join('\r\n');
+}
+
+/** Render a user's open tasks as all-day VEVENTs on their effective due date. */
+export function renderAgendaIcs(input: {
+  calendarName: string;
+  tasks: IcsTask[];
+  appUrl?: string;
+  now?: Date;
+}): string {
+  const now = input.now || new Date();
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Pragati//Daily Agenda//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeIcsText(input.calendarName)}`,
+    'X-WR-CALDESC:Open tasks by due date — read-only feed from Pragati.',
+    // Hint clients to refresh a few times a day; a daily agenda needs no more.
+    'X-PUBLISHED-TTL:PT6H',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT6H',
+  ];
+
+  for (const t of input.tasks) {
+    const dayAfter = new Date(t.due.getTime() + 24 * 60 * 60 * 1000);
+    const summary = `${t.title}${t.projectName ? ` · ${t.projectName}` : ''}`;
+    const descParts = [
+      t.status ? `Status: ${String(t.status).replace(/_/g, ' ')}` : '',
+      t.priority ? `Priority: ${t.priority}` : '',
+      input.appUrl ? `${input.appUrl}/tasks/${t.id}` : '',
+    ].filter(Boolean);
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:task-${t.id}@pragati`,
+      `DTSTAMP:${icsStamp(now)}`,
+      `DTSTART;VALUE=DATE:${icsDate(t.due)}`,
+      `DTEND;VALUE=DATE:${icsDate(dayAfter)}`,
+      `SUMMARY:${escapeIcsText(summary)}`,
+      ...(descParts.length ? [`DESCRIPTION:${escapeIcsText(descParts.join('\n'))}`] : []),
+      ...(input.appUrl ? [`URL:${input.appUrl}/tasks/${t.id}`] : []),
+      'TRANSP:TRANSPARENT', // tasks block no calendar time — they're markers
+      'END:VEVENT',
+    );
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.map(foldIcsLine).join('\r\n') + '\r\n';
+}

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
 import { BirdsEyeLoader } from '@/components/BirdsEyeLoader';
+import { BUILTIN_QUOTES, dailyQuoteOffset, type Quote } from '@/lib/quotes';
 import { ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { AVATAR_FONTS, avatarFg } from '@/components/ui';
 
@@ -18,30 +19,10 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating wisdom — short aphorisms from Naval Ravikant, chosen for the
-   app's own themes: compounding progress, long-term work, focus, leverage.
-   Each is a single-sentence, widely-circulated line, quoted with attribution.
-
-   No-repeat rule: every quote has a stable id and a per-device "seen" ledger
-   lives in localStorage, so a returning user never sees the same line twice
-   until they've seen them all (the login page is pre-auth, so the device is
-   the closest thing to a user identity we have here). Once the whole set has
-   been seen, the ledger resets and a fresh cycle begins — with a finite set,
-   that's the only honest option. */
-const QUOTES = [
-  'Play long-term games with long-term people.',
-  'Impatience with actions, patience with results.',
-  'Escape competition through authenticity.',
-  'All the returns in life, whether in wealth, relationships, or knowledge, come from compound interest.',
-  'If you can’t decide, the answer is no.',
-  'Earn with your mind, not with your time.',
-  'Learn to sell. Learn to build. If you can do both, you will be unstoppable.',
-  'Code and media are permissionless leverage.',
-  'Inspiration is perishable — act on it immediately.',
-  'A busy calendar and a busy mind will destroy your ability to create anything great.',
-  'Specific knowledge is found by pursuing your genuine curiosity.',
-  'Reading is faster than listening. Doing is faster than watching.',
-];
+/* Rotating, attributed wisdom from seven builders (Jobs, Naval, Bezos, Musk,
+   Franklin, Jensen, Ellison). Built-ins ship with the app; /api/quotes swaps
+   in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
+   without a redeploy. Daily-seeded start so the day has "a quote of the day". */
 
 const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
 
@@ -69,21 +50,20 @@ function markQuoteSeen(i: number) {
 }
 
 function RotatingQuote() {
-  // The queue is built once on mount (shuffled unseen indices); we then walk
-  // it, marking each line seen as it appears. SSR renders nothing — the
-  // ledger only exists client-side, and a server-picked quote would flash.
-  const [queue, setQueue] = useState<number[]>([]);
-  const [pos, setPos] = useState(0);
+  const [quotes, setQuotes] = useState<Quote[]>(BUILTIN_QUOTES);
+  const [i, setI] = useState(() => dailyQuoteOffset(BUILTIN_QUOTES.length));
   const [show, setShow] = useState(true);
 
   useEffect(() => {
-    const unseen = unseenQuoteIndices();
-    for (let i = unseen.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [unseen[i], unseen[j]] = [unseen[j], unseen[i]];
-    }
-    setQueue(unseen);
-    markQuoteSeen(unseen[0]);
+    fetch('/api/quotes')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.quotes?.length) {
+          setQuotes(d.quotes);
+          setI(dailyQuoteOffset(d.quotes.length));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -91,36 +71,26 @@ function RotatingQuote() {
     const t = setInterval(() => {
       setShow(false);
       setTimeout(() => {
-        setPos((p) => {
-          const next = (p + 1) % queue.length;
-          markQuoteSeen(queue[next]);
-          return next;
-        });
+        setI((n) => (n + 1) % quotes.length);
         setShow(true);
       }, 400);
-    }, 8000);
+    }, 7000);
     return () => clearInterval(t);
-  }, [queue]);
+  }, [quotes.length]);
 
-  if (queue.length === 0) return <div style={{ minHeight: 34 }} />;
+  const q = quotes[i % quotes.length];
   return (
     <div
       style={{
+        fontSize: 12,
         transition: 'opacity 0.4s ease',
         opacity: show ? 1 : 0,
-        minHeight: 34,
+        minHeight: 30,
       }}
       className="max-w-[320px] mx-auto"
     >
-      <div style={{ fontSize: 12 }} className="text-white/45 italic tracking-wide leading-snug">
-        “{QUOTES[queue[pos]]}”
-      </div>
-      <div
-        style={{ fontSize: 10 }}
-        className="text-white/25 mt-1.5 font-semibold tracking-[0.18em] uppercase"
-      >
-        — Naval Ravikant
-      </div>
+      <span style={{ fontStyle: 'italic' }}>“{q.text}”</span>
+      <span className="block text-[10px] text-white/25 mt-0.5 not-italic">— {q.author}</span>
     </div>
   );
 }

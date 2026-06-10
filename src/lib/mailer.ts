@@ -42,54 +42,116 @@ function apiUrl(): string {
   return process.env.BREVO_API_URL?.trim() || DEFAULT_API_URL;
 }
 
-/** True when a real Brevo sender is configured and email can actually go out. */
+/* ── Provider seam ─────────────────────────────────────────────────────────
+   MAIL_PROVIDER selects the outbound transport (default 'brevo'):
+
+     brevo    – Brevo transactional HTTP API (BREVO_API_KEY + BREVO_SENDER_EMAIL)
+     resend   – Resend HTTP API            (RESEND_API_KEY + MAIL_SENDER_EMAIL)
+     webhook  – ANY relay the operator owns (MAIL_WEBHOOK_URL [+ MAIL_WEBHOOK_TOKEN])
+
+   'webhook' is the bring-your-own answer for organisations that already run
+   mail infrastructure (M365/Exchange, internal SMTP gateways): we POST a
+   plain JSON envelope {to,toName,subject,html,text,senderName} and their
+   tiny relay (a Graph API call, a Lambda, an Apps Script) does the send on
+   infrastructure they already pay for — unlimited volume, zero cost here. */
+export type MailProvider = 'brevo' | 'resend' | 'webhook';
+
+export function mailProvider(): MailProvider {
+  const p = (process.env.MAIL_PROVIDER || 'brevo').trim().toLowerCase();
+  return p === 'resend' || p === 'webhook' ? p : 'brevo';
+}
+
+/** True when the selected provider has everything it needs to actually send. */
 export function mailerConfigured(): boolean {
-  return !!(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
+  switch (mailProvider()) {
+    case 'resend':
+      return !!(process.env.RESEND_API_KEY && process.env.MAIL_SENDER_EMAIL);
+    case 'webhook':
+      return !!process.env.MAIL_WEBHOOK_URL;
+    default:
+      return !!(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
+  }
 }
 
 /** The configured sender address (or '' when unconfigured) — surfaced read-only
  *  in the admin setup checklist so an operator can confirm what's wired up. */
 export function configuredSender(): string {
-  return process.env.BREVO_SENDER_EMAIL || '';
+  switch (mailProvider()) {
+    case 'resend':
+      return process.env.MAIL_SENDER_EMAIL || '';
+    case 'webhook':
+      return process.env.MAIL_SENDER_EMAIL || 'via your relay';
+    default:
+      return process.env.BREVO_SENDER_EMAIL || '';
+  }
 }
 
 export async function sendEmail(msg: MailMessage): Promise<MailResult> {
-  const apiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.BREVO_SENDER_EMAIL;
-  const senderName = process.env.BREVO_SENDER_NAME || SENDER_NAME_FALLBACK;
-
-  if (!apiKey || !senderEmail) {
-    console.warn('[mailer] Brevo not configured — skipping email to', msg.to);
+  const provider = mailProvider();
+  if (!mailerConfigured()) {
+    console.warn(`[mailer] ${provider} not configured — skipping email to`, msg.to);
     return { ok: false, skipped: true };
   }
 
+  const senderName = process.env.MAIL_SENDER_NAME || process.env.BREVO_SENDER_NAME || SENDER_NAME_FALLBACK;
+
+  let url: string;
+  let headers: Record<string, string>;
+  let body: Record<string, unknown>;
+
+  if (provider === 'resend') {
+    url = process.env.MAIL_API_URL?.trim() || 'https://api.resend.com/emails';
+    headers = { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' };
+    body = {
+      from: `${senderName} <${process.env.MAIL_SENDER_EMAIL}>`,
+      to: [msg.to],
+      subject: msg.subject,
+      html: msg.html,
+      ...(msg.text ? { text: msg.text } : {}),
+    };
+  } else if (provider === 'webhook') {
+    url = process.env.MAIL_WEBHOOK_URL!;
+    headers = {
+      'content-type': 'application/json',
+      ...(process.env.MAIL_WEBHOOK_TOKEN
+        ? { authorization: `Bearer ${process.env.MAIL_WEBHOOK_TOKEN}` }
+        : {}),
+    };
+    body = {
+      to: msg.to,
+      toName: msg.toName || '',
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text || '',
+      senderName,
+    };
+  } else {
+    url = apiUrl();
+    headers = {
+      'api-key': process.env.BREVO_API_KEY!,
+      'content-type': 'application/json',
+      accept: 'application/json',
+    };
+    body = {
+      sender: { email: process.env.BREVO_SENDER_EMAIL, name: senderName },
+      to: [{ email: msg.to, ...(msg.toName ? { name: msg.toName } : {}) }],
+      subject: msg.subject,
+      htmlContent: msg.html,
+      ...(msg.text ? { textContent: msg.text } : {}),
+    };
+  }
+
   try {
-    const res = await fetch(apiUrl(), {
-      method: 'POST',
-      headers: {
-        'api-key': apiKey,
-        'content-type': 'application/json',
-        accept: 'application/json',
-      },
-      body: JSON.stringify({
-        sender: { email: senderEmail, name: senderName },
-        to: [{ email: msg.to, ...(msg.toName ? { name: msg.toName } : {}) }],
-        subject: msg.subject,
-        htmlContent: msg.html,
-        ...(msg.text ? { textContent: msg.text } : {}),
-      }),
-    });
-
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error('[mailer] Brevo send failed', res.status, body.slice(0, 300));
-      return { ok: false, error: `brevo_${res.status}` };
+      const text = await res.text().catch(() => '');
+      console.error(`[mailer] ${provider} send failed`, res.status, text.slice(0, 300));
+      return { ok: false, error: `${provider}_${res.status}` };
     }
-
-    const data = (await res.json().catch(() => ({}))) as { messageId?: string };
-    return { ok: true, id: data?.messageId };
+    const data = (await res.json().catch(() => ({}))) as { messageId?: string; id?: string };
+    return { ok: true, id: data?.messageId || data?.id };
   } catch (e: any) {
-    console.error('[mailer] Brevo send error', e?.message);
+    console.error(`[mailer] ${provider} send error`, e?.message);
     return { ok: false, error: e?.message || 'send_error' };
   }
 }
