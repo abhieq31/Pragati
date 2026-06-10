@@ -313,3 +313,25 @@ export const TaskUpdateSchema = z.object({
   pendingWith: z.string().max(120).optional(),
 });
 export type TaskUpdateInput = z.infer<typeof TaskUpdateSchema>;
+
+/* ── Workflow templates (custom, workspace-saved) ───────────────────────── */
+
+const WorkflowTemplateTaskSchema = z.object({
+  title: z.string(),
+  type: z.string().optional(),
+});
+export const WorkflowTemplatePhaseSchema = z.object({
+  name: z.string(),
+  tasks: z.array(WorkflowTemplateTaskSchema).default([]),
+});
+export const WorkflowTemplateCreateSchema = z.object({
+  name: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
+  phases: z.array(WorkflowTemplatePhaseSchema).default([]),
+});
+export const WorkflowTemplateUpdateSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  description: z.string().max(500).optional(),
+  phases: z.array(WorkflowTemplatePhaseSchema).optional(),
+});
+export type WorkflowTemplateUpdateInput = z.infer<typeof WorkflowTemplateUpdateSchema>;

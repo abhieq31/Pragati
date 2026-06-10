@@ -230,6 +230,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             body:      ((t as any).title || '').slice(0, 200),
             taskId:    params.id,
             projectId: String((t as any).projectId || ''),
+            preferenceKey: 'notifProjectUpdate',
           });
         }
       }

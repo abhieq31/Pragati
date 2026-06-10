@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useIsLead } from '@/components/CurrentUserContext';
-import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus, Lock } from 'lucide-react';
+import { Plus, X, GripVertical, ChevronDown, ChevronRight, Sparkles, Trash2, BookmarkPlus, Lock, Pencil } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import { clearSidebarCalendarCache } from '@/components/SidebarCalendar';
@@ -106,18 +106,24 @@ function phasesFromCustomTemplate(template: CustomTemplate): Phase[] {
   }));
 }
 
-/* ── Save-as-template dialog ──────────────────────────────────────────────── */
+/* ── Save-as-template / edit-template dialog ─────────────────────────────────
+   Doubles as the "Save as template" (create) and "Edit template" (update)
+   dialog — when `editingTemplate` is provided, the form is pre-filled and
+   submitting PATCHes that template (name, description, and the current
+   phase-editor stages) instead of creating a new one. ────────────────────── */
 function SaveTemplateDialog({
   phases,
+  editingTemplate,
   onClose,
   onSaved,
 }: {
   phases: Phase[];
+  editingTemplate?: CustomTemplate | null;
   onClose: () => void;
   onSaved: (t: CustomTemplate) => void;
 }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(editingTemplate?.name || '');
+  const [description, setDescription] = useState(editingTemplate?.description || '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
@@ -134,7 +140,9 @@ function SaveTemplateDialog({
           tasks: ph.tasks.map(t => ({ title: t })),
         })),
       };
-      const saved = await api<CustomTemplate>('/workflow-templates', { method: 'POST', body: payload });
+      const saved = editingTemplate
+        ? await api<CustomTemplate>(`/workflow-templates/${editingTemplate.id}`, { method: 'PATCH', body: payload })
+        : await api<CustomTemplate>('/workflow-templates', { method: 'POST', body: payload });
       onSaved(saved);
     } catch (e: any) {
       setErr(e.message || 'Failed to save template.');
@@ -146,13 +154,15 @@ function SaveTemplateDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-800">Save as template</h2>
+          <h2 className="text-base font-bold text-slate-800">{editingTemplate ? 'Edit template' : 'Save as template'}</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-700 transition-colors">
             <X size={16} />
           </button>
         </div>
         <p className="text-xs text-slate-500">
-          Save the current {phases.length} stage{phases.length === 1 ? '' : 's'} as a reusable workspace template. Everyone on the team can use it.
+          {editingTemplate
+            ? `Update the name, description, and stages — saving applies the current ${phases.length} stage${phases.length === 1 ? '' : 's'} to this template for everyone.`
+            : `Save the current ${phases.length} stage${phases.length === 1 ? '' : 's'} as a reusable workspace template. Everyone on the team can use it.`}
         </p>
         <div>
           <label className="label">Template name *</label>
@@ -177,7 +187,7 @@ function SaveTemplateDialog({
         {err && <p className="text-xs text-red-600">{err}</p>}
         <div className="flex items-center gap-3 pt-1">
           <button onClick={save} disabled={saving} className="btn-primary">
-            {saving ? 'Saving…' : 'Save template'}
+            {saving ? 'Saving…' : editingTemplate ? 'Save changes' : 'Save template'}
           </button>
           <button onClick={onClose} className="btn-secondary">Cancel</button>
         </div>
@@ -311,6 +321,7 @@ export default function NewProjectPage() {
   const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
   const [customTemplateId, setCustomTemplateId] = useState<string | null>(null);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<CustomTemplate | null>(null);
   // Template list collapse — show only the first 6 built-in options by default
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   // Current user id (populated from /auth/me once)
@@ -439,14 +450,18 @@ export default function NewProjectPage() {
 
   return (
     <div className="max-w-3xl pb-20">
-      {/* Save-as-template dialog */}
+      {/* Save-as-template / edit-template dialog */}
       {showSaveDialog && (
         <SaveTemplateDialog
           phases={phases}
-          onClose={() => setShowSaveDialog(false)}
+          editingTemplate={editingTemplate}
+          onClose={() => { setShowSaveDialog(false); setEditingTemplate(null); }}
           onSaved={saved => {
-            setCustomTemplates(ts => [saved, ...ts]);
+            setCustomTemplates(ts => editingTemplate
+              ? ts.map(t => t.id === saved.id ? saved : t)
+              : [saved, ...ts]);
             setShowSaveDialog(false);
+            setEditingTemplate(null);
           }}
         />
       )}
@@ -761,7 +776,7 @@ export default function NewProjectPage() {
                                 ? 'bg-blue-50 dark:bg-blue-500/15 border-blue-500 text-blue-700 dark:text-blue-300'
                                 : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20'
                             }`}>
-                            <div className="flex items-center gap-1.5 pr-5">
+                            <div className="flex items-center gap-1.5 pr-9">
                               <span className={active ? 'font-bold' : 'font-semibold'}>{ct.name}</span>
                             </div>
                             <div className={`mt-0.5 text-[10px] ${active ? 'text-blue-600/80 dark:text-blue-300/80' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -769,13 +784,27 @@ export default function NewProjectPage() {
                             </div>
                           </button>
                           {isOwner && (
-                            <button
-                              type="button"
-                              onClick={e => { e.stopPropagation(); deleteCustomTemplate(ct.id); }}
-                              className="absolute top-1.5 right-1.5 p-0.5 rounded text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                              title="Delete template">
-                              <Trash2 size={11} />
-                            </button>
+                            <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  selectCustomTemplate(ct);
+                                  setEditingTemplate(ct);
+                                  setShowSaveDialog(true);
+                                }}
+                                className="p-0.5 rounded text-slate-300 hover:text-blue-500 transition-colors"
+                                title="Edit template">
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); deleteCustomTemplate(ct.id); }}
+                                className="p-0.5 rounded text-slate-300 hover:text-red-500 transition-colors"
+                                title="Delete template">
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
                           )}
                         </div>
                       );

@@ -286,7 +286,7 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     return () => window.removeEventListener('keydown', handleKey);
   }, [router]);
 
-  type NavItem = { href: string; label: string; icon: any; iconColor: string; iconBg: string };
+  type NavItem = { href: string; label: string; icon: any; iconColor: string; iconBg: string; adminOnly?: boolean };
 
   const isAdmin       = user.role === 'admin' || user.role === 'master_admin';
   const isMasterAdmin = user.role === 'master_admin';
@@ -303,14 +303,14 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
     { href: '/teams',    label: 'Teams',     icon: Users,           iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
   const adminExtra: NavItem[] = [
-    { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1' },
-    { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF' },
+    { href: '/people',   label: 'People',    icon: UsersRound,      iconColor: '#00897B', iconBg: '#E0F2F1', adminOnly: true },
+    { href: '/audit',    label: 'Logs',      icon: ScrollText,      iconColor: '#6366F1', iconBg: '#EEF2FF', adminOnly: true },
   ];
   // The master-admin item is only added when the signed-in user actually holds
   // that role. In the current single-tenant deploy no one does, so the link
   // never appears — the route itself also redirects non-master-admins.
   const masterAdminExtra: NavItem[] = isMasterAdmin
-    ? [{ href: '/master-admin', label: 'Platform', icon: Globe, iconColor: '#9333EA', iconBg: '#F3E8FF' }]
+    ? [{ href: '/master-admin', label: 'Platform', icon: Globe, iconColor: '#9333EA', iconBg: '#F3E8FF', adminOnly: true }]
     : [];
 
   const contributorNav: NavItem[] = [
@@ -757,12 +757,19 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
                   } : {}}
                 >
                   <div
-                    className="w-6 h-6 flex items-center justify-center"
+                    className="relative w-6 h-6 flex items-center justify-center"
                   >
                     <Icon
                       size={active ? 20 : 18}
                       style={{ color: active ? n.iconColor : dark ? 'rgba(255,255,255,0.4)' : '#94a3b8' }}
                     />
+                    {n.adminOnly && (
+                      <span
+                        className="absolute top-0 right-0 w-2 h-2 rounded-full bg-amber-400"
+                        style={{ boxShadow: `0 0 0 2px ${dark ? '#262624' : '#ffffff'}` }}
+                        title="Admin"
+                      />
+                    )}
                   </div>
                   <span
                     className="text-[9px] font-semibold truncate max-w-full"
@@ -810,6 +817,25 @@ export default function AppShell({ user, initialDark, initialSidebarCollapsed = 
               className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
               <UserCircle size={18} className="text-slate-400" /> Profile &amp; settings
             </Link>
+            {/* Admin-only links — these never fit in the 4-tab bottom nav, so
+                this is the only mobile entry point for Logs (and Platform for
+                master-admins). */}
+            {isAdmin && [...adminExtra, ...masterAdminExtra].length > 0 && (
+              <>
+                <div className={`px-3 pt-3 pb-1 text-[10px] font-bold uppercase tracking-widest ${dark ? 'text-amber-400/70' : 'text-amber-600/80'}`}>
+                  Admin
+                </div>
+                {[...adminExtra, ...masterAdminExtra].map(n => {
+                  const Icon = n.icon;
+                  return (
+                    <Link key={n.href} href={n.href} onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
+                      <Icon size={18} style={{ color: n.iconColor }} /> {n.label}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
             <button type="button" onClick={() => { toggleDark(); setMobileMenuOpen(false); }}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${dark ? 'text-white/70 hover:bg-white/5' : 'text-slate-600 hover:bg-slate-100'}`}>
               {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-400" />}
