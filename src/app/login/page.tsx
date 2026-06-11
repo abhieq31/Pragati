@@ -24,6 +24,34 @@ function getInitials(name: string) {
    in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
    without a redeploy. Daily-seeded start so the day has "a quote of the day". */
 
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
+
+/** Indices not yet shown on this device; resets when the set is exhausted.
+ *  Takes the current library size — the list is dynamic (built-ins now,
+ *  the operator's live feed once /api/quotes responds). */
+function unseenQuoteIndices(count: number): number[] {
+  const all = Array.from({ length: count }, (_, i) => i);
+  try {
+    const seen: number[] = JSON.parse(localStorage.getItem(QUOTES_SEEN_KEY) || '[]');
+    const valid = new Set(seen.filter((n) => Number.isInteger(n) && n >= 0 && n < count));
+    const unseen = all.filter((i) => !valid.has(i));
+    if (unseen.length > 0) return unseen;
+    localStorage.removeItem(QUOTES_SEEN_KEY);
+    return all;
+  } catch {
+    return all;
+  }
+}
+
+function markQuoteSeen(i: number) {
+  try {
+    const seen: number[] = JSON.parse(localStorage.getItem(QUOTES_SEEN_KEY) || '[]');
+    if (!seen.includes(i)) localStorage.setItem(QUOTES_SEEN_KEY, JSON.stringify([...seen, i]));
+  } catch {
+    /* private mode — quotes simply rotate without the ledger */
+  }
+}
+
 function RotatingQuote() {
   const [quotes, setQuotes] = useState<Quote[]>(BUILTIN_QUOTES);
   const [i, setI] = useState(() => dailyQuoteOffset(BUILTIN_QUOTES.length));
@@ -46,7 +74,13 @@ function RotatingQuote() {
     const t = setInterval(() => {
       setShow(false);
       setTimeout(() => {
-        setI((n) => (n + 1) % quotes.length);
+        setI((n) => {
+          // Prefer a quote this device hasn't seen yet; wrap when exhausted.
+          const unseen = unseenQuoteIndices(quotes.length).filter((x) => x !== n);
+          const next = unseen.length > 0 ? unseen[0] : (n + 1) % quotes.length;
+          markQuoteSeen(next);
+          return next;
+        });
         setShow(true);
       }, 400);
     }, 7000);
@@ -62,7 +96,7 @@ function RotatingQuote() {
         opacity: show ? 1 : 0,
         minHeight: 30,
       }}
-      className="max-w-[320px] mx-auto"
+      className="text-white/40 tracking-wide max-w-[320px] mx-auto leading-snug"
     >
       <span style={{ fontStyle: 'italic' }}>“{q.text}”</span>
       <span className="block text-[10px] text-white/25 mt-0.5 not-italic">— {q.author}</span>
