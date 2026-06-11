@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, ChevronDown } from 'lucide-react';
 import { api } from '@/lib/client/api';
 
 interface CalTask {
@@ -75,6 +75,25 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   const [hover, setHover] = useState<{ key: string; x: number; y: number; placeLeft: boolean } | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Collapsed by default — the rail is navigation first; the month grid is
+  // one click away and the choice is remembered per browser. While collapsed
+  // the data fetch is skipped entirely.
+  const [openCal, setOpenCal] = useState(false);
+  useEffect(() => {
+    try {
+      setOpenCal(localStorage.getItem('pragati-sidebar-cal') === '1');
+    } catch {}
+  }, []);
+  function toggleCal() {
+    setOpenCal((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem('pragati-sidebar-cal', next ? '1' : '0');
+      } catch {}
+      return next;
+    });
+  }
+
   // Touch-swipe tracking for month navigation.
   const touchStartY = useRef<number | null>(null);
 
@@ -98,6 +117,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   const rangeKey = `${rangeFrom}|${rangeTo}`;
 
   useEffect(() => {
+    if (!openCal) return;
     let alive = true;
     const cached = rangeCache.get(rangeKey);
     if (cached) {
@@ -114,7 +134,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
     return () => {
       alive = false;
     };
-  }, [rangeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rangeKey, openCal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Group tasks by local day key.
   const byDay = useMemo(() => {
@@ -199,112 +219,137 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Header — centered month + year, nav arrows flank */}
-      <div className="flex items-center justify-between px-1 mb-1.5">
-        <button
-          onClick={prevMonth}
-          className={`p-0.5 rounded transition-colors shrink-0 ${dark ? 'text-white/30 hover:text-white/65 hover:bg-white/5' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
-          aria-label="Previous month"
-        >
-          <ChevronLeft size={13} />
-        </button>
+      {/* Disclosure row — always visible; the grid below only when open */}
+      <button
+        type="button"
+        onClick={toggleCal}
+        aria-expanded={openCal}
+        className={`w-full flex items-center gap-2 px-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${
+          dark
+            ? 'text-white/45 hover:text-white/75 hover:bg-white/5'
+            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+        }`}
+      >
+        <CalendarDays size={12} />
+        <span>Calendar</span>
+        <span className={`ml-auto font-semibold ${dark ? 'text-white/30' : 'text-slate-300'}`}>
+          {monthName}
+        </span>
+        <ChevronDown size={12} className={`transition-transform ${openCal ? 'rotate-180' : ''}`} />
+      </button>
 
-        <button
-          onClick={isCurrentMonth ? undefined : goToday}
-          className={`flex items-baseline gap-1 text-[11px] tracking-tight transition-colors ${
-            isCurrentMonth ? 'cursor-default' : 'hover:text-blue-500 cursor-pointer'
-          }`}
-          title={isCurrentMonth ? undefined : 'Back to this month'}
-        >
-          <span className={`font-black ${dark ? 'text-white/80' : 'text-slate-700'}`}>{monthName}</span>
-          <span className={`font-semibold ${dark ? 'text-white/35' : 'text-slate-400'}`}>{monthYear}</span>
-        </button>
+      {openCal && (
+        <>
+          {/* Header — centered month + year, nav arrows flank */}
+          <div className="flex items-center justify-between px-1 mb-1.5">
+            <button
+              onClick={prevMonth}
+              className={`p-0.5 rounded transition-colors shrink-0 ${dark ? 'text-white/30 hover:text-white/65 hover:bg-white/5' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
+              aria-label="Previous month"
+            >
+              <ChevronLeft size={13} />
+            </button>
 
-        <button
-          onClick={nextMonth}
-          className={`p-0.5 rounded transition-colors shrink-0 ${dark ? 'text-white/30 hover:text-white/65 hover:bg-white/5' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
-          aria-label="Next month"
-        >
-          <ChevronRight size={13} />
-        </button>
-      </div>
+            <button
+              onClick={isCurrentMonth ? undefined : goToday}
+              className={`flex items-baseline gap-1 text-[11px] tracking-tight transition-colors ${
+                isCurrentMonth ? 'cursor-default' : 'hover:text-blue-500 cursor-pointer'
+              }`}
+              title={isCurrentMonth ? undefined : 'Back to this month'}
+            >
+              <span className={`font-black ${dark ? 'text-white/80' : 'text-slate-700'}`}>{monthName}</span>
+              <span className={`font-semibold ${dark ? 'text-white/35' : 'text-slate-400'}`}>
+                {monthYear}
+              </span>
+            </button>
 
-      {/* Weekday header */}
-      <div className="grid grid-cols-7 mb-0.5">
-        {WEEKDAYS.map((d, i) => (
-          <div
-            key={i}
-            className={`text-center text-[8px] font-bold ${dark ? 'text-white/20' : 'text-slate-300'}`}
-          >
-            {d}
+            <button
+              onClick={nextMonth}
+              className={`p-0.5 rounded transition-colors shrink-0 ${dark ? 'text-white/30 hover:text-white/65 hover:bg-white/5' : 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'}`}
+              aria-label="Next month"
+            >
+              <ChevronRight size={13} />
+            </button>
           </div>
-        ))}
-      </div>
 
-      {/* Day grid — only current month's days, with leading blank cells */}
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {/* Leading blank cells to align the 1st to its weekday */}
-        {Array.from({ length: leadingBlanks }, (_, i) => (
-          <div key={`blank-${i}`} style={{ width: 24, height: 24 }} />
-        ))}
-        {grid.map((d) => {
-          const k = dayKey(d);
-          const isToday = k === todayKey;
-          const list = byDay.get(k);
-          const sig = list && list.length ? signals(list) : null;
-          return (
-            <div key={k} className="flex flex-col items-center">
-              <button
-                onMouseEnter={(e) => list && openHover(k, e.currentTarget)}
-                onMouseLeave={closeHover}
-                onClick={(e) => {
-                  if (!list || list.length === 0) return;
-                  // If already showing hover card, navigate to the first task
-                  if (hover?.key === k) {
-                    router.push(`/tasks/${list[0].id}`);
-                    setHover(null);
-                  } else {
-                    openHover(k, e.currentTarget);
-                  }
-                }}
-                className={`relative rounded-full flex items-center justify-center text-[10px] font-semibold transition-colors ${
-                  list ? 'cursor-pointer' : 'cursor-default'
-                } ${
-                  isToday
-                    ? 'text-white'
-                    : dark
-                      ? 'text-white/60 hover:bg-white/5'
-                      : 'text-slate-600 hover:bg-slate-100'
-                }`}
-                style={
-                  isToday
-                    ? {
-                        width: 26,
-                        height: 26,
-                        background: 'linear-gradient(135deg,#0d47a1 0%,#1565C0 45%,#1e88e5 100%)',
-                        boxShadow: '0 2px 8px rgba(21,101,192,0.45)',
-                      }
-                    : { width: 24, height: 24 }
-                }
+          {/* Weekday header */}
+          <div className="grid grid-cols-7 mb-0.5">
+            {WEEKDAYS.map((d, i) => (
+              <div
+                key={i}
+                className={`text-center text-[8px] font-bold ${dark ? 'text-white/20' : 'text-slate-300'}`}
               >
-                {d.getDate()}
-              </button>
-              {/* Dots — at most two (mine=blue, team=green); overdue paints red */}
-              <div className="flex items-center gap-[2px] h-[5px] mt-[1px]">
-                {sig?.overdue && (
-                  <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#ef4444' }} />
-                )}
-                {!sig?.overdue && sig?.mine && (
-                  <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#1976D2' }} />
-                )}
-                {!sig?.overdue && sig?.team && (
-                  <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#22a565' }} />
-                )}
+                {d}
               </div>
-            </div>
-          );
-        })}
-      </div>
+            ))}
+          </div>
+
+          {/* Day grid — only current month's days, with leading blank cells */}
+          <div className="grid grid-cols-7 gap-y-0.5">
+            {/* Leading blank cells to align the 1st to its weekday */}
+            {Array.from({ length: leadingBlanks }, (_, i) => (
+              <div key={`blank-${i}`} style={{ width: 24, height: 24 }} />
+            ))}
+            {grid.map((d) => {
+              const k = dayKey(d);
+              const isToday = k === todayKey;
+              const list = byDay.get(k);
+              const sig = list && list.length ? signals(list) : null;
+              return (
+                <div key={k} className="flex flex-col items-center">
+                  <button
+                    onMouseEnter={(e) => list && openHover(k, e.currentTarget)}
+                    onMouseLeave={closeHover}
+                    onClick={(e) => {
+                      if (!list || list.length === 0) return;
+                      // If already showing hover card, navigate to the first task
+                      if (hover?.key === k) {
+                        router.push(`/tasks/${list[0].id}`);
+                        setHover(null);
+                      } else {
+                        openHover(k, e.currentTarget);
+                      }
+                    }}
+                    className={`relative rounded-full flex items-center justify-center text-[10px] font-semibold transition-colors ${
+                      list ? 'cursor-pointer' : 'cursor-default'
+                    } ${
+                      isToday
+                        ? 'text-white'
+                        : dark
+                          ? 'text-white/60 hover:bg-white/5'
+                          : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                    style={
+                      isToday
+                        ? {
+                            width: 26,
+                            height: 26,
+                            background: 'linear-gradient(135deg,#0d47a1 0%,#1565C0 45%,#1e88e5 100%)',
+                            boxShadow: '0 2px 8px rgba(21,101,192,0.45)',
+                          }
+                        : { width: 24, height: 24 }
+                    }
+                  >
+                    {d.getDate()}
+                  </button>
+                  {/* Dots — at most two (mine=blue, team=green); overdue paints red */}
+                  <div className="flex items-center gap-[2px] h-[5px] mt-[1px]">
+                    {sig?.overdue && (
+                      <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#ef4444' }} />
+                    )}
+                    {!sig?.overdue && sig?.mine && (
+                      <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#1976D2' }} />
+                    )}
+                    {!sig?.overdue && sig?.team && (
+                      <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#22a565' }} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Floating hover card — portalled so the sidebar's overflow never clips it */}
       {hover &&
