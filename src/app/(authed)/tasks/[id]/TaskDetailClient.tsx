@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { notifyCalendarChange } from '@/components/SidebarCalendar';
+import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, formatDate, useToast } from '@/components/ui';
@@ -121,6 +122,9 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
       setLoadErr(e?.message || 'Could not load this task.');
     }
   }
+
+  // Realtime: keep the task current as others comment, reassign, or move it.
+  useLiveRefresh(load); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // The page is SSR-seeded. Avoid a duplicate task fetch on hydration; only

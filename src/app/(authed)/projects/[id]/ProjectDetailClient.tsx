@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { notifyCalendarChange } from '@/components/SidebarCalendar';
+import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
 import {
   Card,
   LifecycleTag,
@@ -1180,6 +1181,11 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       setLoadErr(e?.message || 'Could not load this project.');
     }
   }
+
+  // Realtime: refresh on focus and on app-wide change events. No background
+  // interval here — a refetch mid-drag would yank the kanban board; focus and
+  // explicit change events are the safe moments to re-sync.
+  useLiveRefresh(load, { intervalMs: 0 }); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // The route is server-seeded with the project and current user. Avoid a
