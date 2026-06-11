@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { notifyCalendarChange } from '@/components/SidebarCalendar';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { Card, PriorityTag, StatusTag, formatDate, useToast } from '@/components/ui';
@@ -217,6 +218,8 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
     if (opts?.optimistic) setTask((t: any) => ({ ...t, ...opts.optimistic }));
     try {
       await api(`/tasks/${id}`, { method: 'PATCH', body: patch });
+      // A date change must refresh the sidebar calendar dots at once.
+      if ('dueDate' in patch || 'ccTcd' in patch || 'status' in patch) notifyCalendarChange();
       load();
     } catch (e: any) {
       showToast(e.message || 'Save failed', 'err');

@@ -20,6 +20,7 @@ import {
 import { api } from '@/lib/client/api';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
+import { notifyCalendarChange } from '@/components/SidebarCalendar';
 
 /**
  * Bird's-Eye View — a clean, executive top-down map of a workspace / team /
@@ -2008,6 +2009,7 @@ function BirdsEyeTaskEditor({
       body.assigneeId = assigneeId || null;
       body.ccTcd = due || null;
       await api(`/tasks/${task.id}`, { method: 'PATCH', body });
+      notifyCalendarChange();
       onSaved();
     } catch (e: any) {
       setErr(e?.message || 'Save failed');
@@ -2160,6 +2162,7 @@ function BirdsEyeNewTaskEditor({
         }
       }
       await api('/tasks', { method: 'POST', body });
+      notifyCalendarChange();
       onSaved();
     } catch (e: any) {
       setErr(e?.message || 'Save failed');

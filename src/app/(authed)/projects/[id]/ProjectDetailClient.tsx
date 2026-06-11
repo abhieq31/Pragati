@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
+import { notifyCalendarChange } from '@/components/SidebarCalendar';
 import {
   Card,
   LifecycleTag,
@@ -723,6 +724,7 @@ function QuickAddTask({
       setDue('');
       setAssignee('');
       setOpen(false);
+      notifyCalendarChange();
       onAdded();
     } finally {
       setSaving(false);
@@ -1527,6 +1529,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     if (!confirm('Delete this task permanently? This cannot be undone.')) return;
     try {
       await api(`/tasks/${taskId}`, { method: 'DELETE' });
+      notifyCalendarChange();
       showToast('Task deleted');
       load();
     } catch (e: any) {

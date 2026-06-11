@@ -731,9 +731,30 @@ function CalendarFeedSection() {
                 {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
+            {/* One-click subscribe — webcal:// launches Apple/Outlook's
+                "add subscription" dialog directly; the Google link opens its
+                add-by-URL flow. No copy-paste needed. */}
+            <div className="flex flex-wrap gap-2">
+              <a
+                className="btn-primary text-xs inline-flex items-center gap-1.5"
+                href={state.url.replace(/^https?:\/\//, 'webcal://')}
+              >
+                <CalendarDays size={13} /> Add to Apple / Outlook
+              </a>
+              <a
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(state.url)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <CalendarDays size={13} /> Add to Google Calendar
+              </a>
+            </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              In your calendar app choose “Subscribe / Add calendar from URL” and paste this link. Anyone with
-              the URL can read your task agenda — rotate it if it leaks.
+              One click subscribes you to a <strong>live</strong> feed — your calendar re-checks it on its own
+              schedule, so date changes flow through automatically. Or paste the link above into any app via
+              “Subscribe / Add calendar from URL”. Anyone with the URL can read your task agenda — rotate it
+              if it leaks.
             </p>
             <div className="flex gap-2">
               <button className="btn-ghost text-xs" onClick={mint} disabled={busy}>
