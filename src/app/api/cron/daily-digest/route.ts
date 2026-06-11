@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import { buildAndSendDailyDigests } from '@/lib/digest';
+import { sendDailyBriefPushes } from '@/lib/push';
 
 export const runtime = 'nodejs';
 // Never statically evaluated — this route reads the clock and the DB on every
@@ -47,8 +48,11 @@ export async function GET(req: NextRequest) {
     }
 
     const summary = await buildAndSendDailyDigests({});
+    // Same beat, second channel: the zero-cost Web Push fan-out. Failures
+    // here must never fail the email run — push is best-effort by design.
+    const push = await sendDailyBriefPushes().catch(() => ({ users: 0, delivered: 0 }));
     return NextResponse.json(
-      { mode: cronAuthed ? 'cron' : 'manual', ...summary },
+      { mode: cronAuthed ? 'cron' : 'manual', ...summary, push },
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (e) {

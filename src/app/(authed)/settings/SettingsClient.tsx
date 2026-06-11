@@ -15,6 +15,7 @@ import {
   Lock,
   ShieldCheck,
   Copy,
+  CalendarDays,
   Check,
   RefreshCw,
   X,
@@ -668,6 +669,100 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
 /* ── Daily email — workspace settings (admin only) ──────────────────────────
    Lets the admin tune what every user's digest contains and verify delivery
    end-to-end with a test send, all without leaving the page. */
+/* ── Personal calendar feed — the pull-based, zero-cost channel ───────────
+   A tokened read-only iCalendar URL the user subscribes to from Outlook /
+   Google / Apple Calendar. Their calendar app polls it; we never send
+   anything. Rotate to invalidate a leaked URL; turn off to revoke. */
+function CalendarFeedSection() {
+  const [state, setState] = useState<{ enabled: boolean; url: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    api('/me/ics-token')
+      .then((d: any) => setState(d))
+      .catch(() => setState({ enabled: false, url: null }));
+  }, []);
+
+  async function mint() {
+    setBusy(true);
+    try {
+      setState((await api('/me/ics-token', { method: 'POST' })) as any);
+    } catch {
+      /* leave state as-is */
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function revoke() {
+    setBusy(true);
+    try {
+      setState((await api('/me/ics-token', { method: 'DELETE' })) as any);
+    } catch {
+      /* leave state as-is */
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div id="calendar-feed" className="scroll-mt-6">
+      <Section
+        icon={CalendarDays}
+        title="Calendar feed"
+        subtitle="See your open tasks in Outlook / Google / Apple Calendar — read-only, updates itself."
+      >
+        {!state ? (
+          <div className="text-xs text-slate-400 py-2">Loading…</div>
+        ) : state.enabled && state.url ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <code className="text-[11px] font-mono bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08] rounded-lg px-2 py-1.5 break-all flex-1 min-w-[200px]">
+                {state.url}
+              </code>
+              <button
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                onClick={() => {
+                  navigator.clipboard?.writeText(state.url!);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+              >
+                {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              In your calendar app choose “Subscribe / Add calendar from URL” and paste this link. Anyone with
+              the URL can read your task agenda — rotate it if it leaks.
+            </p>
+            <div className="flex gap-2">
+              <button className="btn-ghost text-xs" onClick={mint} disabled={busy}>
+                Rotate link
+              </button>
+              <button
+                className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                onClick={revoke}
+                disabled={busy}
+              >
+                Turn off
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm text-slate-600 dark:text-white/60">
+              Generate a private link, subscribe once, and your due tasks appear in your calendar.
+            </p>
+            <button className="btn-primary text-sm" onClick={mint} disabled={busy}>
+              {busy ? 'Generating…' : 'Generate link'}
+            </button>
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
 function AdminDigestSettings() {
   const [cfg, setCfg] = useState<any | null>(null);
   const [status, setStatus] = useState<any | null>(null);
@@ -782,6 +877,18 @@ function AdminDigestSettings() {
               Sends daily at {status.sendTimeLocal} · {status.timeZone}
               {status.senderEmail ? ` · from ${status.senderEmail}` : ''}
             </div>
+            {cfg?.lastRunAt && (
+              <div className="text-[11px] text-slate-400 mt-1">
+                Last run {new Date(cfg.lastRunAt).toLocaleString()} · sent{' '}
+                <strong className="text-slate-600">
+                  {cfg.lastRunSummary?.sent ?? 0}/{cfg.lastRunSummary?.cap ?? status.dailyCap}
+                </strong>{' '}
+                free sends
+                {(cfg.lastRunSummary?.failed ?? 0) > 0 && ` · ${cfg.lastRunSummary.failed} failed`}
+                {(cfg.lastRunSummary?.skippedCapReached ?? 0) > 0 &&
+                  ` · ${cfg.lastRunSummary.skippedCapReached} skipped at the daily cap`}
+              </div>
+            )}
           </div>
         )}
 
@@ -1190,6 +1297,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
       {/* ── Daily task email — personal opt-in, then (admin) workspace config ── */}
       <DailyDigestToggle initialUser={initialUser} />
+      <CalendarFeedSection />
       {user.role === 'admin' && <AdminDigestSettings />}
 
       {/* ── Account & security — tucked behind a disclosure so the day-to-day

@@ -308,7 +308,32 @@ export default function TeamDetailPage() {
           <div>
             <h1 className="text-2xl font-bold">{team.name}</h1>
             {team.description && <p className="text-slate-600 mt-1">{team.description}</p>}
-            <p className="text-sm text-slate-500 mt-1">Function: {team.function}</p>
+            {/* Human label + tone for the team's operating function — the raw
+                enum value ("rtb") is a database detail, not UI copy. */}
+            <span
+              className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                (
+                  {
+                    rtb: 'bg-blue-50 text-blue-700 border-blue-200',
+                    ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                  } as Record<string, string>
+                )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              {(
+                {
+                  rtb: 'Run the Business',
+                  ctb: 'Change the Business',
+                  general: 'General',
+                  csv_validation: 'CSV / Validation',
+                  data_integrity: 'Data Integrity',
+                  pharmacovigilance: 'Pharmacovigilance',
+                  lab_informatics: 'Lab Informatics',
+                  audit: 'Audit',
+                  training: 'Training',
+                } as Record<string, string>
+              )[team.function] || team.function}
+            </span>
             {/* Remove avatar option — shown when avatar is set and user is owner/admin */}
             {isOwnerOrAdmin && avatarImage && (
               <button

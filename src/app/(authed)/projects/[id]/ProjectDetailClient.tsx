@@ -1559,7 +1559,23 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             {project.isPersonal ? 'Personal' : project.ccNo || project.code}
             {project.ccNo && <span className="ml-1.5 opacity-50 text-[9px]">[{project.code}]</span>}
           </div>
-          {!project.isPersonal && (
+          {/* Personal projects are a private space — say so, warmly, and meet
+              the owner where they are in the journey. Rule-based, one line. */}
+          {project.isPersonal && (
+            <p className="text-[11.5px] text-violet-500/90 dark:text-violet-300/70 mt-0.5">
+              <Lock size={10} className="inline -mt-0.5 mr-1" />
+              {pct === 0
+                ? 'Only you can see this. Every big thing starts at 0% — pick one small task.'
+                : pct < 50
+                  ? `Only you can see this. ${pct}% in — momentum loves consistency.`
+                  : pct < 100
+                    ? `Only you can see this. ${pct}% done — the finish line is in sight.`
+                    : 'Complete. Take a moment — you did this for you.'}
+            </p>
+          )}
+          {/* The reference row earns its place only when there IS a reference —
+              or when the owner could set one. Empty dashes are clutter. */}
+          {!project.isPersonal && (project.ccNo || isOwner) && (
             <div className="flex items-center gap-1 mt-0.5">
               {editingCcNo ? (
                 <>

@@ -4,10 +4,14 @@
 // so content materialises in place instead of swapping out a spinner and
 // reflowing. No JS, no hydration.
 import { PragatiMark } from '@/components/PragatiMark';
+import { LoadingQuip } from '@/components/LoadingQuip';
 
 export default function Loading() {
   return (
     <div className="pb-12 max-w-[1440px]">
+      <div className="mb-3">
+        <LoadingQuip />
+      </div>
       {/* Indeterminate brand sweep — a single moving gradient line at the very
           top tells the user "we're in motion" the whole time the skeleton is
           up. The skeleton alone reads as static after ~1s; the sweep keeps the

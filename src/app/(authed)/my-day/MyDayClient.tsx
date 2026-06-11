@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
@@ -23,6 +24,7 @@ import {
   PinOff,
   FileText,
   Layers,
+  FolderKanban,
 } from 'lucide-react';
 import { WhiteboardIcon } from '@/components/WhiteboardIcon';
 import { DatePicker } from '@/components/DatePicker';
@@ -852,6 +854,8 @@ export default function MyDayClient({ initialData }: { initialData: { open: Note
             </div>
           )}
 
+          <TodayFromProjects />
+
           {/* ── Done section ─────────────────────────────────────── */}
           {done.length > 0 && (
             <div className="mt-5">
@@ -1153,6 +1157,69 @@ function PromoteModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Today from your projects ────────────────────────────────────────────────
+   My Day is the personal cockpit, but the day also has assigned work. This
+   pulls the viewer's Daily Brief (same object as the dashboard card) and
+   shows at most five due/overdue rows under the capture input — so the page
+   answers "what should I do today?" even when the personal list is empty.
+   Silent while loading; one warm line when there is nothing due. */
+function TodayFromProjects() {
+  const [brief, setBrief] = useState<any | null>(null);
+
+  useEffect(() => {
+    api('/me/brief')
+      .then((b: any) => setBrief(b))
+      .catch(() => setBrief({ my: { overdue: [], today: [], soon: [] } }));
+  }, []);
+
+  if (!brief) return null;
+  const rows = [
+    ...(brief.my?.overdue || []).map((t: any) => ({ ...t, tone: 'overdue' })),
+    ...(brief.my?.today || []).map((t: any) => ({ ...t, tone: 'today' })),
+    ...(brief.my?.soon || []).map((t: any) => ({ ...t, tone: 'soon' })),
+  ].slice(0, 5);
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center gap-2 mb-1.5">
+        <FolderKanban size={12} className="text-slate-400 dark:text-white/30 shrink-0" />
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/30">
+          Today from your projects
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-[12px] text-slate-400 dark:text-white/30">
+          Nothing due from your projects — the day is yours.
+        </p>
+      ) : (
+        rows.map((t: any) => (
+          <Link key={t.id} href={`/tasks/${t.id}`} className="flex items-center gap-2 py-1 group/tfp min-w-0">
+            <span
+              className={`shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                t.tone === 'overdue'
+                  ? 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-500/10'
+                  : t.tone === 'today'
+                    ? 'text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/10'
+                    : 'text-slate-600 bg-slate-100 dark:text-white/50 dark:bg-white/[0.06]'
+              }`}
+            >
+              {t.label}
+            </span>
+            <span className="text-[12.5px] text-slate-700 dark:text-white/70 truncate group-hover/tfp:text-blue-700 dark:group-hover/tfp:text-blue-400 transition-colors">
+              {t.title}
+            </span>
+            {t.projectName && (
+              <span className="text-[10.5px] text-slate-400 dark:text-white/30 truncate shrink-0 max-w-[140px]">
+                · {t.projectName}
+              </span>
+            )}
+          </Link>
+        ))
+      )}
     </div>
   );
 }
