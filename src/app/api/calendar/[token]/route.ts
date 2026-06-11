@@ -83,7 +83,9 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
         'Content-Disposition': 'inline; filename="pragati-agenda.ics"',
-        'Cache-Control': 'private, max-age=900', // calendar clients poll; 15 min is plenty fresh
+        // Short TTL so a date change shows up on the next client poll. Clients
+        // still honour the in-feed REFRESH-INTERVAL for how often they ask.
+        'Cache-Control': 'private, max-age=120, must-revalidate',
       },
     });
   } catch (e) {

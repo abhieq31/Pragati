@@ -432,11 +432,17 @@ export function Avatar({ name, size = 28, letter, bg, font, ring }: AvatarProps)
       style={{
         width: size,
         height: size,
+        // aspectRatio + flex:none guarantee a perfect circle even inside a
+        // flex row that would otherwise squish one axis into an oval.
+        aspectRatio: '1 / 1',
+        flex: 'none',
         background,
         // Circle avatars across the whole app (Google/LinkedIn style).
         borderRadius: '50%',
+        // Rings are symmetric box-shadows (no directional drop) so the edge
+        // reads as a clean circle, not a faintly egg-shaped one.
         boxShadow: ring
-          ? '0 0 0 2px rgba(255,255,255,0.9), 0 1px 3px rgba(15,23,42,0.15)'
+          ? '0 0 0 2px rgba(255,255,255,0.92), 0 0 0 3.5px rgba(15,23,42,0.08)'
           : useMonogram
             ? '0 1px 2px rgba(15,23,42,0.12)'
             : 'inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 2px rgba(15,23,42,0.12)',

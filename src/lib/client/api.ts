@@ -80,6 +80,15 @@ export async function api<T = any>(
     throw new Error(msg);
   }
 
+  // Realtime: any successful mutation (anything that isn't a GET) tells every
+  // mounted live view in this tab to refresh — see useLiveRefresh. This is the
+  // single hook that makes the whole app feel live to your own actions without
+  // each call site having to remember to broadcast.
+  const method = (opts.method || 'GET').toUpperCase();
+  if (method !== 'GET' && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('pragati:data-changed'));
+  }
+
   if (res.status === 204) return null as T;
   return res.json();
 }

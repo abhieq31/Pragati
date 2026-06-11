@@ -67,6 +67,15 @@ export function clearSidebarCalendarCache() {
   rangeCache.clear();
 }
 
+/** Call after any task create/edit/delete (especially a date change) so the
+ *  sidebar calendar dots refresh immediately, app-wide, without a reload. */
+export function notifyCalendarChange() {
+  rangeCache.clear();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('pragati:calendar-refresh'));
+  }
+}
+
 export function SidebarCalendar({ dark }: { dark: boolean }) {
   const router = useRouter();
   const today = useMemo(() => new Date(), []);
@@ -116,25 +125,43 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   const rangeTo = dayKey(grid[grid.length - 1]);
   const rangeKey = `${rangeFrom}|${rangeTo}`;
 
+  // Fetch the visible range. `force` bypasses the per-range cache — used when a
+  // task's date changes elsewhere in the app so the dots reflect it at once.
+  const loadRange = useCallback(
+    (force = false) => {
+      if (force) rangeCache.delete(rangeKey);
+      const cached = rangeCache.get(rangeKey);
+      if (cached) {
+        setTasks(cached);
+        return;
+      }
+      api<{ tasks: CalTask[] }>(`/me/calendar?from=${rangeFrom}&to=${rangeTo}`)
+        .then((d) => {
+          rangeCache.set(rangeKey, d.tasks);
+          setTasks(d.tasks);
+        })
+        .catch(() => {});
+    },
+    [rangeKey, rangeFrom, rangeTo],
+  );
+
   useEffect(() => {
     if (!openCal) return;
-    let alive = true;
-    const cached = rangeCache.get(rangeKey);
-    if (cached) {
-      setTasks(cached);
-      return;
+    loadRange();
+  }, [rangeKey, openCal, loadRange]);
+
+  // Live refresh: any task create/edit/delete/date-change in the app dispatches
+  // `pragati:calendar-refresh`, so the dots update without a page reload. The
+  // whole module cache is cleared (the changed task may have moved months) and
+  // the visible range is refetched when the calendar is open.
+  useEffect(() => {
+    function onRefresh() {
+      rangeCache.clear();
+      if (openCal) loadRange(true);
     }
-    api<{ tasks: CalTask[] }>(`/me/calendar?from=${rangeFrom}&to=${rangeTo}`)
-      .then((d) => {
-        if (!alive) return;
-        rangeCache.set(rangeKey, d.tasks);
-        setTasks(d.tasks);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [rangeKey, openCal]); // eslint-disable-line react-hooks/exhaustive-deps
+    window.addEventListener('pragati:calendar-refresh', onRefresh);
+    return () => window.removeEventListener('pragati:calendar-refresh', onRefresh);
+  }, [openCal, loadRange]);
 
   // Group tasks by local day key.
   const byDay = useMemo(() => {
@@ -235,7 +262,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
         <span className={`ml-auto font-semibold ${dark ? 'text-white/30' : 'text-slate-300'}`}>
           {monthName}
         </span>
-        <ChevronDown size={12} className={`transition-transform ${openCal ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`transition-transform ${openCal ? '' : 'rotate-180'}`} />
       </button>
 
       {openCal && (

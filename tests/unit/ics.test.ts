@@ -41,6 +41,7 @@ describe('renderAgendaIcs', () => {
           due: new Date('2026-06-12T00:00:00Z'),
           status: 'in_progress',
           priority: 'high',
+          updatedAt: new Date('2026-06-11T09:30:00Z'),
         },
       ],
     });
@@ -54,6 +55,17 @@ describe('renderAgendaIcs', () => {
     assert.match(ics, /SUMMARY:Approve URS\\; revision · MES Upgrade/);
     assert.match(ics, /URL:https:\/\/pragati.example\/tasks\/abc123/);
     assert.match(ics, /TRANSP:TRANSPARENT/);
+    // SEQUENCE + LAST-MODIFIED let clients (Outlook) update a moved event.
+    assert.match(ics, /SEQUENCE:\d+/);
+    assert.match(ics, /LAST-MODIFIED:20260611T093000Z/);
+  });
+
+  it('emits SEQUENCE 0 when the task has no updatedAt', () => {
+    const ics = renderAgendaIcs({
+      calendarName: 'X',
+      tasks: [{ id: 'n1', title: 'No stamp', due: new Date('2026-06-12T00:00:00Z') }],
+    });
+    assert.match(ics, /SEQUENCE:0/);
   });
 
   it('omits links when no app URL is configured and handles empty feeds', () => {

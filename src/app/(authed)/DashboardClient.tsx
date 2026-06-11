@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
 import { formatDate, daysUntil, ProgressBar, LIFECYCLE_LABELS, STATUS_COLORS } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { UserAvatar } from '@/components/AvatarRegistry';
@@ -271,7 +273,12 @@ function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
 /* ── Main page ────────────────────────────────────────────────────────────── */
 export default function DashboardClient({ initialData }: { initialData: DashResp }) {
   const dash = initialData;
+  const router = useRouter();
   const isLead = useIsLead();
+  // Realtime: the dashboard is server-rendered, so re-running the server
+  // component (router.refresh) is the cheapest way to pull fresh rollups when
+  // the tab regains focus, on a gentle interval, and on app-wide change events.
+  useLiveRefresh(() => router.refresh());
   const [summaryModal, setSummaryModal] = useState<null | 'open' | 'overdue'>(null);
   // Bird's-eye view — the lead's whole workspace as a packed tree. Opened
   // from the small compass icon in the greeting row.

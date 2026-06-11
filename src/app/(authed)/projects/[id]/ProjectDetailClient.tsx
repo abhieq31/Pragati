@@ -4,6 +4,8 @@ import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
+import { notifyCalendarChange } from '@/components/SidebarCalendar';
+import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
 import {
   Card,
   LifecycleTag,
@@ -726,6 +728,7 @@ function QuickAddTask({
       setDue('');
       setAssignee('');
       setOpen(false);
+      notifyCalendarChange();
       onAdded();
     } finally {
       setSaving(false);
@@ -1189,6 +1192,11 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     }
   }
 
+  // Realtime: refresh on focus and on app-wide change events. No background
+  // interval here — a refetch mid-drag would yank the kanban board; focus and
+  // explicit change events are the safe moments to re-sync.
+  useLiveRefresh(load, { intervalMs: 0 }); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     // The route is server-seeded with the project and current user. Avoid a
     // duplicate hydration fetch; only fall back to the API if a client-side
@@ -1537,6 +1545,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     if (!confirm('Delete this task permanently? This cannot be undone.')) return;
     try {
       await api(`/tasks/${taskId}`, { method: 'DELETE' });
+      notifyCalendarChange();
       showToast('Task deleted');
       load();
     } catch (e: any) {

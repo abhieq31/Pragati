@@ -14,9 +14,18 @@ export interface IcsTask {
   due: Date;
   status?: string;
   priority?: string | null;
-  /** Last task mutation — drives SEQUENCE/LAST-MODIFIED so a date change in
-   *  Pragati updates the existing calendar event instead of duplicating it. */
+  /** When the task last changed — drives SEQUENCE/LAST-MODIFIED so calendar
+   *  clients (Outlook especially) actually update a moved event instead of
+   *  keeping the stale date. */
   updatedAt?: Date | null;
+}
+
+// SEQUENCE must be a monotonically increasing integer per UID. Seconds since
+// this epoch keep it well inside the 32-bit range every client accepts.
+const SEQUENCE_EPOCH = Date.UTC(2020, 0, 1);
+function icsSequence(updatedAt?: Date | null): number {
+  if (!updatedAt) return 0;
+  return Math.max(0, Math.floor((updatedAt.getTime() - SEQUENCE_EPOCH) / 1000));
 }
 
 /** RFC 5545 text escaping: backslash, semicolon, comma, newline. */
@@ -90,8 +99,10 @@ export function renderAgendaIcs(input: {
       'BEGIN:VEVENT',
       `UID:task-${t.id}@pragati`,
       `DTSTAMP:${icsStamp(now)}`,
-      `LAST-MODIFIED:${icsStamp(updated)}`,
-      `SEQUENCE:${seq}`,
+      // SEQUENCE + LAST-MODIFIED bump whenever the task changes, so a client
+      // that already imported this UID re-reads the new DTSTART.
+      `SEQUENCE:${icsSequence(t.updatedAt)}`,
+      `LAST-MODIFIED:${icsStamp(t.updatedAt || now)}`,
       `DTSTART;VALUE=DATE:${icsDate(t.due)}`,
       `DTEND;VALUE=DATE:${icsDate(dayAfter)}`,
       `SUMMARY:${escapeIcsText(summary)}`,

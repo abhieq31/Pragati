@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
+import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
 import { LifecycleTag, StatusTag, formatDate } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { useIsLead } from '@/components/CurrentUserContext';
@@ -38,8 +39,12 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       ['planning', 'in_progress', 'on_hold'].forEach((s) => params.append('status', s));
     } else if (tab === 'completed') {
       params.set('status', 'completed');
-    } else if (status) {
-      params.set('status', status);
+    } else {
+      // "All" means all — including cancelled AND archived projects, which the
+      // API hides by default. Without this, a cancelled-then-archived project
+      // would vanish from every tab.
+      params.set('includeArchived', '1');
+      if (status) params.set('status', status);
     }
     setLoaded(false);
     api<any[]>(`/projects?${params.toString()}`)
@@ -59,6 +64,10 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, team, lc, status, tab]);
+
+  // Realtime: refetch on tab focus, periodically while visible, and instantly
+  // when anything in the app reports a change.
+  useLiveRefresh(load); // eslint-disable-line react-hooks/exhaustive-deps
 
   const STATUS_COLORS: Record<string, { dot: string; label: string }> = {
     planning: { dot: '#94a3b8', label: 'Planning' },

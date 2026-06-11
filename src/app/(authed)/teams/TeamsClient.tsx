@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
+import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
 import { Avatar } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { UserAvatar } from '@/components/AvatarRegistry';
@@ -85,6 +86,9 @@ export default function TeamsClient({
       .then(setTeams)
       .catch(() => {});
   }
+
+  // Realtime: refresh team rollups on focus / interval / app-wide changes.
+  useLiveRefresh(load); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canManage = me?.role === 'lead' || me?.role === 'admin';
   const uMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
