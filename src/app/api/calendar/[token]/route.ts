@@ -34,14 +34,17 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
     if (!owner) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const now = new Date();
+    // 30 days back keeps overdue context; the future is effectively unbounded
+    // (2 years) so every dated task the user plans is already on the calendar
+    // the moment it's created — no re-subscribe, no horizon surprises.
     const lower = new Date(now.getTime() - 30 * DAY_MS);
-    const upper = new Date(now.getTime() + 60 * DAY_MS);
+    const upper = new Date(now.getTime() + 730 * DAY_MS);
     const tasks = await Task.find({
       assigneeId: (owner as any)._id,
       status: { $ne: 'done' },
       $or: [{ ccTcd: { $gte: lower, $lt: upper } }, { ccTcd: null, dueDate: { $gte: lower, $lt: upper } }],
     })
-      .select('_id title status priority dueDate ccTcd projectId')
+      .select('_id title status priority dueDate ccTcd projectId updatedAt')
       .limit(300)
       .lean();
 
@@ -64,11 +67,14 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
         due,
         status: t.status,
         priority: t.priority || null,
+        updatedAt: t.updatedAt ? new Date(t.updatedAt) : null,
       });
     }
 
     const body = renderAgendaIcs({
-      calendarName: `Pragati — ${(owner as any).name || 'My tasks'}`,
+      // One calendar, one name. Subscribers see a calendar called "Pragati"
+      // in Outlook/Google/Apple — not a per-user label they didn't choose.
+      calendarName: 'Pragati',
       tasks: items,
       appUrl: appBaseUrl(),
       now,

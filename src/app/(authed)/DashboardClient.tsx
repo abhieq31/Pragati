@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
+import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
 import { formatDate, daysUntil, ProgressBar, LIFECYCLE_LABELS, STATUS_COLORS } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
@@ -456,28 +457,30 @@ function FullScreenOverlay({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-3 sm:p-8 overflow-auto"
-      onClick={onClose}
-    >
+    <ModalPortal>
       <div
-        className="bg-white dark:bg-[#262624] rounded-2xl w-full max-w-4xl my-2 shadow-2xl dark:border dark:border-white/[0.08]"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center p-3 sm:p-8 overflow-auto"
+        onClick={onClose}
       >
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-white/[0.07] sticky top-0 bg-white dark:bg-[#262624] rounded-t-2xl z-10">
-          {icon}
-          <h3 className="text-sm font-bold text-slate-800 dark:text-white/85">{title}</h3>
-          <button
-            onClick={onClose}
-            title="Close"
-            className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
-          >
-            <X size={16} />
-          </button>
+        <div
+          className="bg-white dark:bg-[#262624] rounded-2xl w-full max-w-4xl my-2 shadow-2xl dark:border dark:border-white/[0.08]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-white/[0.07] sticky top-0 bg-white dark:bg-[#262624] rounded-t-2xl z-10">
+            {icon}
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white/85">{title}</h3>
+            <button
+              onClick={onClose}
+              title="Close"
+              className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-2 sm:p-3">{children}</div>
         </div>
-        <div className="p-2 sm:p-3">{children}</div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
@@ -1831,30 +1834,32 @@ function ContributorsPanel({
       )}
 
       {activityPerson && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
-          onClick={() => setActivityPerson(null)}
-        >
+        <ModalPortal>
           <div
-            className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 overlay-in"
+            onClick={() => setActivityPerson(null)}
           >
-            <div className="flex items-start gap-3 mb-5">
-              <UserAvatar userId={activityPerson.id} name={activityPerson.name} size={44} />
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base font-black text-slate-900 truncate">{activityPerson.name}</h3>
-                <div className="text-xs text-slate-400 mt-0.5">Performance overview</div>
+            <div
+              className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-[820px] max-h-[calc(100vh-2rem)] overflow-y-auto modal-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-3 mb-5">
+                <UserAvatar userId={activityPerson.id} name={activityPerson.name} size={44} />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-black text-slate-900 truncate">{activityPerson.name}</h3>
+                  <div className="text-xs text-slate-400 mt-0.5">Performance overview</div>
+                </div>
+                <button
+                  onClick={() => setActivityPerson(null)}
+                  className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <button
-                onClick={() => setActivityPerson(null)}
-                className="text-slate-300 hover:text-slate-500 ml-2 mt-0.5"
-              >
-                <X size={18} />
-              </button>
+              <ActivityGraph userId={activityPerson.id} name={activityPerson.name} />
             </div>
-            <ActivityGraph userId={activityPerson.id} name={activityPerson.name} />
           </div>
-        </div>
+        </ModalPortal>
       )}
     </section>
   );
