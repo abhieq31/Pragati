@@ -401,9 +401,11 @@ interface AvatarProps {
   font?: number | null;
   /** Render a subtle white ring border around the circular avatar. */
   ring?: boolean;
+  /** Uploaded photo (compressed data URL). When set, wins over the monogram. */
+  image?: string | null;
 }
 
-export function Avatar({ name, size = 28, letter, bg, font, ring }: AvatarProps) {
+export function Avatar({ name, size = 28, letter, bg, font, ring, image }: AvatarProps) {
   // Initials: first letter of first word + first letter of last word.
   // Single-word names render a single letter. Coloured deterministically by name.
   const trimmed = (name || '').trim();
@@ -450,21 +452,33 @@ export function Avatar({ name, size = 28, letter, bg, font, ring }: AvatarProps)
       title={trimmed || ''}
       aria-label={trimmed || 'User'}
     >
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <text
-          x={size / 2}
-          y={size / 2}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontFamily={fontDef.family}
-          fontWeight={fontDef.weight}
-          fontSize={fontSize}
-          fill={color}
-          letterSpacing="0.02em"
-        >
-          {initials}
-        </text>
-      </svg>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={image}
+          alt=""
+          width={size}
+          height={size}
+          className="w-full h-full object-cover rounded-full select-none"
+          draggable={false}
+        />
+      ) : (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
+          <text
+            x={size / 2}
+            y={size / 2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontFamily={fontDef.family}
+            fontWeight={fontDef.weight}
+            fontSize={fontSize}
+            fill={color}
+            letterSpacing="0.02em"
+          >
+            {initials}
+          </text>
+        </svg>
+      )}
     </div>
   );
 }

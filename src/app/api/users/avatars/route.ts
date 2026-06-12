@@ -25,16 +25,17 @@ export async function GET(req: NextRequest) {
 
     // Only rows with a custom background set count as "customised".
     const rows = await User.find(
-      { avatarBg: { $nin: [null, ''] } },
-      '_id avatarLetter avatarBg avatarFont',
+      { $or: [{ avatarBg: { $nin: [null, ''] } }, { avatarImage: { $nin: [null, ''] } }] },
+      '_id avatarLetter avatarBg avatarFont avatarImage',
     ).lean();
 
-    const avatars: Record<string, { letter: string; bg: string; font: number }> = {};
+    const avatars: Record<string, { letter: string; bg: string; font: number; image?: string }> = {};
     for (const r of rows as any[]) {
       avatars[String(r._id)] = {
         letter: r.avatarLetter || '',
         bg: r.avatarBg || '',
         font: typeof r.avatarFont === 'number' ? r.avatarFont : 0,
+        image: (r as any).avatarImage || undefined,
       };
     }
 

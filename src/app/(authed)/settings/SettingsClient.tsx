@@ -45,6 +45,7 @@ function ProfileAvatar({
   letter,
   bg,
   font,
+  image,
   size = 88,
   onClick,
   title,
@@ -53,11 +54,12 @@ function ProfileAvatar({
   letter?: string;
   bg?: string;
   font?: number;
+  image?: string;
   size?: number;
   onClick?: () => void;
   title?: string;
 }) {
-  const inner = <Avatar name={name} size={size} letter={letter} bg={bg} font={font} />;
+  const inner = <Avatar name={name} size={size} letter={letter} bg={bg} font={font} image={image} />;
   if (!onClick) return inner;
   // Wrap in a button so clicking the portrait opens the monogram editor
   // (matches user expectation — "click avatar to change it"). The pencil
@@ -69,7 +71,7 @@ function ProfileAvatar({
       onClick={onClick}
       title={title || 'Change avatar'}
       aria-label={title || 'Change avatar'}
-      className="group relative rounded-full focus:outline-none focus:ring-2 focus:ring-white/40"
+      className="group relative block p-0 leading-none rounded-full focus:outline-none focus:ring-2 focus:ring-white/40"
     >
       {inner}
       <span
@@ -777,23 +779,40 @@ function CalendarFeedSection() {
                 {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
-            {/* One-click subscribe — webcal:// launches Apple/Outlook's
-                "add subscription" dialog directly; the Google link opens its
-                add-by-URL flow. No copy-paste needed. */}
+            {/* One-click subscribe — each button lands the user INSIDE their
+                calendar's own "add subscription" flow with the URL pre-filled:
+                Outlook via its addfromweb deep link (work first, personal
+                fallback), Google via the cid handoff, Apple via webcal://. */}
             <div className="flex flex-wrap gap-2">
               <a
                 className="btn-primary text-xs inline-flex items-center gap-1.5"
-                href={state.url.replace(/^https?:\/\//, 'webcal://')}
-              >
-                <CalendarDays size={13} /> Add to Apple / Outlook
-              </a>
-              <a
-                className="btn-ghost text-xs inline-flex items-center gap-1.5"
-                href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(state.url)}`}
+                href={`https://outlook.office.com/calendar/0/addfromweb?url=${encodeURIComponent(state.url)}&name=${encodeURIComponent('Pragati')}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                <CalendarDays size={13} /> Add to Google Calendar
+                <CalendarDays size={13} /> Outlook (work)
+              </a>
+              <a
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                href={`https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(state.url)}&name=${encodeURIComponent('Pragati')}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <CalendarDays size={13} /> Outlook (personal)
+              </a>
+              <a
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(state.url.replace(/^https?:\/\//, 'webcal://'))}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <CalendarDays size={13} /> Google
+              </a>
+              <a
+                className="btn-ghost text-xs inline-flex items-center gap-1.5"
+                href={state.url.replace(/^https?:\/\//, 'webcal://')}
+              >
+                <CalendarDays size={13} /> Apple
               </a>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -892,6 +911,7 @@ function AdminDigestSettings() {
       else if (!r.mailerConfigured)
         setTestMsg('Email isn’t configured yet — set BREVO_API_KEY and BREVO_SENDER_EMAIL.');
       else if (r.skippedNoEmail > 0) setTestMsg('No deliverable email on your own account.');
+      else if (r.lastError) setTestMsg(`Provider rejected the send: ${r.lastError}`);
       else setTestMsg('Nothing was sent.');
     } catch (e: any) {
       setTestMsg(e.message || 'Test failed.');
@@ -1153,6 +1173,41 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
   const [avatarBg, setAvatarBg] = useState<string>((initialUser as any).avatarBg || '');
   const [avatarFont, setAvatarFont] = useState<number>((initialUser as any).avatarFont ?? 0);
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
+  // Uploaded photo (compressed client-side). Wins over the monogram everywhere.
+  const [avatarImage, setAvatarImage] = useState<string>((initialUser as any).avatarImage || '');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoErr, setPhotoErr] = useState('');
+
+  async function onPhotoPicked(file: File | null) {
+    if (!file) return;
+    setPhotoBusy(true);
+    setPhotoErr('');
+    try {
+      const { compressAvatar } = await import('@/lib/client/compressAvatar');
+      const data = await compressAvatar(file);
+      await api('/users/me', { method: 'PATCH', body: { avatarImage: data } });
+      setAvatarImage(data);
+      router.refresh();
+    } catch (e: any) {
+      setPhotoErr(e.message || 'Upload failed.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function removePhoto() {
+    setPhotoBusy(true);
+    setPhotoErr('');
+    try {
+      await api('/users/me', { method: 'PATCH', body: { avatarImage: '' } });
+      setAvatarImage('');
+      router.refresh();
+    } catch (e: any) {
+      setPhotoErr(e.message || 'Could not remove the photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
   const [editingProfile, setEditingProfile] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -1275,15 +1330,45 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         organisation={user.organisation}
         linkUsername
         avatar={
-          <ProfileAvatar
-            name={user.name}
-            letter={avatarLetter}
-            bg={avatarBg}
-            font={avatarFont}
-            size={88}
-            onClick={() => setShowAvatarEditor(true)}
-            title="Change avatar"
-          />
+          <div className="flex flex-col items-center gap-1.5">
+            <ProfileAvatar
+              name={user.name}
+              letter={avatarLetter}
+              bg={avatarBg}
+              font={avatarFont}
+              image={avatarImage}
+              size={88}
+              onClick={() => setShowAvatarEditor(true)}
+              title="Change avatar"
+            />
+            <div className="flex items-center gap-2">
+              <label className="text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
+                {photoBusy ? 'Uploading…' : avatarImage ? 'Change photo' : 'Upload photo'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={photoBusy}
+                  onChange={(e) => {
+                    onPhotoPicked(e.target.files?.[0] || null);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+              {avatarImage && !photoBusy && (
+                <button
+                  type="button"
+                  onClick={removePhoto}
+                  className="text-[10.5px] font-semibold text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            {photoErr && (
+              <span className="text-[10px] text-red-500 max-w-[140px] text-center">{photoErr}</span>
+            )}
+          </div>
         }
         actions={
           <div className="flex items-center gap-1.5">

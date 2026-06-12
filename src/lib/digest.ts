@@ -363,6 +363,9 @@ export interface RunSummary {
   /** Recipients not attempted because the free daily send cap was reached. */
   skippedCapReached: number;
   failed: number;
+  /** Provider reason for the FIRST failed send — turns a silent 0-sent run
+   *  into an actionable message (e.g. Brevo's IP-allowlist rejection). */
+  lastError?: string;
   cap: number;
   mailerConfigured: boolean;
 }
@@ -498,7 +501,12 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
 
     const res = await sendEmail({ to: r.email, toName: (r.user as any).name, subject, html, text });
     if (res.ok) summary.sent += 1;
-    else summary.failed += 1;
+    else {
+      summary.failed += 1;
+      if (!summary.lastError) {
+        summary.lastError = [res.error, res.detail].filter(Boolean).join(' — ') || 'send failed';
+      }
+    }
   }
 
   // Operational record of the last real run, surfaced in the admin panel so
