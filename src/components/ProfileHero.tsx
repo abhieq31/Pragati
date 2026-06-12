@@ -72,12 +72,14 @@ export function ProfileHero({
       <div className="flex flex-col sm:flex-row sm:items-center gap-5">
         {/* Brand-ring avatar — the one decorative element the hero keeps. */}
         <div
-          className="shrink-0 self-start sm:self-auto rounded-full p-[3px]"
+          className="shrink-0 self-start sm:self-auto rounded-full p-[3px] grid place-items-center leading-none"
           style={{
             background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
           }}
         >
-          <div className="rounded-full p-[3px] bg-white dark:bg-[#262624]">{avatar}</div>
+          <div className="rounded-full p-[3px] bg-white dark:bg-[#262624] grid place-items-center leading-none">
+            {avatar}
+          </div>
         </div>
 
         <div className="flex-1 min-w-0">

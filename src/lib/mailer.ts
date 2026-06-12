@@ -29,6 +29,9 @@ export interface MailResult {
   ok: boolean;
   skipped?: boolean;
   error?: string;
+  /** First ~200 chars of the provider's error body — surfaced to the user so
+   *  "unauthorised IP" / "sender not verified" explain themselves. */
+  detail?: string;
   id?: string;
 }
 
@@ -146,7 +149,7 @@ export async function sendEmail(msg: MailMessage): Promise<MailResult> {
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error(`[mailer] ${provider} send failed`, res.status, text.slice(0, 300));
-      return { ok: false, error: `${provider}_${res.status}` };
+      return { ok: false, error: `${provider}_${res.status}`, detail: text.slice(0, 200) };
     }
     const data = (await res.json().catch(() => ({}))) as { messageId?: string; id?: string };
     return { ok: true, id: data?.messageId || data?.id };

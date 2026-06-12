@@ -20,7 +20,7 @@ import { api } from '@/lib/client/api';
  * triggers router.refresh) propagates to their own rows in lists too.
  */
 
-type AvatarStyle = { letter: string; bg: string; font: number };
+type AvatarStyle = { letter: string; bg: string; font: number; image?: string };
 type Registry = Record<string, AvatarStyle>;
 
 const Ctx = createContext<Registry>({});
@@ -31,15 +31,20 @@ export function AvatarRegistryProvider({
   children,
 }: {
   // Current user's own style, so self renders correctly before/around the fetch.
-  seed?: { id: string; letter?: string; bg?: string; font?: number };
+  seed?: { id: string; letter?: string; bg?: string; font?: number; image?: string };
   // Server-seeded map of every customised avatar — eliminates first-paint flash.
   initial?: Registry;
   children: React.ReactNode;
 }) {
   const [registry, setRegistry] = useState<Registry>(() => {
     const base: Registry = { ...(initial || {}) };
-    if (seed?.id && seed.bg) {
-      base[seed.id] = { letter: seed.letter || '', bg: seed.bg, font: seed.font ?? 0 };
+    if (seed?.id && (seed.bg || seed.image)) {
+      base[seed.id] = {
+        letter: seed.letter || '',
+        bg: seed.bg || '',
+        font: seed.font ?? 0,
+        image: seed.image,
+      };
     }
     return base;
   });
@@ -49,12 +54,12 @@ export function AvatarRegistryProvider({
   // values flow in here without a hard reload. Deps are primitives so this
   // only runs when one of them actually changes.
   useEffect(() => {
-    if (!seed?.id || !seed.bg) return;
+    if (!seed?.id || (!seed.bg && !seed.image)) return;
     setRegistry((prev) => ({
       ...prev,
-      [seed.id]: { letter: seed.letter || '', bg: seed.bg!, font: seed.font ?? 0 },
+      [seed.id]: { letter: seed.letter || '', bg: seed.bg || '', font: seed.font ?? 0, image: seed.image },
     }));
-  }, [seed?.id, seed?.letter, seed?.bg, seed?.font]);
+  }, [seed?.id, seed?.letter, seed?.bg, seed?.font, seed?.image]);
 
   // Refresh the rest of the map once on mount — covers avatars changed by
   // others since the SSR snapshot. Fetched values win over the initial seed.
@@ -99,5 +104,14 @@ export function UserAvatar({
   size?: number;
 }) {
   const style = useAvatarStyle(userId);
-  return <Avatar name={name} size={size} letter={style?.letter} bg={style?.bg} font={style?.font} />;
+  return (
+    <Avatar
+      name={name}
+      size={size}
+      letter={style?.letter}
+      bg={style?.bg}
+      font={style?.font}
+      image={style?.image}
+    />
+  );
 }

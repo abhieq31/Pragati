@@ -65,6 +65,7 @@ export function u(user: any) {
     // legacy name-derived initials + hashed gradient".
     avatarLetter: user.avatarLetter || '',
     avatarBg: user.avatarBg || '',
+    avatarImage: user.avatarImage || '',
     avatarFont: typeof user.avatarFont === 'number' ? user.avatarFont : 0,
     soundDropEnabled: user.soundDropEnabled !== false,
     githubUrl: user.githubUrl || '',

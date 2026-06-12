@@ -163,6 +163,10 @@ const UserSchema = new Schema(
     avatarLetter: { type: String, default: '' }, // 1–2 chars, uppercase
     avatarBg: { type: String, default: '' }, // CSS colour (hex)
     avatarFont: { type: Number, default: 0 }, // 0..AVATAR_FONTS.length-1
+    // Optional uploaded photo — a CLIENT-COMPRESSED data URL (192px square
+    // JPEG, ≤ ~60KB enforced on both sides) so profile photos never become a
+    // storage problem. Empty string = no photo (monogram renders instead).
+    avatarImage: { type: String, default: '' },
 
     // Audible drop-cue preference. Defaults to true (ships with sound).
     // Synthesised in-browser via Web Audio, so there's no asset to deliver.

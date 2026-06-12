@@ -83,6 +83,7 @@ export interface CurrentUser {
   avatarLetter?: string;
   avatarBg?: string;
   avatarFont?: number;
+  avatarImage?: string;
   /** Drop-sound preference for kanban / dashboard reorders. */
   soundDropEnabled?: boolean;
 }
@@ -454,6 +455,7 @@ export default function AppShell({
           letter={user.avatarLetter}
           bg={user.avatarBg}
           font={user.avatarFont}
+          image={user.avatarImage}
           ring
         />
         <div className="min-w-0">
@@ -725,6 +727,7 @@ export default function AppShell({
               letter={user.avatarLetter}
               bg={user.avatarBg}
               font={user.avatarFont}
+              image={user.avatarImage}
               ring
             />
           </button>
@@ -767,6 +770,7 @@ export default function AppShell({
                 letter={user.avatarLetter}
                 bg={user.avatarBg}
                 font={user.avatarFont}
+                image={user.avatarImage}
                 ring
               />
             </button>
@@ -802,7 +806,13 @@ export default function AppShell({
   return (
     <CurrentUserProvider user={user}>
       <AvatarRegistryProvider
-        seed={{ id: user.id, letter: user.avatarLetter, bg: user.avatarBg, font: user.avatarFont }}
+        seed={{
+          id: user.id,
+          letter: user.avatarLetter,
+          bg: user.avatarBg,
+          font: user.avatarFont,
+          image: user.avatarImage,
+        }}
         initial={initialAvatars}
       >
         {/* Fixed-height app shell: the shell itself never scrolls (overflow-hidden),
@@ -942,6 +952,7 @@ export default function AppShell({
                     letter={user.avatarLetter}
                     bg={user.avatarBg}
                     font={user.avatarFont}
+                    image={user.avatarImage}
                     ring
                   />
                 </button>
@@ -1061,6 +1072,7 @@ export default function AppShell({
                     letter={user.avatarLetter}
                     bg={user.avatarBg}
                     font={user.avatarFont}
+                    image={user.avatarImage}
                     ring
                   />
                   <div>

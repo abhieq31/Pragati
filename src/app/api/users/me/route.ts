@@ -43,6 +43,14 @@ const EditableBody = z.object({
     .regex(/^(#[0-9A-Fa-f]{6}|)$/, 'Use a hex colour')
     .optional(),
   avatarFont: z.number().int().min(0).max(9).optional(),
+  // Uploaded photo: client-compressed data URL. Hard server cap (~90KB of
+  // base64 ≈ 65KB binary) + strict prefix so nothing but a small raster image
+  // can ever be stored. '' clears the photo.
+  avatarImage: z
+    .string()
+    .max(90_000)
+    .regex(/^(data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+|)$/, 'Invalid image')
+    .optional(),
   // Drop sound on kanban/dashboard reorders.
   soundDropEnabled: z.boolean().optional(),
 });
@@ -97,6 +105,7 @@ export async function PATCH(req: NextRequest) {
     if (d.avatarLetter !== undefined) (user as any).avatarLetter = d.avatarLetter.toUpperCase();
     if (d.avatarBg !== undefined) (user as any).avatarBg = d.avatarBg;
     if (d.avatarFont !== undefined) (user as any).avatarFont = d.avatarFont;
+    if (d.avatarImage !== undefined) (user as any).avatarImage = d.avatarImage;
     if (d.soundDropEnabled !== undefined) (user as any).soundDropEnabled = d.soundDropEnabled;
 
     // Apply identity fields only when NOT LDAP-synced
