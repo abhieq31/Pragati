@@ -40,6 +40,48 @@ export function digestDailyCap(): number {
   return Number.isFinite(n) && n > 0 ? n : 300;
 }
 
+/** The hour (0–23, workspace timezone) a user gets their digest when they
+ *  haven't picked one. 8 = 8 AM, matching the historical 08:30 default.
+ *  Override with DIGEST_DEFAULT_HOUR. */
+export function defaultDigestHour(): number {
+  const n = parseInt(process.env.DIGEST_DEFAULT_HOUR || '', 10);
+  return Number.isFinite(n) && n >= 0 && n <= 23 ? n : 8;
+}
+
+/** The wall-clock hour (0–23) in `tz` for instant `now`. Used to match each
+ *  user's chosen send hour against an hourly cron tick. Pure. */
+export function hourInTz(now: Date, tz: string): number {
+  const h = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false }).format(now);
+  const n = parseInt(h, 10);
+  return n === 24 ? 0 : n; // 'en-US' renders midnight as 24
+}
+
+/** Local calendar day key (YYYY-MM-DD) in `tz` — the idempotency key that
+ *  guarantees at-most-once delivery per user per local day, no matter how
+ *  many times (or from how many triggers) the endpoint is hit. Pure. */
+export function localDateKey(now: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  return parts; // en-CA already yields YYYY-MM-DD
+}
+
+/** Does this user's chosen send hour fall in the current cron tick? When
+ *  `scheduledHour` is undefined (a manual/force run) every hour matches —
+ *  the admin is sending the whole batch now. Pure. */
+export function digestHourMatches(
+  userHour: number | null | undefined,
+  scheduledHour: number | undefined,
+  fallbackHour: number,
+): boolean {
+  if (scheduledHour === undefined) return true;
+  const h = typeof userHour === 'number' && userHour >= 0 && userHour <= 23 ? userHour : fallbackHour;
+  return h === scheduledHour;
+}
+
 /** Absolute base URL for in-email links, or '' when none is configured (links
  *  are then omitted rather than rendered relative-and-broken). */
 export function appBaseUrl(): string {
@@ -218,27 +260,76 @@ export interface RenderInput {
   introNote?: string;
   test?: boolean;
   dateLabel: string;
+  /** Tasks the recipient closed yesterday — fuels the momentum line. */
+  winsYesterday?: number;
 }
 
-/** Render the personal digest to { subject, html, text }. Pure. */
+/* A short canon of closing lines (drawn from the same books as the login
+   screen — never attributed). One per day, same for everyone, like a
+   masthead. The email should end on judgment, not on a task list. */
+const CLOSING_LINES = [
+  'Concentrate on the one or two activities with leverage beyond all others.',
+  'Output is the measure. Activity is noise.',
+  'Success breeds complacency. Stay paranoid about what matters.',
+  'Hard things are hard because there are no easy answers. Decide anyway.',
+  'Spend zero time on what you could have done. All of it on what you might do.',
+  'Practice isn’t what you do once you’re good. It’s what makes you good.',
+  'Run. Don’t walk.',
+  'The most important time is now.',
+  'It is better to be first than it is to be better.',
+  'Let chaos reign — then rein in chaos.',
+];
+
+export function closingLine(now: Date = new Date()): string {
+  const day = Math.floor(now.getTime() / 86_400_000);
+  return CLOSING_LINES[day % CLOSING_LINES.length];
+}
+
+/** The single highest-leverage item: the stalest overdue, else the top
+ *  due-today by priority. This is what the email leads with — one decision,
+ *  not a wall of rows. */
+export function pickFocus(sections: DigestSections): DigestTask | null {
+  return sections.overdue[0] || sections.today[0] || null;
+}
+
+/** Render the personal digest to { subject, html, text }. Pure.
+ *
+ *  Design intent: an executive brief, not a chore list. It opens with ONE
+ *  thing to start on (leverage), acknowledges yesterday's output (momentum),
+ *  compresses the rest into scannable rows, and closes with a single line of
+ *  judgment. Value first, inventory second. */
 export function renderDigestEmail(input: RenderInput): { subject: string; html: string; text: string } {
-  const { name, sections, projectName, appUrl, introNote, test, dateLabel } = input;
+  const { name, sections, projectName, appUrl, introNote, test, dateLabel, winsYesterday = 0 } = input;
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
+  const weekday = dateLabel.split(/[ ,]/)[0] || 'daily';
+
+  const focus = pickFocus(sections);
 
   const counts: string[] = [];
   if (sections.today.length) counts.push(`${sections.today.length} due today`);
   if (sections.overdue.length) counts.push(`${sections.overdue.length} overdue`);
   if (sections.soon.length) counts.push(`${sections.soon.length} due soon`);
-  const subject = `${test ? '[Test] ' : ''}Pragati — ${counts.join(' · ') || 'nothing due today'}`;
+  const subject = `${test ? '[Test] ' : ''}Your ${weekday} brief — ${counts.join(' · ') || 'all clear'}`;
+
+  // The focus item leads alone; don't list it twice.
+  const rest = {
+    overdue: sections.overdue.filter((t) => t !== focus),
+    today: sections.today.filter((t) => t !== focus),
+    soon: sections.soon,
+  };
 
   const row = (t: DigestTask) => renderTaskRow(t, projectName(t.projectId), appUrl);
   const sectionsHtml = [
-    renderSection('Overdue', sections.overdue.map(row).join(''), '#b91c1c'),
-    renderSection('Due today', sections.today.map(row).join(''), '#0f172a'),
-    renderSection('Due soon', sections.soon.map(row).join(''), '#2563eb'),
+    renderSection('Also overdue', rest.overdue.map(row).join(''), '#b91c1c'),
+    renderSection(
+      focus && sections.today.includes(focus) ? 'Also due today' : 'Due today',
+      rest.today.map(row).join(''),
+      '#0f172a',
+    ),
+    renderSection('Coming up', rest.soon.map(row).join(''), '#2563eb'),
     sections.projectUpdates.length
       ? renderSection(
-          'Project updates (last 24h)',
+          'Moved yesterday',
           sections.projectUpdates
             .map(
               (p) =>
@@ -250,9 +341,30 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       : '',
   ].join('');
 
+  // ── The one thing ─────────────────────────────────────────────────────
+  const focusHtml = focus
+    ? `<div style="margin:0 0 22px;border:1px solid ${focus.bucket === 'overdue' ? '#fecaca' : '#bfdbfe'};border-left:4px solid ${focus.bucket === 'overdue' ? '#dc2626' : '#1565C0'};border-radius:12px;padding:14px 16px;background:${focus.bucket === 'overdue' ? '#fff7f7' : '#f8fbff'};">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${focus.bucket === 'overdue' ? '#b91c1c' : '#1565C0'};margin-bottom:4px;">Start here</div>
+        <div style="font-size:16px;font-weight:700;color:#0f172a;line-height:1.35;">${
+          appUrl
+            ? `<a href="${appUrl}/tasks/${focus.id}" style="color:#0f172a;text-decoration:none;">${escapeHtml(focus.title)}</a>`
+            : escapeHtml(focus.title)
+        }</div>
+        <div style="font-size:12px;color:#64748b;margin-top:3px;">${escapeHtml(focus.label)}${
+          projectName(focus.projectId) ? ` · ${escapeHtml(projectName(focus.projectId)!)}` : ''
+        } — clear this and the day tilts your way.</div>
+      </div>`
+    : '';
+
+  // ── Momentum ──────────────────────────────────────────────────────────
+  const momentum =
+    winsYesterday > 0
+      ? `<div style="font-size:13px;color:#15803d;font-weight:600;margin:0 0 16px;">You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday. Keep the streak honest.</div>`
+      : '';
+
   const emptyNote = digestHasContent(sections)
     ? ''
-    : `<div style="font-size:15px;color:#16a34a;font-weight:600;margin:6px 0 18px;">You're all clear — nothing due today. 🎉</div>`;
+    : `<div style="font-size:15px;color:#16a34a;font-weight:600;margin:6px 0 18px;">You're all clear — nothing due today. Use the room: pick the one thing with the most leverage and move it.</div>`;
 
   const intro =
     introNote && introNote.trim()
@@ -267,6 +379,8 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     ? `<a href="${appUrl}/settings" style="color:#64748b;">your profile settings</a>`
     : 'your profile settings';
 
+  const aphorism = closingLine();
+
   const html = `<!doctype html><html><body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
@@ -275,16 +389,19 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         <div style="color:#94a3b8;font-size:12px;margin-top:2px;">${escapeHtml(dateLabel)}${test ? ' · test message' : ''}</div>
       </td></tr>
       <tr><td style="padding:26px;">
-        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)} 👋</div>
+        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)}</div>
         ${intro}
+        ${momentum}
         ${emptyNote}
+        ${focusHtml}
         ${sectionsHtml}
         ${openBtn ? `<div style="margin-top:8px;">${openBtn}</div>` : ''}
+        <div style="margin-top:22px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:13px;font-style:italic;color:#64748b;">“${escapeHtml(aphorism)}”</div>
       </td></tr>
       <tr><td style="padding:16px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
         <div style="font-size:12px;color:#94a3b8;line-height:1.5;">
           You're receiving this because the daily task email is on for your account.
-          Turn it off any time in ${manage}.
+          Change the time, or turn it off, in ${manage}.
         </div>
       </td></tr>
     </table>
@@ -298,6 +415,13 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     `Good morning, ${first}.`,
     '',
   ];
+  if (winsYesterday > 0) {
+    lines.push(`You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday.`, '');
+  }
+  if (focus) {
+    const pn = projectName(focus.projectId);
+    lines.push('START HERE', `  → [${focus.label}] ${focus.title}${pn ? ` (${pn})` : ''}`, '');
+  }
   const textSection = (heading: string, items: DigestTask[]) => {
     if (!items.length) return;
     lines.push(heading.toUpperCase());
@@ -307,16 +431,17 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     }
     lines.push('');
   };
-  textSection('Overdue', sections.overdue);
-  textSection('Due today', sections.today);
-  textSection('Due soon', sections.soon);
+  textSection('Also overdue', rest.overdue);
+  textSection('Due today', rest.today);
+  textSection('Coming up', rest.soon);
   if (sections.projectUpdates.length) {
-    lines.push('PROJECT UPDATES (LAST 24H)');
+    lines.push('MOVED YESTERDAY');
     for (const p of sections.projectUpdates) lines.push(`  • ${p.name} — ${p.count} done`);
     lines.push('');
   }
   if (!digestHasContent(sections)) lines.push("You're all clear — nothing due today.");
   if (appUrl) lines.push('', `Open My Day: ${appUrl}/my-day`);
+  lines.push('', `“${aphorism}”`);
 
   return { subject, html, text: lines.join('\n') };
 }
@@ -349,6 +474,10 @@ export interface RunOptions {
    *  empty-skip, so an admin can verify delivery end to end. */
   test?: boolean;
   onlyUserId?: string;
+  /** Scheduled (hourly) run: only send to users whose chosen send hour equals
+   *  this (workspace-tz) hour, and stamp each as sent-today so re-ticks never
+   *  double-send. Omit for a manual "send now" run, which serves everyone. */
+  scheduledHour?: number;
 }
 
 export interface RunSummary {
@@ -360,6 +489,10 @@ export interface RunSummary {
   sent: number;
   skippedNoEmail: number;
   skippedNoTasks: number;
+  /** Recipients whose chosen send hour isn't this tick (hourly scheduled run). */
+  skippedWrongHour: number;
+  /** Recipients already sent their digest earlier today (idempotency). */
+  skippedAlreadySent: number;
   /** Recipients not attempted because the free daily send cap was reached. */
   skippedCapReached: number;
   failed: number;
@@ -393,11 +526,16 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     sent: 0,
     skippedNoEmail: 0,
     skippedNoTasks: 0,
+    skippedWrongHour: 0,
+    skippedAlreadySent: 0,
     skippedCapReached: 0,
     failed: 0,
     cap: digestDailyCap(),
     mailerConfigured: mailerConfigured(),
   };
+
+  const todayKey = localDateKey(now, tz);
+  const fallbackHour = defaultDigestHour();
 
   // Master switch — scheduled runs go quiet when disabled; a test still sends.
   if (!settings.enabled && !opts.test) {
@@ -408,12 +546,26 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     ? { _id: new mongoose.Types.ObjectId(opts.onlyUserId) }
     : { active: { $ne: false }, notifDailyDigest: true };
 
-  const users = await User.find(recipientFilter).select('_id name email notifyEmail').limit(1000).lean();
+  const users = await User.find(recipientFilter)
+    .select('_id name email notifyEmail digestHour lastDigestSentOn')
+    .limit(1000)
+    .lean();
 
   const recipients = users
     .map((u) => ({ user: u, email: resolveDigestEmail(u as any) }))
     .filter((r) => {
       summary.considered += 1;
+      // Per-user send time: on an hourly scheduled run, only this hour's users.
+      if (!opts.test && !digestHourMatches((r.user as any).digestHour, opts.scheduledHour, fallbackHour)) {
+        summary.skippedWrongHour += 1;
+        return false;
+      }
+      // Idempotency: never send the same user twice in one local day, however
+      // many triggers fire (Vercel cron + GitHub Action + a manual run).
+      if (!opts.test && (r.user as any).lastDigestSentOn === todayKey) {
+        summary.skippedAlreadySent += 1;
+        return false;
+      }
       if (!r.email) {
         summary.skippedNoEmail += 1;
         return false;
@@ -442,6 +594,22 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     const k = String(t.assigneeId);
     (tasksByUser.get(k) || tasksByUser.set(k, []).get(k)!).push(t);
   }
+
+  // Momentum: how many tasks each recipient closed during yesterday's local
+  // day — one aggregate for the whole batch. The brief opens with output, not
+  // with the to-do pile (output is the measure; activity is noise).
+  const yesterdayStart = new Date(window.start.getTime() - DAY_MS);
+  const winsAgg = await Task.aggregate([
+    {
+      $match: {
+        assigneeId: { $in: ids },
+        status: 'done',
+        completedAt: { $gte: yesterdayStart, $lt: window.start },
+      },
+    },
+    { $group: { _id: '$assigneeId', n: { $sum: 1 } } },
+  ]);
+  const winsByUser = new Map<string, number>(winsAgg.map((w: any) => [String(w._id), w.n]));
 
   // Optional project-updates section (admin opt-in, off by default).
   const projectUpdatesByUser = settings.projectUpdates
@@ -497,11 +665,18 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
       introNote: settings.introNote || '',
       test: opts.test,
       dateLabel,
+      winsYesterday: winsByUser.get(uid) || 0,
     });
 
     const res = await sendEmail({ to: r.email, toName: (r.user as any).name, subject, html, text });
-    if (res.ok) summary.sent += 1;
-    else {
+    if (res.ok) {
+      summary.sent += 1;
+      // Stamp sent-today so no other trigger re-sends this user. Test sends
+      // don't stamp — they must never suppress the real daily delivery.
+      if (!opts.test) {
+        await User.updateOne({ _id: r.user._id }, { $set: { lastDigestSentOn: todayKey } }).catch(() => {});
+      }
+    } else {
       summary.failed += 1;
       if (!summary.lastError) {
         summary.lastError = [res.error, res.detail].filter(Boolean).join(' — ') || 'send failed';
