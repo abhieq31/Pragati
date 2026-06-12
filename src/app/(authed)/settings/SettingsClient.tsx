@@ -498,6 +498,36 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
   const canEnable = !!effectiveEmail;
   const [enabled, setEnabled] = useState<boolean>(!!initialUser.notifDailyDigest);
   const [saving, setSaving] = useState(false);
+  // Delivery health — lets the toggle be honest when the deployment can't
+  // actually send (no mail provider / no cron secret) instead of silently
+  // accepting an opt-in that will never produce an email.
+  const [health, setHealth] = useState<{ mailerConfigured: boolean; cronSecretSet: boolean } | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState('');
+
+  useEffect(() => {
+    api('/me/digest-health')
+      .then((h: any) => setHealth(h))
+      .catch(() => {});
+  }, []);
+
+  async function sendSelfTest() {
+    setTesting(true);
+    setTestMsg('');
+    try {
+      const r: any = await api('/cron/daily-digest?test=1');
+      if (r.sent > 0) setTestMsg('Test email sent — check your inbox (and spam, the first time).');
+      else if (!r.mailerConfigured)
+        setTestMsg('Email isn’t configured on this deployment yet — ask your admin.');
+      else if (r.skippedNoEmail > 0)
+        setTestMsg('No deliverable address on your account — set a notification email above.');
+      else setTestMsg('Nothing was sent — check your notification email above.');
+    } catch (e: any) {
+      setTestMsg(e.message || 'Test failed.');
+    } finally {
+      setTesting(false);
+    }
+  }
 
   async function toggle() {
     if (!canEnable) return;
@@ -545,6 +575,21 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
               Sent every day at <strong>8:30 AM (IST)</strong> with the tasks assigned to you that are due
               that day.
             </p>
+            {health && (!health.mailerConfigured || !health.cronSecretSet) && (
+              <p className="mt-1.5 text-[11.5px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-2.5 py-1.5">
+                Heads up: email delivery isn’t fully configured on this deployment yet
+                {!health.mailerConfigured ? ' (no mail provider)' : ' (scheduled send not enabled)'} — your
+                preference is saved and takes effect the moment your admin completes setup.
+              </p>
+            )}
+            {enabled && (
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <button type="button" onClick={sendSelfTest} disabled={testing} className="btn-ghost text-xs">
+                  {testing ? 'Sending…' : 'Send me a test email'}
+                </button>
+                {testMsg && <span className="text-[11px] text-slate-500 dark:text-white/45">{testMsg}</span>}
+              </div>
+            )}
             {canEnable ? (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 {editingEmail ? (
@@ -752,10 +797,11 @@ function CalendarFeedSection() {
               </a>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              One click subscribes you to a <strong>live</strong> feed — your calendar re-checks it on its own
-              schedule, so date changes flow through automatically. Or paste the link above into any app via
-              “Subscribe / Add calendar from URL”. Anyone with the URL can read your task agenda — rotate it
-              if it leaks.
+              One click subscribes you to a <strong>live</strong> feed — date changes in Pragati flow through
+              automatically on your calendar app’s next refresh (Outlook: every few hours; Google: up to a
+              day; Apple: configurable, down to every 5 minutes). The feed itself is always current — the wait
+              is purely your calendar’s polling schedule. Or paste the link above into any app via “Subscribe
+              / Add calendar from URL”. Anyone with the URL can read your task agenda — rotate it if it leaks.
             </p>
             <div className="flex gap-2">
               <button className="btn-ghost text-xs" onClick={mint} disabled={busy}>

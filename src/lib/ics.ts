@@ -89,12 +89,6 @@ export function renderAgendaIcs(input: {
       t.priority ? `Priority: ${t.priority}` : '',
       input.appUrl ? `${input.appUrl}/tasks/${t.id}` : '',
     ].filter(Boolean);
-    // Update semantics: the UID is stable per task, so a reschedule must bump
-    // SEQUENCE (RFC 5545 §3.8.7.4) for clients to replace the old occurrence
-    // instead of showing a duplicate. Minutes-since-epoch of the last mutation
-    // is monotonic per change and needs no stored counter.
-    const updated = t.updatedAt || now;
-    const seq = Math.max(0, Math.floor(+updated / 60000) - 28_000_000);
     lines.push(
       'BEGIN:VEVENT',
       `UID:task-${t.id}@pragati`,
