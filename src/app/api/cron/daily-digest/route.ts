@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth';
+import { requireRole, requireUser } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import { buildAndSendDailyDigests } from '@/lib/digest';
 import { sendDailyBriefPushes } from '@/lib/push';
@@ -32,18 +32,23 @@ export async function GET(req: NextRequest) {
     const auth = req.headers.get('authorization');
     const cronAuthed = !!secret && auth === `Bearer ${secret}`;
 
-    // Anything that isn't a verified cron call must be an admin (also required
-    // for test mode, which emails the caller). Master-admin is a strict
-    // superset of admin everywhere in the app, so it is accepted here too.
-    let adminId: string | null = null;
-    if (!cronAuthed || isTest) {
+    // Test mode emails the CALLER and only the caller — so any signed-in user
+    // may run it to verify their own delivery ("I turned it on but nothing
+    // arrives"). Full manual runs (everyone's digest) stay admin-only.
+    // Master-admin is a strict superset of admin everywhere in the app.
+    let callerId: string | null = null;
+    if (isTest) {
+      const { user, error } = await requireUser(req);
+      if (error) return error;
+      callerId = user!.sub;
+    } else if (!cronAuthed) {
       const { user, error } = await requireRole(req, 'admin', 'master_admin');
       if (error) return error;
-      adminId = user.sub;
+      callerId = user.sub;
     }
 
     if (isTest) {
-      const summary = await buildAndSendDailyDigests({ test: true, onlyUserId: adminId! });
+      const summary = await buildAndSendDailyDigests({ test: true, onlyUserId: callerId! });
       return NextResponse.json({ mode: 'test', ...summary }, { headers: { 'Cache-Control': 'no-store' } });
     }
 

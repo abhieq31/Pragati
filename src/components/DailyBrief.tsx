@@ -348,8 +348,72 @@ export function DailyBrief() {
               )}
             </div>
           )}
+
+          <ChannelsNudge />
         </div>
       </div>
     </section>
+  );
+}
+
+/* ── Channels nudge ──────────────────────────────────────────────────────────
+   One quiet line at the bottom of the brief: "this same rundown can reach you
+   by email / live in your calendar". Three rules keep it from being spam:
+   shows only the channels the user hasn't set up, disappears on its own once
+   both are on, and one ✕ dismisses it forever (localStorage). No modal, no
+   badge, no repeat. */
+const NUDGE_KEY = 'pragati-channels-nudge-dismissed';
+
+function ChannelsNudge() {
+  const [state, setState] = useState<{ email: boolean; calendar: boolean } | null>(null);
+  const [dismissed, setDismissed] = useState(true);
+
+  useEffect(() => {
+    if (localStorage.getItem(NUDGE_KEY)) return; // dismissed forever — skip the fetches too
+    setDismissed(false);
+    Promise.all([api<any>('/users/me').catch(() => null), api<any>('/me/ics-token').catch(() => null)]).then(
+      ([me, ics]) => {
+        setState({ email: !!me?.notifDailyDigest, calendar: !!ics?.enabled });
+      },
+    );
+  }, []);
+
+  if (dismissed || !state || (state.email && state.calendar)) return null;
+
+  return (
+    <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.05] flex items-center gap-2 min-w-0">
+      <span className="text-[11px] text-slate-400 dark:text-white/35 truncate">
+        Get this rundown{' '}
+        {!state.email && (
+          <Link
+            href="/settings#daily-email"
+            className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            in your inbox
+          </Link>
+        )}
+        {!state.email && !state.calendar && ' · '}
+        {!state.calendar && (
+          <Link
+            href="/settings#calendar-feed"
+            className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            live in your calendar
+          </Link>
+        )}
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          localStorage.setItem(NUDGE_KEY, '1');
+          setDismissed(true);
+        }}
+        aria-label="Don't show this again"
+        title="Don't show this again"
+        className="ml-auto shrink-0 p-0.5 rounded text-slate-300 hover:text-slate-500 dark:text-white/20 dark:hover:text-white/50 transition-colors"
+      >
+        <X size={11} />
+      </button>
+    </div>
   );
 }
