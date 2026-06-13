@@ -182,7 +182,18 @@ const UserSchema = new Schema(
     soundDropEnabled: { type: Boolean, default: true },
 
     // ── Social / public profile ─────────────────────────────────────────
+    // Legacy single GitHub field — superseded by `links` below, but kept so
+    // existing rows keep rendering. The public profile merges it into the link
+    // list when present and not already represented.
     githubUrl: { type: String, default: '' },
+    // Generic outbound links the member chooses to show on their public
+    // profile — any site, not just GitHub. Each is a URL with an optional
+    // label; when the label is empty the profile derives a pretty one (and a
+    // brand icon) from the host. Capped small so the profile stays clean.
+    links: {
+      type: [{ url: { type: String, default: '' }, label: { type: String, default: '' } }],
+      default: [],
+    },
     // IDs of users this person follows (mutual awareness within workspace).
     following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 

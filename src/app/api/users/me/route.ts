@@ -14,11 +14,26 @@ const EditableBody = z.object({
   title: z.string().max(120).optional(),
   phone: z.string().max(40).optional(),
   location: z.string().max(80).optional(),
-  // Public social link — validated as a GitHub URL to prevent arbitrary redirects.
+  // Legacy single GitHub link — still accepted for backward compatibility.
   githubUrl: z
     .string()
     .max(200)
     .regex(/^(https:\/\/github\.com\/[A-Za-z0-9_.-]{1,39})?$/, 'Must be a valid GitHub profile URL or empty')
+    .optional(),
+  // Generic public links — any site, not just GitHub. Each must be an http(s)
+  // URL (so no javascript:/data: redirects) with an optional short label. Capped
+  // at six so the profile stays clean.
+  links: z
+    .array(
+      z.object({
+        url: z
+          .string()
+          .max(300)
+          .regex(/^https?:\/\/[^\s]+$/i, 'Links must start with http:// or https://'),
+        label: z.string().max(24).optional(),
+      }),
+    )
+    .max(6)
     .optional(),
   // Notifications
   notifTaskAssigned: z.boolean().optional(),
@@ -98,6 +113,8 @@ export async function PATCH(req: NextRequest) {
     if (d.phone !== undefined) user.phone = d.phone as any;
     if (d.location !== undefined) user.location = d.location as any;
     if (d.githubUrl !== undefined) (user as any).githubUrl = d.githubUrl;
+    if (d.links !== undefined)
+      (user as any).links = d.links.map((l) => ({ url: l.url.trim(), label: (l.label || '').trim() }));
     if (d.notifTaskAssigned !== undefined) user.notifTaskAssigned = d.notifTaskAssigned as any;
     if (d.notifTaskDueSoon !== undefined) user.notifTaskDueSoon = d.notifTaskDueSoon as any;
     if (d.notifTaskOverdue !== undefined) user.notifTaskOverdue = d.notifTaskOverdue as any;

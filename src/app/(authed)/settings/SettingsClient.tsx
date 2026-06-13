@@ -30,9 +30,18 @@ import {
   ExternalLink,
   Mail,
   Send,
+  Plus,
+  Trash2,
+  Globe,
+  Github,
+  Linkedin,
+  Twitter,
+  Instagram,
+  Youtube,
 } from 'lucide-react';
 
 import { MonogramEditor } from '@/components/MonogramEditor';
+import { linkMeta, type LinkBrand } from '@/lib/links';
 import { ProfileHero } from '@/components/ProfileHero';
 
 /* ── Profile avatar wrapper ───────────────────────────────────────────────
@@ -433,6 +442,92 @@ function ReadonlyField({ label, value }: { label: string; value: string }) {
         {value || <span className="text-slate-300">—</span>}
       </div>
     </div>
+  );
+}
+
+/* ── Links editor ─────────────────────────────────────────────────────────────
+   Any site, not just GitHub. Each row is a URL (+ optional label); the brand
+   icon is derived live from the host so the member sees how it will look. */
+const SETTINGS_BRAND_ICON: Record<LinkBrand, typeof Globe> = {
+  github: Github,
+  linkedin: Linkedin,
+  twitter: Twitter,
+  instagram: Instagram,
+  youtube: Youtube,
+  email: Mail,
+  medium: Globe,
+  dribbble: Globe,
+  behance: Globe,
+  figma: Globe,
+  gitlab: Globe,
+  website: Globe,
+};
+
+function LinksEditor({
+  links,
+  setLinks,
+}: {
+  links: { url: string; label: string }[];
+  setLinks: (next: { url: string; label: string }[]) => void;
+}) {
+  const update = (i: number, patch: Partial<{ url: string; label: string }>) =>
+    setLinks(links.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const remove = (i: number) => setLinks(links.filter((_, idx) => idx !== i));
+  const add = () => setLinks([...links, { url: '', label: '' }]);
+
+  return (
+    <Field label="Links" hint="Any site — GitHub, LinkedIn, your portfolio, X… Shown on your public profile.">
+      <div className="space-y-2">
+        {links.map((l, i) => {
+          const valid = /^https?:\/\/[^\s]+$/i.test(l.url.trim());
+          const m = valid ? linkMeta(l.url, l.label) : null;
+          const Icon = m ? SETTINGS_BRAND_ICON[m.brand] || Globe : Globe;
+          return (
+            <div key={i} className="flex items-center gap-2">
+              <span
+                className="w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0"
+                style={{ color: m ? m.color : '#94a3b8' }}
+                title={m ? m.label : 'Add a link'}
+              >
+                <Icon size={15} />
+              </span>
+              <input
+                className="input flex-1 min-w-0"
+                type="url"
+                inputMode="url"
+                placeholder="https://…"
+                value={l.url}
+                onChange={(e) => update(i, { url: e.target.value })}
+              />
+              <input
+                className="input w-32 shrink-0"
+                placeholder="Label (optional)"
+                value={l.label}
+                maxLength={24}
+                onChange={(e) => update(i, { label: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors shrink-0"
+                title="Remove link"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          );
+        })}
+        {links.length < 6 && (
+          <button
+            type="button"
+            onClick={add}
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+          >
+            <Plus size={14} /> Add link
+          </button>
+        )}
+      </div>
+    </Field>
   );
 }
 
@@ -1210,7 +1305,17 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
 
   const [name, setName] = useState(initialUser.name || '');
   const [employeeId, setEmpId] = useState(initialUser.employeeId || '');
-  const [githubUrl, setGithubUrl] = useState(initialUser.githubUrl || '');
+  // Generic public links (any site). Seed from the saved list; fold a legacy
+  // githubUrl into it the first time so nothing the user set is lost, then the
+  // links list is the single source of truth.
+  const [links, setLinks] = useState<{ url: string; label: string }[]>(() => {
+    const ls = ((initialUser.links as any[]) || []).map((l) => ({
+      url: String(l?.url || ''),
+      label: String(l?.label || ''),
+    }));
+    if (ls.length === 0 && initialUser.githubUrl) ls.push({ url: initialUser.githubUrl, label: '' });
+    return ls;
+  });
   const [identitySaving, setIdentitySaving] = useState(false);
   const [identityMsg, setIdentityMsg] = useState('');
 
@@ -1335,7 +1440,15 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
     setIdentityMsg('');
     setIdentitySaving(true);
     try {
-      await api('/users/me', { method: 'PATCH', body: { name, githubUrl } });
+      // Persist the cleaned link list and clear the legacy githubUrl — `links`
+      // is now the single source of truth (the public profile still folds in a
+      // legacy value for rows that never re-saved).
+      const cleaned = links
+        .map((l) => ({ url: l.url.trim(), label: l.label.trim() }))
+        .filter((l) => /^https?:\/\/[^\s]+$/i.test(l.url))
+        .slice(0, 6);
+      await api('/users/me', { method: 'PATCH', body: { name, links: cleaned, githubUrl: '' } });
+      setLinks(cleaned);
       setIdentityMsg('Saved');
       setTimeout(() => setIdentityMsg(''), 2500);
     } catch (err: any) {
@@ -1481,16 +1594,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
             <Field label="Full name">
               <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
             </Field>
-            <Field label="GitHub profile URL" hint="Optional — shown on your public profile">
-              <input
-                className="input"
-                type="url"
-                placeholder="https://github.com/username"
-                value={githubUrl}
-                onChange={(e) => setGithubUrl(e.target.value)}
-                pattern="^(https://github\.com/[A-Za-z0-9_.-]{1,39})?$"
-              />
-            </Field>
+            <LinksEditor links={links} setLinks={setLinks} />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <ReadonlyField label="Username" value={user.username ? `@${user.username}` : '—'} />
               <ReadonlyField label="Member ID" value={employeeId || '—'} />
