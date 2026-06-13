@@ -24,6 +24,7 @@ export function ProfileHero({
   location,
   organisation,
   avatar,
+  avatarExtra,
   actions,
   linkUsername = false,
   showMemberId = true,
@@ -38,6 +39,9 @@ export function ProfileHero({
   organisation?: string | null;
   /** The avatar node (editable button on settings, plain Avatar on public). */
   avatar: ReactNode;
+  /** Rendered BELOW the brand ring (e.g. the photo upload/remove links) —
+   *  never inside it, so text can't overlap the circle. */
+  avatarExtra?: ReactNode;
   /** Right-side action slot — Edit (self) or nothing (public). */
   actions?: ReactNode;
   /** When true, @username links to the public profile route. */
@@ -70,16 +74,21 @@ export function ProfileHero({
   return (
     <section className="card p-5 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-        {/* Brand-ring avatar — the one decorative element the hero keeps. */}
-        <div
-          className="shrink-0 self-start sm:self-auto rounded-full p-[3px] grid place-items-center leading-none"
-          style={{
-            background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
-          }}
-        >
-          <div className="rounded-full p-[3px] bg-white dark:bg-[#262624] grid place-items-center leading-none">
-            {avatar}
+        {/* Brand-ring avatar — the one decorative element the hero keeps.
+            avatarExtra (upload/remove links) renders under the ring, never
+            inside the circle. */}
+        <div className="shrink-0 self-start sm:self-auto flex flex-col items-center gap-1.5">
+          <div
+            className="rounded-full p-[3px] grid place-items-center leading-none"
+            style={{
+              background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
+            }}
+          >
+            <div className="rounded-full p-[3px] bg-white dark:bg-[#262624] grid place-items-center leading-none">
+              {avatar}
+            </div>
           </div>
+          {avatarExtra}
         </div>
 
         <div className="flex-1 min-w-0">

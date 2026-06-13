@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db';
+import { sendEmail, mailerConfigured } from '@/lib/mailer';
+import { appBaseUrl } from '@/lib/digest';
 import { User } from '@/models/User';
 import { requireUser } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
@@ -102,6 +104,10 @@ export async function PATCH(req: NextRequest) {
     if (d.notifTaskDueSoon !== undefined) user.notifTaskDueSoon = d.notifTaskDueSoon as any;
     if (d.notifTaskOverdue !== undefined) user.notifTaskOverdue = d.notifTaskOverdue as any;
     if (d.notifProjectUpdate !== undefined) user.notifProjectUpdate = d.notifProjectUpdate as any;
+    // Flipping the daily brief ON earns a welcome email — it doubles as the
+    // delivery test (replaces the old "send me a test email" button): if this
+    // lands, tomorrow's brief lands. Only on the false -> true transition.
+    const digestJustEnabled = d.notifDailyDigest === true && !(user as any).notifDailyDigest;
     if (d.notifDailyDigest !== undefined) (user as any).notifDailyDigest = d.notifDailyDigest;
     if (d.digestHour !== undefined) (user as any).digestHour = d.digestHour;
     if (d.notifyEmail !== undefined) (user as any).notifyEmail = d.notifyEmail.trim();
@@ -124,6 +130,24 @@ export async function PATCH(req: NextRequest) {
     }
 
     await user.save();
+
+    if (digestJustEnabled && mailerConfigured()) {
+      const to = ((user as any).notifyEmail || '').trim() || (user as any).email || '';
+      if (to && !to.endsWith('@pragati.local')) {
+        const { renderWelcomeEmail, defaultDigestHour, digestTimeZone } = await import('@/lib/digest');
+        const hour = (user as any).digestHour ?? defaultDigestHour();
+        const h12 = hour % 12 === 0 ? 12 : hour % 12;
+        const hourLabel = `${h12}:30 ${hour < 12 ? 'AM' : 'PM'} (${digestTimeZone()})`;
+        const { subject, html, text } = renderWelcomeEmail({
+          name: (user as any).name || '',
+          role: (user as any).role,
+          appUrl: appBaseUrl(),
+          hourLabel,
+        });
+        // Fire-and-forget — a mail hiccup must never fail the settings save.
+        void sendEmail({ to, toName: (user as any).name, subject, html, text }).catch(() => {});
+      }
+    }
     // Profile edits (name/title/department/avatar) change how this user is
     // rendered in the admin People directory, so drop its cached copy.
     void bustPeopleDirectoryCache();

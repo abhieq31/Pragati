@@ -492,14 +492,15 @@ function WhiteboardFAB() {
         onClick={() => setOpen(true)}
         title="Open whiteboard"
         aria-label="Open whiteboard"
-        className="fixed bottom-6 right-6 z-40 rounded-full shadow-xl flex items-center gap-2 pl-3.5 pr-4 h-12 text-white text-[13px] font-bold transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-6 right-6 z-40 w-13 h-13 rounded-full shadow-xl grid place-items-center text-white transition-transform hover:scale-105 active:scale-95"
         style={{
+          width: 52,
+          height: 52,
           background: 'linear-gradient(135deg, #1565C0 0%, #22C55E 100%)',
           boxShadow: '0 4px 16px rgba(21,101,192,0.35)',
         }}
       >
-        <WhiteboardIcon size={20} className="text-white" filled />
-        Whiteboard
+        <WhiteboardIcon size={24} className="text-white" filled />
       </button>
 
       {/* Whiteboard drawer */}

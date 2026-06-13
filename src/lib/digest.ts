@@ -262,6 +262,20 @@ export interface RenderInput {
   dateLabel: string;
   /** Tasks the recipient closed yesterday — fuels the momentum line. */
   winsYesterday?: number;
+  /** Recipient role — drives one quiet line of framing, so the same brief
+   *  reads as "your plate" to an IC, "you first, then the team" to a lead,
+   *  and "the workspace" to the admin. */
+  role?: string;
+}
+
+/** One line of role framing under the greeting. Deliberately copy, not data —
+ *  the data below is identical for everyone; the lens is what changes. */
+export function roleFraming(role?: string): string {
+  if (role === 'admin' || role === 'master_admin')
+    return 'Your own plate first — the workspace view is one click away on your console.';
+  if (role === 'lead' || role === 'pm')
+    return 'Your plate first. Clear it, then look at the board — your team reads your pace.';
+  return 'Just your plate — nothing about anyone else, nothing you can’t act on.';
 }
 
 /* A short canon of closing lines (drawn from the same books as the login
@@ -292,6 +306,57 @@ export function pickFocus(sections: DigestSections): DigestTask | null {
   return sections.overdue[0] || sections.today[0] || null;
 }
 
+/* ── Subscription welcome ──────────────────────────────────────────────────
+   Sent exactly once, the moment a user turns the daily brief on. It doubles
+   as the delivery test (which replaced the old "send me a test email"
+   button): if this lands, tomorrow's brief lands. Role-personalised copy,
+   same visual system as the daily brief. Pure — unit-testable. */
+export function renderWelcomeEmail(input: {
+  name: string;
+  role?: string;
+  appUrl: string;
+  hourLabel: string; // e.g. "8:30 AM IST"
+}): { subject: string; html: string; text: string } {
+  const first = (input.name || '').trim().split(/\s+/)[0] || 'there';
+  const roleLine =
+    input.role === 'admin' || input.role === 'master_admin'
+      ? 'As the workspace admin you also keep the console — the brief covers your own plate, so mornings start with you, not with everyone.'
+      : input.role === 'lead' || input.role === 'pm'
+        ? 'As a lead, your brief opens with your own plate — clear it first, then turn to the board. Your team reads your pace.'
+        : 'Your brief covers exactly one thing: what is on your plate today. No noise about anyone else.';
+  const subject = 'You’re in — your Pragati morning brief starts tomorrow';
+  const html = `<!doctype html><html><body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+  <div style="height:4px;background:linear-gradient(90deg,#1565C0,#43A047);"></div>
+  <div style="padding:28px 28px 24px;">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#1565C0;margin:0 0 14px;">Pragati</div>
+    <h1 style="margin:0 0 10px;font-size:20px;line-height:1.3;color:#0f172a;">Good call, ${escapeHtml(first)}.</h1>
+    <p style="margin:0 0 14px;font-size:14px;color:#334155;line-height:1.6;">Starting tomorrow at <strong>${escapeHtml(
+      input.hourLabel,
+    )}</strong>, you’ll get one short brief: the single task that matters most, then the rest of your day — overdue first, nearest date first.</p>
+    <p style="margin:0 0 18px;font-size:13px;color:#64748b;line-height:1.6;">${escapeHtml(roleLine)}</p>
+    ${
+      input.appUrl
+        ? `<a href="${input.appUrl}" style="display:inline-block;background:#1565C0;color:#ffffff;font-size:13px;font-weight:700;text-decoration:none;border-radius:10px;padding:10px 18px;">Open Pragati</a>`
+        : ''
+    }
+    <p style="margin:22px 0 0;font-size:12px;color:#94a3b8;line-height:1.5;">This is the only email you’ll get today — and you can switch the brief off any time in Settings.</p>
+  </div>
+</div>
+</body></html>`;
+  const text = [
+    `Good call, ${first}.`,
+    '',
+    `Starting tomorrow at ${input.hourLabel}, you'll get one short brief: the single task that matters most, then the rest of your day.`,
+    roleLine,
+    input.appUrl ? `Open Pragati: ${input.appUrl}` : '',
+    'You can switch the brief off any time in Settings.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  return { subject, html, text };
+}
+
 /** Render the personal digest to { subject, html, text }. Pure.
  *
  *  Design intent: an executive brief, not a chore list. It opens with ONE
@@ -299,7 +364,7 @@ export function pickFocus(sections: DigestSections): DigestTask | null {
  *  compresses the rest into scannable rows, and closes with a single line of
  *  judgment. Value first, inventory second. */
 export function renderDigestEmail(input: RenderInput): { subject: string; html: string; text: string } {
-  const { name, sections, projectName, appUrl, introNote, test, dateLabel, winsYesterday = 0 } = input;
+  const { name, sections, projectName, appUrl, introNote, test, dateLabel, winsYesterday = 0, role } = input;
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
   const weekday = dateLabel.split(/[ ,]/)[0] || 'daily';
 
@@ -340,6 +405,10 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         )
       : '',
   ].join('');
+
+  const framingHtml = `<p style="margin:0 0 18px;font-size:13px;color:#64748b;line-height:1.5;">${escapeHtml(
+    roleFraming(role),
+  )}</p>`;
 
   // ── The one thing ─────────────────────────────────────────────────────
   const focusHtml = focus
@@ -389,7 +458,8 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         <div style="color:#94a3b8;font-size:12px;margin-top:2px;">${escapeHtml(dateLabel)}${test ? ' · test message' : ''}</div>
       </td></tr>
       <tr><td style="padding:26px;">
-        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)}</div>
+        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 6px;">Good morning, ${escapeHtml(first)}</div>
+        ${framingHtml}
         ${intro}
         ${momentum}
         ${emptyNote}
@@ -659,6 +729,7 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
 
     const { subject, html, text } = renderDigestEmail({
       name: (r.user as any).name || '',
+      role: (r.user as any).role,
       sections,
       projectName: (pid) => (pid ? projName.get(pid) || null : null),
       appUrl,
