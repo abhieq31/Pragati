@@ -60,12 +60,25 @@ export function useLiveRefresh(
     const evtList = eventsKey ? eventsKey.split(',').filter(Boolean) : [];
     evtList.forEach((name) => window.addEventListener(name, onEvent));
 
+    // Cross-tab liveness: a mutation in any other tab of this app (see
+    // lib/client/api) posts here, so every open tab updates without a reload.
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('pragati');
+      bc.onmessage = (e) => {
+        if (e.data === 'data-changed') onEvent();
+      };
+    } catch {
+      /* no BroadcastChannel — same-tab event + interval still cover liveness */
+    }
+
     return () => {
       if (timer) clearInterval(timer);
       if (debounce) clearTimeout(debounce);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', onFocus);
       evtList.forEach((name) => window.removeEventListener(name, onEvent));
+      bc?.close();
     };
   }, [enabled, intervalMs, eventsKey]);
 }
