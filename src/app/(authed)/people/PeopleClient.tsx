@@ -4,7 +4,7 @@ import { ModalPortal } from '@/components/ModalPortal';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
-import { RoleBadge } from '@/components/ui';
+import { RoleBadge, formatDateTime, formatFullDate } from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import dynamic from 'next/dynamic';
 const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
@@ -1653,7 +1653,7 @@ export default function PeopleClient({
                 {u.lockedAt && (
                   <span
                     className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
-                    title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}
+                    title={`Locked at ${formatDateTime(u.lockedAt)} after too many failed sign-ins`}
                   >
                     Locked
                   </span>
@@ -1845,7 +1845,7 @@ export default function PeopleClient({
                 {u.lockedAt && (
                   <span
                     className="tag border text-xs font-semibold border-rose-200 bg-rose-50 text-rose-700"
-                    title={`Locked at ${new Date(u.lockedAt).toLocaleString()} after too many failed sign-ins`}
+                    title={`Locked at ${formatDateTime(u.lockedAt)} after too many failed sign-ins`}
                   >
                     Locked
                   </span>
@@ -1959,7 +1959,7 @@ export default function PeopleClient({
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono">@{handleOf(u)}</span>
-                      {u.deactivatedAt && <span>· off {new Date(u.deactivatedAt).toLocaleDateString()}</span>}
+                      {u.deactivatedAt && <span>· off {formatFullDate(u.deactivatedAt)}</span>}
                       {u.deactivatedBy && <span>· by {u.deactivatedBy}</span>}
                     </div>
                     {u.deactivationReason && (

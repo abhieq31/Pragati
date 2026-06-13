@@ -402,7 +402,9 @@ export default function NewProjectPage() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
-    api<any[]>('/teams').then(setTeams);
+    api<any[]>('/teams')
+      .then(setTeams)
+      .catch(() => {});
     api<any>('/auth/me')
       .then((me) => {
         if (me?.user?.id) setCurrentUserId(me.user.id);
@@ -489,6 +491,12 @@ export default function NewProjectPage() {
       setErr('Project name is required.');
       return;
     }
+    // A start date after the due date is almost always a typo and produces
+    // nonsensical "behind pace" math downstream — catch it before the round-trip.
+    if (form.startDate && form.dueDate && form.startDate > form.dueDate) {
+      setErr('The start date is after the due date — please check the dates.');
+      return;
+    }
     setErr('');
     setLoading(true);
     // ICs may toggle off to *browse* lead workflows, but they can only ever
@@ -510,7 +518,14 @@ export default function NewProjectPage() {
           startDate: form.startDate || undefined,
           dueDate: form.dueDate || undefined,
           useTemplate: false,
-          customPhases: phases.map((ph) => ({ name: ph.name, tasks: ph.tasks })),
+          // Drop blank phase names and empty task titles so an unfilled row
+          // can't save a broken, nameless stage into the workflow.
+          customPhases: phases
+            .map((ph) => ({
+              name: ph.name.trim(),
+              tasks: (ph.tasks || []).map((t) => t.trim()).filter(Boolean),
+            }))
+            .filter((ph) => ph.name),
         },
       });
       // Bust the sidebar calendar cache so newly-added tasks appear immediately.

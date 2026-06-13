@@ -15,6 +15,7 @@ import {
   PROJECT_STATUS_OPTIONS,
   TaskLink,
   formatDate,
+  formatDateTime,
   useToast,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
@@ -790,7 +791,7 @@ function QuickAddTask({
               title={sug.dueDate.reason}
               className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             >
-              Due {new Date(sug.dueDate.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              Due {formatDate(sug.dueDate.date)}
             </button>
           )}
         </div>
@@ -1727,11 +1728,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             {project.archived && (
               <span
                 className="tag border border-amber-200 bg-amber-50 text-amber-800 font-semibold inline-flex items-center gap-1.5"
-                title={
-                  project.archivedAt
-                    ? `Archived ${new Date(project.archivedAt).toLocaleString()}`
-                    : 'Archived'
-                }
+                title={project.archivedAt ? `Archived ${formatDateTime(project.archivedAt)}` : 'Archived'}
               >
                 <Archive size={11} /> Archived
               </span>
@@ -1899,11 +1896,16 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     ? `Archive "${project.name}"?\nIt will be hidden from the dashboard and project list, but tasks and audit history remain.`
                     : `Restore "${project.name}" from the archive?`;
                   if (!confirm(msg)) return;
-                  await api(`/projects/${project.id}/archive`, {
-                    method: 'POST',
-                    body: { archived: archiving },
-                  });
-                  load();
+                  try {
+                    await api(`/projects/${project.id}/archive`, {
+                      method: 'POST',
+                      body: { archived: archiving },
+                    });
+                    showToast(archiving ? 'Project archived' : 'Project restored');
+                    load();
+                  } catch (e: any) {
+                    showToast(e?.message || 'Could not update the archive state', 'err');
+                  }
                 }}
                 className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors ${
                   project.archived

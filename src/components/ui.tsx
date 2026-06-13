@@ -249,6 +249,30 @@ export function formatDate(s?: string | Date | null) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** Safe date+time for tooltips/metadata. Returns '—' for null and '' for an
+ *  unparseable value — never the literal "Invalid Date" string a raw
+ *  `new Date(x).toLocaleString()` leaks into the UI. */
+export function formatDateTime(s?: string | Date | null) {
+  if (!s) return '—';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+/** Safe full date (no time). Same null/invalid guards as formatDateTime. */
+export function formatFullDate(s?: string | Date | null) {
+  if (!s) return '—';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 export function daysUntil(s?: string | Date | null) {
   if (!s) return null;
   const d = typeof s === 'string' && s.length === 10 ? new Date(s + 'T12:00:00') : new Date(s);

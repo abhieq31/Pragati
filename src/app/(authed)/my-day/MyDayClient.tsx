@@ -28,6 +28,7 @@ import {
   FolderKanban,
 } from 'lucide-react';
 import { WhiteboardIcon } from '@/components/WhiteboardIcon';
+import { formatDate } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import dynamicImport from 'next/dynamic';
@@ -166,6 +167,8 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
   const [editText, setEditText] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteErr, setNoteErr] = useState('');
   // Notes are secondary to the day's todos — collapsed by default so the page
   // reads as a clean todo surface first. The choice is remembered per browser.
   const [open, setOpen] = useState<boolean>(false);
@@ -201,7 +204,9 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
   async function addNote(e: React.FormEvent) {
     e.preventDefault();
     const content = text.trim();
-    if (!content) return;
+    if (!content || savingNote) return;
+    setSavingNote(true);
+    setNoteErr('');
     try {
       const note = await api<UserNote>('/scratch/notes', {
         method: 'POST',
@@ -211,24 +216,38 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
       setText('');
       setTitle('');
       setShowTitle(false);
-    } catch {}
+    } catch (err: any) {
+      setNoteErr(err?.message || 'Could not save the note — try again.');
+    } finally {
+      setSavingNote(false);
+    }
   }
 
   async function removeNote(id: string) {
+    // Optimistic remove, then reconcile from the server on failure so a
+    // dropped delete reappears instead of silently "sticking" deleted.
+    const prev = notes;
     setNotes((n) => n.filter((x) => x.id !== id));
     try {
       await api(`/scratch/notes/${id}`, { method: 'DELETE' });
-    } catch {}
+    } catch (err: any) {
+      setNotes(prev);
+      setNoteErr(err?.message || 'Could not delete the note — try again.');
+    }
   }
 
   async function togglePin(note: UserNote) {
+    const prev = notes;
     const updated = { ...note, pinned: !note.pinned };
     setNotes((n) =>
       n.map((x) => (x.id === note.id ? updated : x)).sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)),
     );
     try {
       await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { pinned: !note.pinned } });
-    } catch {}
+    } catch (err: any) {
+      setNotes(prev);
+      setNoteErr(err?.message || 'Could not update the note — try again.');
+    }
   }
 
   function startEdit(note: UserNote) {
@@ -243,6 +262,7 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
       setEditingId(null);
       return;
     }
+    const prev = notes;
     const updated = { ...note, content, title: editTitle.trim() || null };
     setNotes((n) => n.map((x) => (x.id === note.id ? updated : x)));
     setEditingId(null);
@@ -251,7 +271,10 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
         method: 'PATCH',
         body: { content, title: editTitle.trim() || undefined },
       });
-    } catch {}
+    } catch (err: any) {
+      setNotes(prev);
+      setNoteErr(err?.message || 'Could not save your edit — try again.');
+    }
   }
 
   return (
@@ -335,13 +358,22 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
                 {text.trim() && (
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-semibold px-2.5 py-1.5 transition-colors fade-in-soft"
+                    disabled={savingNote}
+                    className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-[11px] font-semibold px-2.5 py-1.5 transition-colors fade-in-soft"
                   >
-                    Save note
+                    {savingNote ? 'Saving…' : 'Save note'}
                   </button>
                 )}
               </div>
             </div>
+            {noteErr && (
+              <div
+                role="alert"
+                className="mt-2 text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-lg px-2.5 py-1.5"
+              >
+                {noteErr}
+              </div>
+            )}
           </form>
 
           {/* Notes list */}
@@ -445,7 +477,7 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
                       onClick={(e) => e.stopPropagation()}
                     >
                       <span className="flex-1 text-[9px] text-slate-300 dark:text-white/20">
-                        {new Date(note.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        {formatDate(note.createdAt)}
                       </span>
                       <button
                         onClick={() => startEdit(note)}

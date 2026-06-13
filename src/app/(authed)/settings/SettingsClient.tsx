@@ -4,7 +4,7 @@ import { ModalPortal } from '@/components/ModalPortal';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/client/api';
-import { Avatar } from '@/components/ui';
+import { Avatar, formatDateTime } from '@/components/ui';
 // The contribution heatmap is a sizeable, below-the-fold client component —
 // lazy-load it so it never blocks first paint of the profile page.
 const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
@@ -982,7 +982,7 @@ function AdminDigestSettings() {
             </div>
             {cfg?.lastRunAt && (
               <div className="text-[11px] text-slate-400 mt-1">
-                Last run {new Date(cfg.lastRunAt).toLocaleString()} · sent{' '}
+                Last run {formatDateTime(cfg.lastRunAt)} · sent{' '}
                 <strong className="text-slate-600">
                   {cfg.lastRunSummary?.sent ?? 0}/{cfg.lastRunSummary?.cap ?? status.dailyCap}
                 </strong>{' '}
