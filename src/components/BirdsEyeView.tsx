@@ -833,6 +833,8 @@ export function BirdsEyeView({
       return new Set();
     }
   });
+  const [svgExportPending, setSvgExportPending] = useState(false);
+  const svgExportRestore = useRef<{ collapseTasks: boolean; collapsedIds: Set<string> } | null>(null);
   // Brush / annotation layer — freeform polylines over the canvas so a lead
   // can sketch on top of the structure during a brainstorm. Persists per scope.
   type BrushStroke = { color: string; width: number; points: { x: number; y: number }[] };
@@ -1204,7 +1206,7 @@ export function BirdsEyeView({
     setBrushStrokes([]);
   }
 
-  function exportSvg() {
+  const exportSvg = useCallback(() => {
     if (!svgRef.current) return;
     const clone = svgRef.current.cloneNode(true) as SVGSVGElement;
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1219,7 +1221,34 @@ export function BirdsEyeView({
     a.download = `pragati-birds-eye-${new Date().toISOString().slice(0, 10)}.svg`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }, [height, width]);
+
+  function requestExpandedSvgExport() {
+    if (svgExportPending) return;
+    svgExportRestore.current = {
+      collapseTasks,
+      collapsedIds: new Set(collapsedIds),
+    };
+    setSvgExportPending(true);
+    // The SVG must be laid out from expanded state before it is cloned.
+    setCollapseTasks(false);
+    setCollapsedIds(new Set());
   }
+
+  useEffect(() => {
+    if (!svgExportPending || collapseTasks || collapsedIds.size > 0) return;
+    const timer = window.setTimeout(() => {
+      exportSvg();
+      const restore = svgExportRestore.current;
+      if (restore) {
+        setCollapseTasks(restore.collapseTasks);
+        setCollapsedIds(restore.collapsedIds);
+      }
+      svgExportRestore.current = null;
+      setSvgExportPending(false);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [svgExportPending, collapseTasks, collapsedIds, exportSvg]);
 
   function printAsPdf() {
     if (!svgRef.current) return;
@@ -1406,11 +1435,12 @@ export function BirdsEyeView({
             )}
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
             <button
-              onClick={exportSvg}
-              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
-              title="Download SVG"
+              onClick={requestExpandedSvgExport}
+              disabled={svgExportPending}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+              title="Download SVG with all nodes expanded"
             >
-              <Download size={15} />
+              <Download size={15} className={svgExportPending ? 'animate-pulse' : ''} />
             </button>
             <button
               onClick={printAsPdf}
