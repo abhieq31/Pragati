@@ -23,6 +23,45 @@ import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
 import { ExportMenu } from '@/components/ExportMenu';
 import { Select } from '@/components/Select';
 
+/* One task line, reused by the Work view (grouped by person for leads, flat for
+   an IC). When grouped under a person we drop the redundant assignee chip. */
+function TeamTaskRow({ t, showAssignee }: { t: any; showAssignee: boolean }) {
+  const overdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
+  return (
+    <div className="py-2.5 flex items-center gap-3 text-sm">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <TaskLink task={t} />
+        </div>
+        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 min-w-0">
+          <Link href={`/projects/${t.projectId}`} className="hover:underline font-medium truncate shrink-0">
+            {t.projectCode}
+          </Link>
+          {showAssignee && (
+            <span className="inline-flex items-center gap-1 min-w-0">
+              <span className="text-slate-300">·</span>
+              {t.assigneeId ? (
+                <>
+                  <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={16} />
+                  <span className="truncate">{t.assigneeName}</span>
+                </>
+              ) : (
+                <span>Unassigned</span>
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+      <StatusTag status={t.status} />
+      <span
+        className={`text-xs w-24 text-right shrink-0 ${overdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}
+      >
+        {t.dueDate ? formatDate(t.dueDate) : '—'}
+      </span>
+    </div>
+  );
+}
+
 const FUNCTION_LABEL: Record<string, string> = {
   general: 'General',
   ctb: 'Change the Business',
@@ -53,11 +92,12 @@ export default function TeamDetailPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const me = useCurrentUser();
   const isLead = me?.role === 'lead' || me?.role === 'admin';
-  // An IC's team view is personal: they see their own micro-tasks only and
-  // none of their teammates' progress. Default them straight to micro-tasks.
-  const [view, setView] = useState<'progress' | 'microtasks' | 'projects'>(
-    isLead ? 'progress' : 'microtasks',
-  );
+  // Two views, not three. The old "Team progress" tab duplicated the "Projects"
+  // tab (same per-project bars), so they're merged into one Projects overview
+  // (team-wide summary + per-project rows). "Work" answers the lead's daily
+  // question — who is doing what — by grouping tasks under each person; an IC
+  // sees only their own. Both roles open on Work.
+  const [view, setView] = useState<'work' | 'projects'>('work');
 
   async function load() {
     setLoadError('');
@@ -456,8 +496,7 @@ export default function TeamDetailPage() {
           <div className="flex gap-2">
             {(
               [
-                ...(isLead ? [['progress', 'Team progress']] : []),
-                ['microtasks', isLead ? 'Micro-tasks' : 'My tasks'],
+                ['work', isLead ? 'Work' : 'My tasks'],
                 ['projects', 'Projects'],
               ] as [string, string][]
             ).map(([k, l]) => (
@@ -473,135 +512,135 @@ export default function TeamDetailPage() {
             ))}
           </div>
 
-          {/* Skeleton placeholder while the progress aggregation is loading,
-              so the page doesn't appear frozen while Mongo is responding. */}
-          {view === 'progress' && isLead && !progress && (
-            <div className="space-y-4" aria-busy="true" aria-live="polite">
-              <Card title="Project progress">
-                <div className="space-y-2.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="skeleton h-3 w-1/2" />
-                      <div className="skeleton h-2 flex-1" />
-                      <div className="skeleton h-3 w-12" />
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          )}
-          {view === 'progress' && isLead && progress && (
-            <>
-              <Card title="Project progress">
-                <div className="space-y-2">
-                  {progress.projects.map((p: any) => {
-                    const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
-                    return (
-                      <Link
-                        href={`/projects/${p.id}`}
-                        key={p.id}
-                        className="block hover:bg-slate-50 -mx-2 px-2 py-2 rounded"
-                      >
-                        <div className="flex justify-between text-sm">
-                          <div>
-                            <span className="font-mono text-xs text-slate-500 mr-2">{p.code}</span>
-                            {p.name}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <LifecycleTag lifecycle={p.lifecycle} />
-                            <StatusTag status={p.status} />
-                            <span className="text-xs text-slate-500 w-20 text-right">
-                              {p.tasksDone}/{p.taskCount} · {pct}%
-                            </span>
-                          </div>
-                        </div>
-                        <ProgressBar value={pct} className="mt-1.5" />
-                      </Link>
-                    );
-                  })}
-                </div>
-              </Card>
-            </>
-          )}
-
-          {view === 'microtasks' && (
-            <Card title={isLead ? 'All micro-tasks across team projects' : 'My tasks across team projects'}>
-              {/* Decluttered row: title + project · assignee (leads only) on the
-                  left; status and due date on the right. Lifecycle/priority/GxP
-                  chips moved off the main row to reduce visual noise. */}
-              <div className="divide-y divide-slate-100">
-                {visibleBoard.map((t: any) => {
-                  const overdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
+          {/* ── Work — who is doing what ──────────────────────────────────
+              For a lead, tasks are grouped under each person (with open/total
+              counts) so the answer to "who's on what" is the page itself, not a
+              spreadsheet. An IC sees only their own tasks, flat. */}
+          {view === 'work' &&
+            (isLead ? (
+              <Card title="Who's doing what">
+                {(() => {
+                  const byAssignee = new Map<string, any[]>();
+                  for (const t of visibleBoard) {
+                    const k = t.assigneeId || '__unassigned';
+                    (byAssignee.get(k) || byAssignee.set(k, []).get(k)!).push(t);
+                  }
+                  const groups: { id: string; name: string; tasks: any[] }[] = [];
+                  for (const m of team.members) {
+                    const ts = byAssignee.get(m.id);
+                    if (ts && ts.length) groups.push({ id: m.id, name: m.name, tasks: ts });
+                  }
+                  const un = byAssignee.get('__unassigned');
+                  if (un && un.length) groups.push({ id: '__unassigned', name: 'Unassigned', tasks: un });
+                  if (groups.length === 0)
+                    return <div className="text-sm text-slate-500 py-4">No tasks yet.</div>;
                   return (
-                    <div key={t.id} className="py-2.5 flex items-center gap-3 text-sm">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <TaskLink task={t} />
-                        </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 min-w-0">
-                          <Link
-                            href={`/projects/${t.projectId}`}
-                            className="hover:underline font-medium truncate shrink-0"
-                          >
-                            {t.projectCode}
-                          </Link>
-                          {isLead && (
-                            <span className="inline-flex items-center gap-1 min-w-0">
-                              <span className="text-slate-300">·</span>
-                              {t.assigneeId ? (
-                                <>
-                                  <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={16} />
-                                  <span className="truncate">{t.assigneeName}</span>
-                                </>
+                    <div className="space-y-5">
+                      {groups.map((g) => {
+                        const open = g.tasks.filter((t) => t.status !== 'done').length;
+                        const overdue = g.tasks.filter(
+                          (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done',
+                        ).length;
+                        return (
+                          <div key={g.id}>
+                            <div className="flex items-center gap-2 mb-1">
+                              {g.id === '__unassigned' ? (
+                                <span className="w-[22px] h-[22px] rounded-full bg-slate-100 text-slate-400 text-[11px] font-bold flex items-center justify-center shrink-0">
+                                  ?
+                                </span>
                               ) : (
-                                <span>Unassigned</span>
+                                <UserAvatar userId={g.id} name={g.name} size={22} />
                               )}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <StatusTag status={t.status} />
-                      <span
-                        className={`text-xs w-24 text-right shrink-0 ${overdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}
-                      >
-                        {t.dueDate ? formatDate(t.dueDate) : '—'}
-                      </span>
+                              <span className="text-sm font-bold text-slate-700">{g.name}</span>
+                              <span className="text-[11px] text-slate-400">
+                                {open} open · {g.tasks.length} total
+                                {overdue > 0 && (
+                                  <span className="text-red-500 font-semibold"> · {overdue} overdue</span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="divide-y divide-slate-100 pl-1">
+                              {g.tasks.map((t: any) => (
+                                <TeamTaskRow key={t.id} t={t} showAssignee={false} />
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
-                })}
-                {visibleBoard.length === 0 && (
-                  <div className="text-sm text-slate-500 py-4">
-                    {isLead ? 'No tasks yet.' : 'You have no tasks in this team yet.'}
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
+                })()}
+              </Card>
+            ) : (
+              <Card title="My tasks across team projects">
+                <div className="divide-y divide-slate-100">
+                  {visibleBoard.map((t: any) => (
+                    <TeamTaskRow key={t.id} t={t} showAssignee={false} />
+                  ))}
+                  {visibleBoard.length === 0 && (
+                    <div className="text-sm text-slate-500 py-4">You have no tasks in this team yet.</div>
+                  )}
+                </div>
+              </Card>
+            ))}
 
           {view === 'projects' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {team.projects.map((p: any) => {
-                const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
+            <div className="space-y-4">
+              {/* Team-wide progress summary — the headline the old separate
+                  "Team progress" tab used to carry, now at the top of Projects
+                  so there's one place for "where does the team stand". */}
+              {(() => {
+                const projs = team.projects || [];
+                const total = projs.reduce((s: number, p: any) => s + (p.taskCount || 0), 0);
+                const done = projs.reduce((s: number, p: any) => s + (p.tasksDone || 0), 0);
+                const active = projs.filter((p: any) => p.status === 'in_progress').length;
+                const pct = total ? Math.round((done / total) * 100) : 0;
+                if (projs.length === 0) return null;
                 return (
-                  <Link href={`/projects/${p.id}`} key={p.id} className="card p-4 hover:shadow-md transition">
-                    <div className="text-xs font-mono text-slate-500">{p.ccNo || p.code}</div>
-                    <div className="font-semibold">{p.name}</div>
-                    <div className="flex gap-2 mt-2">
-                      <LifecycleTag lifecycle={p.lifecycle} />
-                      <StatusTag status={p.status} />
+                  <Card title="Team progress">
+                    <div className="flex items-center justify-between gap-3 mb-2 text-sm">
+                      <span className="text-slate-500">
+                        <strong className="text-slate-800 dark:text-white/85">{projs.length}</strong> project
+                        {projs.length === 1 ? '' : 's'} · {active} active
+                      </span>
+                      <span className="text-slate-500">
+                        <strong className="text-slate-800 dark:text-white/85 tabular-nums">{done}</strong>/
+                        {total} tasks done ·{' '}
+                        <strong className="text-blue-600 dark:text-blue-400 tabular-nums">{pct}%</strong>
+                      </span>
                     </div>
-                    <div className="mt-3">
-                      <div className="flex justify-between text-xs text-slate-500 mb-1">
-                        <span>
-                          {p.tasksDone}/{p.taskCount}
-                        </span>
-                        <span>{pct}%</span>
-                      </div>
-                      <ProgressBar value={pct} />
-                    </div>
-                  </Link>
+                    <ProgressBar value={pct} />
+                  </Card>
                 );
-              })}
+              })()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {team.projects.map((p: any) => {
+                  const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
+                  return (
+                    <Link
+                      href={`/projects/${p.id}`}
+                      key={p.id}
+                      className="card p-4 hover:shadow-md transition"
+                    >
+                      <div className="text-xs font-mono text-slate-500">{p.ccNo || p.code}</div>
+                      <div className="font-semibold">{p.name}</div>
+                      <div className="flex gap-2 mt-2">
+                        <LifecycleTag lifecycle={p.lifecycle} />
+                        <StatusTag status={p.status} />
+                      </div>
+                      <div className="mt-3">
+                        <div className="flex justify-between text-xs text-slate-500 mb-1">
+                          <span>
+                            {p.tasksDone}/{p.taskCount}
+                          </span>
+                          <span>{pct}%</span>
+                        </div>
+                        <ProgressBar value={pct} />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
