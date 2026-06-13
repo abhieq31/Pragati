@@ -5,6 +5,7 @@ import { Task } from '@/models/Task';
 import { Project } from '@/models/Project';
 import { DigestSetting, type DigestSettingDoc } from '@/models/DigestSetting';
 import { sendEmail, mailerConfigured } from '@/lib/mailer';
+import { resolveIndustry, pickInsight } from '@/lib/insights';
 
 /**
  * Daily "tasks due today" email digest.
@@ -262,6 +263,23 @@ export interface RenderInput {
   dateLabel: string;
   /** Tasks the recipient closed yesterday — fuels the momentum line. */
   winsYesterday?: number;
+  /** Recipient role — drives one quiet line of framing, so the same brief
+   *  reads as "your plate" to an IC, "you first, then the team" to a lead,
+   *  and "the workspace" to the admin. */
+  role?: string;
+  /** Optional curated industry insight (see lib/insights) — the continuous
+   *  "thought worth a minute" feed, tuned to the workspace's niche. */
+  insight?: { tag: string; title: string; body: string } | null;
+}
+
+/** One line of role framing under the greeting. Deliberately copy, not data —
+ *  the data below is identical for everyone; the lens is what changes. */
+export function roleFraming(role?: string): string {
+  if (role === 'admin' || role === 'master_admin')
+    return 'Your own plate first — the workspace view is one click away on your console.';
+  if (role === 'lead' || role === 'pm')
+    return 'Your plate first. Clear it, then look at the board — your team reads your pace.';
+  return 'Just your plate — nothing about anyone else, nothing you can’t act on.';
 }
 
 /* A short canon of closing lines (drawn from the same books as the login
@@ -292,6 +310,168 @@ export function pickFocus(sections: DigestSections): DigestTask | null {
   return sections.overdue[0] || sections.today[0] || null;
 }
 
+/* Role-aware feature tour for the welcome email — the three or four moves
+ *  that make Pragati pay off fastest for THIS role. Kept to a handful: a
+ *  welcome that lists everything teaches nothing. */
+function welcomeTour(role?: string): { icon: string; title: string; body: string }[] {
+  if (role === 'admin' || role === 'master_admin') {
+    return [
+      {
+        icon: '🛡️',
+        title: 'Open the Console first',
+        body: 'The whole workspace on one screen — who’s active, what needs attention, what just changed. Your morning starts here.',
+      },
+      {
+        icon: '👥',
+        title: 'People & Logs are yours alone',
+        body: 'Add or off-board members, set roles, and read an immutable trail of every change. Everything you do is signed.',
+      },
+      {
+        icon: '🗺️',
+        title: 'Everything a lead has, plus the whole tree',
+        body: 'Open the bird’s-eye view from any team or project to see the entire organisation at a glance.',
+      },
+    ];
+  }
+  if (role === 'lead' || role === 'pm') {
+    return [
+      {
+        icon: '🗺️',
+        title: 'Run the bird’s-eye view',
+        body: 'See team → project → task as one living tree. Drag to rebalance, spot what’s drifting, export a board in two clicks.',
+      },
+      {
+        icon: '⚡',
+        title: 'Watch for “May slip”',
+        body: 'Pragati learns how your people actually deliver and quietly flags work likely to miss its date — while there’s still time to act.',
+      },
+      {
+        icon: '🌅',
+        title: 'Clear your own plate first',
+        body: 'Your brief opens with your work, not the team’s. A lead who models a calm, finished day sets the team’s pace.',
+      },
+    ];
+  }
+  return [
+    {
+      icon: '🌅',
+      title: 'Start in My Day',
+      body: 'Empty your head into one list, then promote the lines that matter into tracked tasks. The rest stays private to you.',
+    },
+    {
+      icon: '🎯',
+      title: 'Trust “Up Next”',
+      body: 'Your dashboard shows the day in order — overdue first, nearest date next. Work top-down and you’re always on the right thing.',
+    },
+    {
+      icon: '📅',
+      title: 'Put Pragati in your calendar',
+      body: 'Subscribe once from Settings and your due tasks appear in Outlook, Google, or Apple — updating themselves as dates change.',
+    },
+  ];
+}
+
+/* ── Subscription welcome ──────────────────────────────────────────────────
+   Sent exactly once, the moment a user turns the daily brief on. It doubles
+   as the delivery test (which replaced the old "send me a test email"
+   button): if this lands, tomorrow's brief lands. It's also the one chance
+   to teach the product — so it carries a short, role-aware "how to get the
+   most out of Pragati" tour, one industry insight, and a work-life-balance
+   close. Fully responsive (single 600px column, fluid below). Pure. */
+export function renderWelcomeEmail(input: {
+  name: string;
+  role?: string;
+  appUrl: string;
+  hourLabel: string; // e.g. "8:30 AM IST"
+  /** Optional curated industry insight (see lib/insights). */
+  insight?: { tag: string; title: string; body: string } | null;
+}): { subject: string; html: string; text: string } {
+  const first = (input.name || '').trim().split(/\s+/)[0] || 'there';
+  const roleLine =
+    input.role === 'admin' || input.role === 'master_admin'
+      ? 'As the workspace admin you also keep the console — but your brief covers your own plate, so mornings start with you, not with everyone.'
+      : input.role === 'lead' || input.role === 'pm'
+        ? 'As a lead, your brief opens with your own plate — clear it first, then turn to the board. Your team reads your pace.'
+        : 'Your brief covers exactly one thing: what’s on your plate today. No noise about anyone else.';
+  const tour = welcomeTour(input.role);
+  const subject = `Welcome to Pragati, ${first} — here’s how to get the most from it`;
+
+  const tourHtml = tour
+    .map(
+      (t) => `<tr><td style="padding:10px 0;border-bottom:1px solid #f1f5f9;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="30" valign="top" style="font-size:18px;line-height:1.3;padding-right:10px;">${t.icon}</td>
+          <td valign="top">
+            <div style="font-size:14px;font-weight:700;color:#0f172a;line-height:1.4;">${escapeHtml(t.title)}</div>
+            <div style="font-size:13px;color:#64748b;line-height:1.55;margin-top:2px;">${escapeHtml(t.body)}</div>
+          </td>
+        </tr></table>
+      </td></tr>`,
+    )
+    .join('');
+
+  const insightHtml = input.insight
+    ? `<div style="margin:22px 0 4px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1565C0;margin:0 0 6px;">${escapeHtml(
+          input.insight.tag,
+        )} · worth a minute</div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;line-height:1.4;">${escapeHtml(input.insight.title)}</div>
+        <div style="font-size:13px;color:#475569;line-height:1.55;margin-top:4px;">${escapeHtml(input.insight.body)}</div>
+      </div>`
+    : '';
+
+  const cta = input.appUrl
+    ? `<a href="${input.appUrl}" style="display:inline-block;background:#1565C0;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;padding:11px 20px;">Open Pragati</a>`
+    : '';
+
+  const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>
+<body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+  <tr><td style="height:4px;background:linear-gradient(90deg,#1565C0,#43A047);font-size:0;line-height:0;">&nbsp;</td></tr>
+  <tr><td style="padding:30px 28px 8px;">
+    <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#1565C0;margin:0 0 14px;">Pragati</div>
+    <h1 style="margin:0 0 10px;font-size:22px;line-height:1.3;color:#0f172a;">Welcome aboard, ${escapeHtml(first)}.</h1>
+    <p style="margin:0 0 14px;font-size:14px;color:#334155;line-height:1.6;">Starting tomorrow at <strong>${escapeHtml(
+      input.hourLabel,
+    )}</strong> you’ll get one short brief: the single task that matters most, then the rest of your day — overdue first, nearest date next. One email a day, never a pile.</p>
+    <p style="margin:0 0 4px;font-size:13px;color:#64748b;line-height:1.6;">${escapeHtml(roleLine)}</p>
+  </td></tr>
+  <tr><td style="padding:14px 28px 4px;">
+    <div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0f172a;margin:0 0 4px;">Getting the most out of Pragati</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${tourHtml}</table>
+    ${insightHtml}
+  </td></tr>
+  <tr><td style="padding:18px 28px 6px;">${cta}</td></tr>
+  <tr><td style="padding:18px 28px 0;">
+    <p style="margin:0;font-size:13px;color:#334155;line-height:1.6;"><strong>One promise:</strong> Pragati is built to move your work forward <em>and</em> hand you your evening back. Finish at a clean line, not an exhausted one — a rested team ships better than a burnt-out one. That’s the whole idea.</p>
+  </td></tr>
+  <tr><td style="padding:18px 28px 26px;">
+    <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.5;">This is the only email you’ll get today. You can change the time or switch the brief off any time in <strong>Settings → Daily task email</strong>.</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+  const text = [
+    `Welcome aboard, ${first}.`,
+    '',
+    `Starting tomorrow at ${input.hourLabel} you'll get one short brief: the single task that matters most, then the rest of your day. One email a day, never a pile.`,
+    roleLine,
+    '',
+    'Getting the most out of Pragati:',
+    ...tour.map((t) => `• ${t.title} — ${t.body}`),
+    ...(input.insight ? ['', `${input.insight.tag}: ${input.insight.title} — ${input.insight.body}`] : []),
+    '',
+    'One promise: Pragati is built to move your work forward and hand you your evening back. Finish at a clean line, not an exhausted one.',
+    input.appUrl ? `\nOpen Pragati: ${input.appUrl}` : '',
+    'Change the time or switch the brief off any time in Settings → Daily task email.',
+  ]
+    .filter((l) => l !== undefined)
+    .join('\n');
+  return { subject, html, text };
+}
+
 /** Render the personal digest to { subject, html, text }. Pure.
  *
  *  Design intent: an executive brief, not a chore list. It opens with ONE
@@ -299,7 +479,18 @@ export function pickFocus(sections: DigestSections): DigestTask | null {
  *  compresses the rest into scannable rows, and closes with a single line of
  *  judgment. Value first, inventory second. */
 export function renderDigestEmail(input: RenderInput): { subject: string; html: string; text: string } {
-  const { name, sections, projectName, appUrl, introNote, test, dateLabel, winsYesterday = 0 } = input;
+  const {
+    name,
+    sections,
+    projectName,
+    appUrl,
+    introNote,
+    test,
+    dateLabel,
+    winsYesterday = 0,
+    role,
+    insight,
+  } = input;
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
   const weekday = dateLabel.split(/[ ,]/)[0] || 'daily';
 
@@ -340,6 +531,10 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         )
       : '',
   ].join('');
+
+  const framingHtml = `<p style="margin:0 0 18px;font-size:13px;color:#64748b;line-height:1.5;">${escapeHtml(
+    roleFraming(role),
+  )}</p>`;
 
   // ── The one thing ─────────────────────────────────────────────────────
   const focusHtml = focus
@@ -389,13 +584,25 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         <div style="color:#94a3b8;font-size:12px;margin-top:2px;">${escapeHtml(dateLabel)}${test ? ' · test message' : ''}</div>
       </td></tr>
       <tr><td style="padding:26px;">
-        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)}</div>
+        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 6px;">Good morning, ${escapeHtml(first)}</div>
+        ${framingHtml}
         ${intro}
         ${momentum}
         ${emptyNote}
         ${focusHtml}
         ${sectionsHtml}
         ${openBtn ? `<div style="margin-top:8px;">${openBtn}</div>` : ''}
+        ${
+          insight
+            ? `<div style="margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:13px 15px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1565C0;margin:0 0 4px;">${escapeHtml(
+              insight.tag,
+            )} · worth a minute</div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.4;">${escapeHtml(insight.title)}</div>
+            <div style="font-size:12.5px;color:#475569;line-height:1.5;margin-top:3px;">${escapeHtml(insight.body)}</div>
+          </div>`
+            : ''
+        }
         <div style="margin-top:22px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:13px;font-style:italic;color:#64748b;">“${escapeHtml(aphorism)}”</div>
       </td></tr>
       <tr><td style="padding:16px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
@@ -629,6 +836,11 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
 
   const forceSend = !!opts.test;
 
+  // One curated, industry-tuned insight per day, shared across the workspace
+  // (a common "thought for the day"). Single-tenant reads PRAGATI_INDUSTRY;
+  // the multi-tenant path will resolve the tenant's stored niche here.
+  const dailyInsight = pickInsight(resolveIndustry(), 0, now);
+
   for (const r of recipients) {
     const uid = String(r.user._id);
     const raw = tasksByUser.get(uid) || [];
@@ -659,6 +871,7 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
 
     const { subject, html, text } = renderDigestEmail({
       name: (r.user as any).name || '',
+      role: (r.user as any).role,
       sections,
       projectName: (pid) => (pid ? projName.get(pid) || null : null),
       appUrl,
@@ -666,6 +879,7 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
       test: opts.test,
       dateLabel,
       winsYesterday: winsByUser.get(uid) || 0,
+      insight: dailyInsight,
     });
 
     const res = await sendEmail({ to: r.email, toName: (r.user as any).name, subject, html, text });

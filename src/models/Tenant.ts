@@ -49,6 +49,11 @@ const TenantSchema = new Schema(
     // exceeds the cap by 10% (warning surface below that).
     userQuota: { type: Number, default: 25 },
     projectQuota: { type: Number, default: 200 },
+    // Industry niche — chosen on the master-admin console. Drives the curated
+    // insights feed (see lib/insights) so each tenant gets domain-relevant
+    // operating wisdom in the welcome email and daily brief. Free-text-safe:
+    // an unrecognised value falls back to 'general' at read time.
+    industry: { type: String, default: 'general' },
     // Lifecycle. `active: false` blocks all sign-ins for the tenant; useful
     // for billing-suspended customers without deleting their data.
     active: { type: Boolean, default: true },

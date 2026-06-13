@@ -81,12 +81,24 @@ export async function api<T = any>(
   }
 
   // Realtime: any successful mutation (anything that isn't a GET) tells every
-  // mounted live view in this tab to refresh — see useLiveRefresh. This is the
-  // single hook that makes the whole app feel live to your own actions without
-  // each call site having to remember to broadcast.
+  // mounted live view to refresh — see useLiveRefresh. This is the single hook
+  // that makes the whole app feel live to your own actions without each call
+  // site having to remember to broadcast.
+  //   • this tab : a window event (instant, in-process)
+  //   • other tabs/windows on this device : a BroadcastChannel message, so a
+  //     change in one tab updates every other open tab of the same app
+  //     without a reload. (Cross-DEVICE liveness is the visibility/interval
+  //     refetch in useLiveRefresh — no always-on socket needed.)
   const method = (opts.method || 'GET').toUpperCase();
   if (method !== 'GET' && typeof window !== 'undefined') {
     window.dispatchEvent(new Event('pragati:data-changed'));
+    try {
+      const bc = new BroadcastChannel('pragati');
+      bc.postMessage('data-changed');
+      bc.close();
+    } catch {
+      /* Safari/old browsers without BroadcastChannel — same-tab event still fires */
+    }
   }
 
   if (res.status === 204) return null as T;

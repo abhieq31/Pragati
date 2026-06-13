@@ -4,7 +4,7 @@ import { ModalPortal } from '@/components/ModalPortal';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/client/api';
-import { Avatar } from '@/components/ui';
+import { Avatar, formatDateTime } from '@/components/ui';
 // The contribution heatmap is a sizeable, below-the-fold client component —
 // lazy-load it so it never blocks first paint of the profile page.
 const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
@@ -516,8 +516,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
     timeZoneLabel?: string;
     defaultHour?: number;
   } | null>(null);
-  const [testing, setTesting] = useState(false);
-  const [testMsg, setTestMsg] = useState('');
   // Preferred send hour (0–23, workspace tz). null = workspace default hour.
   const [digestHour, setDigestHour] = useState<number | null>(
     typeof (initialUser as any).digestHour === 'number' ? (initialUser as any).digestHour : null,
@@ -537,24 +535,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
       .then((h: any) => setHealth(h))
       .catch(() => {});
   }, []);
-
-  async function sendSelfTest() {
-    setTesting(true);
-    setTestMsg('');
-    try {
-      const r: any = await api('/cron/daily-digest?test=1');
-      if (r.sent > 0) setTestMsg('Test email sent — check your inbox (and spam, the first time).');
-      else if (!r.mailerConfigured)
-        setTestMsg('Email isn’t configured on this deployment yet — ask your admin.');
-      else if (r.skippedNoEmail > 0)
-        setTestMsg('No deliverable address on your account — set a notification email above.');
-      else setTestMsg('Nothing was sent — check your notification email above.');
-    } catch (e: any) {
-      setTestMsg(e.message || 'Test failed.');
-    } finally {
-      setTesting(false);
-    }
-  }
 
   async function toggle() {
     if (!canEnable) return;
@@ -625,14 +605,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                 {!health.mailerConfigured ? ' (no mail provider)' : ' (scheduled send not enabled)'} — your
                 preference is saved and takes effect the moment your admin completes setup.
               </p>
-            )}
-            {enabled && (
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <button type="button" onClick={sendSelfTest} disabled={testing} className="btn-ghost text-xs">
-                  {testing ? 'Sending…' : 'Send me a test email'}
-                </button>
-                {testMsg && <span className="text-[11px] text-slate-500 dark:text-white/45">{testMsg}</span>}
-              </div>
             )}
             {canEnable ? (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -1010,7 +982,7 @@ function AdminDigestSettings() {
             </div>
             {cfg?.lastRunAt && (
               <div className="text-[11px] text-slate-400 mt-1">
-                Last run {new Date(cfg.lastRunAt).toLocaleString()} · sent{' '}
+                Last run {formatDateTime(cfg.lastRunAt)} · sent{' '}
                 <strong className="text-slate-600">
                   {cfg.lastRunSummary?.sent ?? 0}/{cfg.lastRunSummary?.cap ?? status.dailyCap}
                 </strong>{' '}
@@ -1372,17 +1344,19 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         organisation={user.organisation}
         linkUsername
         avatar={
-          <div className="flex flex-col items-center gap-1.5">
-            <ProfileAvatar
-              name={user.name}
-              letter={avatarLetter}
-              bg={avatarBg}
-              font={avatarFont}
-              image={avatarImage}
-              size={88}
-              onClick={() => setShowAvatarEditor(true)}
-              title="Change avatar"
-            />
+          <ProfileAvatar
+            name={user.name}
+            letter={avatarLetter}
+            bg={avatarBg}
+            font={avatarFont}
+            image={avatarImage}
+            size={88}
+            onClick={() => setShowAvatarEditor(true)}
+            title="Change avatar"
+          />
+        }
+        avatarExtra={
+          <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-2">
               <label className="text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
                 {photoBusy ? 'Uploading…' : avatarImage ? 'Change photo' : 'Upload photo'}
