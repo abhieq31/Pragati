@@ -6,6 +6,7 @@ import { Project } from '@/models/Project';
 import { DigestSetting, type DigestSettingDoc } from '@/models/DigestSetting';
 import { sendEmail, mailerConfigured } from '@/lib/mailer';
 import { resolveIndustry, pickInsight } from '@/lib/insights';
+import { normalizeRole } from '@/lib/auth';
 
 /**
  * Daily "tasks due today" email digest.
@@ -97,9 +98,12 @@ export function digestTimeMatches(
   if (scheduledHour === undefined) return true;
   const hour = typeof userHour === 'number' && userHour >= 0 && userHour <= 23 ? userHour : fallbackHour;
   const minute = typeof userMinute === 'number' && userMinute >= 0 && userMinute <= 59 ? userMinute : 0;
-  if (hour !== scheduledHour) return false;
-  if (scheduledMinute === undefined) return true;
-  return minute === scheduledMinute;
+  if (scheduledMinute === undefined) return hour === scheduledHour;
+
+  // Scheduled runners are not guaranteed to start on the exact requested
+  // minute. Treat every later tick on the same local day as a catch-up
+  // opportunity; lastDigestSentOn provides the at-most-once guard.
+  return scheduledHour * 60 + scheduledMinute >= hour * 60 + minute;
 }
 
 /** Absolute base URL for in-email links, or '' when none is configured (links
@@ -989,7 +993,7 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
       continue;
     }
 
-    const role = (r.user as any).role;
+    const role = normalizeRole((r.user as any).role);
     let leadershipBrief: RenderInput['leadershipBrief'] = null;
     if (role === 'lead' || role === 'admin' || role === 'master_admin') {
       try {

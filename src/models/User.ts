@@ -159,6 +159,7 @@ const UserSchema = new Schema(
     // successful digest. Guarantees at-most-once delivery per day regardless of
     // how many triggers fire. Cleared implicitly by the date rolling over.
     lastDigestSentOn: { type: String, default: '' },
+    lastBriefPushSentOn: { type: String, default: '' },
     // Capability token for the personal read-only calendar feed
     // (/api/calendar/<token>/agenda.ics). Calendar clients can't send auth
     // cookies, so the URL itself is the secret — random, per-user, rotatable
