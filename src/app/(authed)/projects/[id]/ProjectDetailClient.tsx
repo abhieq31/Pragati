@@ -1553,9 +1553,36 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
     }
   }
 
+  // Horowitz's wartime test: a project in trouble must LOOK like it, or the
+  // tool is lying by omission. "War footing" = a meaningful share of the open
+  // work has already slipped (and there's enough of it to matter). One honest
+  // banner, nothing else changes — peacetime projects never see it.
+  const warFooting =
+    !project.isPersonal &&
+    project.status !== 'completed' &&
+    project.status !== 'cancelled' &&
+    openTaskCount >= 3 &&
+    overdue / openTaskCount >= 0.34;
+
   return (
     <div className="space-y-5 page-enter">
       {ToastEl}
+      {warFooting && (
+        <div
+          className="rounded-xl border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10 px-4 py-3 flex items-start gap-3"
+          role="alert"
+        >
+          <AlertTriangle size={18} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="text-[13px] font-bold text-red-800 dark:text-red-300">
+              This project is behind — {overdue} of {openTaskCount} open tasks are overdue.
+            </div>
+            <div className="text-[12px] text-red-700/80 dark:text-red-300/70 mt-0.5">
+              Not a normal day. Clear the overdue first; everything else waits.
+            </div>
+          </div>
+        </div>
+      )}
       {celebration && (
         <Celebration
           title={celebration.title}
