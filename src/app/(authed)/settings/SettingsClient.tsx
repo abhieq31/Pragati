@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 
 import { MonogramEditor } from '@/components/MonogramEditor';
+import { ProfileHighlights } from '@/components/ProfileHighlights';
 import { linkMeta, type LinkBrand } from '@/lib/links';
 import { ProfileHero } from '@/components/ProfileHero';
 
@@ -1554,6 +1555,9 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
           </div>
         }
       />
+
+      {/* Highlights — story-style, text-only. Owner can add/remove here. */}
+      <ProfileHighlights userId={user.id} isSelf />
 
       {/* Monogram avatar editor — letter + colour + font, with Inspire-me. */}
       {showAvatarEditor && (

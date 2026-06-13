@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { linkMeta, type LinkBrand } from '@/lib/links';
+import { ProfileHighlights } from '@/components/ProfileHighlights';
 
 // Map a detected brand to a lucide icon. Anything without a dedicated mark
 // (Medium, Dribbble, a personal site, …) renders the clean Globe chip — its
@@ -298,6 +299,9 @@ export default function ProfileView({
           )}
         </div>
       </div>
+
+      {/* ── Highlights — story-style, text-only ─────────────────────────── */}
+      <ProfileHighlights userId={profile.id} isSelf={isSelf} />
 
       {/* ── Impact row — what this person delivers, at a glance ─────────── */}
       {statTiles.length > 0 && (
