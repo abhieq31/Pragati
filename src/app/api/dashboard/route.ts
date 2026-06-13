@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const [tasks, allProjects, summaryAgg, statusAgg, orgData] = await Promise.all([
       Task.find({ assigneeId: userId }).sort({ status: 1, dueDate: 1 }).lean(),
       Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] })
-        .select('_id code name lifecycle status')
+        .select('_id code ccNo name lifecycle status')
         .lean(),
       // Summary aggregation
       Task.aggregate([
@@ -154,7 +154,7 @@ export async function GET(req: NextRequest) {
       projects: allProjects.map((p) => ({
         id: String(p._id),
         name: p.name,
-        code: p.code,
+        code: (p as any).ccNo || p.code,
         status: p.status,
         lifecycle: p.lifecycle,
       })),

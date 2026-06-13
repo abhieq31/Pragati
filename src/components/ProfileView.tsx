@@ -8,6 +8,12 @@ import {
   Activity,
   Pencil,
   Github,
+  Linkedin,
+  Twitter,
+  Instagram,
+  Youtube,
+  Mail,
+  Globe,
   Users,
   UserCheck,
   CheckCircle2,
@@ -18,6 +24,26 @@ import {
   Check,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { linkMeta, type LinkBrand } from '@/lib/links';
+import { ProfileHighlights } from '@/components/ProfileHighlights';
+
+// Map a detected brand to a lucide icon. Anything without a dedicated mark
+// (Medium, Dribbble, a personal site, …) renders the clean Globe chip — its
+// brand accent colour still carries the identity.
+const BRAND_ICON: Record<LinkBrand, typeof Globe> = {
+  github: Github,
+  linkedin: Linkedin,
+  twitter: Twitter,
+  instagram: Instagram,
+  youtube: Youtube,
+  email: Mail,
+  medium: Globe,
+  dribbble: Globe,
+  behance: Globe,
+  figma: Globe,
+  gitlab: Globe,
+  website: Globe,
+};
 
 // The contribution heatmap is a sizeable, below-the-fold client component —
 // lazy-load it so it never blocks first paint of the profile page.
@@ -50,7 +76,9 @@ export default function ProfileView({
     avatarLetter?: string;
     avatarBg?: string;
     avatarFont?: number;
+    avatarImage?: string;
     githubUrl?: string;
+    links?: { url: string; label?: string }[];
     followingCount?: number;
     followerCount?: number;
     viewerIsFollowing?: boolean;
@@ -96,6 +124,14 @@ export default function ProfileView({
   }
 
   const firstName = profile.name.split(/\s+/)[0];
+
+  // The public link row. New profiles use the generic `links` list; older rows
+  // may only have the legacy githubUrl — fold it in (deduped) so nothing the
+  // member previously saved disappears.
+  const allLinks: { url: string; label?: string }[] = [...(profile.links || [])];
+  if (profile.githubUrl && !allLinks.some((l) => l.url === profile.githubUrl)) {
+    allLinks.unshift({ url: profile.githubUrl });
+  }
 
   // Share affordance — the profile URL is the user's public face inside the
   // workspace; copying it should be one click, not an address-bar ritual.
@@ -172,6 +208,7 @@ export default function ProfileView({
             letter={profile.avatarLetter}
             bg={profile.avatarBg}
             font={profile.avatarFont}
+            image={profile.avatarImage}
           />
         }
         actions={
@@ -212,19 +249,27 @@ export default function ProfileView({
           )}
         </div>
 
-        {/* Right side: GitHub chip + copy link + Follow button */}
+        {/* Right side: link chips + copy link + Follow button */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {profile.githubUrl && (
-            <a
-              href={profile.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:border-slate-300"
-            >
-              <Github size={14} />
-              GitHub
-            </a>
-          )}
+          {allLinks.map((l, i) => {
+            const m = linkMeta(l.url, l.label);
+            const Icon = BRAND_ICON[m.brand] || Globe;
+            return (
+              <a
+                key={`${l.url}-${i}`}
+                href={m.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={m.href}
+                className="group inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/75 transition hover:-translate-y-px hover:border-slate-300 hover:shadow-sm"
+              >
+                <span style={{ color: m.color }} className="shrink-0">
+                  <Icon size={14} />
+                </span>
+                <span className="max-w-[160px] truncate">{m.label}</span>
+              </a>
+            );
+          })}
 
           <button
             onClick={copyLink}
@@ -254,6 +299,9 @@ export default function ProfileView({
           )}
         </div>
       </div>
+
+      {/* ── Highlights — story-style, text-only ─────────────────────────── */}
+      <ProfileHighlights userId={profile.id} isSelf={isSelf} />
 
       {/* ── Impact row — what this person delivers, at a glance ─────────── */}
       {statTiles.length > 0 && (

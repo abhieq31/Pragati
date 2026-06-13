@@ -7,7 +7,6 @@ import {
   ZoomOut,
   Scan,
   Download,
-  FileDown,
   Layers,
   RotateCcw,
   Pencil,
@@ -1245,37 +1244,6 @@ export function BirdsEyeView({
     setCollapsedIds(new Set());
   }
 
-  useEffect(() => {
-    if (!svgExportPending || collapseTasks || collapsedIds.size > 0) return;
-    const timer = window.setTimeout(() => {
-      exportSvg();
-      const restore = svgExportRestore.current;
-      if (restore) {
-        setCollapseTasks(restore.collapseTasks);
-        setCollapsedIds(restore.collapsedIds);
-      }
-      svgExportRestore.current = null;
-      setSvgExportPending(false);
-    }, 200);
-    return () => window.clearTimeout(timer);
-  }, [svgExportPending, collapseTasks, collapsedIds, exportSvg]);
-
-  function printAsPdf() {
-    if (!svgRef.current) return;
-    const xml = new XMLSerializer().serializeToString(svgRef.current);
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(`<!doctype html><html><head><title>${escapeHtml(data.rootLabel)} — Bird's-eye</title>
-      <style>@page { size: landscape; margin: 12mm; } body { margin: 0; font-family: -apple-system, system-ui, sans-serif; } header { padding: 12px 16px; border-bottom: 2px solid #1565C0; } header h1 { margin: 0; font-size: 18px; color: #0f172a; } header p { margin: 4px 0 0; font-size: 11px; color: #64748b; } main { padding: 12px; } svg { max-width: 100%; height: auto; } #pragati-print-bar { position: fixed; right: 16px; bottom: 16px; z-index: 99999; display: flex; gap: 8px; font-family: -apple-system, system-ui, sans-serif; } @media print { #pragati-print-bar { display:none !important; } }</style>
-      </head><body>
-      <header><h1>${escapeHtml(data.rootLabel)} — Bird&apos;s-eye view</h1><p>Generated ${new Date().toLocaleString()}${data.rootSubLabel ? ` · ${escapeHtml(data.rootSubLabel)}` : ''}</p></header>
-      <main>${xml}</main>
-      <div id="pragati-print-bar"><button onclick="window.print()" style="background:linear-gradient(135deg,#1565C0,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer">Save as PDF / Print</button><button onclick="window.close()" style="background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer">Close</button></div>
-      </body></html>`);
-    w.document.close();
-    w.focus();
-  }
-
   if (!mounted) return null;
   return createPortal(
     <div className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm overlay-in" onClick={onClose}>
@@ -1445,20 +1413,12 @@ export function BirdsEyeView({
             )}
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
             <button
-              onClick={requestExpandedSvgExport}
-              disabled={svgExportPending}
-              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50"
-              title="Download SVG with all nodes expanded"
-            >
-              <Download size={15} className={svgExportPending ? 'animate-pulse' : ''} />
-            </button>
-            <button
-              onClick={printAsPdf}
+              onClick={exportSvg}
               className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Export as PDF"
+              title="Download this view as an SVG"
             >
-              <FileDown size={13} />
-              <span className="hidden sm:inline">Export PDF</span>
+              <Download size={13} />
+              <span className="hidden sm:inline">SVG</span>
             </button>
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
             <button

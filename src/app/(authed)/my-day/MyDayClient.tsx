@@ -31,6 +31,7 @@ import { WhiteboardIcon } from '@/components/WhiteboardIcon';
 import { formatDate } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
+import { notifyCalendarChange } from '@/components/SidebarCalendar';
 import dynamicImport from 'next/dynamic';
 
 const Whiteboard = dynamicImport(() => import('@/components/Whiteboard').then((m) => m.Whiteboard), {
@@ -218,9 +219,9 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
     setNotes((n) => n.filter((x) => x.id !== id));
     try {
       await api(`/scratch/notes/${id}`, { method: 'DELETE' });
-    } catch (err: any) {
-      setNotes(prev);
-      setNoteErr(err?.message || 'Could not delete the note — try again.');
+    } catch {
+      // Server rejected the delete — resync so the note doesn't vanish locally.
+      load();
     }
   }
 
@@ -232,9 +233,9 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
     );
     try {
       await api(`/scratch/notes/${note.id}`, { method: 'PATCH', body: { pinned: !note.pinned } });
-    } catch (err: any) {
-      setNotes(prev);
-      setNoteErr(err?.message || 'Could not update the note — try again.');
+    } catch {
+      // Revert to the server's truth on failure.
+      load();
     }
   }
 
@@ -259,9 +260,9 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
         method: 'PATCH',
         body: { content, title: editTitle.trim() || undefined },
       });
-    } catch (err: any) {
-      setNotes(prev);
-      setNoteErr(err?.message || 'Could not save your edit — try again.');
+    } catch {
+      // Keep the list consistent with the server if the edit didn't persist.
+      load();
     }
   }
 
@@ -616,7 +617,6 @@ export default function MyDayClient({ initialData }: { initialData: { open: Note
   const [open, setOpen] = useState<Note[]>(initialData.open);
   const [done, setDone] = useState<Note[]>(initialData.done);
   const [text, setText] = useState('');
-  const [showDone, setShowDone] = useState(false);
   const [promote, setPromote] = useState<Note | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -923,54 +923,6 @@ export default function MyDayClient({ initialData }: { initialData: { open: Note
           )}
 
           <TodayFromProjects />
-
-          {/* ── Done section ─────────────────────────────────────── */}
-          {done.length > 0 && (
-            <div className="mt-5">
-              <button
-                onClick={() => setShowDone((s) => !s)}
-                className="w-full flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50/60 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.07] text-[12px] font-semibold text-slate-500 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/55 hover:bg-slate-100/50 dark:hover:bg-white/[0.04] transition-colors"
-              >
-                <div className="w-[18px] h-[18px] rounded-[5px] bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center shrink-0">
-                  <Check size={10} className="text-emerald-600 dark:text-emerald-400" strokeWidth={3} />
-                </div>
-                <span>Done · {done.length}</span>
-                <span className="ml-auto">
-                  {showDone ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                </span>
-              </button>
-              <div className="mt-1.5 border-t border-slate-100 dark:border-white/[0.05]" />
-
-              {showDone && (
-                <div className="space-y-0.5 mt-1.5 fade-in-soft">
-                  {done.map((n) => (
-                    <div
-                      key={n.id}
-                      className="group flex items-center gap-3 px-3.5 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-white/[0.03] transition-colors"
-                    >
-                      <button
-                        onClick={() => toggle(n)}
-                        aria-label="Reopen"
-                        className="w-[18px] h-[18px] rounded-[5px] bg-emerald-500 border border-emerald-500 flex items-center justify-center shrink-0 hover:bg-emerald-400 transition-colors"
-                      >
-                        <Check size={11} className="text-white" strokeWidth={3} />
-                      </button>
-                      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm text-slate-400 dark:text-white/25 line-through leading-relaxed">
-                        {n.text}
-                      </span>
-                      <button
-                        onClick={() => remove(n)}
-                        aria-label="Delete"
-                        className="p-0.5 rounded text-slate-300 dark:text-white/15 hover:text-red-500 dark:hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -1063,6 +1015,9 @@ function PromoteModal({
       if (due) body.dueDate = due;
       const task = await api<{ id: string }>('/tasks', { method: 'POST', body });
       await api(`/scratch/${note.id}`, { method: 'PATCH', body: { done: true, promotedTaskId: task.id } });
+      // A promoted task can carry a due date — refresh the sidebar calendar so
+      // its dot appears immediately (the app's convention for date changes).
+      if (due) notifyCalendarChange();
       onDone();
     } catch (e: any) {
       setErr(e.message || 'Could not create the task.');

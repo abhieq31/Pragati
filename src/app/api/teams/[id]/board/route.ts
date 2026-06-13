@@ -73,7 +73,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       tasks.map((t) => {
         const p = pMap.get(String(t.projectId));
         return taskS(t, {
-          projectCode: p?.code,
+          projectCode: (p as any)?.ccNo || p?.code,
           projectName: p?.name,
           lifecycle: p?.lifecycle,
           assigneeName: t.assigneeId ? uMap.get(String(t.assigneeId)) : null,

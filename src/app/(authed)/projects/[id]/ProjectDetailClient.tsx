@@ -1673,11 +1673,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
         {/* Left — identity, description, then status directly below it */}
         <div className="min-w-0 md:flex-1">
-          {/* Show the user-defined reference (ccNo) when set; otherwise show system code */}
-          <div className="text-[11px] text-slate-400 font-mono break-all">
-            {project.isPersonal ? 'Personal' : project.ccNo || project.code}
-            {project.ccNo && <span className="ml-1.5 opacity-50 text-[9px]">[{project.code}]</span>}
-          </div>
+          {/* Personal projects carry no shared reference — just mark them private. */}
+          {project.isPersonal && (
+            <div className="text-[11px] text-slate-400 font-mono break-all">Personal</div>
+          )}
           {/* Personal projects are a private space — say so, warmly, and meet
               the owner where they are in the journey. Rule-based, one line. */}
           {project.isPersonal && (
@@ -1692,91 +1691,100 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     : 'Complete. Take a moment — you did this for you.'}
             </p>
           )}
-          {/* The reference row earns its place only when there IS a reference —
-              or when the owner could set one. Empty dashes are clutter. */}
-          {!project.isPersonal && (project.ccNo || isOwner) && (
-            <div className="flex items-center gap-1 mt-0.5">
-              {editingCcNo ? (
-                <>
-                  {/* The reference SCHEME is user-pickable per project — a
-                      project may be tracked by a CC#, an SOP#, a CAPA#, … */}
-                  <datalist id="reflabel-suggestions">
-                    {['CC#', 'SOP#', 'CAPA#', 'DEV#', 'INC#', 'DOC#', 'Ref #'].map((v) => (
-                      <option key={v} value={v} />
-                    ))}
-                  </datalist>
-                  <input
-                    type="text"
-                    list="reflabel-suggestions"
-                    value={refLabelDraft}
-                    onChange={(e) => setRefLabelDraft(e.target.value)}
-                    maxLength={20}
-                    placeholder="Ref #"
-                    aria-label="Reference type"
-                    title="What this reference is — e.g. CC#, SOP#, CAPA#"
-                    className="text-[11px] font-mono text-slate-500 border-b border-blue-400 outline-none bg-transparent px-0.5 w-16"
-                  />
-                  {/* datalist for autocomplete from existing task ccNos */}
-                  <datalist id="ccno-suggestions">
-                    {Array.from(new Set(tasks.map((t: any) => t.ccNo).filter(Boolean))).map((v: any) => (
-                      <option key={v} value={v} />
-                    ))}
-                  </datalist>
-                  <input
-                    type="text"
-                    list="ccno-suggestions"
-                    value={ccNoDraft}
-                    onChange={(e) => setCcNoDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        saveCcNo(ccNoDraft, refLabelDraft);
-                      }
-                      if (e.key === 'Escape') {
-                        setEditingCcNo(false);
-                      }
-                    }}
-                    autoFocus
-                    maxLength={60}
-                    placeholder="e.g. CC-2025-042"
-                    className="text-[11px] font-mono text-slate-700 border-b border-blue-400 outline-none bg-transparent px-0.5 w-36"
-                  />
-                  <button
-                    onClick={() => saveCcNo(ccNoDraft, refLabelDraft)}
-                    className="text-blue-500 hover:text-blue-700 ml-1"
-                    title="Save"
-                  >
-                    <CheckCircle2 size={12} />
-                  </button>
-                  <button
-                    onClick={() => setEditingCcNo(false)}
-                    className="text-slate-300 hover:text-slate-500 ml-0.5"
-                    title="Cancel"
-                  >
-                    <X size={11} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className="text-[11px] text-slate-400 font-mono">{project.refLabel || 'Ref #'}:</span>
-                  <span className="text-[11px] font-mono text-slate-600">{project.ccNo || '—'}</span>
-                  {isOwner && (
-                    <button
-                      onClick={() => {
-                        setCcNoDraft(project.ccNo || '');
+          {/* Reference number — a single identity line. The system assigns one
+              when the project is created; the owner retitles it by tapping
+              directly on the number. Whatever is set here is THE reference shown
+              everywhere (list, dashboard, email, calendar), in real time — so we
+              render exactly one element, never the system code beside it. */}
+          {!project.isPersonal &&
+            (editingCcNo ? (
+              <div className="flex items-center gap-1 mt-0.5">
+                {/* The reference SCHEME is user-pickable per project — a project
+                    may be tracked by a CC#, an SOP#, a CAPA#, … */}
+                <datalist id="reflabel-suggestions">
+                  {['CC#', 'SOP#', 'CAPA#', 'DEV#', 'INC#', 'DOC#', 'Ref #'].map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <input
+                  type="text"
+                  list="reflabel-suggestions"
+                  value={refLabelDraft}
+                  onChange={(e) => setRefLabelDraft(e.target.value)}
+                  maxLength={20}
+                  placeholder="Ref #"
+                  aria-label="Reference type"
+                  title="What this reference is — e.g. CC#, SOP#, CAPA#"
+                  className="text-[11px] font-mono text-slate-500 border-b border-blue-400 outline-none bg-transparent px-0.5 w-16"
+                />
+                {/* datalist for autocomplete from existing task ccNos */}
+                <datalist id="ccno-suggestions">
+                  {Array.from(new Set(tasks.map((t: any) => t.ccNo).filter(Boolean))).map((v: any) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
+                <input
+                  type="text"
+                  list="ccno-suggestions"
+                  value={ccNoDraft}
+                  onChange={(e) => setCcNoDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveCcNo(ccNoDraft, refLabelDraft);
+                    }
+                    if (e.key === 'Escape') {
+                      setEditingCcNo(false);
+                    }
+                  }}
+                  autoFocus
+                  maxLength={60}
+                  placeholder="e.g. CC-2025-042"
+                  className="text-[11px] font-mono text-slate-700 border-b border-blue-400 outline-none bg-transparent px-0.5 w-44"
+                />
+                <button
+                  onClick={() => saveCcNo(ccNoDraft, refLabelDraft)}
+                  className="text-blue-500 hover:text-blue-700 ml-1"
+                  title="Save"
+                >
+                  <CheckCircle2 size={12} />
+                </button>
+                <button
+                  onClick={() => setEditingCcNo(false)}
+                  className="text-slate-300 hover:text-slate-500 ml-0.5"
+                  title="Cancel"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={!isOwner}
+                onClick={
+                  isOwner
+                    ? () => {
+                        setCcNoDraft(project.ccNo || project.code || '');
                         setRefLabelDraft(project.refLabel || '');
                         setEditingCcNo(true);
-                      }}
-                      className="ml-1 text-slate-300 hover:text-blue-500 transition-colors"
-                      title={`Edit ${project.refLabel || 'reference number'}`}
-                    >
-                      <Pencil size={11} />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+                      }
+                    : undefined
+                }
+                title={isOwner ? 'Tap to set this project’s reference number' : undefined}
+                className={`group/ref inline-flex items-center gap-1.5 mt-0.5 text-[11px] font-mono break-all text-left ${
+                  isOwner ? 'cursor-pointer hover:text-slate-800' : 'cursor-default'
+                } text-slate-500`}
+              >
+                {project.refLabel && <span className="text-slate-400">{project.refLabel}</span>}
+                <span className="text-slate-600">{project.ccNo || project.code || '—'}</span>
+                {isOwner && (
+                  <Pencil
+                    size={11}
+                    className="opacity-0 group-hover/ref:opacity-50 transition-opacity text-slate-400 shrink-0"
+                  />
+                )}
+              </button>
+            ))}
           {/* Title — owner sees a hover-to-edit affordance; everyone else sees plain text */}
           {editingTitle ? (
             <input
@@ -1888,7 +1896,13 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           {/* Status — directly under the description */}
           <div className="flex items-center flex-wrap gap-2 mt-3">
             {isLead ? (
-              <ProjectStatusHover value={project.status} onChange={updateStatus} pending={savingStatus} />
+              <StatusPillRow
+                value={project.status}
+                onChange={updateStatus}
+                options={PROJECT_STATUS_OPTIONS.filter((s) => s !== 'planning') as unknown as string[]}
+                pending={savingStatus}
+                collapsible
+              />
             ) : (
               <span className="text-xs font-semibold px-2 py-1 rounded-md bg-slate-100 text-slate-600 capitalize">
                 {String(project.status || '').replace(/_/g, ' ')}

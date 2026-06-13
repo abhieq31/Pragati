@@ -218,7 +218,10 @@ export function bucketTasks(
     } else if (ms < window.end.getTime()) {
       today.push({ ...base, bucket: 'today', label: 'Today' });
     } else if (ms < soonEnd) {
-      const d = Math.max(1, Math.round((ms - window.start.getTime()) / DAY_MS));
+      // Calendar-day offset from today's local midnight — floor, not round, so a
+      // task due tomorrow afternoon reads "Tomorrow", not "in 2d" (rounding the
+      // half-day up was the bug).
+      const d = Math.max(1, Math.floor((ms - window.start.getTime()) / DAY_MS));
       soon.push({ ...base, bucket: 'soon', label: d === 1 ? 'Tomorrow' : `in ${d}d` });
     }
   }
@@ -516,19 +519,7 @@ export function renderWelcomeEmail(input: {
  *  compresses the rest into scannable rows, and closes with a single line of
  *  judgment. Value first, inventory second. */
 export function renderDigestEmail(input: RenderInput): { subject: string; html: string; text: string } {
-  const {
-    name,
-    sections,
-    projectName,
-    appUrl,
-    introNote,
-    test,
-    dateLabel,
-    winsYesterday = 0,
-    role,
-    insight,
-    leadershipBrief,
-  } = input;
+  const { name, sections, projectName, appUrl, test, dateLabel, winsYesterday = 0 } = input;
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
   const weekday = dateLabel.split(/[ ,]/)[0] || 'daily';
 
@@ -653,23 +644,13 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     ? ''
     : `<div style="font-size:15px;color:#16a34a;font-weight:600;margin:6px 0 18px;">You're all clear — nothing due today. Use the room: pick the one thing with the most leverage and move it.</div>`;
 
-  const cleanIntro =
-    introNote &&
-    introNote.trim() &&
-    !(/^\S{12,}$/.test(introNote.trim()) && !/[aeiou]/i.test(introNote.trim()))
-      ? introNote.trim()
-      : '';
-  const intro = cleanIntro
-    ? `<div style="font-size:14px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin:0 0 20px;">${escapeHtml(cleanIntro)}</div>`
-    : '';
-
   const openBtn = appUrl
     ? `<a href="${appUrl}/my-day" style="display:inline-block;background:#1565C0;color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:10px;">Open My Day</a>`
     : '';
 
   const manage = appUrl
-    ? `<a href="${appUrl}/settings#daily-email" style="color:#64748b;font-weight:600;">unsubscribe or change delivery</a>`
-    : 'your profile settings';
+    ? `<a href="${appUrl}/settings#daily-email" style="color:#64748b;text-decoration:underline;">your daily-email settings</a>`
+    : 'your daily-email settings';
 
   const aphorism = closingLine();
 
@@ -681,10 +662,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         <div style="color:#94a3b8;font-size:12px;margin-top:2px;">${escapeHtml(dateLabel)}${test ? ' · test message' : ''}</div>
       </td></tr>
       <tr><td style="padding:26px;">
-        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 6px;">Good morning, ${escapeHtml(first)}</div>
-        ${framingHtml}
-        ${leadershipHtml}
-        ${intro}
+        <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)}</div>
         ${momentum}
         ${emptyNote}
         ${focusHtml}
@@ -706,7 +684,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       <tr><td style="padding:16px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
         <div style="font-size:12px;color:#94a3b8;line-height:1.5;">
           You're receiving this because the daily task email is on for your account.
-          ${manage}.
+          Change the time, or unsubscribe, in ${manage}.
         </div>
       </td></tr>
     </table>
@@ -793,6 +771,12 @@ export interface RunOptions {
   /** Test mode: send only to `onlyUserId`, ignoring opt-in / master-switch /
    *  empty-skip, so an admin can verify delivery end to end. */
   test?: boolean;
+  /** Welcome mode: a real (non-test) first brief sent to `onlyUserId` the
+   *  moment they switch the daily email on — same bypasses as a test (hour,
+   *  idempotency, empty-skip) but a genuine email, and it stamps sent-today so
+   *  the scheduled run won't double-send. Turns "I turned it on" into instant
+   *  proof it works. */
+  welcome?: boolean;
   onlyUserId?: string;
   /** Scheduled (hourly) run: only send to users whose chosen send hour equals
    *  this (workspace-tz) hour, and stamp each as sent-today so re-ticks never
@@ -859,8 +843,13 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
   const todayKey = localDateKey(now, tz);
   const fallbackHour = defaultDigestHour();
 
-  // Master switch — scheduled runs go quiet when disabled; a test still sends.
-  if (!settings.enabled && !opts.test) {
+  // A one-shot run targets a single user on demand (a test, or a welcome send
+  // on first opt-in) and bypasses the hour/idempotency/empty filters so it
+  // always lands. A test additionally renders as "[Test]" and never stamps.
+  const isOneShot = !!opts.test || !!opts.welcome;
+
+  // Master switch — scheduled runs go quiet when disabled; a one-shot still sends.
+  if (!settings.enabled && !isOneShot) {
     return { ...summary, disabled: true };
   }
 
@@ -878,22 +867,13 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     .filter((r) => {
       summary.considered += 1;
       // Per-user send time: on an hourly scheduled run, only this hour's users.
-      if (
-        !opts.test &&
-        !digestTimeMatches(
-          (r.user as any).digestHour,
-          (r.user as any).digestMinute,
-          opts.scheduledHour,
-          opts.scheduledMinute,
-          fallbackHour,
-        )
-      ) {
+      if (!isOneShot && !digestHourMatches((r.user as any).digestHour, opts.scheduledHour, fallbackHour)) {
         summary.skippedWrongHour += 1;
         return false;
       }
       // Idempotency: never send the same user twice in one local day, however
       // many triggers fire (Vercel cron + GitHub Action + a manual run).
-      if (!opts.test && (r.user as any).lastDigestSentOn === todayKey) {
+      if (!isOneShot && (r.user as any).lastDigestSentOn === todayKey) {
         summary.skippedAlreadySent += 1;
         return false;
       }
@@ -958,7 +938,7 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     : [];
   const projName = new Map<string, string>(projDocs.map((p: any) => [String(p._id), p.name]));
 
-  const forceSend = !!opts.test;
+  const forceSend = isOneShot;
 
   // One curated, industry-tuned insight per day, shared across the workspace
   // (a common "thought for the day"). Single-tenant reads PRAGATI_INDUSTRY;
@@ -1036,8 +1016,9 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
 
   // Operational record of the last real run, surfaced in the admin panel so
   // the operator can see delivery health (and cap headroom) at a glance.
-  // Test sends are excluded — they would overwrite the scheduled run's stats.
-  if (!opts.test) {
+  // One-shot sends (test / welcome) are excluded — they would overwrite the
+  // scheduled run's stats.
+  if (!isOneShot) {
     await DigestSetting.updateOne(
       { _id: 'global' },
       {

@@ -69,6 +69,9 @@ export function u(user: any) {
     avatarFont: typeof user.avatarFont === 'number' ? user.avatarFont : 0,
     soundDropEnabled: user.soundDropEnabled !== false,
     githubUrl: user.githubUrl || '',
+    links: (user.links || [])
+      .map((l: any) => ({ url: String(l?.url || ''), label: String(l?.label || '') }))
+      .filter((l: any) => l.url),
     following: (user.following || []).map((id: any) => String(id)),
     // Real notification address (distinct from the synthetic login `email`) and
     // the per-user opt-in for the daily task-due digest. Surfaced so the
