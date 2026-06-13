@@ -360,6 +360,24 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
                           {p.tasksOverdue} overdue
                         </span>
                       )}
+                      {/* Throughput trend — output this week vs. last. A single
+                          count is an inventory; the delta is the truth. */}
+                      {(() => {
+                        const w = p.done7d ?? 0;
+                        const prev = p.donePrev7d ?? 0;
+                        if (w === 0 && prev === 0) return null;
+                        const up = w >= prev;
+                        return (
+                          <span
+                            className="inline-flex items-center gap-0.5 text-[10.5px] font-bold shrink-0 tabular-nums"
+                            style={{ color: up ? '#16a34a' : '#d97706' }}
+                            title={`${w} done this week · ${prev} the week before`}
+                          >
+                            {up ? '▲' : '▼'} {w}
+                            <span className="font-normal opacity-60">/wk</span>
+                          </span>
+                        );
+                      })()}
                     </div>
                     {p.dueDate && (
                       <span

@@ -72,30 +72,79 @@ export async function GET(req: NextRequest) {
     const [teams, owners, taskAgg] = await Promise.all([
       Team.find({ _id: { $in: projects.map((p) => p.teamId).filter(Boolean) } }).lean(),
       User.find({ _id: { $in: projects.map((p) => p.ownerId).filter(Boolean) } }).lean(),
-      Task.aggregate([
-        { $match: { projectId: { $in: projects.map((p) => p._id) } } },
-        { $group: { _id: { projectId: '$projectId', status: '$status' }, c: { $sum: 1 } } },
-      ]),
+      (() => {
+        const now = Date.now();
+        const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        const fourteenDaysAgo = new Date(now - 14 * 24 * 60 * 60 * 1000);
+        // Match the SSR projectList shape exactly so a filtered/searched refetch
+        // keeps the overdue count AND the throughput trend on each card.
+        return Task.aggregate([
+          { $match: { projectId: { $in: projects.map((p) => p._id) } } },
+          {
+            $group: {
+              _id: '$projectId',
+              total: { $sum: 1 },
+              done: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } },
+              overdue: {
+                $sum: {
+                  $cond: [
+                    {
+                      $and: [
+                        { $ne: ['$status', 'done'] },
+                        { $ne: ['$dueDate', null] },
+                        { $lt: ['$dueDate', new Date()] },
+                      ],
+                    },
+                    1,
+                    0,
+                  ],
+                },
+              },
+              done7d: {
+                $sum: {
+                  $cond: [
+                    { $and: [{ $eq: ['$status', 'done'] }, { $gte: ['$completedAt', sevenDaysAgo] }] },
+                    1,
+                    0,
+                  ],
+                },
+              },
+              donePrev7d: {
+                $sum: {
+                  $cond: [
+                    {
+                      $and: [
+                        { $eq: ['$status', 'done'] },
+                        { $gte: ['$completedAt', fourteenDaysAgo] },
+                        { $lt: ['$completedAt', sevenDaysAgo] },
+                      ],
+                    },
+                    1,
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+        ]);
+      })(),
     ]);
     const tMap = new Map(teams.map((t) => [String(t._id), t.name]));
     const oMap = new Map(owners.map((o) => [String(o._id), o.name]));
-    const agg = new Map<string, { total: number; done: number }>();
-    for (const r of taskAgg) {
-      const key = String(r._id.projectId);
-      const e = agg.get(key) || { total: 0, done: 0 };
-      e.total += r.c;
-      if (r._id.status === 'done') e.done += r.c;
-      agg.set(key, e);
-    }
+    const agg = new Map<string, any>(taskAgg.map((a: any) => [String(a._id), a]));
     return NextResponse.json(
-      projects.map((p) =>
-        projectS(p, {
+      projects.map((p) => {
+        const a = agg.get(String(p._id)) || {};
+        return projectS(p, {
           teamName: tMap.get(String(p.teamId)) || null,
           ownerName: oMap.get(String(p.ownerId)) || null,
-          taskCount: agg.get(String(p._id))?.total || 0,
-          tasksDone: agg.get(String(p._id))?.done || 0,
-        }),
-      ),
+          taskCount: a.total || 0,
+          tasksDone: a.done || 0,
+          tasksOverdue: a.overdue || 0,
+          done7d: a.done7d || 0,
+          donePrev7d: a.donePrev7d || 0,
+        });
+      }),
     );
   } catch (e) {
     return handleError(e);

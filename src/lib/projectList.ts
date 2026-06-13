@@ -29,6 +29,10 @@ export interface ProjectListItem {
   taskCount: number;
   tasksDone: number;
   tasksOverdue: number;
+  /** Tasks completed in the last 7 days, and the 7 before that — a throughput
+   *  trend (Grove: output, and the truth is in the delta, not the total). */
+  done7d?: number;
+  donePrev7d?: number;
   archived?: boolean;
 }
 
@@ -89,6 +93,9 @@ export async function listProjectsForUser(
   if (projects.length === 0) return [];
 
   const projectIds = projects.map((p) => p._id);
+  const nowMs = Date.now();
+  const sevenDaysAgo = new Date(nowMs - 7 * 24 * 60 * 60 * 1000);
+  const fourteenDaysAgo = new Date(nowMs - 14 * 24 * 60 * 60 * 1000);
   const [teams, owners, taskAgg] = await Promise.all([
     Team.find({ _id: { $in: projects.map((p) => p.teamId).filter(Boolean) } }).lean(),
     User.find({ _id: { $in: projects.map((p) => p.ownerId).filter(Boolean) } }).lean(),
@@ -99,6 +106,34 @@ export async function listProjectsForUser(
           _id: '$projectId',
           taskCount: { $sum: 1 },
           tasksDone: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } },
+          // Grove's rule: an indicator should measure OUTPUT, and a single
+          // number lies — a trend tells the truth. done7d / donePrev7d give
+          // each project card a "this week vs. last" throughput delta, so a
+          // glance reveals momentum (or stall), not just a static count.
+          done7d: {
+            $sum: {
+              $cond: [
+                { $and: [{ $eq: ['$status', 'done'] }, { $gte: ['$completedAt', sevenDaysAgo] }] },
+                1,
+                0,
+              ],
+            },
+          },
+          donePrev7d: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$status', 'done'] },
+                    { $gte: ['$completedAt', fourteenDaysAgo] },
+                    { $lt: ['$completedAt', sevenDaysAgo] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
           tasksOverdue: {
             $sum: {
               $cond: [
@@ -124,7 +159,13 @@ export async function listProjectsForUser(
   const taskMap = new Map(taskAgg.map((a: any) => [String(a._id), a]));
 
   return projects.map((p) => {
-    const t = taskMap.get(String(p._id)) || { taskCount: 0, tasksDone: 0, tasksOverdue: 0 };
+    const t = taskMap.get(String(p._id)) || {
+      taskCount: 0,
+      tasksDone: 0,
+      tasksOverdue: 0,
+      done7d: 0,
+      donePrev7d: 0,
+    };
     return {
       ...projectS(p, {
         teamName: p.teamId ? teamMap.get(String(p.teamId)) || null : null,
@@ -133,6 +174,8 @@ export async function listProjectsForUser(
       taskCount: t.taskCount,
       tasksDone: t.tasksDone,
       tasksOverdue: t.tasksOverdue,
+      done7d: t.done7d || 0,
+      donePrev7d: t.donePrev7d || 0,
     } as ProjectListItem;
   });
 }
