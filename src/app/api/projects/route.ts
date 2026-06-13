@@ -202,7 +202,10 @@ export async function POST(req: NextRequest) {
 
     const project = await Project.create({
       code,
-      ccNo: body.ccNo || '',
+      // Every shared project is born with a reference number. The system seeds
+      // it from the generated code; the owner can retitle it later by tapping
+      // the number on the detail page. Personal projects carry no shared ref.
+      ccNo: body.ccNo || (isPersonal ? '' : code),
       refLabel: body.refLabel || '',
       name: body.name,
       description: body.description || '',

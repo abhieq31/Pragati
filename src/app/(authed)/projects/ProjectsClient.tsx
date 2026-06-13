@@ -200,7 +200,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       {!loaded && (
         <div
           className="grid gap-5"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}
           aria-busy="true"
           aria-live="polite"
         >
@@ -229,7 +229,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Grid */}
       {loaded && (
-        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))' }}>
           {projects.map((p) => {
             const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
             const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
@@ -265,10 +265,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
                         <Lock size={9} /> Private
                       </span>
                     ) : (
-                      <span
-                        className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.05] px-2 py-0.5 rounded"
-                        title={p.ccNo ? `System ref: ${p.code}` : undefined}
-                      >
+                      <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.05] px-2 py-0.5 rounded">
                         {p.ccNo || p.code}
                       </span>
                     )}

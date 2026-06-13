@@ -27,17 +27,19 @@ export const maxDuration = 60;
 export async function GET(req: NextRequest) {
   try {
     const isTest = req.nextUrl.searchParams.get('test') === '1';
+    const isWelcome = req.nextUrl.searchParams.get('welcome') === '1';
 
     const secret = process.env.CRON_SECRET;
     const auth = req.headers.get('authorization');
     const cronAuthed = !!secret && auth === `Bearer ${secret}`;
 
-    // Test mode emails the CALLER and only the caller — so any signed-in user
-    // may run it to verify their own delivery ("I turned it on but nothing
-    // arrives"). Full manual runs (everyone's digest) stay admin-only.
+    // Test / welcome modes email the CALLER and only the caller — so any
+    // signed-in user may run them to verify their own delivery ("I turned it on
+    // but nothing arrives") or to receive their first brief the instant they
+    // opt in. Full manual runs (everyone's digest) stay admin-only.
     // Master-admin is a strict superset of admin everywhere in the app.
     let callerId: string | null = null;
-    if (isTest) {
+    if (isTest || isWelcome) {
       const { user, error } = await requireUser(req);
       if (error) return error;
       callerId = user!.sub;
@@ -47,9 +49,14 @@ export async function GET(req: NextRequest) {
       callerId = user.sub;
     }
 
-    if (isTest) {
-      const summary = await buildAndSendDailyDigests({ test: true, onlyUserId: callerId! });
-      return NextResponse.json({ mode: 'test', ...summary }, { headers: { 'Cache-Control': 'no-store' } });
+    if (isTest || isWelcome) {
+      const summary = await buildAndSendDailyDigests(
+        isTest ? { test: true, onlyUserId: callerId! } : { welcome: true, onlyUserId: callerId! },
+      );
+      return NextResponse.json(
+        { mode: isTest ? 'test' : 'welcome', ...summary },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
     }
 
     // A scheduled (cron-secret) tick honours each user's chosen send hour and

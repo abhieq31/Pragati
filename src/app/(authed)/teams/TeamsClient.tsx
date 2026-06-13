@@ -132,7 +132,7 @@ export default function TeamsClient({
           )}
         </div>
       ) : (
-        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))' }}>
+        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))' }}>
           {filtered.map((t) => (
             <TeamCard
               key={t.id}

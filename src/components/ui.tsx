@@ -609,39 +609,64 @@ export function StatusPillRow({
   options = TASK_STATUS_OPTIONS as unknown as string[],
   pending = false,
   className = '',
+  collapsible = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   options?: readonly string[] | string[];
   pending?: boolean;
   className?: string;
+  /** When true, only the current status shows; the other options expand
+   *  horizontally on hover/focus. Keeps the header calm until you reach for it. */
+  collapsible?: boolean;
 }) {
+  const pill = (opt: string) => {
+    const active = opt === value;
+    const optDot = STATUS_DOT[opt] ?? '#94a3b8';
+    const optLabel = STATUS_LABEL[opt] ?? opt.replace(/_/g, ' ');
+    return (
+      <button
+        key={opt}
+        type="button"
+        disabled={pending}
+        onClick={() => !active && onChange(opt)}
+        aria-pressed={active}
+        className={`relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
+          active
+            ? 'bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_0_0_1px_rgba(21,101,192,0.18)]'
+            : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+        } disabled:opacity-50`}
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: optDot }} />
+        {optLabel}
+      </button>
+    );
+  };
+
+  if (collapsible) {
+    const others = (options as string[]).filter((o) => o !== value);
+    return (
+      <div
+        className={`group inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.04] p-1 ${className}`}
+        title="Change status"
+      >
+        {pill(value)}
+        {/* Animated 0fr→1fr width reveal — CSS-only, no layout jank. */}
+        <div className="grid grid-cols-[0fr] transition-[grid-template-columns] duration-300 ease-out group-hover:grid-cols-[1fr] group-focus-within:grid-cols-[1fr]">
+          <div className="overflow-hidden min-w-0 flex items-center gap-1">{others.map(pill)}</div>
+        </div>
+        {pending && (
+          <span className="ml-1 w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin opacity-60 text-slate-400" />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/70 p-1 ${className}`}
     >
-      {(options as string[]).map((opt) => {
-        const active = opt === value;
-        const optDot = STATUS_DOT[opt] ?? '#94a3b8';
-        const optLabel = STATUS_LABEL[opt] ?? opt.replace(/_/g, ' ');
-        return (
-          <button
-            key={opt}
-            type="button"
-            disabled={pending}
-            onClick={() => !active && onChange(opt)}
-            aria-pressed={active}
-            className={`relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
-              active
-                ? 'bg-white text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_0_0_1px_rgba(21,101,192,0.18)]'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
-            } disabled:opacity-50`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: optDot }} />
-            {optLabel}
-          </button>
-        );
-      })}
+      {(options as string[]).map(pill)}
       {pending && (
         <span className="ml-1 w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin opacity-60 text-slate-400" />
       )}

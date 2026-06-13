@@ -538,11 +538,26 @@ export default function TeamDetailPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <TaskLink task={t} />
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                          <Link href={`/projects/${t.projectId}`} className="hover:underline font-medium">
+                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 min-w-0">
+                          <Link
+                            href={`/projects/${t.projectId}`}
+                            className="hover:underline font-medium truncate shrink-0"
+                          >
                             {t.projectCode}
                           </Link>
-                          {isLead && <> · {t.assigneeName || 'Unassigned'}</>}
+                          {isLead && (
+                            <span className="inline-flex items-center gap-1 min-w-0">
+                              <span className="text-slate-300">·</span>
+                              {t.assigneeId ? (
+                                <>
+                                  <UserAvatar userId={t.assigneeId} name={t.assigneeName} size={16} />
+                                  <span className="truncate">{t.assigneeName}</span>
+                                </>
+                              ) : (
+                                <span>Unassigned</span>
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <StatusTag status={t.status} />
@@ -569,7 +584,7 @@ export default function TeamDetailPage() {
                 const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
                 return (
                   <Link href={`/projects/${p.id}`} key={p.id} className="card p-4 hover:shadow-md transition">
-                    <div className="text-xs font-mono text-slate-500">{p.code}</div>
+                    <div className="text-xs font-mono text-slate-500">{p.ccNo || p.code}</div>
                     <div className="font-semibold">{p.name}</div>
                     <div className="flex gap-2 mt-2">
                       <LifecycleTag lifecycle={p.lifecycle} />
@@ -602,7 +617,7 @@ export default function TeamDetailPage() {
             teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
             projects: (team.projects || []).map((p: any) => ({
               id: p.id,
-              code: p.code,
+              code: p.ccNo || p.code,
               name: p.name,
               teamId: team.id,
               health: 'healthy',

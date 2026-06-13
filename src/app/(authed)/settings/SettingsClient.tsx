@@ -563,6 +563,25 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
     setSaving(true);
     try {
       await api('/users/me', { method: 'PATCH', body: { notifDailyDigest: next } });
+      // Switching it ON sends the first brief right away — proof it works, and
+      // the welcome the user expects the moment they opt in. Best-effort: a send
+      // hiccup must never make the toggle look like it failed.
+      if (next) {
+        setTestMsg('Sending your first brief…');
+        try {
+          const r: any = await api('/cron/daily-digest?welcome=1');
+          if (r.sent > 0) setTestMsg('Your first brief is on its way — check your inbox (and spam).');
+          else if (!r.mailerConfigured)
+            setTestMsg('Saved. Email isn’t configured on this deployment yet — your admin can finish setup.');
+          else if (r.skippedNoEmail > 0)
+            setTestMsg('Saved — add a notification email above to receive your daily brief.');
+          else setTestMsg('Saved. Your daily brief will arrive at your chosen time.');
+        } catch {
+          setTestMsg('Saved. Your daily brief will arrive at your chosen time.');
+        }
+      } else {
+        setTestMsg('');
+      }
     } catch {
       setEnabled(!next);
     } finally {
