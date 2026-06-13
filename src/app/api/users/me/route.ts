@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { connectDB } from '@/lib/db';
+import { sendEmail, mailerConfigured } from '@/lib/mailer';
+import { appBaseUrl } from '@/lib/digest';
 import { User } from '@/models/User';
 import { requireUser } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
@@ -44,6 +46,7 @@ const EditableBody = z.object({
   notifDailyDigest: z.boolean().optional(),
   // Preferred digest hour (0–23, workspace tz). null clears it → default hour.
   digestHour: z.number().int().min(0).max(23).nullable().optional(),
+  digestMinute: z.number().int().min(0).max(59).optional(),
   // The address where the daily digest is sent. Users can set this themselves
   // so they can choose a delivery address (work vs personal inbox) without
   // asking an admin. Admins can still override it via the People page.
@@ -119,8 +122,13 @@ export async function PATCH(req: NextRequest) {
     if (d.notifTaskDueSoon !== undefined) user.notifTaskDueSoon = d.notifTaskDueSoon as any;
     if (d.notifTaskOverdue !== undefined) user.notifTaskOverdue = d.notifTaskOverdue as any;
     if (d.notifProjectUpdate !== undefined) user.notifProjectUpdate = d.notifProjectUpdate as any;
+    // Flipping the daily brief ON earns a welcome email — it doubles as the
+    // delivery test (replaces the old "send me a test email" button): if this
+    // lands, tomorrow's brief lands. Only on the false -> true transition.
+    const digestJustEnabled = d.notifDailyDigest === true && !(user as any).notifDailyDigest;
     if (d.notifDailyDigest !== undefined) (user as any).notifDailyDigest = d.notifDailyDigest;
     if (d.digestHour !== undefined) (user as any).digestHour = d.digestHour;
+    if (d.digestMinute !== undefined) (user as any).digestMinute = d.digestMinute;
     if (d.notifyEmail !== undefined) (user as any).notifyEmail = d.notifyEmail.trim();
     if (d.avatarLetter !== undefined) (user as any).avatarLetter = d.avatarLetter.toUpperCase();
     if (d.avatarBg !== undefined) (user as any).avatarBg = d.avatarBg;
@@ -141,6 +149,31 @@ export async function PATCH(req: NextRequest) {
     }
 
     await user.save();
+
+    if (digestJustEnabled && mailerConfigured()) {
+      const to = ((user as any).notifyEmail || '').trim() || (user as any).email || '';
+      if (to && !to.endsWith('@pragati.local')) {
+        const { renderWelcomeEmail, defaultDigestHour, digestTimeZone } = await import('@/lib/digest');
+        const { resolveIndustry, pickInsight } = await import('@/lib/insights');
+        const hour = (user as any).digestHour ?? defaultDigestHour();
+        const h12 = hour % 12 === 0 ? 12 : hour % 12;
+        const minute = (user as any).digestMinute ?? 0;
+        const hourLabel = `${h12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'} (${digestTimeZone()})`;
+        // Industry-tuned insight (single-tenant reads PRAGATI_INDUSTRY; the
+        // multi-tenant path will pass the tenant's stored niche here). seed=1
+        // so the welcome's insight differs from the day's brief insight.
+        const insight = pickInsight(resolveIndustry(), 1);
+        const { subject, html, text } = renderWelcomeEmail({
+          name: (user as any).name || '',
+          role: (user as any).role,
+          appUrl: appBaseUrl(),
+          hourLabel,
+          insight,
+        });
+        // Fire-and-forget — a mail hiccup must never fail the settings save.
+        void sendEmail({ to, toName: (user as any).name, subject, html, text }).catch(() => {});
+      }
+    }
     // Profile edits (name/title/department/avatar) change how this user is
     // rendered in the admin People directory, so drop its cached copy.
     void bustPeopleDirectoryCache();

@@ -300,6 +300,40 @@ export default function TeamDetailPage() {
                 </button>
               </div>
               <ActivityGraph userId={activityMember.id} name={activityMember.name} />
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <div className="mb-2 text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">
+                  Working on now
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {board
+                    .filter(
+                      (task: any) =>
+                        task.assigneeId === activityMember.id &&
+                        task.status !== 'done' &&
+                        task.status !== 'cancelled',
+                    )
+                    .slice(0, 8)
+                    .map((task: any) => (
+                      <Link
+                        key={task.id}
+                        href={`/tasks/${task.id}`}
+                        className="rounded-xl border border-slate-200 p-3 transition hover:border-blue-200 hover:bg-blue-50/40"
+                      >
+                        <div className="truncate text-sm font-semibold text-slate-800">{task.title}</div>
+                        <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                          <span className="truncate">{task.projectCode}</span>
+                          <StatusTag status={task.status} />
+                        </div>
+                      </Link>
+                    ))}
+                  {!board.some(
+                    (task: any) =>
+                      task.assigneeId === activityMember.id &&
+                      task.status !== 'done' &&
+                      task.status !== 'cancelled',
+                  ) && <div className="text-sm text-slate-400">No active assigned tasks right now.</div>}
+                </div>
+              </div>
             </div>
           </div>
         </ModalPortal>
@@ -399,6 +433,7 @@ export default function TeamDetailPage() {
             <ExportMenu
               onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
               onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+              onBirdEyeSvg={() => setShowBirdEye(true)}
             />
           </div>
         )}

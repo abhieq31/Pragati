@@ -11,10 +11,10 @@ import {
   LifecycleTag,
   PriorityTag,
   StatusSelect,
-  StatusPillRow,
   PROJECT_STATUS_OPTIONS,
   TaskLink,
   formatDate,
+  formatDateTime,
   useToast,
 } from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
@@ -38,6 +38,7 @@ import {
   ScrollText,
   Eye,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
 import { chimeIfEnabled, playDropTick } from '@/lib/sound';
@@ -62,6 +63,78 @@ const STATUS_META: Record<string, { label: string; color: string; bg: string; bo
   blocked: { label: 'Blocked', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
   done: { label: 'Done', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
 };
+
+function ProjectStatusHover({
+  value,
+  onChange,
+  pending,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  pending: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const options = PROJECT_STATUS_OPTIONS.filter((status) => status !== 'planning');
+  const current = STATUS_META[value] || {
+    label: value.replace(/_/g, ' '),
+    color: '#475569',
+    bg: '#f8fafc',
+    border: '#e2e8f0',
+  };
+  return (
+    <div
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocus={() => setOpen(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        disabled={pending}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold transition-shadow hover:shadow-sm disabled:opacity-60"
+        style={{ color: current.color, background: current.bg, borderColor: current.border }}
+      >
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: current.color }} />
+        {current.label}
+        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-full top-1/2 z-30 ml-2 flex -translate-y-1/2 items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#262624]"
+        >
+          {options
+            .filter((status) => status !== value)
+            .map((status) => {
+              const meta = STATUS_META[status] || current;
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  role="menuitem"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    setOpen(false);
+                    onChange(status);
+                  }}
+                  className="whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-transform hover:-translate-y-px"
+                  style={{ color: meta.color, background: meta.bg, borderColor: meta.border }}
+                >
+                  {meta.label}
+                </button>
+              );
+            })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ── Kanban board ─────────────────────────────────────────────────────────── */
 const COLUMN_WIDTH = 230;
@@ -790,7 +863,7 @@ function QuickAddTask({
               title={sug.dueDate.reason}
               className="inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             >
-              Due {new Date(sug.dueDate.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+              Due {formatDate(sug.dueDate.date)}
             </button>
           )}
         </div>
@@ -1762,11 +1835,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             {project.archived && (
               <span
                 className="tag border border-amber-200 bg-amber-50 text-amber-800 font-semibold inline-flex items-center gap-1.5"
-                title={
-                  project.archivedAt
-                    ? `Archived ${new Date(project.archivedAt).toLocaleString()}`
-                    : 'Archived'
-                }
+                title={project.archivedAt ? `Archived ${formatDateTime(project.archivedAt)}` : 'Archived'}
               >
                 <Archive size={11} /> Archived
               </span>
@@ -1917,6 +1986,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               }
               onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
               onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
+              onBirdEyeSvg={() => setShowBirdEye(true)}
             />
             {isAdmin && !project.isPersonal && (
               <Link
@@ -1935,11 +2005,16 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                     ? `Archive "${project.name}"?\nIt will be hidden from the dashboard and project list, but tasks and audit history remain.`
                     : `Restore "${project.name}" from the archive?`;
                   if (!confirm(msg)) return;
-                  await api(`/projects/${project.id}/archive`, {
-                    method: 'POST',
-                    body: { archived: archiving },
-                  });
-                  load();
+                  try {
+                    await api(`/projects/${project.id}/archive`, {
+                      method: 'POST',
+                      body: { archived: archiving },
+                    });
+                    showToast(archiving ? 'Project archived' : 'Project restored');
+                    load();
+                  } catch (e: any) {
+                    showToast(e?.message || 'Could not update the archive state', 'err');
+                  }
                 }}
                 className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors ${
                   project.archived
@@ -1972,7 +2047,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           {
             label: 'Progress',
             value: `${pct}%`,
-            sub: `${tasks.filter((t: any) => t.status === 'done').length}/${tasks.length} tasks · weighted`,
+            sub: `${tasks.filter((t: any) => t.status === 'done').length}/${tasks.length} tasks`,
             bar: pct,
           },
           { label: 'Phases', value: phases.length, sub: 'lifecycle stages' },
@@ -2349,6 +2424,10 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               assigneeName: t.assigneeName ?? null,
               dueDate: (t.ccTcd || t.dueDate) ?? null,
               phaseName: (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.name ?? null,
+              position: t.position ?? Number.MAX_SAFE_INTEGER,
+              phasePosition:
+                (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.position ??
+                Number.MAX_SAFE_INTEGER,
               subtaskCount: t.subtaskCount,
               subtasksDone: t.subtasksDone,
               subtaskTitles: (t.subtaskTitles || []).slice(0, 5),

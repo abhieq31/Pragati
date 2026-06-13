@@ -995,7 +995,21 @@ export default function AppShell({
             >
               <div className="flex items-center justify-around pt-2 px-2">
                 {/* Show up to 4 primary nav items + My Day = 5 tabs max. */}
-                {[...nav.slice(0, 4), myDayItem].map((n) => {
+                {[
+                  // Mobile is its own composition, not a compressed desktop:
+                  // 5 thumb-reach tabs — the three core surfaces, My Day, and
+                  // the user's own profile. Admin surfaces stay in the avatar
+                  // sheet, where they always lived on mobile.
+                  ...nav.slice(0, 3),
+                  myDayItem,
+                  {
+                    href: user.username ? `/${user.username}` : '/settings',
+                    label: 'Profile',
+                    icon: UserCircle,
+                    iconColor: '#C2185B',
+                    iconBg: '#FCE4EC',
+                  } as NavItem,
+                ].map((n) => {
                   const Icon = n.icon;
                   const active = isActive(n.href);
                   const tourKey = `nav-${n.label.toLowerCase().replace(/\s+/g, '-')}`;

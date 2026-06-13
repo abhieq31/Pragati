@@ -23,6 +23,7 @@ export function ProfileHero({
   location,
   organisation,
   avatar,
+  avatarExtra,
   actions,
   linkUsername = false,
   showMemberId = true,
@@ -37,6 +38,9 @@ export function ProfileHero({
   organisation?: string | null;
   /** The avatar node (editable button on settings, plain Avatar on public). */
   avatar: ReactNode;
+  /** Rendered BELOW the brand ring (e.g. the photo upload/remove links) —
+   *  never inside it, so text can't overlap the circle. */
+  avatarExtra?: ReactNode;
   /** Right-side action slot — Edit (self) or nothing (public). */
   actions?: ReactNode;
   /** When true, @username links to the public profile route. */

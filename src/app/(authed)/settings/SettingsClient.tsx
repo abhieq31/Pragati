@@ -4,7 +4,7 @@ import { ModalPortal } from '@/components/ModalPortal';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/client/api';
-import { Avatar } from '@/components/ui';
+import { Avatar, formatDateTime } from '@/components/ui';
 // The contribution heatmap is a sizeable, below-the-fold client component —
 // lazy-load it so it never blocks first paint of the profile page.
 const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m) => m.ActivityGraph), {
@@ -583,13 +583,6 @@ function ChecklistItem({ ok, label, hint }: { ok: boolean; label: string; hint?:
 /* ── Daily task email — personal opt-in (all users) ─────────────────────────
    The destination address can now be self-managed; the user also controls
    whether the 08:30 digest is sent. */
-/** "8 AM" / "1 PM" / "12 AM" for an hour 0–23. */
-function hourLabel(h: number): string {
-  const period = h < 12 ? 'AM' : 'PM';
-  const display = h % 12 === 0 ? 12 : h % 12;
-  return `${display} ${period}`;
-}
-
 function DailyDigestToggle({ initialUser }: { initialUser: any }) {
   const loginEmail = initialUser.email || '';
   const [notifyEmail, setNotifyEmail] = useState<string>(initialUser.notifyEmail || '');
@@ -612,17 +605,22 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
     timeZoneLabel?: string;
     defaultHour?: number;
   } | null>(null);
-  const [testing, setTesting] = useState(false);
-  const [testMsg, setTestMsg] = useState('');
   // Preferred send hour (0–23, workspace tz). null = workspace default hour.
   const [digestHour, setDigestHour] = useState<number | null>(
     typeof (initialUser as any).digestHour === 'number' ? (initialUser as any).digestHour : null,
   );
+  const [digestMinute, setDigestMinute] = useState<number>(
+    typeof (initialUser as any).digestMinute === 'number' ? (initialUser as any).digestMinute : 0,
+  );
 
-  async function saveHour(next: number | null) {
-    setDigestHour(next);
+  async function saveTime(nextHour: number | null, nextMinute: number) {
+    setDigestHour(nextHour);
+    setDigestMinute(nextMinute);
     try {
-      await api('/users/me', { method: 'PATCH', body: { digestHour: next } });
+      await api('/users/me', {
+        method: 'PATCH',
+        body: { digestHour: nextHour, digestMinute: nextMinute },
+      });
     } catch {
       /* keep optimistic value; a refresh will reconcile */
     }
@@ -633,24 +631,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
       .then((h: any) => setHealth(h))
       .catch(() => {});
   }, []);
-
-  async function sendSelfTest() {
-    setTesting(true);
-    setTestMsg('');
-    try {
-      const r: any = await api('/cron/daily-digest?test=1');
-      if (r.sent > 0) setTestMsg('Test email sent — check your inbox (and spam, the first time).');
-      else if (!r.mailerConfigured)
-        setTestMsg('Email isn’t configured on this deployment yet — ask your admin.');
-      else if (r.skippedNoEmail > 0)
-        setTestMsg('No deliverable address on your account — set a notification email above.');
-      else setTestMsg('Nothing was sent — check your notification email above.');
-    } catch (e: any) {
-      setTestMsg(e.message || 'Test failed.');
-    } finally {
-      setTesting(false);
-    }
-  }
 
   async function toggle() {
     if (!canEnable) return;
@@ -706,29 +686,40 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
 
   return (
     <div id="daily-email" className="scroll-mt-6">
-      <Section
-        icon={Mail}
-        title="Daily task email"
-        subtitle="A morning email of the tasks you have due that day."
-      >
+      <Section icon={Mail} title="Daily task email" subtitle="Your focused daily brief, when you want it.">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 text-sm text-slate-600 dark:text-white/60 leading-relaxed flex-1">
-            <p>A morning email with the tasks assigned to you that are due that day.</p>
             {enabled && (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-[12px] text-slate-500 dark:text-white/50">Send it at</span>
+                <span className="text-[12px] font-semibold text-slate-500 dark:text-white/50">Send at</span>
                 <select
                   value={digestHour === null ? '' : String(digestHour)}
-                  onChange={(e) => saveHour(e.target.value === '' ? null : Number(e.target.value))}
+                  onChange={(e) =>
+                    saveTime(e.target.value === '' ? null : Number(e.target.value), digestMinute)
+                  }
                   className="text-[12px] rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
-                  <option value="">Default ({hourLabel(health?.defaultHour ?? 8)})</option>
+                  <option value="">Default ({String(health?.defaultHour ?? 8).padStart(2, '0')}:00)</option>
                   {Array.from({ length: 24 }, (_, h) => (
                     <option key={h} value={String(h)}>
-                      {hourLabel(h)}
+                      {String(h).padStart(2, '0')}
                     </option>
                   ))}
                 </select>
+                <span className="text-slate-300">:</span>
+                <select
+                  value={String(digestMinute)}
+                  onChange={(e) => saveTime(digestHour, Number(e.target.value))}
+                  aria-label="Daily email minute"
+                  className="text-[12px] rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                >
+                  {Array.from({ length: 12 }, (_, index) => index * 5).map((minute) => (
+                    <option key={minute} value={minute}>
+                      {String(minute).padStart(2, '0')}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">24h</span>
                 <span className="text-[11px] text-slate-400 dark:text-white/35">
                   {health?.timeZoneLabel ? `(${health.timeZoneLabel})` : ''}
                 </span>
@@ -740,14 +731,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                 {!health.mailerConfigured ? ' (no mail provider)' : ' (scheduled send not enabled)'} — your
                 preference is saved and takes effect the moment your admin completes setup.
               </p>
-            )}
-            {enabled && (
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <button type="button" onClick={sendSelfTest} disabled={testing} className="btn-ghost text-xs">
-                  {testing ? 'Sending…' : 'Send me a test email'}
-                </button>
-                {testMsg && <span className="text-[11px] text-slate-500 dark:text-white/45">{testMsg}</span>}
-              </div>
             )}
             {canEnable ? (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -1123,7 +1106,7 @@ function AdminDigestSettings() {
             </div>
             {cfg?.lastRunAt && (
               <div className="text-[11px] text-slate-400 mt-1">
-                Last run {new Date(cfg.lastRunAt).toLocaleString()} · sent{' '}
+                Last run {formatDateTime(cfg.lastRunAt)} · sent{' '}
                 <strong className="text-slate-600">
                   {cfg.lastRunSummary?.sent ?? 0}/{cfg.lastRunSummary?.cap ?? status.dailyCap}
                 </strong>{' '}
@@ -1503,17 +1486,19 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         organisation={user.organisation}
         linkUsername
         avatar={
-          <div className="flex flex-col items-center gap-1.5">
-            <ProfileAvatar
-              name={user.name}
-              letter={avatarLetter}
-              bg={avatarBg}
-              font={avatarFont}
-              image={avatarImage}
-              size={88}
-              onClick={() => setShowAvatarEditor(true)}
-              title="Change avatar"
-            />
+          <ProfileAvatar
+            name={user.name}
+            letter={avatarLetter}
+            bg={avatarBg}
+            font={avatarFont}
+            image={avatarImage}
+            size={88}
+            onClick={() => setShowAvatarEditor(true)}
+            title="Change avatar"
+          />
+        }
+        avatarExtra={
+          <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-2">
               <label className="text-[10.5px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
                 {photoBusy ? 'Uploading…' : avatarImage ? 'Change photo' : 'Upload photo'}
