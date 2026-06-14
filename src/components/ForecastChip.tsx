@@ -67,12 +67,11 @@ export function ForecastChip({ projectId }: { projectId: string }) {
     };
   }, [projectId]);
 
-  if (!f) {
-    return (
-      <span className="inline-block h-[26px] w-[110px] rounded-full bg-slate-100 dark:bg-white/[0.05] animate-pulse" />
-    );
-  }
-  if (!f.ok || !f.p50) return null;
+  // Render nothing until we have a real result — this chip sits in the project
+  // header's badge row, so a placeholder that later collapses to null would
+  // shove the priority/lifecycle badges sideways (a visible layout shift). No
+  // space is reserved; the chip simply appears at the end of the row when ready.
+  if (!f || !f.ok || !f.p50) return null;
 
   const tone = TONE[f.vsTarget || 'neutral'] || TONE.neutral;
   const tip = [
