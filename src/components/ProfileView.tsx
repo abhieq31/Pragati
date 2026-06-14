@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { Avatar } from '@/components/ui';
@@ -16,6 +16,7 @@ import {
   Globe,
   Users,
   UserCheck,
+  UserPlus,
   CheckCircle2,
   CalendarRange,
   FolderKanban,
@@ -51,6 +52,90 @@ const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m
   ssr: false,
   loading: () => <div className="h-40 rounded-xl bg-slate-50 animate-pulse" />,
 });
+
+/* A readable text colour from the member's accent: dark accents are used as-is;
+   very light ones (peach, sky, mint…) are darkened so accent-coloured text
+   stays legible on a white pill. */
+function readableAccent(hex?: string | null): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec((hex || '').trim());
+  if (!m) return '#1565C0';
+  const n = parseInt(m[1], 16);
+  let r = (n >> 16) & 255;
+  let g = (n >> 8) & 255;
+  let b = n & 255;
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (luminance > 150) {
+    r = Math.round(r * 0.5);
+    g = Math.round(g * 0.5);
+    b = Math.round(b * 0.5);
+  }
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/* Animate a number from 0 → target on mount (easeOutCubic). Honours
+   prefers-reduced-motion by jumping straight to the value, so the figure is
+   never withheld from anyone who's opted out of motion. */
+function useCountUp(target: number, durationMs = 900): number {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setValue(target);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+  return value;
+}
+
+type StatTileData = {
+  label: string;
+  value: number;
+  sub: string;
+  icon: typeof CheckCircle2;
+  color: string;
+  bg: string;
+};
+
+/* A single impact figure — gradient accent line, tinted icon chip and a
+   counting-up number. Staggered in via the shared .fade-up-stagger utility so
+   the row reveals left-to-right as the profile settles. */
+function StatTile({ s, index }: { s: StatTileData; index: number }) {
+  const shown = useCountUp(s.value);
+  return (
+    <div
+      className="card fade-up-stagger relative overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      style={{ animationDelay: `${120 + index * 70}ms` }}
+    >
+      <span
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-[3px]"
+        style={{ background: `linear-gradient(90deg, ${s.color}, ${s.color}00)` }}
+      />
+      <div className="flex items-center gap-2">
+        <span
+          className="w-8 h-8 rounded-xl grid place-items-center shrink-0"
+          style={{ background: s.bg, color: s.color }}
+        >
+          <s.icon size={15} />
+        </span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{s.label}</span>
+      </div>
+      <div className="mt-3 text-[26px] leading-none font-black text-slate-900 dark:text-white tabular-nums">
+        {shown}
+      </div>
+      <div className="text-[11px] text-slate-400 mt-1">{s.sub}</div>
+    </div>
+  );
+}
 
 /**
  * Read-only public profile, shown at /[username]. Any signed-in member can
@@ -95,6 +180,12 @@ export default function ProfileView({
   const isLeadOrAdmin = profile.role === 'lead' || profile.role === 'admin';
   const roleText =
     profile.role === 'admin' ? 'Admin' : isLeadOrAdmin ? 'Team Lead' : 'Individual Contributor';
+
+  // Per-member accent, derived from their monogram colour. Personalises the
+  // hero cover/ring (handled in ProfileHero) and the Follow CTA / link hovers.
+  const accent =
+    profile.avatarBg && /^#[0-9a-fA-F]{6}$/.test(profile.avatarBg) ? profile.avatarBg : undefined;
+  const accentText = readableAccent(profile.avatarBg);
 
   // Follow / unfollow state — initialised from the server-rendered prop.
   const [following, setFollowing] = useState(!!profile.viewerIsFollowing);
@@ -153,7 +244,7 @@ export default function ProfileView({
   // Impact row — server-rendered numbers so the first impression of a profile
   // is what this person delivers, before the heatmap streams in below.
   const stats = profile.stats;
-  const statTiles = stats
+  const statTiles: StatTileData[] = stats
     ? [
         {
           label: 'Delivered',
@@ -190,8 +281,107 @@ export default function ProfileView({
       ]
     : [];
 
+  // ── Frosted action pill over the cover — legible on any accent colour ──────
+  const coverAction = isSelf ? (
+    <Link
+      href="/settings"
+      className="inline-flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-black/30 backdrop-blur px-3.5 py-1.5 text-[12px] font-bold text-slate-700 dark:text-white shadow-sm ring-1 ring-black/5 transition hover:scale-[1.03]"
+    >
+      <Pencil size={12} /> Edit profile
+    </Link>
+  ) : (
+    <button
+      onClick={toggleFollow}
+      disabled={busy}
+      onMouseEnter={() => setHoveringFollow(true)}
+      onMouseLeave={() => setHoveringFollow(false)}
+      className="inline-flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-black/30 backdrop-blur px-3.5 py-1.5 text-[12px] font-bold shadow-sm ring-1 ring-black/5 transition hover:scale-[1.03] disabled:opacity-60"
+      style={{
+        color: following ? (hoveringFollow ? '#dc2626' : '#16a34a') : accentText,
+      }}
+    >
+      {following ? (
+        hoveringFollow ? (
+          <>
+            <UserCheck size={13} /> Unfollow
+          </>
+        ) : (
+          <>
+            <UserCheck size={13} /> Following
+          </>
+        )
+      ) : (
+        <>
+          <UserPlus size={13} /> Follow
+        </>
+      )}
+    </button>
+  );
+
+  // ── Hero footer — social proof + links + share, folded into the hero card ──
+  const heroFooter = (
+    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
+      <div className="flex items-center gap-4 text-sm text-slate-500 flex-wrap">
+        <span className="flex items-center gap-1.5">
+          <Users size={14} className="text-slate-400" />
+          <span>
+            <strong className="font-bold text-slate-700 dark:text-white/80">{followerCount}</strong>{' '}
+            {followerCount === 1 ? 'follower' : 'followers'}
+          </span>
+        </span>
+        <span className="text-slate-300">·</span>
+        <span className="flex items-center gap-1.5">
+          <UserCheck size={14} className="text-slate-400" />
+          <span>
+            follows{' '}
+            <strong className="font-bold text-slate-700 dark:text-white/80">
+              {profile.followingCount ?? 0}
+            </strong>
+          </span>
+        </span>
+        {joined && (
+          <>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-400">Joined {joined}</span>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2.5 flex-wrap">
+        {allLinks.map((l, i) => {
+          const m = linkMeta(l.url, l.label);
+          const Icon = BRAND_ICON[m.brand] || Globe;
+          return (
+            <a
+              key={`${l.url}-${i}`}
+              href={m.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={m.href}
+              className="group inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/75 transition hover:-translate-y-px hover:border-slate-300 hover:shadow-sm"
+            >
+              <span style={{ color: m.color }} className="shrink-0">
+                <Icon size={14} />
+              </span>
+              <span className="max-w-[160px] truncate">{m.label}</span>
+            </a>
+          );
+        })}
+
+        <button
+          onClick={copyLink}
+          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/75 transition hover:bg-slate-100 dark:hover:bg-white/[0.08] hover:border-slate-300"
+          title="Copy a link to this profile"
+        >
+          {copied ? <Check size={14} className="text-green-600" /> : <LinkIcon size={14} />}
+          {copied ? 'Copied' : 'Share'}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="max-w-5xl mx-auto pb-12 space-y-6">
+    <div className="max-w-5xl mx-auto pb-16 space-y-5 page-enter">
       <ProfileHero
         name={profile.name}
         username={profile.username}
@@ -201,6 +391,7 @@ export default function ProfileView({
         department={profile.department}
         location={profile.location}
         organisation={profile.organisation}
+        accent={accent}
         avatar={
           <Avatar
             name={profile.name}
@@ -211,94 +402,9 @@ export default function ProfileView({
             image={profile.avatarImage}
           />
         }
-        actions={
-          isSelf ? (
-            <Link
-              href="/settings"
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-slate-600 dark:text-white/70 transition hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
-            >
-              <Pencil size={12} /> Edit profile
-            </Link>
-          ) : null
-        }
+        actions={coverAction}
+        footer={heroFooter}
       />
-
-      {/* ── Metadata strip (social counts + joined date + actions) ──────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        {/* Social counts + tenure */}
-        <div className="flex items-center gap-4 text-sm text-slate-500 flex-wrap">
-          <span className="flex items-center gap-1.5">
-            <Users size={14} className="text-slate-400" />
-            <span>
-              <strong className="font-bold text-slate-700">{followerCount}</strong>{' '}
-              {followerCount === 1 ? 'follower' : 'followers'}
-            </span>
-          </span>
-          <span className="text-slate-300">·</span>
-          <span className="flex items-center gap-1.5">
-            <UserCheck size={14} className="text-slate-400" />
-            <span>
-              follows <strong className="font-bold text-slate-700">{profile.followingCount ?? 0}</strong>
-            </span>
-          </span>
-          {joined && (
-            <>
-              <span className="text-slate-300">·</span>
-              <span className="text-slate-400">Joined {joined}</span>
-            </>
-          )}
-        </div>
-
-        {/* Right side: link chips + copy link + Follow button */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {allLinks.map((l, i) => {
-            const m = linkMeta(l.url, l.label);
-            const Icon = BRAND_ICON[m.brand] || Globe;
-            return (
-              <a
-                key={`${l.url}-${i}`}
-                href={m.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={m.href}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/75 transition hover:-translate-y-px hover:border-slate-300 hover:shadow-sm"
-              >
-                <span style={{ color: m.color }} className="shrink-0">
-                  <Icon size={14} />
-                </span>
-                <span className="max-w-[160px] truncate">{m.label}</span>
-              </a>
-            );
-          })}
-
-          <button
-            onClick={copyLink}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:border-slate-300"
-            title="Copy a link to this profile"
-          >
-            {copied ? <Check size={14} className="text-green-600" /> : <LinkIcon size={14} />}
-            {copied ? 'Copied' : 'Share'}
-          </button>
-
-          {!isSelf && (
-            <button
-              onClick={toggleFollow}
-              disabled={busy}
-              onMouseEnter={() => setHoveringFollow(true)}
-              onMouseLeave={() => setHoveringFollow(false)}
-              className={
-                following
-                  ? hoveringFollow
-                    ? 'border border-red-200 bg-red-50 text-red-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
-                    : 'border border-green-200 text-green-700 bg-green-50 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
-                  : 'border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
-              }
-            >
-              {following ? (hoveringFollow ? 'Unfollow' : 'Following ✓') : 'Follow'}
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* ── Highlights — story-style, text-only ─────────────────────────── */}
       <ProfileHighlights userId={profile.id} isSelf={isSelf} />
@@ -306,24 +412,8 @@ export default function ProfileView({
       {/* ── Impact row — what this person delivers, at a glance ─────────── */}
       {statTiles.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {statTiles.map((s) => (
-            <div key={s.label} className="card p-4">
-              <div className="flex items-center gap-2">
-                <span
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: s.bg, color: s.color }}
-                >
-                  <s.icon size={14} />
-                </span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {s.label}
-                </span>
-              </div>
-              <div className="mt-2.5 text-2xl font-black text-slate-900 dark:text-white tabular-nums">
-                {s.value}
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">{s.sub}</div>
-            </div>
+          {statTiles.map((s, i) => (
+            <StatTile key={s.label} s={s} index={i} />
           ))}
         </div>
       )}
@@ -332,7 +422,10 @@ export default function ProfileView({
       <div id="activity" className="scroll-mt-6">
         <div className="card rounded-xl border overflow-hidden">
           <div className="section-head px-5 py-4 border-b flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 shrink-0">
+            <div
+              className="flex items-center justify-center w-8 h-8 rounded-lg shrink-0"
+              style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)' }}
+            >
               <Activity size={18} className="text-blue-500" />
             </div>
             <div>

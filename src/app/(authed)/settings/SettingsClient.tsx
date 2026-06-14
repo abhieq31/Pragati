@@ -1500,6 +1500,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         location={user.location}
         organisation={user.organisation}
         linkUsername
+        accent={avatarBg}
         avatar={
           <ProfileAvatar
             name={user.name}
