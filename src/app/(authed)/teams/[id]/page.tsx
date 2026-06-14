@@ -7,6 +7,7 @@ import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X, Camera } from 'lucide-react';
 import { TeamForesight } from '@/components/TeamForesight';
+import { TeamDetailSkeleton } from '@/components/SkeletonScreens';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
 import dynamic from 'next/dynamic';
 // Heavy interactive SVG canvas — defer it until a viewer opens the modal.
@@ -249,41 +250,12 @@ export default function TeamDetailPage() {
     );
   }
 
+  // Mirror the route-level loading.tsx exactly — the navigation skeleton
+  // (loading.tsx → TeamDetailSkeleton) and this in-component fetch skeleton are
+  // the same shape, so the handoff between them is seamless rather than a flash
+  // of two different layouts.
   if (!team) {
-    return (
-      <div className="space-y-6 page-enter" aria-busy="true" aria-live="polite">
-        <div className="space-y-2">
-          <div className="skeleton h-7 w-48" />
-          <div className="skeleton h-4 w-3/4" />
-          <div className="skeleton h-3 w-32" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-1 space-y-3">
-            <div className="card p-4 space-y-3">
-              <div className="skeleton h-4 w-24" />
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="skeleton h-7 w-7 rounded-full shrink-0" />
-                  <div className="skeleton h-3 flex-1" />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="lg:col-span-3 space-y-3">
-            <div className="card p-4 space-y-3">
-              <div className="skeleton h-4 w-32" />
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="space-y-1">
-                  <div className="skeleton h-3 w-full" />
-                  <div className="skeleton h-2 w-1/2" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <span className="sr-only">Loading team…</span>
-      </div>
-    );
+    return <TeamDetailSkeleton />;
   }
 
   async function addMember() {

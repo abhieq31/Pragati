@@ -118,11 +118,11 @@ export default function ProfileView({
   // is what this person delivers, before the heatmap streams in below.
   const stats = profile.stats;
 
-  // ── Frosted action pill over the cover — Edit (self) only ──────────────────
+  // ── Edit action (self only) — a quiet pill in the hero's top-right ─────────
   const coverAction = isSelf ? (
     <Link
       href="/settings"
-      className="inline-flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-black/30 backdrop-blur px-3.5 py-1.5 text-[12px] font-bold text-slate-700 dark:text-white shadow-sm ring-1 ring-black/5 transition hover:scale-[1.03]"
+      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-slate-600 dark:text-white/70 transition hover:border-blue-300 hover:text-blue-700 dark:hover:text-blue-300"
     >
       <Pencil size={12} /> Edit profile
     </Link>

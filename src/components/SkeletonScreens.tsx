@@ -18,23 +18,23 @@ function Skel({ className = '' }: { className?: string }) {
    tiles, the Foresight panel) so the real content lands without a jump. */
 function ProfileHeroGhost() {
   return (
-    <div className="card overflow-hidden p-0">
-      <div className="h-28 sm:h-36 skeleton" />
-      <div className="px-5 sm:px-6 pb-5 sm:pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
-          <div className="-mt-14 sm:-mt-16 shrink-0">
-            <Skel className="h-[96px] w-[96px] rounded-full ring-4 ring-white dark:ring-[#262624]" />
-          </div>
-          <div className="flex-1 min-w-0 sm:pt-3 space-y-2.5">
+    <div className="card p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
+        <div className="shrink-0">
+          <Skel className="h-[96px] w-[96px] rounded-full ring-1 ring-slate-200 dark:ring-white/10" />
+        </div>
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2.5">
             <Skel className="h-6 w-52 max-w-full rounded-lg" />
             <Skel className="h-3.5 w-32 rounded" />
             <Skel className="h-3.5 w-64 max-w-full rounded" />
           </div>
+          <Skel className="h-7 w-24 rounded-full shrink-0" />
         </div>
-        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-3">
-          <Skel className="h-3.5 w-28 rounded" />
-          <Skel className="h-7 w-24 rounded-full" />
-        </div>
+      </div>
+      <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-3">
+        <Skel className="h-3.5 w-28 rounded" />
+        <Skel className="h-7 w-20 rounded-full" />
       </div>
     </div>
   );
