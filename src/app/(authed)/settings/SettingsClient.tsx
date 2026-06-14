@@ -42,9 +42,10 @@ import {
 } from 'lucide-react';
 
 import { MonogramEditor } from '@/components/MonogramEditor';
-import { ProfileHighlights } from '@/components/ProfileHighlights';
 import { linkMeta, type LinkBrand } from '@/lib/links';
 import { ProfileHero } from '@/components/ProfileHero';
+import { DeliveryForesight } from '@/components/DeliveryForesight';
+import { SelfImpactTiles } from '@/components/ProfileStatTiles';
 
 /* ── Profile avatar wrapper ───────────────────────────────────────────────
    Renders the user's monogram avatar with a hover-overlay "edit" hint.
@@ -1556,9 +1557,6 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         }
       />
 
-      {/* Highlights — story-style, text-only. Owner can add/remove here. */}
-      <ProfileHighlights userId={user.id} isSelf />
-
       {/* Monogram avatar editor — letter + colour + font, with Inspire-me. */}
       {showAvatarEditor && (
         <MonogramEditor
@@ -1613,6 +1611,12 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
           </form>
         </Section>
       )}
+
+      {/* ── Impact row — your delivery at a glance (matches the public profile) ── */}
+      <SelfImpactTiles />
+
+      {/* ── Delivery Foresight — predictive read over the heavy engine ──── */}
+      <DeliveryForesight userId={user.id} isSelf />
 
       {/* ── Activity — the star feature, front and centre ────────────────── */}
       <div id="activity" className="scroll-mt-6">
