@@ -4,7 +4,14 @@ import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
-import { formatDate, daysUntil, ProgressBar, LIFECYCLE_LABELS, STATUS_COLORS } from '@/components/ui';
+import {
+  formatDate,
+  daysUntil,
+  ProgressBar,
+  LIFECYCLE_LABELS,
+  STATUS_COLORS,
+  projectRef,
+} from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { useIsLead } from '@/components/CurrentUserContext';
@@ -78,6 +85,8 @@ interface TeamTask {
 interface DashProject {
   id: string;
   code: string;
+  ccNo?: string;
+  refLabel?: string;
   name: string;
   lifecycle?: string;
   status: string;
@@ -1228,7 +1237,7 @@ function ProjectRow({
             {project.name}
           </Link>
           <div className="text-[10px] font-bold text-slate-400/80 dark:text-white/25 tracking-wider mt-0.5">
-            {project.code}
+            {projectRef(project)}
           </div>
           {/* Identity + metadata pills — replaces the dot-separated strip so
               each fact reads as its own chip and the row scans cleanly. */}

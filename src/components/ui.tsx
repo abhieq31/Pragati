@@ -242,6 +242,26 @@ export function EmptyState({ title, hint, principle }: { title: string; hint?: s
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
+
+/** The reference string to display for a project everywhere outside the detail
+ *  page: the user's own reference number (ccNo) with its picked label
+ *  (refLabel), falling back to the system code only when no reference is set.
+ *  This is THE identity the README promises — "your reference scheme, not
+ *  ours" — so a card never shows the system-generated code once the owner has
+ *  given the project its real number. */
+export function projectRef(p: {
+  ccNo?: string | null;
+  refLabel?: string | null;
+  code?: string | null;
+}): string {
+  const num = (p.ccNo || '').trim();
+  if (num) {
+    const label = (p.refLabel || '').trim();
+    return label ? `${label} ${num}` : num;
+  }
+  return (p.code || '').trim();
+}
+
 export function formatDate(s?: string | Date | null) {
   if (!s) return '—';
   const d = new Date(s);

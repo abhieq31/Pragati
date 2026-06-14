@@ -226,25 +226,28 @@ export default function ProfileView({
       {/* ── Metadata strip (social counts + joined date + actions) ──────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         {/* Social counts + tenure */}
-        <div className="flex items-center gap-4 text-sm text-slate-500 flex-wrap">
+        <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-white/50 flex-wrap">
           <span className="flex items-center gap-1.5">
-            <Users size={14} className="text-slate-400" />
+            <Users size={14} className="text-slate-400 dark:text-white/35" />
             <span>
-              <strong className="font-bold text-slate-700">{followerCount}</strong>{' '}
+              <strong className="font-bold text-slate-700 dark:text-white/80">{followerCount}</strong>{' '}
               {followerCount === 1 ? 'follower' : 'followers'}
             </span>
           </span>
-          <span className="text-slate-300">·</span>
+          <span className="text-slate-300 dark:text-white/20">·</span>
           <span className="flex items-center gap-1.5">
-            <UserCheck size={14} className="text-slate-400" />
+            <UserCheck size={14} className="text-slate-400 dark:text-white/35" />
             <span>
-              follows <strong className="font-bold text-slate-700">{profile.followingCount ?? 0}</strong>
+              follows{' '}
+              <strong className="font-bold text-slate-700 dark:text-white/80">
+                {profile.followingCount ?? 0}
+              </strong>
             </span>
           </span>
           {joined && (
             <>
-              <span className="text-slate-300">·</span>
-              <span className="text-slate-400">Joined {joined}</span>
+              <span className="text-slate-300 dark:text-white/20">·</span>
+              <span className="text-slate-400 dark:text-white/40">Joined {joined}</span>
             </>
           )}
         </div>
@@ -273,7 +276,7 @@ export default function ProfileView({
 
           <button
             onClick={copyLink}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 hover:border-slate-300"
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-white/75 transition hover:bg-slate-100 dark:hover:bg-white/[0.08] hover:border-slate-300 dark:hover:border-white/20"
             title="Copy a link to this profile"
           >
             {copied ? <Check size={14} className="text-green-600" /> : <LinkIcon size={14} />}
@@ -289,9 +292,9 @@ export default function ProfileView({
               className={
                 following
                   ? hoveringFollow
-                    ? 'border border-red-200 bg-red-50 text-red-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
-                    : 'border border-green-200 text-green-700 bg-green-50 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
-                  : 'border border-blue-200 text-blue-600 hover:bg-blue-50 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
+                    ? 'border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
+                    : 'border border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
+                  : 'border border-blue-200 dark:border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 px-4 py-1.5 rounded-full text-sm font-semibold transition disabled:opacity-60'
               }
             >
               {following ? (hoveringFollow ? 'Unfollow' : 'Following ✓') : 'Follow'}
@@ -315,14 +318,14 @@ export default function ProfileView({
                 >
                   <s.icon size={14} />
                 </span>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/40">
                   {s.label}
                 </span>
               </div>
               <div className="mt-2.5 text-2xl font-black text-slate-900 dark:text-white tabular-nums">
                 {s.value}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">{s.sub}</div>
+              <div className="text-[11px] text-slate-400 dark:text-white/35 mt-0.5">{s.sub}</div>
             </div>
           ))}
         </div>
@@ -330,14 +333,14 @@ export default function ProfileView({
 
       {/* ── Activity section ────────────────────────────────────────────── */}
       <div id="activity" className="scroll-mt-6">
-        <div className="card rounded-xl border overflow-hidden">
-          <div className="section-head px-5 py-4 border-b flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 shrink-0">
-              <Activity size={18} className="text-blue-500" />
+        <div className="card rounded-xl border dark:border-white/10 overflow-hidden">
+          <div className="section-head px-5 py-4 border-b dark:border-white/10 flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/15 shrink-0">
+              <Activity size={18} className="text-blue-500 dark:text-blue-400" />
             </div>
             <div>
-              <h3 className="text-[15px] font-bold text-slate-800 leading-tight">Activity</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+              <h3 className="text-[15px] font-bold text-slate-800 dark:text-white leading-tight">Activity</h3>
+              <p className="text-[11px] text-slate-400 dark:text-white/40 mt-0.5 leading-snug">
                 {isSelf ? 'Your' : `${firstName}'s`} delivered work on Pragati — completed tasks, weighted for
                 on-time and priority.
               </p>

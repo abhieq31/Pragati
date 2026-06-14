@@ -17,6 +17,10 @@ import { normalizeRole } from '@/lib/auth';
 export interface ProjectListItem {
   id: string;
   code: string;
+  /** User-pickable reference number + its label (the README's "your reference
+   *  scheme, not ours"). Shown on cards in place of the system code. */
+  ccNo?: string;
+  refLabel?: string;
   name: string;
   description?: string;
   lifecycle: string;
@@ -85,7 +89,7 @@ export async function listProjectsForUser(
 
   const projects = await Project.find(q)
     .select(
-      'code name description lifecycle status priority teamId ownerId startDate dueDate completedAt gxpImpact archived archivedAt archivedBy isPersonal personal createdAt',
+      'code ccNo refLabel name description lifecycle status priority teamId ownerId startDate dueDate completedAt gxpImpact archived archivedAt archivedBy isPersonal personal createdAt',
     )
     .sort({ createdAt: -1 })
     .limit(200)

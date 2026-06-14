@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/client/api';
 import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
-import { LifecycleTag, StatusTag, formatDate } from '@/components/ui';
+import { LifecycleTag, StatusTag, formatDate, projectRef } from '@/components/ui';
 import { Select } from '@/components/Select';
 import { useIsLead } from '@/components/CurrentUserContext';
 import { Plus, Search, SlidersHorizontal, Lock, X } from 'lucide-react';
@@ -198,7 +198,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
       {!loaded && (
         <div
           className="grid gap-5"
-          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}
           aria-busy="true"
           aria-live="polite"
         >
@@ -227,7 +227,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
       {/* Grid */}
       {loaded && (
-        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+        <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
           {projects.map((p) => {
             const pct = p.taskCount ? Math.round((p.tasksDone / p.taskCount) * 100) : 0;
             const overdueRatio = p.taskCount ? (p.tasksOverdue || 0) / p.taskCount : 0;
@@ -264,7 +264,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
                       </span>
                     ) : (
                       <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-slate-400 dark:text-white/30 bg-slate-50 dark:bg-white/[0.05] px-2 py-0.5 rounded">
-                        {p.ccNo || p.code}
+                        {projectRef(p)}
                       </span>
                     )}
                     <span
