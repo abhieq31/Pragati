@@ -57,10 +57,12 @@ const ProjectSchema = new Schema(
     archivedAt: { type: Date, default: null },
     archivedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 
-    // ── Personal projects ───────────────────────────────────────────────
-    // A personal project is private to its owner — never surfaced to other
-    // users (including admins) anywhere in the app. Any authenticated user
-    // can create one; it carries no team.
+    // ── Personal projects (DEPRECATED field) ────────────────────────────
+    // Duplicate of `isPersonal` above, which is now the single source of
+    // truth. No new code writes this; scripts/consolidate-personal-flag.ts
+    // backfills `isPersonal` from it and unsets it on existing rows. Kept in
+    // the schema only so legacy documents still parse during the transition
+    // and a rollback stays safe — do NOT read or write it in new code.
     personal: { type: Boolean, default: false },
 
     // ── Project reference number ─────────────────────────────────────────

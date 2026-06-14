@@ -17,6 +17,7 @@
     "set-password": "tsx scripts/set-password.ts",
     "backfill-usernames": "tsx scripts/backfill-usernames.ts",
     "migrate-roles": "tsx scripts/migrate-roles.ts",
+    "consolidate-personal-flag": "tsx scripts/consolidate-personal-flag.ts",
     "smoke-prod": "tsx scripts/smoke-prod.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/unit/*.test.ts",

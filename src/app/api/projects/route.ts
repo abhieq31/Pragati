@@ -215,8 +215,11 @@ export async function POST(req: NextRequest) {
       // its creator — that is what keeps it private to them.
       teamId: isPersonal ? undefined : body.teamId || undefined,
       ownerId: isPersonal ? user!.sub : body.ownerId || user!.sub,
+      // `isPersonal` is the single source of truth. The legacy duplicate
+      // `personal` field is no longer written (it's healed away by
+      // scripts/consolidate-personal-flag.ts); the privacy filter still
+      // guards both, so a straggler can never leak before the backfill runs.
       isPersonal,
-      personal: isPersonal,
       startDate: body.startDate ? new Date(body.startDate) : undefined,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
       gxpImpact: isPersonal ? 'none' : body.gxpImpact || 'none',
