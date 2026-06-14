@@ -28,6 +28,7 @@ import { api } from '@/lib/client/api';
 import { linkMeta, type LinkBrand } from '@/lib/links';
 import { ProfileHighlights } from '@/components/ProfileHighlights';
 import { ConnectionsModal, type ConnectionTab } from '@/components/ConnectionsModal';
+import { ProfileQuickLinks } from '@/components/ProfileQuickLinks';
 
 // Map a detected brand to a lucide icon. Anything without a dedicated mark
 // (Medium, Dribbble, a personal site, …) renders the clean Globe chip — its
@@ -357,6 +358,8 @@ export default function ProfileView({
       </div>
 
       <div className="flex items-center gap-2.5 flex-wrap">
+        <ProfileQuickLinks />
+        {allLinks.length > 0 && <span className="w-px h-5 bg-slate-200 dark:bg-white/10" aria-hidden />}
         {allLinks.map((l, i) => {
           const m = linkMeta(l.url, l.label);
           const Icon = BRAND_ICON[m.brand] || Globe;
