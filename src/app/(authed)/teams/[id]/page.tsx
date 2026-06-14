@@ -5,7 +5,17 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
-import { Trash2, BarChart3, X, Camera } from 'lucide-react';
+import {
+  Trash2,
+  BarChart3,
+  X,
+  Camera,
+  Users,
+  FolderKanban,
+  CheckCircle2,
+  ListTodo,
+  AlertTriangle,
+} from 'lucide-react';
 import { TeamForesight } from '@/components/TeamForesight';
 import { TeamDetailSkeleton } from '@/components/SkeletonScreens';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
@@ -87,22 +97,28 @@ const FUNCTION_COVER: Record<string, string> = {
 };
 const DEFAULT_COVER = 'linear-gradient(115deg, #1565C0 0%, #1976D2 40%, #2E7D32 100%)';
 
-/* One figure in the team hero's summary strip. */
+/* One figure in the team header's stat strip — a quiet tile with an icon so
+   the five numbers scan at a glance rather than reading as a wall of text. */
 function HeroStat({
+  icon: Icon,
   label,
   value,
   sub,
   accent,
 }: {
+  icon?: any;
   label: string;
   value: React.ReactNode;
   sub?: string;
   accent?: string;
 }) {
   return (
-    <div className="min-w-0">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
-      <div className="mt-0.5 flex items-baseline gap-1">
+    <div className="min-w-0 rounded-xl border border-slate-200/70 dark:border-white/[0.07] bg-slate-50/60 dark:bg-white/[0.02] px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        {Icon && <Icon size={12} className="shrink-0" style={accent ? { color: accent } : undefined} />}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="mt-1 flex items-baseline gap-1">
         <span
           className="text-[20px] font-black tabular-nums leading-none text-slate-900 dark:text-white"
           style={accent ? { color: accent } : undefined}
@@ -361,140 +377,129 @@ export default function TeamDetailPage() {
           </div>
         </ModalPortal>
       )}
-      {/* ── Team hero — function-tinted cover, avatar straddling, summary strip ── */}
-      <section className="card overflow-hidden p-0">
-        <div className="relative h-24 sm:h-28 overflow-hidden" style={{ background: cover }}>
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              opacity: 0.5,
-              background: 'radial-gradient(120% 150% at 12% -30%, rgba(255,255,255,0.4), transparent 50%)',
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              opacity: 0.16,
-              backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1.4px)',
-              backgroundSize: '15px 15px',
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-16"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.14), transparent)' }}
-          />
-          {(isOwnerOrAdmin || isLead) && (
-            <div className="absolute top-3 right-3 flex items-center gap-1.5">
-              <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
-              <ExportMenu
-                onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
-                onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
-                onBirdEyeSvg={() => setShowBirdEye(true)}
-              />
+      {/* ── Team header — minimal identity + actions, then a stat strip.
+          No cover banner: a compact, dense header that gets straight to the
+          numbers, matching the rest of the app. ─────────────────────────── */}
+      <section className="card p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
+          {/* Avatar — neutral framed; owner/admin can replace it on hover. The
+              function tint lives on the small fallback tile, not a full banner. */}
+          <div className="shrink-0 flex flex-col items-center gap-1">
+            <div
+              className={`relative rounded-2xl p-[3px] bg-white dark:bg-[#262624] ring-1 ring-slate-200 dark:ring-white/10 shadow-sm ${
+                isOwnerOrAdmin ? 'cursor-pointer' : ''
+              }`}
+              onMouseEnter={() => setAvatarHover(true)}
+              onMouseLeave={() => setAvatarHover(false)}
+              onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
+              title={isOwnerOrAdmin ? 'Change team avatar' : undefined}
+            >
+              {avatarImage ? (
+                <img
+                  src={avatarImage}
+                  alt={`${team.name} avatar`}
+                  className="w-[68px] h-[68px] rounded-[14px] object-cover"
+                />
+              ) : (
+                <div
+                  className="w-[68px] h-[68px] rounded-[14px] flex items-center justify-center"
+                  style={{ background: cover }}
+                >
+                  <span className="text-3xl font-black text-white/90 select-none">
+                    {team.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
+                <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
+                  {avatarUploading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Camera size={18} className="text-white" />
+                  )}
+                </div>
+              )}
             </div>
-          )}
+            {isOwnerOrAdmin && avatarImage && (
+              <button
+                onClick={removeAvatar}
+                disabled={avatarUploading}
+                className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
+              >
+                Remove
+              </button>
+            )}
+            {isOwnerOrAdmin && (
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarFileChange}
+              />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
+                    {team.name}
+                  </h1>
+                  {/* Human label for the team's operating function — the raw enum
+                      ("rtb") is a database detail, not UI copy. */}
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                      (
+                        {
+                          rtb: 'bg-blue-50 text-blue-700 border-blue-200',
+                          ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        } as Record<string, string>
+                      )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    {FUNCTION_LABEL[team.function] || team.function}
+                  </span>
+                </div>
+                {team.description && (
+                  <p className="text-sm text-slate-500 dark:text-white/50 mt-1.5 leading-snug">
+                    {team.description}
+                  </p>
+                )}
+              </div>
+
+              {(isOwnerOrAdmin || isLead) && (
+                <div className="shrink-0 flex items-center gap-1.5">
+                  <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
+                  <ExportMenu
+                    onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+                    onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+                    onBirdEyeSvg={() => setShowBirdEye(true)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="px-5 sm:px-6 pb-5">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-            {/* Avatar straddling the cover (owner/admin can change on hover). */}
-            <div className="-mt-12 shrink-0 flex flex-col items-center gap-1">
-              <div
-                className="relative cursor-pointer rounded-2xl p-[3px] bg-white dark:bg-[#262624] shadow-lg"
-                onMouseEnter={() => setAvatarHover(true)}
-                onMouseLeave={() => setAvatarHover(false)}
-                onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
-                title={isOwnerOrAdmin ? 'Change team avatar' : undefined}
-              >
-                {avatarImage ? (
-                  <img
-                    src={avatarImage}
-                    alt={`${team.name} avatar`}
-                    className="w-[72px] h-[72px] rounded-[14px] object-cover"
-                  />
-                ) : (
-                  <div
-                    className="w-[72px] h-[72px] rounded-[14px] flex items-center justify-center"
-                    style={{ background: cover }}
-                  >
-                    <span className="text-3xl font-black text-white/90 select-none">
-                      {team.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
-                  <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
-                    {avatarUploading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Camera size={18} className="text-white" />
-                    )}
-                  </div>
-                )}
-              </div>
-              {isOwnerOrAdmin && avatarImage && (
-                <button
-                  onClick={removeAvatar}
-                  disabled={avatarUploading}
-                  className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
-                >
-                  Remove
-                </button>
-              )}
-              {isOwnerOrAdmin && (
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarFileChange}
-                />
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0 sm:pb-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
-                  {team.name}
-                </h1>
-                {/* Human label for the team's operating function — the raw enum
-                    ("rtb") is a database detail, not UI copy. */}
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
-                    (
-                      {
-                        rtb: 'bg-blue-50 text-blue-700 border-blue-200',
-                        ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                      } as Record<string, string>
-                    )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
-                  }`}
-                >
-                  {FUNCTION_LABEL[team.function] || team.function}
-                </span>
-              </div>
-              {team.description && (
-                <p className="text-sm text-slate-500 dark:text-white/50 mt-1.5 leading-snug">
-                  {team.description}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Summary strip — the team at a glance, from data already on screen. */}
-          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/[0.06] grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <HeroStat label="Members" value={team.members.length} />
-            <HeroStat label="Projects" value={heroProjects.length} />
-            <HeroStat label="Tasks done" value={`${heroTaskDone}/${heroTaskTotal}`} sub={`${heroPct}%`} />
-            <HeroStat label={isLead ? 'Open' : 'My open'} value={heroOpen} />
-            <HeroStat
-              label={isLead ? 'Overdue' : 'My overdue'}
-              value={heroOverdue}
-              accent={heroOverdue > 0 ? '#dc2626' : undefined}
-            />
-          </div>
+        {/* Stat strip — the team at a glance, from data already on screen. */}
+        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          <HeroStat icon={Users} label="Members" value={team.members.length} />
+          <HeroStat icon={FolderKanban} label="Projects" value={heroProjects.length} />
+          <HeroStat
+            icon={CheckCircle2}
+            label="Tasks done"
+            value={`${heroTaskDone}/${heroTaskTotal}`}
+            sub={`${heroPct}%`}
+          />
+          <HeroStat icon={ListTodo} label={isLead ? 'Open' : 'My open'} value={heroOpen} />
+          <HeroStat
+            icon={AlertTriangle}
+            label={isLead ? 'Overdue' : 'My overdue'}
+            value={heroOverdue}
+            accent={heroOverdue > 0 ? '#dc2626' : undefined}
+          />
         </div>
       </section>
 

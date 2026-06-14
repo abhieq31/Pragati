@@ -19,10 +19,11 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, attributed wisdom from seven builders (Jobs, Naval, Bezos, Musk,
-   Franklin, Jensen, Ellison). Built-ins ship with the app; /api/quotes swaps
-   in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
-   without a redeploy. Daily-seeded start so the day has "a quote of the day". */
+/* Rotating, unattributed wisdom — a single builder's voice on first
+   principles, simplification, and execution. The name is never shown, only the
+   line. Built-ins ship with the app; /api/quotes swaps in the operator's live
+   feed (QUOTES_FEED_URL) so the library keeps growing without a redeploy.
+   Daily-seeded start so the day has "a quote of the day". */
 
 const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
 

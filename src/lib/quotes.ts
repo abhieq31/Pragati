@@ -1,17 +1,15 @@
 /**
- * Login-screen wisdom — drawn from a fixed canon of books on building and
- * leading: High Output Management, Only the Paranoid Survive, The Hard Thing
- * About Hard Things, The Innovator's Dilemma, Outliers, The Singularity Is
- * Near, Snow Crash, and Positioning — plus Jensen Huang's own lines.
+ * Login-screen wisdom — a single voice: the builder's playbook of first
+ * principles, ruthless simplification, and execution under pressure. Chosen to
+ * resonate with what Pragati is for — shipping real work, deleting needless
+ * process, and reading delivery honestly.
  *
- * Display rule: NO attribution is ever rendered. The words stand alone.
- * (`author` is kept on the type for internal curation and feed validation
- * only — the login page never shows it.)
+ * Display rule: NO attribution is ever rendered. The words stand alone — the
+ * login page shows the line, never the name. (`author` is kept on the type for
+ * internal curation only and is never surfaced in the UI.)
  *
  * No-repeat rule: the login page rotates through a per-device shuffled queue
- * and never repeats a quote until the whole library is exhausted. At one
- * quote per 8 seconds across 40+ quotes, that guarantees no repetition for
- * well over five minutes of reading.
+ * and never repeats a quote until the whole library is exhausted.
  *
  * The library can still be refreshed forever without a redeploy by hosting a
  * JSON array of {text, author} and setting QUOTES_FEED_URL — /api/quotes
@@ -24,165 +22,107 @@ export interface Quote {
 }
 
 export const BUILTIN_QUOTES: Quote[] = [
-  // ── High Output Management ──────────────────────────────────────────────
+  // ── First principles ────────────────────────────────────────────────────
+  { text: 'Boil things down to their fundamental truths, then reason up from there.', author: 'Elon Musk' },
   {
-    text: 'A manager’s output is the output of his organization plus the output of the neighboring organizations under his influence.',
-    author: 'High Output Management',
+    text: 'It is important to reason from first principles rather than by analogy.',
+    author: 'Elon Musk',
   },
   {
-    text: 'The art of management lies in selecting the one, two, or three activities that provide leverage well beyond the others — and concentrating on them.',
-    author: 'High Output Management',
+    text: 'The only rules are the ones dictated by the laws of physics. Everything else is a recommendation.',
+    author: 'Elon Musk',
+  },
+  // ── Question the requirements ────────────────────────────────────────────
+  {
+    text: 'Make the requirements less dumb. Your requirements are definitely dumb — it is just a question of how dumb.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Stressing output is the key to improving productivity; looking to increase activity can result in just the opposite.',
-    author: 'High Output Management',
+    text: 'Every requirement should carry a name, not a department. A requirement no one will own is a requirement no one should follow.',
+    author: 'Elon Musk',
+  },
+  // ── Delete, then simplify ────────────────────────────────────────────────
+  {
+    text: 'Delete any part or process you can. If you are not adding back at least a tenth of what you remove, you are not deleting enough.',
+    author: 'Elon Musk',
+  },
+  { text: 'The best part is no part. The best process is no process.', author: 'Elon Musk' },
+  {
+    text: 'The most common error of a smart engineer is to optimize something that should not exist.',
+    author: 'Elon Musk',
   },
   {
-    text: 'How you handle your own time is the single most important aspect of being a role model and leader.',
-    author: 'High Output Management',
+    text: 'Simplify first, then accelerate. Never speed up a step that should have been deleted.',
+    author: 'Elon Musk',
+  },
+  { text: 'Any product that needs a manual to work is broken.', author: 'Elon Musk' },
+  // ── Schedules, urgency, cost of delay ────────────────────────────────────
+  { text: 'If a schedule is long, it is wrong. If it is tight, it is right.', author: 'Elon Musk' },
+  { text: 'The longer a problem waits, the more it costs to fix.', author: 'Elon Musk' },
+  {
+    text: 'Move fast — but know exactly what you are building, and why.',
+    author: 'Elon Musk',
+  },
+  // ── Persistence & resolve ────────────────────────────────────────────────
+  {
+    text: 'When something is important enough, you do it even if the odds are not in your favor.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Training is, quite simply, one of the highest-leverage activities a manager can perform.',
-    author: 'High Output Management',
+    text: 'Persistence is very important. You should not give up unless you are forced to give up.',
+    author: 'Elon Musk',
   },
   {
-    text: 'A genuinely effective indicator covers the output of the work, not simply the activity involved.',
-    author: 'High Output Management',
+    text: 'The first step is to establish that something is possible; then probability will occur.',
+    author: 'Elon Musk',
+  },
+  { text: 'If things are not failing, you are not innovating enough.', author: 'Elon Musk' },
+  {
+    text: 'If you get up in the morning and think the future is going to be better, it is a bright day.',
+    author: 'Elon Musk',
+  },
+  // ── Focus & feedback ─────────────────────────────────────────────────────
+  {
+    text: 'Focus on signal over noise. Do not waste time on anything that does not make the work better.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Reports are more a medium of self-discipline than a way to communicate information.',
-    author: 'High Output Management',
+    text: 'A goal everyone understands — and understands the reason for — gets done faster.',
+    author: 'Elon Musk',
   },
   {
-    text: 'When a person is not doing his job, there can only be two reasons: he either can’t do it, or won’t.',
-    author: 'High Output Management',
-  },
-  // ── Only the Paranoid Survive ───────────────────────────────────────────
-  {
-    text: 'Success breeds complacency. Complacency breeds failure. Only the paranoid survive.',
-    author: 'Only the Paranoid Survive',
+    text: 'Constantly seek criticism. A well-reasoned critique of your work is worth its weight in gold.',
+    author: 'Elon Musk',
   },
   {
-    text: 'A strategic inflection point is when the fundamentals of a business are about to change.',
-    author: 'Only the Paranoid Survive',
+    text: 'Pay attention to negative feedback, and actively solicit it — especially from people who will tell you the truth.',
+    author: 'Elon Musk',
+  },
+  // ── Teams & ownership ────────────────────────────────────────────────────
+  {
+    text: 'Great things are never built by one person. They are built by a team that trusts one another.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Bad companies are destroyed by crisis. Good companies survive them. Great companies are improved by them.',
-    author: 'Only the Paranoid Survive',
-  },
-  { text: 'Let chaos reign, then rein in chaos.', author: 'Only the Paranoid Survive' },
-  {
-    text: 'The person who is the star of a previous era is often the last one to adapt to change.',
-    author: 'Only the Paranoid Survive',
-  },
-  // ── The Hard Thing About Hard Things ────────────────────────────────────
-  {
-    text: 'Hard things are hard because there are no easy answers or recipes.',
-    author: 'The Hard Thing About Hard Things',
+    text: 'Talent wins the game, but the real multiplier is how well the team works together.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Take care of the people, the products, and the profits — in that order.',
-    author: 'The Hard Thing About Hard Things',
+    text: 'Take ownership of the outcome, not just your part of it.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Every time you make the hard, correct decision you become a bit more courageous; every time you make the easy, wrong decision you become a bit more cowardly.',
-    author: 'The Hard Thing About Hard Things',
+    text: 'It is OK to have your eggs in one basket — as long as you control what happens to that basket.',
+    author: 'Elon Musk',
+  },
+  // ── Progress ─────────────────────────────────────────────────────────────
+  {
+    text: 'Make progress, fail, learn, make more progress. That is the only way forward.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Spend zero time on what you could have done, and devote all of your time on what you might do.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'There are no shortcuts to knowledge, especially knowledge gained from personal experience.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Build a culture that rewards people for getting problems into the open, where they can be solved.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Sometimes an organization doesn’t need a solution; it just needs clarity.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  // ── The Innovator's Dilemma ─────────────────────────────────────────────
-  { text: 'Markets that do not exist cannot be analyzed.', author: "The Innovator's Dilemma" },
-  {
-    text: 'The very decision-making processes that are key to the success of established companies are the same processes that reject disruptive ideas.',
-    author: "The Innovator's Dilemma",
-  },
-  {
-    text: 'Disruption starts simpler and cheaper at the low end — and then it climbs.',
-    author: "The Innovator's Dilemma",
-  },
-  {
-    text: 'Listening only to your best customers can be precisely how you lose the future.',
-    author: "The Innovator's Dilemma",
-  },
-  // ── Outliers ────────────────────────────────────────────────────────────
-  {
-    text: 'Practice isn’t the thing you do once you’re good. It’s the thing you do that makes you good.',
-    author: 'Outliers',
-  },
-  {
-    text: 'Success arises out of a predictable and powerful set of circumstances and opportunities — and the readiness to seize them.',
-    author: 'Outliers',
-  },
-  {
-    text: 'Hard work is a prison sentence only if it does not have meaning.',
-    author: 'Outliers',
-  },
-  {
-    text: 'Autonomy, complexity, and a connection between effort and reward — the three qualities work must have to be satisfying.',
-    author: 'Outliers',
-  },
-  {
-    text: 'No one who rises before dawn three hundred sixty days a year fails to make his family rich.',
-    author: 'Outliers',
-  },
-  // ── The Singularity Is Near ─────────────────────────────────────────────
-  {
-    text: 'We won’t experience a hundred years of progress in this century — it will be more like twenty thousand years of progress, at today’s rate.',
-    author: 'The Singularity Is Near',
-  },
-  {
-    text: 'Our intuition about the future is linear. The reality of technology is exponential.',
-    author: 'The Singularity Is Near',
-  },
-  {
-    text: 'An invention has to make sense in the world in which it is finished, not the world in which it is started.',
-    author: 'The Singularity Is Near',
-  },
-  // ── Snow Crash ──────────────────────────────────────────────────────────
-  {
-    text: 'The world is full of power and energy, and a person can go far by just skimming off a tiny bit of it.',
-    author: 'Snow Crash',
-  },
-  { text: 'Condense fact from the vapor of nuance.', author: 'Snow Crash' },
-  // ── Positioning ─────────────────────────────────────────────────────────
-  {
-    text: 'Positioning is not what you do to a product. It is what you do to the mind.',
-    author: 'Positioning',
-  },
-  { text: 'It is better to be first than it is to be better.', author: 'Positioning' },
-  {
-    text: 'The mind screens and rejects much of the information offered it. It accepts only what matches its prior state.',
-    author: 'Positioning',
-  },
-  {
-    text: 'Don’t try to create something new and different in the mind. Work with what’s already there.',
-    author: 'Positioning',
-  },
-  // ── Jensen Huang ────────────────────────────────────────────────────────
-  { text: 'I want you to be in a state of urgency. Not panic — urgency.', author: 'Jensen Huang' },
-  { text: 'Run. Don’t walk.', author: 'Jensen Huang' },
-  { text: 'The mission is the boss.', author: 'Jensen Huang' },
-  {
-    text: 'I don’t wear a watch, because the most important time is now.',
-    author: 'Jensen Huang',
-  },
-  {
-    text: 'Greatness is not intelligence. Greatness comes from character — and character is formed through struggle.',
-    author: 'Jensen Huang',
+    text: 'Brand is just a perception, and perception will match reality over time.',
+    author: 'Elon Musk',
   },
 ];
 

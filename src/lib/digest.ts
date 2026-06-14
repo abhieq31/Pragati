@@ -542,9 +542,10 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     leadershipBrief,
     foresightLine,
   } = input;
-  // Task rows show the project *reference* (ccNo||code) to match the app; fall
-  // back to the name when a caller predates the projectRef resolver.
-  const projLabel = (pid: string | null) => (projectRef ? projectRef(pid) : projectName(pid));
+  // Task rows show the project *reference* (ccNo||code) to match the app, but
+  // fall back to the project name when no reference resolves (a caller that
+  // predates the resolver, or a project with neither ccNo nor code).
+  const projLabel = (pid: string | null) => (projectRef ? projectRef(pid) : null) || projectName(pid);
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
   const weekday = dateLabel.split(/[ ,]/)[0] || 'daily';
 
