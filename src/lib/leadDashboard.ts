@@ -4,6 +4,7 @@ import { Task } from '@/models/Task';
 import { User } from '@/models/User';
 import { Team } from '@/models/Team';
 import { project as projectS, task as taskS, date as toIso } from '@/lib/serialize';
+import { projectRef } from '@/lib/projectRef';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStrip';
 import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
@@ -280,6 +281,10 @@ async function computeLeadDashboardData(jwtUser: {
         taskCount: s.total,
         tasksDone: s.done,
       }),
+      // The reference shown on the card is whatever the owner picked (ccNo),
+      // falling back to the system code — same rule as the API and every other
+      // surface, so a changed reference reflects here too.
+      code: projectRef(p),
       openTasks: open,
       overdueCount: s.overdue,
       progressPct: pct,
@@ -299,7 +304,7 @@ async function computeLeadDashboardData(jwtUser: {
   });
   const taskList = sortedTasks.map((t) => {
     const p = projMap.get(String(t.projectId));
-    return taskS(t, { projectCode: p?.code, projectName: p?.name, lifecycle: p?.lifecycle });
+    return taskS(t, { projectCode: projectRef(p), projectName: p?.name, lifecycle: p?.lifecycle });
   });
 
   const teamTasks = teamTasksRaw.map((t) => {
@@ -313,7 +318,7 @@ async function computeLeadDashboardData(jwtUser: {
       ccTcd: toIso((t as any).ccTcd),
       completedAt: toIso(t.completedAt),
       projectId: String(t.projectId),
-      projectCode: p?.code ?? '',
+      projectCode: projectRef(p),
       projectName: p?.name ?? '',
       lifecycle: p?.lifecycle ?? null,
       assigneeId: t.assigneeId ? String(t.assigneeId) : null,
