@@ -27,6 +27,7 @@ import {
 import { api } from '@/lib/client/api';
 import { linkMeta, type LinkBrand } from '@/lib/links';
 import { ProfileHighlights } from '@/components/ProfileHighlights';
+import { ConnectionsModal, type ConnectionTab } from '@/components/ConnectionsModal';
 
 // Map a detected brand to a lucide icon. Anything without a dedicated mark
 // (Medium, Dribbble, a personal site, …) renders the clean Globe chip — its
@@ -193,6 +194,8 @@ export default function ProfileView({
   const [busy, setBusy] = useState(false);
   // Optimistic follower count
   const [followerCount, setFollowerCount] = useState(profile.followerCount ?? 0);
+  // Which connection list (if any) is open in the modal.
+  const [connTab, setConnTab] = useState<ConnectionTab | null>(null);
 
   async function toggleFollow() {
     if (busy) return;
@@ -322,15 +325,21 @@ export default function ProfileView({
   const heroFooter = (
     <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
       <div className="flex items-center gap-4 text-sm text-slate-500 flex-wrap">
-        <span className="flex items-center gap-1.5">
+        <button
+          onClick={() => setConnTab('followers')}
+          className="flex items-center gap-1.5 rounded-md -mx-1 px-1 hover:text-slate-700 dark:hover:text-white/80 transition-colors"
+        >
           <Users size={14} className="text-slate-400" />
           <span>
             <strong className="font-bold text-slate-700 dark:text-white/80">{followerCount}</strong>{' '}
             {followerCount === 1 ? 'follower' : 'followers'}
           </span>
-        </span>
+        </button>
         <span className="text-slate-300">·</span>
-        <span className="flex items-center gap-1.5">
+        <button
+          onClick={() => setConnTab('following')}
+          className="flex items-center gap-1.5 rounded-md -mx-1 px-1 hover:text-slate-700 dark:hover:text-white/80 transition-colors"
+        >
           <UserCheck size={14} className="text-slate-400" />
           <span>
             follows{' '}
@@ -338,7 +347,7 @@ export default function ProfileView({
               {profile.followingCount ?? 0}
             </strong>
           </span>
-        </span>
+        </button>
         {joined && (
           <>
             <span className="text-slate-300">·</span>
@@ -441,6 +450,17 @@ export default function ProfileView({
           </div>
         </div>
       </div>
+
+      {connTab && (
+        <ConnectionsModal
+          userId={profile.id}
+          name={profile.name}
+          tab={connTab}
+          followerCount={followerCount}
+          followingCount={profile.followingCount ?? 0}
+          onClose={() => setConnTab(null)}
+        />
+      )}
     </div>
   );
 }
