@@ -473,27 +473,6 @@ export function TeamDetailSkeleton() {
           ))}
         </div>
       </div>
-      {/* Team Foresight panel — header + a row per member. */}
-      <div className="card p-5 space-y-3">
-        <div className="flex items-center gap-2.5 mb-1">
-          <Skel className="h-8 w-8 rounded-lg shrink-0" />
-          <div className="flex-1 space-y-1.5">
-            <Skel className="h-3.5 w-40 rounded" />
-            <Skel className="h-2.5 w-64 max-w-full rounded" />
-          </div>
-          <Skel className="h-4 w-16 rounded shrink-0" />
-        </div>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 py-1.5">
-            <Skel className="h-9 w-9 rounded-full shrink-0" />
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <Skel className="h-3.5 w-40 max-w-full rounded" />
-              <Skel className="h-2.5 w-28 rounded" />
-            </div>
-            <Skel className="h-6 w-24 rounded-full shrink-0" />
-          </div>
-        ))}
-      </div>
       {/* Members rail (1/4) + work column (3/4). */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 card p-4 space-y-3">
@@ -510,6 +489,7 @@ export function TeamDetailSkeleton() {
         </div>
         <div className="lg:col-span-3 space-y-4">
           <div className="flex gap-2">
+            <Skel className="h-8 w-20 rounded" />
             <Skel className="h-8 w-20 rounded" />
             <Skel className="h-8 w-20 rounded" />
           </div>
