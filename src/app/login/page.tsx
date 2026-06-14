@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
 import { BirdsEyeLoader } from '@/components/BirdsEyeLoader';
-import { BUILTIN_QUOTES, dailyQuoteOffset, type Quote } from '@/lib/quotes';
+import { BUILTIN_QUOTES, dailyQuoteOffset, readingMs, type Quote } from '@/lib/quotes';
 import { ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { AVATAR_FONTS, avatarFg } from '@/components/ui';
 
@@ -70,9 +70,13 @@ function RotatingQuote() {
       .catch(() => {});
   }, []);
 
+  // Self-scheduling rotation: each quote stays up for its own reading time
+  // (proportional to length), so a long line isn't cut off and a short one
+  // doesn't linger. Re-runs after every advance to size the next dwell.
   useEffect(() => {
     if (quotes.length < 2) return;
-    const t = setInterval(() => {
+    const dwell = readingMs(quotes[i % quotes.length]?.text || '');
+    const t = setTimeout(() => {
       setShow(false);
       setTimeout(() => {
         setI((n) => {
@@ -84,9 +88,9 @@ function RotatingQuote() {
         });
         setShow(true);
       }, 400);
-    }, 8000);
-    return () => clearInterval(t);
-  }, [quotes.length]);
+    }, dwell);
+    return () => clearTimeout(t);
+  }, [i, quotes]);
 
   const q = quotes[i % quotes.length];
   return (
