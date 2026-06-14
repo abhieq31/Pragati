@@ -9,6 +9,7 @@ import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStrip';
 import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
 import { cached, cacheBust } from '@/lib/cache';
+import { buildWorkMixerFromDashboardData, type WorkMixerResult } from '@/lib/workMixer';
 import { normalizeRole } from '@/lib/auth';
 import { buildDeliveryProfiles, buildOpenLoad, scoreSlipRisk } from '@/lib/ai/slipRisk';
 
@@ -45,6 +46,10 @@ export interface LeadDashboardData {
   /** Bounded fact-based "Needs attention" strip payload — server-computed so
    *  the browser never sees raw signals. Null when nothing surfaces. */
   flowSignal?: FlowSignalPayload | null;
+  /** Optional internal Work Mixer output (shadow mode). Present ONLY when
+   *  WORK_MIXER_ENABLED=true; absent (undefined) by default, so existing
+   *  consumers are unaffected. Never used to render UI in Phase 1. */
+  workMixer?: WorkMixerResult | null;
 }
 
 /**
@@ -60,9 +65,27 @@ export async function getLeadDashboardData(jwtUser: {
   email: string;
   role: string;
 }): Promise<LeadDashboardData> {
-  return cached(dashboardCacheKey(jwtUser.sub, jwtUser.role), DASHBOARD_TTL_SECONDS, () =>
+  const data = await cached(dashboardCacheKey(jwtUser.sub, jwtUser.role), DASHBOARD_TTL_SECONDS, () =>
     computeLeadDashboardData(jwtUser),
   );
+
+  // ── Work Mixer (shadow mode, default OFF) ─────────────────────────────────
+  // When WORK_MIXER_ENABLED=true, derive a bounded, deterministically-ranked
+  // prioritisation view from the data ALREADY in memory — no new queries, no
+  // DB, no Redis. It is attached as an optional, non-breaking field and is not
+  // rendered anywhere in Phase 1. Computed AFTER the cache so the cached payload
+  // (and every existing consumer) is byte-identical when the flag is off, and
+  // wrapped so a bug in the mixer can never break the real dashboard.
+  if (process.env.WORK_MIXER_ENABLED === 'true') {
+    try {
+      const workMixer = buildWorkMixerFromDashboardData(data, { now: new Date() });
+      return { ...data, workMixer };
+    } catch {
+      return data;
+    }
+  }
+
+  return data;
 }
 
 // Pure data fetcher — the actual MongoDB work. Centralising it lets the App
@@ -95,9 +118,25 @@ async function computeLeadDashboardData(jwtUser: {
 
   const [myTasks, teamTasksRaw, teams, owners, projectTaskAgg, perUserAgg, users] = await Promise.all([
     // "My tasks" stays sorted by status so the IC's side panel keeps its
-    // pipeline grouping.
-    Task.find({ assigneeId: scope.userOid, ...visibleTaskPrivacyFilter })
+    // pipeline grouping. Bounded so the dashboard never drags a power user's
+    // entire completed-task history into memory on every render: keep ALL open
+    // tasks (the pipeline) plus anything completed in the last 90 days, and cap
+    // like the project task list below. Done counts come from the separate
+    // aggregations, so this changes no figure on screen.
+    Task.find({
+      assigneeId: scope.userOid,
+      ...visibleTaskPrivacyFilter,
+      $and: [
+        {
+          $or: [
+            { status: { $ne: 'done' } },
+            { completedAt: { $gte: new Date(now.getTime() - 90 * 86400000) } },
+          ],
+        },
+      ],
+    })
       .sort({ status: 1, dueDate: 1 })
+      .limit(500)
       .lean(),
     // Project task lists are ordered by CC Target Completion Date (TCD), then
     // due date — the nearest deadline first. The dashboard re-sorts the same

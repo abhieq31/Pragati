@@ -441,33 +441,36 @@ export function ProjectDetailSkeleton() {
 
 export function TeamDetailSkeleton() {
   return (
-    <div className="pb-12 max-w-[1440px] space-y-5" role="status" aria-label="Loading team">
-      <div className="mb-3">
+    <div className="space-y-6" role="status" aria-label="Loading team">
+      <div className="mb-1">
         <LoadingQuip />
       </div>
-      {/* Hero band — logo tile + title, an export action, and the stats row. */}
-      <div className="card overflow-hidden p-0">
-        <div className="h-32 sm:h-40 skeleton relative">
-          <div className="absolute top-4 right-4">
-            <Skel className="h-9 w-28 rounded-xl" />
-          </div>
-        </div>
-        <div className="px-5 sm:px-6 pb-5">
-          <div className="flex items-start gap-4">
-            <Skel className="-mt-9 h-20 w-20 rounded-2xl shrink-0 ring-4 ring-white dark:ring-[#262624]" />
-            <div className="pt-3 flex-1 min-w-0 space-y-2">
+      {/* Header — avatar tile + title/description, actions top-right, stat strip.
+          No cover band: mirrors the minimal team header. */}
+      <div className="card p-5 sm:p-6">
+        <div className="flex items-start gap-4 sm:gap-5">
+          <Skel className="h-[74px] w-[74px] rounded-2xl shrink-0 ring-1 ring-slate-200 dark:ring-white/10" />
+          <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-2">
               <Skel className="h-6 w-44 rounded-lg" />
               <Skel className="h-3.5 w-64 max-w-full rounded" />
             </div>
+            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+              <Skel className="h-9 w-9 rounded-full" />
+              <Skel className="h-9 w-24 rounded-lg" />
+            </div>
           </div>
-          <div className="mt-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="space-y-1.5">
-                <Skel className="h-2.5 w-16 rounded" />
-                <Skel className="h-6 w-12 rounded" />
-              </div>
-            ))}
-          </div>
+        </div>
+        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] bg-slate-50/60 dark:bg-white/[0.02] px-3 py-2.5 space-y-1.5"
+            >
+              <Skel className="h-2.5 w-16 rounded" />
+              <Skel className="h-5 w-12 rounded" />
+            </div>
+          ))}
         </div>
       </div>
       {/* Team Foresight panel — header + a row per member. */}
@@ -491,9 +494,9 @@ export function TeamDetailSkeleton() {
           </div>
         ))}
       </div>
-      {/* Members rail + work column. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5">
-        <div className="card p-4 space-y-3">
+      {/* Members rail (1/4) + work column (3/4). */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-1 card p-4 space-y-3">
           <Skel className="h-3 w-28 rounded" />
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2 py-1.5">
@@ -505,14 +508,20 @@ export function TeamDetailSkeleton() {
             </div>
           ))}
         </div>
-        <div className="card p-4 space-y-3">
-          <Skel className="h-4 w-40 rounded" />
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skel className="h-3 w-3/4 rounded" />
-              <Skel className="h-5 w-16 rounded-full ml-auto" />
-            </div>
-          ))}
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex gap-2">
+            <Skel className="h-8 w-20 rounded" />
+            <Skel className="h-8 w-20 rounded" />
+          </div>
+          <div className="card p-4 space-y-4">
+            <Skel className="h-4 w-40 rounded" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skel className="h-3 w-3/4 rounded" />
+                <Skel className="h-5 w-16 rounded-full ml-auto" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -29,7 +29,20 @@ export async function GET(req: NextRequest) {
 
     // ── Everything in parallel — one DB round trip per query ─────────────
     const [tasks, allProjects, summaryAgg, statusAgg, orgData] = await Promise.all([
-      Task.find({ assigneeId: userId }).sort({ status: 1, dueDate: 1 }).lean(),
+      // All open tasks (the pipeline) plus anything completed in the last 90
+      // days, capped — so the list never drags a user's entire done-history.
+      // The done/total figures below come from the separate aggregations, so
+      // bounding this list changes no number on screen.
+      Task.find({
+        assigneeId: userId,
+        $or: [
+          { status: { $ne: 'done' } },
+          { completedAt: { $gte: new Date(now.getTime() - 90 * 86400000) } },
+        ],
+      })
+        .sort({ status: 1, dueDate: 1 })
+        .limit(500)
+        .lean(),
       Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] })
         .select('_id code ccNo name lifecycle status')
         .lean(),

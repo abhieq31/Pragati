@@ -85,7 +85,11 @@ export async function GET(req: NextRequest) {
     const wantsFacets = sp.get('facets') === '1';
 
     if (!wantsPage) {
-      const list = await User.find(filter).sort({ name: 1 }).lean();
+      // Full-list path for existing callers (pickers, server-rendered teams
+      // page). Hard backstop so a workspace that grows to tens of thousands of
+      // users can never load the entire collection into one response — invisible
+      // at normal scale; a directory that large should use the ?limit envelope.
+      const list = await User.find(filter).sort({ name: 1 }).limit(5000).lean();
       return NextResponse.json(list.map(u));
     }
 

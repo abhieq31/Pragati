@@ -26,7 +26,14 @@ export async function GET(req: NextRequest) {
     const userId = user.sub;
 
     const [tasks, allProjects] = await Promise.all([
-      Task.find({ assigneeId: userId }).lean(),
+      // All open tasks plus anything completed in the last 90 days, capped — so
+      // "my tasks" never pulls a user's entire completed history.
+      Task.find({
+        assigneeId: userId,
+        $or: [{ status: { $ne: 'done' } }, { completedAt: { $gte: new Date(Date.now() - 90 * 86400000) } }],
+      })
+        .limit(500)
+        .lean(),
       Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] })
         .select('_id code ccNo name lifecycle')
         .lean(),
