@@ -3,15 +3,42 @@ import Link from 'next/link';
 import { ReactNode } from 'react';
 import { MapPin, Building2, Briefcase, Fingerprint } from 'lucide-react';
 
+/* ── Accent helpers ─────────────────────────────────────────────────────────
+   Derive a cohesive cover gradient, avatar ring and soft glow from one base
+   colour — the member's own monogram colour — so every profile feels like
+   *theirs* instead of sharing a single brand band. Missing / invalid colours
+   fall back to the Pragati blue→green brand gradient, so callers that pass no
+   accent (e.g. the settings page) look exactly as before. */
+type RGB = [number, number, number];
+function parseHex(hex?: string | null): RGB | null {
+  if (!hex) return null;
+  let h = hex.trim().replace('#', '');
+  if (h.length === 3)
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+/** Mix a colour toward white (p>0) or black (p<0) by |p| (0–1). */
+function shade([r, g, b]: RGB, p: number): RGB {
+  const t = p < 0 ? 0 : 255;
+  const a = Math.abs(p);
+  return [Math.round((t - r) * a + r), Math.round((t - g) * a + g), Math.round((t - b) * a + b)];
+}
+const rgbStr = ([r, g, b]: RGB, a = 1) =>
+  a === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${a})`;
+
 /**
  * Shared profile hero — used on both the editable settings page (self) and
  * the read-only public profile at /[username].
  *
- * Design: a soft brand-gradient cover that the brand-ring avatar straddles,
- * then name + role and quiet metadata — crafted enough to feel like "mine"
- * while keeping the substance below (impact numbers, activity) uncrowded.
- * Keeping one component means a user's profile looks identical whether
- * they're editing their own or viewing a colleague's.
+ * Design: a layered, per-member brand-gradient cover that the glowing
+ * brand-ring avatar straddles, then name + role and quiet metadata, with an
+ * optional footer strip for social proof / links so the whole identity reads
+ * as one self-contained unit. Keeping one component means a user's profile
+ * looks consistent whether they're editing their own or viewing a colleague's.
  */
 export function ProfileHero({
   name,
@@ -25,6 +52,8 @@ export function ProfileHero({
   avatar,
   avatarExtra,
   actions,
+  footer,
+  accent,
   linkUsername = false,
   showMemberId = true,
 }: {
@@ -41,13 +70,26 @@ export function ProfileHero({
   /** Rendered BELOW the brand ring (e.g. the photo upload/remove links) —
    *  never inside it, so text can't overlap the circle. */
   avatarExtra?: ReactNode;
-  /** Right-side action slot — Edit (self) or nothing (public). */
+  /** Right-side action slot over the cover — Edit (self) or Follow (public). */
   actions?: ReactNode;
+  /** Optional strip below the identity block — social proof, links, share. */
+  footer?: ReactNode;
+  /** Base accent colour (hex). Personalises the cover/ring/glow per member. */
+  accent?: string | null;
   /** When true, @username links to the public profile route. */
   linkUsername?: boolean;
   /** Member ID is internal — hidden on the public profile view. */
   showMemberId?: boolean;
 }) {
+  const base = parseHex(accent);
+  const cover = base
+    ? `linear-gradient(120deg, ${rgbStr(shade(base, -0.3))} 0%, ${rgbStr(base)} 48%, ${rgbStr(shade(base, 0.2))} 100%)`
+    : 'linear-gradient(115deg, #1565C0 0%, #1976D2 38%, #2E7D32 100%)';
+  const ring = base
+    ? `conic-gradient(from 210deg, ${rgbStr(shade(base, -0.12))}, ${rgbStr(shade(base, 0.22))}, ${rgbStr(base)}, ${rgbStr(shade(base, -0.12))})`
+    : 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)';
+  const glow = base ? rgbStr(base, 0.4) : 'rgba(21, 101, 192, 0.32)';
+
   const meta = [
     title ? { icon: Briefcase, text: title } : null,
     department || organisation
@@ -72,38 +114,50 @@ export function ProfileHero({
 
   return (
     <section className="card overflow-hidden p-0">
-      {/* Cover — a soft brand gradient the avatar overlaps. One decorative band,
-          not a noisy banner: it gives the profile a crafted, "this is mine" feel
-          without crowding the substance below. */}
-      <div
-        className="relative h-24 sm:h-28"
-        style={{
-          background: 'linear-gradient(115deg, #1565C0 0%, #1976D2 38%, #2E7D32 100%)',
-        }}
-      >
-        {/* gentle light sweep for depth */}
+      {/* Cover — a layered, per-member brand gradient the avatar overlaps.
+          A light sweep + fine dot-grid + a soft bottom fade give it depth and
+          a crafted, "this is mine" feel without crowding the substance below. */}
+      <div className="relative h-28 sm:h-36 overflow-hidden" style={{ background: cover }}>
         <div
           aria-hidden
-          className="absolute inset-0 opacity-60"
+          className="absolute inset-0"
           style={{
-            background: 'radial-gradient(120% 140% at 12% -20%, rgba(255,255,255,0.35), transparent 45%)',
+            opacity: 0.5,
+            background: 'radial-gradient(120% 150% at 12% -30%, rgba(255,255,255,0.4), transparent 50%)',
           }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            opacity: 0.16,
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1.4px)',
+            backgroundSize: '15px 15px',
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-16"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.14), transparent)' }}
         />
         {actions && <div className="absolute top-3 right-3 flex items-center gap-1.5">{actions}</div>}
       </div>
 
       <div className="px-5 sm:px-6 pb-5 sm:pb-6">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
-          {/* Brand-ring avatar, lifted to straddle the cover. */}
-          <div
-            className="-mt-12 sm:-mt-14 shrink-0 self-start rounded-full p-[3px] grid place-items-center leading-none shadow-lg"
-            style={{
-              background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
-            }}
-          >
-            <div className="rounded-full p-[3px] bg-white dark:bg-[#262624] grid place-items-center leading-none">
-              {avatar}
+          {/* Brand-ring avatar, lifted to straddle the cover, with a soft glow
+              tinted to the member's accent. avatarExtra (photo controls) sits
+              centred beneath it — never inside the ring. */}
+          <div className="-mt-14 sm:-mt-16 shrink-0 self-start flex flex-col items-center gap-2">
+            <div
+              className="rounded-full p-[3px] grid place-items-center leading-none"
+              style={{ background: ring, boxShadow: `0 12px 30px -8px ${glow}` }}
+            >
+              <div className="rounded-full p-[3px] bg-white dark:bg-[#262624] grid place-items-center leading-none">
+                {avatar}
+              </div>
             </div>
+            {avatarExtra && <div className="w-full flex justify-center">{avatarExtra}</div>}
           </div>
 
           <div className="flex-1 min-w-0 sm:pt-3">
@@ -133,6 +187,10 @@ export function ProfileHero({
             )}
           </div>
         </div>
+
+        {footer && (
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06]">{footer}</div>
+        )}
       </div>
     </section>
   );

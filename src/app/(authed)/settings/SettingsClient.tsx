@@ -26,6 +26,7 @@ import {
   ServerCog,
   MoreHorizontal,
   ChevronDown,
+  ChevronRight,
   Pencil,
   ExternalLink,
   Mail,
@@ -698,6 +699,7 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                   onChange={(e) =>
                     saveTime(e.target.value === '' ? null : Number(e.target.value), digestMinute)
                   }
+                  aria-label="Daily email hour"
                   className="text-[12px] rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                 >
                   <option value="">Default ({String(health?.defaultHour ?? 8).padStart(2, '0')}:00)</option>
@@ -949,6 +951,7 @@ function CalendarFeedSection() {
                 never need it; power users / unlisted apps can copy it. */}
             <details className="group">
               <summary className="cursor-pointer list-none text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-white/60 inline-flex items-center gap-1">
+                <ChevronRight size={12} className="shrink-0 transition-transform group-open:rotate-90" />
                 Other app, or copy the link
               </summary>
               <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -1497,6 +1500,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
         location={user.location}
         organisation={user.organisation}
         linkUsername
+        accent={avatarBg}
         avatar={
           <ProfileAvatar
             name={user.name}
