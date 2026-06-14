@@ -30,6 +30,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-06-14',
+    title: 'Delivery Foresight — a predictive read on every profile and brief',
+    tags: ['feature', 'improvement'],
+    highlight: true,
+    body: [
+      'Profiles and the daily email now carry Delivery Foresight: a forward-looking, plain-language read on whether your dates will hold — “on pace to clear your plate by ~Jun 20”, or “this task is trending to miss its date — start it today”.',
+      'Behind one quiet line sits a real model: log-normal duration fits with empirical-Bayes shrinkage, Holt’s-linear velocity forecasting, an inter-completion-gap throughput model, a seeded Monte-Carlo schedule simulation, and a robust MAD control-chart anomaly detector — fully deterministic and auditable, with no LLM on the path.',
+      'Your own profile and brief get the full forecast (plate-clear date and the single riskiest task); a colleague’s profile shows only your delivery rhythm and reliability, never your current workload.',
+      'Retired the profile Highlights (story-style cards) in favour of this — substance over a status update.',
+    ],
+  },
+  {
     date: '2026-05-31',
     title: 'Monogram avatars, personal templates, kanban drop sound',
     tags: ['feature', 'improvement'],

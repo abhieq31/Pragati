@@ -22,7 +22,7 @@ import {
   Check,
 } from 'lucide-react';
 import { linkMeta, type LinkBrand } from '@/lib/links';
-import { ProfileHighlights } from '@/components/ProfileHighlights';
+import { DeliveryForesight } from '@/components/DeliveryForesight';
 
 // Map a detected brand to a lucide icon. Anything without a dedicated mark
 // (Medium, Dribbble, a personal site, …) renders the clean Globe chip — its
@@ -297,9 +297,6 @@ export default function ProfileView({
         footer={heroFooter}
       />
 
-      {/* ── Highlights — story-style, text-only ─────────────────────────── */}
-      <ProfileHighlights userId={profile.id} isSelf={isSelf} />
-
       {/* ── Impact row — what this person delivers, at a glance ─────────── */}
       {statTiles.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -308,6 +305,11 @@ export default function ProfileView({
           ))}
         </div>
       )}
+
+      {/* ── Delivery Foresight — forward-looking read over the heavy engine.
+          Backward (the impact tiles above) meets forward (where they're
+          heading). Self sees the full forecast; a colleague sees rhythm. ── */}
+      <DeliveryForesight userId={profile.id} isSelf={isSelf} />
 
       {/* ── Activity section ────────────────────────────────────────────── */}
       <div id="activity" className="scroll-mt-6">

@@ -296,6 +296,11 @@ export interface RenderInput {
   /** Optional curated industry insight (see lib/insights) — the continuous
    *  "thought worth a minute" feed, tuned to the workspace's niche. */
   insight?: { tag: string; title: string; body: string } | null;
+  /** One personal, computed Delivery-Foresight line (see lib/ai/
+   *  deliveryForesight) — the forward-looking counterpart to the task list:
+   *  "on pace to clear by ~Jun 20" / "X is trending to miss — start it today".
+   *  Null when the person has too little history to forecast. */
+  foresightLine?: string | null;
   leadershipBrief?: {
     headline: string;
     team?: {
@@ -530,6 +535,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     role,
     insight,
     leadershipBrief,
+    foresightLine,
   } = input;
   const first = (name || '').trim().split(/\s+/)[0] || 'there';
   const weekday = dateLabel.split(/[ ,]/)[0] || 'daily';
@@ -651,6 +657,17 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       ? `<div style="font-size:13px;color:#15803d;font-weight:600;margin:0 0 16px;">You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday. Keep the streak honest.</div>`
       : '';
 
+  // ── Foresight ─────────────────────────────────────────────────────────
+  // The forward-looking counterpart to the task list: a single line computed
+  // from the recipient's own delivery history (lib/ai/deliveryForesight). The
+  // "Foresight:" prefix is stripped since the label provides it.
+  const foresightHtml = foresightLine
+    ? `<div style="margin:0 0 22px;border:1px solid #e9d5ff;border-left:4px solid #7c3aed;border-radius:12px;padding:12px 15px;background:#faf5ff;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:3px;">Foresight</div>
+        <div style="font-size:13.5px;color:#0f172a;line-height:1.45;">${escapeHtml(foresightLine.replace(/^Foresight:\s*/i, ''))}</div>
+      </div>`
+    : '';
+
   const emptyNote = digestHasContent(sections)
     ? ''
     : `<div style="font-size:15px;color:#16a34a;font-weight:600;margin:6px 0 18px;">You're all clear — nothing due today. Use the room: pick the one thing with the most leverage and move it.</div>`;
@@ -677,6 +694,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         ${momentum}
         ${emptyNote}
         ${focusHtml}
+        ${foresightHtml}
         ${sectionsHtml}
         ${openBtn ? `<div style="margin-top:8px;">${openBtn}</div>` : ''}
         ${
@@ -730,6 +748,9 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
   if (focus) {
     const pn = projectName(focus.projectId);
     lines.push('START HERE', `  → [${focus.label}] ${focus.title}${pn ? ` (${pn})` : ''}`, '');
+  }
+  if (foresightLine) {
+    lines.push('FORESIGHT', `  ${foresightLine.replace(/^Foresight:\s*/i, '')}`, '');
   }
   const textSection = (heading: string, items: DigestTask[]) => {
     if (!items.length) return;
@@ -956,6 +977,62 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
   // the multi-tenant path will resolve the tenant's stored niche here.
   const dailyInsight = pickInsight(resolveIndustry(), 0, now);
 
+  // ── Delivery Foresight ──────────────────────────────────────────────────
+  // One forward-looking, computed line per recipient (lib/ai/
+  // deliveryForesight) — the predictive counterpart to the task list. Fully
+  // self-contained and best-effort: two batched queries for the whole run
+  // (each recipient's recent completed history + their open plate), the shared
+  // cached prior, then the pure deterministic engine. A failure here — or
+  // simply too little history to forecast — must never block the brief.
+  const foresightByUser = new Map<string, string>();
+  try {
+    const { computeForesight, getWorkspacePrior, seedFromId } = await import('@/lib/ai/deliveryForesight');
+    const prior = await getWorkspacePrior(now);
+    const histSince = new Date(now.getTime() - 180 * DAY_MS);
+    const [historyRows, foreOpenRows] = await Promise.all([
+      Task.find({ assigneeId: { $in: ids }, status: 'done', completedAt: { $gte: histSince } })
+        .select('assigneeId createdAt completedAt dueDate ccTcd')
+        .limit(15000)
+        .lean(),
+      Task.find({ assigneeId: { $in: ids }, status: { $ne: 'done' } })
+        .select('assigneeId title status priority dueDate ccTcd')
+        .limit(8000)
+        .lean(),
+    ]);
+    const histByUser = new Map<string, any[]>();
+    for (const t of historyRows as any[]) {
+      const k = String(t.assigneeId);
+      (histByUser.get(k) || histByUser.set(k, []).get(k)!).push(t);
+    }
+    const openByUser = new Map<string, any[]>();
+    for (const t of foreOpenRows as any[]) {
+      const k = String(t.assigneeId);
+      (openByUser.get(k) || openByUser.set(k, []).get(k)!).push(t);
+    }
+    for (const r of recipients) {
+      const uid = String(r.user._id);
+      const f = computeForesight({
+        completed: histByUser.get(uid) || [],
+        open: (openByUser.get(uid) || []).map((t) => ({
+          id: String(t._id),
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          dueDate: t.dueDate,
+          ccTcd: t.ccTcd,
+        })),
+        prior: prior.cycle,
+        gapPrior: prior.gap,
+        now,
+        trials: 1200,
+        seed: seedFromId(uid),
+      });
+      if (f.digestLine) foresightByUser.set(uid, f.digestLine);
+    }
+  } catch {
+    // best-effort — the brief still sends without the foresight line.
+  }
+
   for (const r of recipients) {
     const uid = String(r.user._id);
     const raw = tasksByUser.get(uid) || [];
@@ -1007,6 +1084,7 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
       winsYesterday: winsByUser.get(uid) || 0,
       insight: dailyInsight,
       leadershipBrief,
+      foresightLine: foresightByUser.get(uid) || null,
     });
 
     const res = await sendEmail({ to: r.email, toName: (r.user as any).name, subject, html, text });
