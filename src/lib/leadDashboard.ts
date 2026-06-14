@@ -118,9 +118,25 @@ async function computeLeadDashboardData(jwtUser: {
 
   const [myTasks, teamTasksRaw, teams, owners, projectTaskAgg, perUserAgg, users] = await Promise.all([
     // "My tasks" stays sorted by status so the IC's side panel keeps its
-    // pipeline grouping.
-    Task.find({ assigneeId: scope.userOid, ...visibleTaskPrivacyFilter })
+    // pipeline grouping. Bounded so the dashboard never drags a power user's
+    // entire completed-task history into memory on every render: keep ALL open
+    // tasks (the pipeline) plus anything completed in the last 90 days, and cap
+    // like the project task list below. Done counts come from the separate
+    // aggregations, so this changes no figure on screen.
+    Task.find({
+      assigneeId: scope.userOid,
+      ...visibleTaskPrivacyFilter,
+      $and: [
+        {
+          $or: [
+            { status: { $ne: 'done' } },
+            { completedAt: { $gte: new Date(now.getTime() - 90 * 86400000) } },
+          ],
+        },
+      ],
+    })
       .sort({ status: 1, dueDate: 1 })
+      .limit(500)
       .lean(),
     // Project task lists are ordered by CC Target Completion Date (TCD), then
     // due date — the nearest deadline first. The dashboard re-sorts the same
