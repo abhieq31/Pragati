@@ -613,55 +613,41 @@ export function TaskDetailSkeleton() {
 
 export function MyDaySkeleton() {
   return (
-    <div className="pb-14 max-w-6xl" role="status" aria-label="Loading My Day">
+    <div className="pb-14 max-w-6xl mx-auto" role="status" aria-label="Loading My Day">
       <div className="mb-3">
         <LoadingQuip />
       </div>
-      <div className="mb-7 pt-1">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skel className="h-2.5 w-20 rounded" />
-            <Skel className="h-9 w-72 max-w-full rounded-xl" />
-            <Skel className="h-3.5 w-40 rounded" />
-          </div>
-          <Skel className="h-14 w-14 rounded-full shrink-0" />
-        </div>
+      {/* Hero header — label, greeting, date. No right-side widget on this page. */}
+      <div className="mb-5 pt-1 space-y-2">
+        <Skel className="h-2.5 w-20 rounded" />
+        <Skel className="h-9 w-80 max-w-full rounded-xl" />
+        <Skel className="h-3.5 w-40 rounded" />
       </div>
-      <div className="mb-6">
-        <div className="rounded-2xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-sm">
+      {/* Capture bar */}
+      <div className="mb-4">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] px-3.5 py-3 shadow-sm">
           <div className="flex items-center gap-3">
             <Skel className="h-9 w-9 rounded-xl shrink-0" />
-            <Skel className="h-5 flex-1 rounded-xl" />
+            <Skel className="h-5 flex-1 rounded-lg" />
           </div>
         </div>
       </div>
+      {/* Open todo rows — no trailing chip; the track/priority controls only
+          appear on hover, so a resting row is just a checkbox + text. */}
       <div className="space-y-1">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 bg-white"
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-white/[0.025]"
           >
             <Skel className="h-[18px] w-[18px] rounded-[5px] shrink-0" />
             <Skel className="h-4 flex-1 max-w-[380px] rounded" />
-            <Skel className="h-4 w-20 rounded-full shrink-0" />
           </div>
         ))}
       </div>
-      <div className="mt-6 space-y-1">
-        <div className="flex items-center gap-2 mb-2">
-          <Skel className="h-3 w-20 rounded" />
-          <Skel className="h-3 w-8 rounded-full" />
-        </div>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 border border-slate-200/80 bg-white"
-          >
-            <Skel className="h-[18px] w-[18px] rounded-[5px] shrink-0" />
-            <Skel className="h-4 flex-1 max-w-[300px] rounded" />
-            <Skel className="h-4 w-16 rounded-full shrink-0" />
-          </div>
-        ))}
+      {/* Completed section is collapsed by default — just its toggle line. */}
+      <div className="mt-5">
+        <Skel className="h-3.5 w-32 rounded" />
       </div>
     </div>
   );
