@@ -945,3 +945,224 @@ export async function buildForesight(
     seed: seedFromId(userId),
   });
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Team roll-up — many members' foresight in one batched pass
+   ════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Foresight for a set of members in two batched queries (their combined
+ * completed history + open plates) plus the shared prior — used by the team
+ * detail page's capacity panel.
+ *
+ * `excludePersonal` (true for any shared/lead context) keeps each member's
+ * private overlays and personal-project tasks out of the roll-up, so a lead
+ * sees a member's SHARED-work outlook only — never their private to-do list.
+ */
+export async function buildForesightBatch(
+  userIds: string[],
+  opts: { now?: Date; trials?: number; excludePersonal?: boolean } = {},
+): Promise<Map<string, Foresight>> {
+  const out = new Map<string, Foresight>();
+  if (userIds.length === 0) return out;
+
+  const { connectDB } = await import('@/lib/db');
+  const { Task } = await import('@/models/Task');
+  const mongoose = (await import('mongoose')).default;
+  await connectDB();
+
+  const now = opts.now ?? new Date();
+  const since = new Date(+now - HISTORY_DAYS * DAY);
+  const ids = userIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  // Personal projects owned by these members — excluded from the shared roll-up.
+  let personalProjectIds: Set<string> | null = null;
+  if (opts.excludePersonal) {
+    const { Project } = await import('@/models/Project');
+    const personal = await Project.find({
+      ownerId: { $in: ids },
+      $or: [{ isPersonal: true }, { personal: true }, { code: /^PRSN-/ }],
+    })
+      .select('_id')
+      .limit(5000)
+      .lean();
+    personalProjectIds = new Set((personal as any[]).map((p) => String(p._id)));
+  }
+
+  const openFilter: Record<string, unknown> = { assigneeId: { $in: ids }, status: { $ne: 'done' } };
+  if (opts.excludePersonal) openFilter.privateToUserId = null;
+
+  const [history, open, prior] = await Promise.all([
+    Task.find({ assigneeId: { $in: ids }, status: 'done', completedAt: { $gte: since } })
+      .select('assigneeId createdAt completedAt dueDate ccTcd')
+      .limit(20000)
+      .lean(),
+    Task.find(openFilter)
+      .select('assigneeId _id title status priority dueDate ccTcd projectId')
+      .limit(12000)
+      .lean(),
+    getWorkspacePrior(now),
+  ]);
+
+  const histByUser = new Map<string, any[]>();
+  for (const t of history as any[]) {
+    const k = String(t.assigneeId);
+    (histByUser.get(k) || histByUser.set(k, []).get(k)!).push(t);
+  }
+  const openByUser = new Map<string, any[]>();
+  for (const t of open as any[]) {
+    if (personalProjectIds && t.projectId && personalProjectIds.has(String(t.projectId))) continue;
+    const k = String(t.assigneeId);
+    (openByUser.get(k) || openByUser.set(k, []).get(k)!).push(t);
+  }
+
+  for (const uid of userIds) {
+    out.set(
+      uid,
+      computeForesight({
+        completed: histByUser.get(uid) || [],
+        open: (openByUser.get(uid) || []).map((t) => ({
+          id: String(t._id),
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          dueDate: t.dueDate,
+          ccTcd: t.ccTcd,
+        })),
+        prior: prior.cycle,
+        gapPrior: prior.gap,
+        now,
+        trials: opts.trials ?? 1500,
+        seed: seedFromId(uid),
+      }),
+    );
+  }
+  return out;
+}
+
+/** One member's row in the team capacity roll-up. Deliberately carries NO task
+ *  titles — only aggregate status — so a shared view never leaks work detail. */
+export interface TeamMemberForesight {
+  id: string;
+  name: string;
+  role?: string;
+  hasSignal: boolean;
+  status: ForesightStatus;
+  reliability: number;
+  reliabilityLabel: string;
+  trend: 'rising' | 'steady' | 'cooling';
+  throughputPerWeek: number;
+  openTasks: number;
+  tasksAtRisk: number;
+  clearDateP80: string | null;
+  clearDays: number | null;
+}
+
+export interface TeamForesightSummary {
+  members: TeamMemberForesight[];
+  headline: string;
+  counts: {
+    onTrack: number;
+    atRisk: number;
+    overloaded: number;
+    cooling: number;
+    clear: number;
+    building: number;
+  };
+  totalAtRisk: number;
+  /** Members carrying slip risk or overload, worst first — the lead's short list. */
+  watch: TeamMemberForesight[];
+  teamThroughputPerWeek: number;
+}
+
+export function toTeamMemberForesight(
+  id: string,
+  name: string,
+  role: string | undefined,
+  f: Foresight,
+): TeamMemberForesight {
+  return {
+    id,
+    name,
+    role,
+    hasSignal: f.hasSignal,
+    status: f.status,
+    reliability: f.reliability,
+    reliabilityLabel: f.reliabilityLabel,
+    trend: f.trend,
+    throughputPerWeek: f.throughputPerWeek,
+    openTasks: f.openTasks,
+    tasksAtRisk: f.tasksAtRisk,
+    clearDateP80: f.clearDateP80,
+    clearDays: f.clearDays,
+  };
+}
+
+/** Roll a team's per-member foresight into one capacity verdict. Pure. */
+export function summarizeTeamForesight(members: TeamMemberForesight[]): TeamForesightSummary {
+  const counts = { onTrack: 0, atRisk: 0, overloaded: 0, cooling: 0, clear: 0, building: 0 };
+  let totalAtRisk = 0;
+  let teamThroughputPerWeek = 0;
+  for (const m of members) {
+    teamThroughputPerWeek += m.throughputPerWeek;
+    totalAtRisk += m.tasksAtRisk;
+    switch (m.status) {
+      case 'on_track':
+        counts.onTrack++;
+        break;
+      case 'at_risk':
+        counts.atRisk++;
+        break;
+      case 'overloaded':
+        counts.overloaded++;
+        break;
+      case 'cooling':
+        counts.cooling++;
+        break;
+      case 'clear':
+        counts.clear++;
+        break;
+      default:
+        counts.building++;
+    }
+  }
+
+  // The watch-list: anyone at risk or overloaded, worst (most at-risk, then
+  // longest plate) first — the handful a lead should actually look at.
+  const rank: Record<string, number> = { overloaded: 0, at_risk: 1, cooling: 2 };
+  const watch = members
+    .filter((m) => m.status === 'at_risk' || m.status === 'overloaded')
+    .sort(
+      (a, b) =>
+        (rank[a.status] ?? 9) - (rank[b.status] ?? 9) ||
+        b.tasksAtRisk - a.tasksAtRisk ||
+        (b.clearDays ?? 0) - (a.clearDays ?? 0),
+    );
+
+  let headline: string;
+  const signal = members.filter((m) => m.hasSignal).length;
+  if (signal === 0) {
+    headline = 'Not enough delivery history yet to read the team’s capacity.';
+  } else if (watch.length === 0) {
+    headline =
+      counts.cooling > 0
+        ? 'Team is broadly on track — a couple of people easing off their usual pace.'
+        : 'Team is on track — current workload looks comfortably inside everyone’s pace.';
+  } else {
+    const lead = watch[0];
+    const who = watch.length === 1 ? lead.name : `${lead.name} +${watch.length - 1}`;
+    headline =
+      totalAtRisk > 0
+        ? `${totalAtRisk} task${totalAtRisk === 1 ? '' : 's'} trending to slip across the team — ${who} ${watch.length === 1 ? 'carries' : 'carry'} the tightest plate${lead.clearDays ? ` (clears ~${Math.round(lead.clearDays)}d out)` : ''}.`
+        : `${who} ${watch.length === 1 ? 'is' : 'are'} running hot — worth rebalancing before dates start to move.`;
+  }
+
+  return {
+    members,
+    headline,
+    counts,
+    totalAtRisk,
+    watch,
+    teamThroughputPerWeek: Math.round(teamThroughputPerWeek * 10) / 10,
+  };
+}

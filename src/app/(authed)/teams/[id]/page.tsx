@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { Trash2, BarChart3, X, Camera } from 'lucide-react';
+import { TeamForesight } from '@/components/TeamForesight';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
 import dynamic from 'next/dynamic';
 // Heavy interactive SVG canvas — defer it until a viewer opens the modal.
@@ -73,6 +74,45 @@ const FUNCTION_LABEL: Record<string, string> = {
   audit: 'Audit',
   training: 'Training',
 };
+
+// A quiet, function-tinted hero cover — a touch of identity per team without
+// the per-member tint that read as noisy on the profile. Falls back to the
+// brand blue→green sweep.
+const FUNCTION_COVER: Record<string, string> = {
+  rtb: 'linear-gradient(115deg, #0d47a1 0%, #1976D2 55%, #1565C0 100%)',
+  ctb: 'linear-gradient(115deg, #1b5e20 0%, #2E7D32 55%, #1565C0 100%)',
+  data_integrity: 'linear-gradient(115deg, #4a148c 0%, #6a1b9a 55%, #1565C0 100%)',
+  audit: 'linear-gradient(115deg, #4e342e 0%, #6d4c41 55%, #455a64 100%)',
+};
+const DEFAULT_COVER = 'linear-gradient(115deg, #1565C0 0%, #1976D2 40%, #2E7D32 100%)';
+
+/* One figure in the team hero's summary strip. */
+function HeroStat({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  accent?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
+      <div className="mt-0.5 flex items-baseline gap-1">
+        <span
+          className="text-[20px] font-black tabular-nums leading-none text-slate-900 dark:text-white"
+          style={accent ? { color: accent } : undefined}
+        >
+          {value}
+        </span>
+        {sub && <span className="text-[11px] text-slate-400">{sub}</span>}
+      </div>
+    </div>
+  );
+}
 
 export default function TeamDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -269,6 +309,17 @@ export default function TeamDetailPage() {
   // ICs only ever see their own micro-tasks; leads see the whole board.
   const visibleBoard = isLead ? board : board.filter((t: any) => t.assigneeId === me?.id);
 
+  // Hero summary — computed from data already on the page (no extra request).
+  const heroProjects = team.projects || [];
+  const heroTaskTotal = heroProjects.reduce((s: number, p: any) => s + (p.taskCount || 0), 0);
+  const heroTaskDone = heroProjects.reduce((s: number, p: any) => s + (p.tasksDone || 0), 0);
+  const heroPct = heroTaskTotal ? Math.round((heroTaskDone / heroTaskTotal) * 100) : 0;
+  const heroOpen = visibleBoard.filter((t: any) => t.status !== 'done').length;
+  const heroOverdue = visibleBoard.filter(
+    (t: any) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done',
+  ).length;
+  const cover = FUNCTION_COVER[team.function] || DEFAULT_COVER;
+
   return (
     <div className="space-y-6">
       {/* Per-member activity peek — leads/admins click the graph icon on a
@@ -338,106 +389,145 @@ export default function TeamDetailPage() {
           </div>
         </ModalPortal>
       )}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          {/* Team avatar — 64px rounded square; leads/admins can change it on hover */}
+      {/* ── Team hero — function-tinted cover, avatar straddling, summary strip ── */}
+      <section className="card overflow-hidden p-0">
+        <div className="relative h-24 sm:h-28 overflow-hidden" style={{ background: cover }}>
           <div
-            className="relative shrink-0 cursor-pointer"
-            onMouseEnter={() => setAvatarHover(true)}
-            onMouseLeave={() => setAvatarHover(false)}
-            onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
-            title={isOwnerOrAdmin ? 'Change team avatar' : undefined}
-          >
-            {avatarImage ? (
-              <img
-                src={avatarImage}
-                alt={`${team.name} avatar`}
-                className="w-16 h-16 rounded-xl object-cover border border-slate-200"
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              opacity: 0.5,
+              background: 'radial-gradient(120% 150% at 12% -30%, rgba(255,255,255,0.4), transparent 50%)',
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              opacity: 0.16,
+              backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1.4px)',
+              backgroundSize: '15px 15px',
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-16"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.14), transparent)' }}
+          />
+          {(isOwnerOrAdmin || isLead) && (
+            <div className="absolute top-3 right-3 flex items-center gap-1.5">
+              <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
+              <ExportMenu
+                onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+                onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+                onBirdEyeSvg={() => setShowBirdEye(true)}
               />
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
-                <span className="text-2xl font-black text-slate-400 select-none">
-                  {team.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-            {/* Change-avatar overlay — only for owner/admin */}
-            {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
-              <div className="absolute inset-0 rounded-xl bg-black/40 flex items-center justify-center">
-                {avatarUploading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 sm:px-6 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+            {/* Avatar straddling the cover (owner/admin can change on hover). */}
+            <div className="-mt-12 shrink-0 flex flex-col items-center gap-1">
+              <div
+                className="relative cursor-pointer rounded-2xl p-[3px] bg-white dark:bg-[#262624] shadow-lg"
+                onMouseEnter={() => setAvatarHover(true)}
+                onMouseLeave={() => setAvatarHover(false)}
+                onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
+                title={isOwnerOrAdmin ? 'Change team avatar' : undefined}
+              >
+                {avatarImage ? (
+                  <img
+                    src={avatarImage}
+                    alt={`${team.name} avatar`}
+                    className="w-[72px] h-[72px] rounded-[14px] object-cover"
+                  />
                 ) : (
-                  <Camera size={18} className="text-white" />
+                  <div
+                    className="w-[72px] h-[72px] rounded-[14px] flex items-center justify-center"
+                    style={{ background: cover }}
+                  >
+                    <span className="text-3xl font-black text-white/90 select-none">
+                      {team.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
+                  <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
+                    {avatarUploading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera size={18} className="text-white" />
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+              {isOwnerOrAdmin && avatarImage && (
+                <button
+                  onClick={removeAvatar}
+                  disabled={avatarUploading}
+                  className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+              {isOwnerOrAdmin && (
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0 sm:pb-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
+                  {team.name}
+                </h1>
+                {/* Human label for the team's operating function — the raw enum
+                    ("rtb") is a database detail, not UI copy. */}
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                    (
+                      {
+                        rtb: 'bg-blue-50 text-blue-700 border-blue-200',
+                        ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                      } as Record<string, string>
+                    )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {FUNCTION_LABEL[team.function] || team.function}
+                </span>
+              </div>
+              {team.description && (
+                <p className="text-sm text-slate-500 dark:text-white/50 mt-1.5 leading-snug">
+                  {team.description}
+                </p>
+              )}
+            </div>
           </div>
-          {/* Hidden file input */}
-          {isOwnerOrAdmin && (
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleAvatarFileChange}
+
+          {/* Summary strip — the team at a glance, from data already on screen. */}
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-white/[0.06] grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <HeroStat label="Members" value={team.members.length} />
+            <HeroStat label="Projects" value={heroProjects.length} />
+            <HeroStat label="Tasks done" value={`${heroTaskDone}/${heroTaskTotal}`} sub={`${heroPct}%`} />
+            <HeroStat label={isLead ? 'Open' : 'My open'} value={heroOpen} />
+            <HeroStat
+              label={isLead ? 'Overdue' : 'My overdue'}
+              value={heroOverdue}
+              accent={heroOverdue > 0 ? '#dc2626' : undefined}
             />
-          )}
-          <div>
-            <h1 className="page-title">{team.name}</h1>
-            {team.description && <p className="text-slate-600 mt-1">{team.description}</p>}
-            {/* Human label + tone for the team's operating function — the raw
-                enum value ("rtb") is a database detail, not UI copy. */}
-            <span
-              className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                (
-                  {
-                    rtb: 'bg-blue-50 text-blue-700 border-blue-200',
-                    ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                  } as Record<string, string>
-                )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
-              }`}
-            >
-              {(
-                {
-                  rtb: 'Run the Business',
-                  ctb: 'Change the Business',
-                  general: 'General',
-                  csv_validation: 'CSV / Validation',
-                  data_integrity: 'Data Integrity',
-                  pharmacovigilance: 'Pharmacovigilance',
-                  lab_informatics: 'Lab Informatics',
-                  audit: 'Audit',
-                  training: 'Training',
-                } as Record<string, string>
-              )[team.function] || team.function}
-            </span>
-            {/* Remove avatar option — shown when avatar is set and user is owner/admin */}
-            {isOwnerOrAdmin && avatarImage && (
-              <button
-                onClick={removeAvatar}
-                disabled={avatarUploading}
-                className="mt-1 text-[11px] text-slate-400 hover:text-red-500 transition-colors"
-              >
-                Remove avatar
-              </button>
-            )}
           </div>
         </div>
-        {/* Any team lead (not just the team's owner) or an admin can export
-            a presentable team report. One "Export" button → PDF / CSV / HTML;
-            the report is generated entirely from data already on screen so
-            this is purely a UI gate. */}
-        {(isOwnerOrAdmin || isLead) && (
-          <div className="shrink-0 flex items-center gap-2 flex-wrap">
-            <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
-            <ExportMenu
-              onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
-              onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
-              onBirdEyeSvg={() => setShowBirdEye(true)}
-            />
-          </div>
-        )}
-      </div>
+      </section>
+
+      {/* ── Team Foresight — capacity outlook over the heavy engine (lead/admin) ── */}
+      {isLead && <TeamForesight teamId={id} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-4">

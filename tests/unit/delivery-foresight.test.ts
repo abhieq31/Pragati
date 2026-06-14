@@ -20,7 +20,9 @@ import {
   detectAnomaly,
   reliabilityIndex,
   computeForesight,
+  summarizeTeamForesight,
   type LogNormalPrior,
+  type TeamMemberForesight,
 } from '../../src/lib/ai/deliveryForesight';
 
 const PRIOR: LogNormalPrior = { muLog: Math.log(4), sigmaLog: 0.7 };
@@ -290,5 +292,63 @@ describe('computeForesight', () => {
     });
     assert.equal(a.clearDateP80, b.clearDateP80);
     assert.equal(a.headline, b.headline);
+  });
+});
+
+// ── summarizeTeamForesight (pure roll-up) ─────────────────────────────────────
+
+describe('summarizeTeamForesight', () => {
+  function member(p: Partial<TeamMemberForesight>): TeamMemberForesight {
+    return {
+      id: p.id || 'x',
+      name: p.name || 'X',
+      role: p.role,
+      hasSignal: p.hasSignal ?? true,
+      status: p.status || 'on_track',
+      reliability: p.reliability ?? 70,
+      reliabilityLabel: p.reliabilityLabel || 'Dependable',
+      trend: p.trend || 'steady',
+      throughputPerWeek: p.throughputPerWeek ?? 3,
+      openTasks: p.openTasks ?? 2,
+      tasksAtRisk: p.tasksAtRisk ?? 0,
+      clearDateP80: p.clearDateP80 ?? null,
+      clearDays: p.clearDays ?? null,
+    };
+  }
+
+  it('counts statuses and sums team throughput', () => {
+    const s = summarizeTeamForesight([
+      member({ id: 'a', status: 'on_track', throughputPerWeek: 2 }),
+      member({ id: 'b', status: 'clear', throughputPerWeek: 1.5 }),
+      member({ id: 'c', status: 'cooling', throughputPerWeek: 1 }),
+    ]);
+    assert.equal(s.counts.onTrack, 1);
+    assert.equal(s.counts.clear, 1);
+    assert.equal(s.counts.cooling, 1);
+    assert.equal(s.teamThroughputPerWeek, 4.5);
+    assert.equal(s.watch.length, 0);
+  });
+
+  it('floats the worst (overloaded, then most at-risk) onto the watch list', () => {
+    const s = summarizeTeamForesight([
+      member({ id: 'ok', name: 'OK', status: 'on_track' }),
+      member({ id: 'risk', name: 'Risk', status: 'at_risk', tasksAtRisk: 2 }),
+      member({ id: 'over', name: 'Over', status: 'overloaded', tasksAtRisk: 1, clearDays: 25 }),
+    ]);
+    assert.equal(s.watch[0].name, 'Over', 'overloaded ranks first');
+    assert.equal(s.watch[1].name, 'Risk');
+    assert.equal(s.totalAtRisk, 3);
+    assert.ok(/slip|rebalanc/i.test(s.headline));
+  });
+
+  it('reads an all-clear team as on track', () => {
+    const s = summarizeTeamForesight([member({ status: 'on_track' }), member({ status: 'clear' })]);
+    assert.equal(s.watch.length, 0);
+    assert.ok(/on track/i.test(s.headline));
+  });
+
+  it('says so when no one has enough history', () => {
+    const s = summarizeTeamForesight([member({ status: 'building', hasSignal: false })]);
+    assert.ok(/history/i.test(s.headline));
   });
 });
