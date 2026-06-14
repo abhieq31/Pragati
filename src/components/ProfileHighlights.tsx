@@ -65,7 +65,7 @@ export function ProfileHighlights({ userId, isSelf }: { userId: string; isSelf: 
           <button
             type="button"
             onClick={() => setComposing(true)}
-            className="flex flex-col items-center gap-1.5 shrink-0 group"
+            className="flex flex-col items-center gap-1.5 shrink-0 w-[72px] group"
             title="Add a highlight"
           >
             <span className="w-16 h-16 rounded-full border-2 border-dashed border-slate-300 dark:border-white/15 flex items-center justify-center text-slate-400 group-hover:border-blue-400 group-hover:text-blue-500 transition-colors">
