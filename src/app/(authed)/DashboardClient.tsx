@@ -111,8 +111,6 @@ interface DashResp {
   people: DashPerson[];
   teamCount: number;
   flowSignal?: FlowSignalPayload | null;
-  /** 10x Work Mixer result (always present in latest; pure deterministic ranking) */
-  workMixer?: any;
 }
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
@@ -243,61 +241,33 @@ function buildBirdsEyeDataFromDash(dash: DashResp): BirdsEyeData {
       teams.push({ id, name });
     }
   }
-  // 10x count of at-risk items for the macro header — instant signal density.
-  const atRiskTasks = dash.teamTasks.filter((t: any) => t.slipRisk?.reason).length;
-
-  // Elon 10x: Enrich with Work Mixer urgency so the tree can visualize priority.
-  // Build a quick map from the always-on mixer result.
-  const mixerScoreById = new Map<string, { score: number; reasons: string[] }>();
-  if (dash.workMixer?.sections) {
-    for (const sec of dash.workMixer.sections) {
-      for (const item of sec.candidates || sec.items || []) {
-        if (item.id) mixerScoreById.set(item.id, { score: item.score || 0, reasons: item.reasons || [] });
-      }
-    }
-  }
-
   return {
     rootLabel: `${dash.user.name}'s workspace`,
-    rootSubLabel: `${dash.teamCount} team${dash.teamCount === 1 ? '' : 's'} · ${dash.projects.length} project${dash.projects.length === 1 ? '' : 's'} · ${dash.teamTasks.length} task${dash.teamTasks.length === 1 ? '' : 's'}${atRiskTasks ? ` · ${atRiskTasks} at risk` : ''}`,
+    rootSubLabel: `${dash.teamCount} team${dash.teamCount === 1 ? '' : 's'} · ${dash.projects.length} project${dash.projects.length === 1 ? '' : 's'} · ${dash.teamTasks.length} task${dash.teamTasks.length === 1 ? '' : 's'}`,
     scope: 'workspace',
     teams,
-    projects: dash.projects.map((p) => {
-      const mixer = mixerScoreById.get(p.id);
-      return {
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        teamId: p.teamName ? (teamIdByName.get(p.teamName) ?? null) : null,
-        health: p.health,
-        taskCount: p.taskCount ?? 0,
-        tasksDone: p.tasksDone ?? 0,
-        dueDate: p.dueDate ?? null,
-        ownerName: p.ownerName ?? null,
-        // 10x: mixer urgency for visual weight in tree
-        mixerScore: mixer?.score,
-        mixerReasons: mixer?.reasons,
-      };
-    }),
-    tasks: dash.teamTasks.map((t) => {
-      const mixer = mixerScoreById.get(t.id);
-      return {
-        id: t.id,
-        title: t.title,
-        projectId: t.projectId,
-        status: t.status,
-        assigneeName: t.assigneeName ?? null,
-        dueDate: (t.ccTcd || t.dueDate) ?? null,
-        subtaskCount: t.subtaskCount,
-        subtasksDone: t.subtasksDone,
-        subtaskTitles: t.subtaskTitles?.slice(0, 5),
-        // 10x: pass slip risk into the tree so high-risk work can be visually
-        // surfaced (node emphasis, badges, etc.) in the macro view.
-        slipRiskReason: t.slipRisk?.reason ?? null,
-        mixerScore: mixer?.score,
-        mixerReasons: mixer?.reasons,
-      };
-    }),
+    projects: dash.projects.map((p) => ({
+      id: p.id,
+      code: p.code,
+      name: p.name,
+      teamId: p.teamName ? (teamIdByName.get(p.teamName) ?? null) : null,
+      health: p.health,
+      taskCount: p.taskCount ?? 0,
+      tasksDone: p.tasksDone ?? 0,
+      dueDate: p.dueDate ?? null,
+      ownerName: p.ownerName ?? null,
+    })),
+    tasks: dash.teamTasks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      projectId: t.projectId,
+      status: t.status,
+      assigneeName: t.assigneeName ?? null,
+      dueDate: (t.ccTcd || t.dueDate) ?? null,
+      subtaskCount: t.subtaskCount,
+      subtasksDone: t.subtasksDone,
+      subtaskTitles: t.subtaskTitles?.slice(0, 5),
+    })),
   };
 }
 
@@ -311,20 +281,9 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
   // the tab regains focus, on a gentle interval, and on app-wide change events.
   useLiveRefresh(() => router.refresh());
   const [summaryModal, setSummaryModal] = useState<null | 'open' | 'overdue'>(null);
-  // Bird's-eye view — THE macro lens. 10x default for leads/admins.
-  // Auto-open the living tree (risk + focus signals overlaid) so it's the primary view.
-  // This is the control room. Classic lists become secondary navigation.
+  // Bird's-eye view — the lead's whole workspace as a packed tree. Opened
+  // from the small compass icon in the greeting row.
   const [birdsEyeOpen, setBirdsEyeOpen] = useState(false);
-
-  // Elon 10x: For anyone who can see the macro (leads+), blast open the tree on mount.
-  // No more hiding the best view behind a tiny icon.
-  useEffect(() => {
-    if (isLead && !birdsEyeOpen) {
-      // Small delay so initial paint settles, then reveal the 10x view.
-      const t = setTimeout(() => setBirdsEyeOpen(true), 120);
-      return () => clearTimeout(t);
-    }
-  }, [isLead]); // eslint-disable-line react-hooks/exhaustive-deps
   // Up Next's expand state is lifted here so the shared two-column header bar
   // (below) can own the expand control — keeping both column titles on one
   // inline header row instead of two floating labels.
@@ -403,16 +362,7 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
             both on the row the user sees every day. */}
         <div className="flex items-center gap-2 shrink-0">
           {!isFirstRun && <StreakChip />}
-          {!isFirstRun && (
-            <button
-              onClick={() => setBirdsEyeOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-white/20 bg-white/80 dark:bg-slate-950/80 px-3 py-1.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.985] transition"
-              title="The 10x control room: full org tree with live slip-risk and focus signals overlaid"
-            >
-              <span>🪐 The Tree</span>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">10x MACRO + RISK</span>
-            </button>
-          )}
+          {!isFirstRun && <BirdEyeButton scopeKey="dashboard" onClick={() => setBirdsEyeOpen(true)} />}
         </div>
       </div>
       {/* Subline removed. The summary chips below (Ongoing / Open / Overdue
@@ -433,36 +383,6 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
               Renders nothing when there's nothing to surface — silence is
               the correct product state. */}
           <FlowSignalStrip data={dash.flowSignal} />
-
-          {/* ── 10x Work Mixer Focus (always computed, pure + explainable) ──
-              Deterministic ranking of what actually matters right now.
-              Scores + reasons come from the X-style mixer over the exact
-              same data the rest of the dashboard uses. No magic, no extra load. */}
-          {dash.workMixer && dash.workMixer.sections && (
-            <div className="mb-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-950/60 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="h-4 w-4" />
-                <div className="font-semibold tracking-tight">Focus Now — Work Mixer</div>
-                <div className="text-xs text-slate-500">ranked • explainable • zero cost</div>
-              </div>
-              <div className="space-y-2 text-sm">
-                {dash.workMixer.sections.slice(0, 3).map((sec: any, i: number) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="font-mono text-[10px] pt-0.5 w-16 shrink-0 text-slate-500">{sec.label}</div>
-                    <div className="flex-1">
-                      {sec.items?.slice(0, 2).map((item: any, j: number) => (
-                        <div key={j} className="text-slate-700 dark:text-slate-200">
-                          {item.title} <span className="text-emerald-600 dark:text-emerald-400 text-xs">({item.score})</span>
-                          {item.reasons?.length ? <span className="text-slate-500 text-xs"> — {item.reasons[0]}</span> : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="text-[10px] text-slate-500 mt-2">Open the Bird’s Eye for the full macro picture with these priorities overlaid.</div>
-            </div>
-          )}
 
           {/* ── Summary strip ──────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2 mb-5">

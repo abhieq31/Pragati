@@ -21,7 +21,6 @@ import { api } from '@/lib/client/api';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import { notifyCalendarChange } from '@/components/SidebarCalendar';
-import { useLiveRefresh, notifyDataChanged } from '@/lib/client/useLiveRefresh';
 
 /**
  * Bird's-Eye View — a clean, executive top-down map of a workspace / team /
@@ -65,9 +64,6 @@ export interface BirdsEyeProject {
   tasksDone: number;
   dueDate?: string | null;
   ownerName?: string | null;
-  /** 10x Elon: Work Mixer score + reasons for visual priority (size/glow/color) in the tree. */
-  mixerScore?: number;
-  mixerReasons?: string[];
 }
 
 export interface BirdsEyeTask {
@@ -86,12 +82,6 @@ export interface BirdsEyeTask {
   subtasksDone?: number;
   /** First few subtask titles for inline rendering inside the task node. */
   subtaskTitles?: string[];
-  /** 10x signal (Elon-mandated): from deterministic slip-risk model.
-   *  Visual emphasis + reason in title so the macro view *is* the early-warning system. */
-  slipRiskReason?: string | null;
-  /** 10x Elon: Work Mixer score for this task (priority in the living tree). */
-  mixerScore?: number;
-  mixerReasons?: string[];
 }
 
 export interface BirdsEyeData {
@@ -685,34 +675,19 @@ function NodeShape({ n }: { n: PositionedNode }) {
   if (n.kind === 'task') {
     const t = n.data as BirdsEyeTask;
     const fill = STATUS_FILL[t?.status || 'todo'];
-    let stroke = STATUS_STROKE[t?.status || 'todo'];
+    const stroke = STATUS_STROKE[t?.status || 'todo'];
     const dot = STATUS_DOT[t?.status || 'todo'];
-    const hasSlip = !!t?.slipRiskReason;
-    const mixerScore = t?.mixerScore || 0;
-
-    // 10x Elon move: Risk is first-class signal in the macro view.
-    // High slip risk = stronger red border + warning accent. Makes "what will bite us" pop at a glance.
-    // Keeps the calm executive aesthetic but adds physics (deterministic risk) you can act on.
-    if (hasSlip) {
-      stroke = '#dc2626'; // critical red overrides status for visibility
-    } else if (mixerScore > 40) {
-      // High mixer urgency = bolder indigo accent for "do this now"
-      stroke = '#4f46e5';
-    }
-
     const subtaskTitles = n.showSubtasks ? (t?.subtaskTitles || []).slice(0, 3) : [];
+    // Y offset where the title block ends — subtask rows start here
     const titleEndY = n.y + 16 + (n.titleLines?.length || 1) * 15;
     const hasProgress = n.showSubtasks && (t?.subtaskCount ?? 0) > 0;
     const progressRatio = hasProgress
       ? Math.max(0, Math.min(1, (t!.subtasksDone ?? 0) / (t!.subtaskCount ?? 1)))
       : 0;
 
-    const riskTitle = hasSlip ? `\n⚠️ MAY SLIP: ${t.slipRiskReason}` : '';
-    const mixerTitle = mixerScore > 0 ? `\n🎯 MIXER: ${mixerScore} (${(t.mixerReasons || []).join(', ')})` : '';
-
     return (
       <g>
-        <title>{fullTitle}{riskTitle}{mixerTitle}</title>
+        <title>{fullTitle}</title>
         <rect
           x={n.x}
           y={n.y}
@@ -721,23 +696,11 @@ function NodeShape({ n }: { n: PositionedNode }) {
           rx={9}
           fill={fill}
           stroke={stroke}
-          strokeWidth={hasSlip ? 2.5 : mixerScore > 40 ? 2 : 1}   // 10x: thicker = higher signal
+          strokeWidth={1}
           filter="url(#beNodeShadow)"
         />
-        {/* Status (or risk) dot */}
-        <circle cx={n.x + 12} cy={n.y + 14} r={hasSlip ? 4.5 : mixerScore > 40 ? 4 : 3.5} fill={hasSlip ? '#dc2626' : mixerScore > 40 ? '#4f46e5' : dot} />
-        {/* 10x risk badge — tiny but unmistakable */}
-        {hasSlip && (
-          <text x={n.x + n.width - 18} y={n.y + 14} fontSize={9} fill="#dc2626" fontWeight={700}>
-            !
-          </text>
-        )}
-        {/* Mixer badge for high priority */}
-        {mixerScore > 40 && !hasSlip && (
-          <text x={n.x + n.width - 18} y={n.y + 14} fontSize={8} fill="#4f46e5" fontWeight={700}>
-            ↑
-          </text>
-        )}
+        {/* Status dot */}
+        <circle cx={n.x + 12} cy={n.y + 14} r={3.5} fill={dot} />
         {/* Task title */}
         <text x={n.x + 22} y={n.y + 17}>
           <MultiText x={n.x + 22} lines={lines} fontSize={11.5} lineHeight={14} fill="#0f172a" weight={600} />
@@ -830,16 +793,9 @@ function edgePath(from: PositionedNode, to: PositionedNode): string {
 
 /* ── Component ─────────────────────────────────────────────────────────────
    Renders inside a portal so the modal sits above the app sidebar/header and
-   the Bird's-eye header is never clipped.
-
-   10x version (Elon mandate): The definitive macro view.
-   - Deterministic layout you can trust for reviews/audits.
-   - Slip risk (deterministic per-person early warning) = red border + ! badge + reason in tooltip.
-   - Work Mixer focus signals live in the dashboard panel next to this.
-   - Search + status + drag + brush + exports that match pixels exactly.
-   Physics > polish. Signal density high. Delete anything that adds noise. */
+   the Bird's-eye header is never clipped. */
 export function BirdsEyeView({
-  data: initialData,
+  data,
   onClose,
   onChange,
   autoExport,
@@ -854,26 +810,6 @@ export function BirdsEyeView({
    *  menu's one-click "Bird's-eye SVG/PNG" without ever showing the modal. */
   autoExport?: 'svg' | 'png' | null;
 }) {
-  // Elon real-time: The tree is alive. Use the app's cheap live refresh to
-  // stay in sync with other users/mutations without WebSockets (Vercel budget).
-  // This makes the macro view feel like a control tower. 15s + events = as real-time as free infra allows.
-  // Combined with optimistic local updates on edits = feels instant.
-  const [liveData, setLiveData] = useState(initialData);
-  useLiveRefresh(() => {
-    // Parent will usually pass fresh data on refresh, but local fallback
-    // keeps the tree updating even if parent is lazy.
-    if (initialData !== liveData) setLiveData(initialData);
-  }, { intervalMs: 10000, events: ['pragati:data-changed'] }); // Elon: tighter for the hero view
-
-  const data = liveData; // use the live one for rendering
-
-  // Optimistic local update for edits/drags so the tree feels real-time even before server roundtrip.
-  const updateLocalNode = (id: string, updates: Partial<BirdsEyeTask>) => {
-    setLiveData(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(t => t.id === id ? { ...t, ...updates } as BirdsEyeTask : t),
-    }));
-  };
   const [mounted, setMounted] = useState(false);
   const [zoom, setZoom] = useState(1);
   // Default collapsed — shows compact count chips per project so the initial
@@ -939,10 +875,6 @@ export function BirdsEyeView({
   // keeps the view trustworthy as a spatial reference).
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
-
-  // 10x risk awareness: if any slipRisk in the tree, surface a live legend.
-  // This makes "what will miss" impossible to miss in the macro view.
-  const hasAnyRisk = useMemo(() => data.tasks.some(t => t.slipRiskReason), [data.tasks]);
   // Status spotlight — clicking a legend chip dims tasks not in that status.
   // null = no filter. Single-select; clicking the active chip clears it.
   const [statusFocus, setStatusFocus] = useState<string | null>(null);
