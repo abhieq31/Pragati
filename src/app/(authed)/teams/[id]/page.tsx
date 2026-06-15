@@ -125,6 +125,9 @@ export default function TeamDetailPage() {
   const [newMember, setNewMember] = useState('');
   const [activityMember, setActivityMember] = useState<any | null>(null);
   const [showBirdEye, setShowBirdEye] = useState(false);
+  // Headless bird's-eye export — set by the Export menu to download the map
+  // (SVG/PNG) directly, without opening the interactive view.
+  const [birdEyeExport, setBirdEyeExport] = useState<'svg' | 'png' | null>(null);
   // Team avatar — loaded on mount, updated on upload/remove
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [avatarHover, setAvatarHover] = useState(false);
@@ -320,6 +323,37 @@ export default function TeamDetailPage() {
   ).length;
   const cover = FUNCTION_COVER[team.function] || DEFAULT_COVER;
 
+  // The bird's-eye tree — built once from data already on the page, shared by
+  // the interactive view and the headless Export-menu download.
+  const birdEyeData = {
+    rootLabel: team.name,
+    rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
+    scope: 'team' as const,
+    teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
+    projects: (team.projects || []).map((p: any) => ({
+      id: p.id,
+      code: p.ccNo || p.code,
+      name: p.name,
+      teamId: team.id,
+      health: 'healthy' as const,
+      taskCount: p.taskCount ?? 0,
+      tasksDone: p.tasksDone ?? 0,
+      dueDate: p.dueDate ?? null,
+      ownerName: p.ownerName ?? null,
+    })),
+    tasks: (board || []).map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      projectId: t.projectId,
+      status: t.status,
+      assigneeName: t.assigneeName ?? null,
+      dueDate: (t.ccTcd || t.dueDate) ?? null,
+      subtaskCount: t.subtaskCount,
+      subtasksDone: t.subtasksDone,
+      subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
+    })),
+  };
+
   return (
     <div className="space-y-6">
       {/* Per-member activity peek — leads/admins click the graph icon on a
@@ -420,7 +454,8 @@ export default function TeamDetailPage() {
               <ExportMenu
                 onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
                 onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
-                onBirdEyeSvg={() => setShowBirdEye(true)}
+                onBirdEyeSvg={() => setBirdEyeExport('svg')}
+                onBirdEyePng={() => setBirdEyeExport('png')}
               />
             </div>
           )}
@@ -770,39 +805,13 @@ export default function TeamDetailPage() {
           )}
         </div>
       </div>
-      {showBirdEye && team && (
-        <BirdsEyeView
-          onClose={() => setShowBirdEye(false)}
-          onChange={load}
-          data={{
-            rootLabel: team.name,
-            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
-            scope: 'team',
-            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
-            projects: (team.projects || []).map((p: any) => ({
-              id: p.id,
-              code: p.ccNo || p.code,
-              name: p.name,
-              teamId: team.id,
-              health: 'healthy',
-              taskCount: p.taskCount ?? 0,
-              tasksDone: p.tasksDone ?? 0,
-              dueDate: p.dueDate ?? null,
-              ownerName: p.ownerName ?? null,
-            })),
-            tasks: (board || []).map((t: any) => ({
-              id: t.id,
-              title: t.title,
-              projectId: t.projectId,
-              status: t.status,
-              assigneeName: t.assigneeName ?? null,
-              dueDate: (t.ccTcd || t.dueDate) ?? null,
-              subtaskCount: t.subtaskCount,
-              subtasksDone: t.subtasksDone,
-              subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
-            })),
-          }}
-        />
+      {showBirdEye && (
+        <BirdsEyeView onClose={() => setShowBirdEye(false)} onChange={load} data={birdEyeData} />
+      )}
+
+      {/* Headless one-shot export from the Export menu — no modal, just a file. */}
+      {birdEyeExport && (
+        <BirdsEyeView autoExport={birdEyeExport} onClose={() => setBirdEyeExport(null)} data={birdEyeData} />
       )}
     </div>
   );

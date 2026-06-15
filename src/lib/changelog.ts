@@ -30,6 +30,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-06-15',
+    title: 'Bird’s-eye view: one-click SVG/PNG export, copy-to-clipboard',
+    tags: ['feature', 'improvement'],
+    body: [
+      'The Export menu’s “Bird Eye View · SVG” now downloads the map directly instead of opening the viewer, and a new “· PNG” option exports a crisp 2× image — both rendered headlessly from the same data, with the whole tree expanded so the file is complete.',
+      'Inside the viewer, the single SVG button became an export group: vector SVG, high-res PNG, or copy the image straight to your clipboard to paste into a deck or chat.',
+    ],
+  },
+  {
     date: '2026-06-14',
     title: 'Delivery Foresight — a predictive read on profiles, briefs and teams',
     tags: ['feature', 'improvement'],
