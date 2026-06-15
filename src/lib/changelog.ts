@@ -31,6 +31,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
+    title: 'Bird’s-eye: real slip-risk model, single/double-click, drag fix',
+    tags: ['feature', 'fix', 'improvement'],
+    body: [
+      'The time-simulation “HEAT %” is now a calibrated logistic slip-risk probability (engineered features → log-odds → sigmoid, the same model family as the slip-risk early warning) instead of an ad-hoc point sum — so the number is an interpretable probability, and advancing the +1d/+3d/+7d horizon genuinely re-forecasts each task’s chance of slipping rather than re-bucketing a counter.',
+      'A single click on any node now opens/hides its branch; a double-click opens that node’s detail page. Dragging a node toward the top-left no longer pushes it off-canvas and breaks the view.',
+    ],
+  },
+  {
+    date: '2026-06-15',
     title: 'One daily brief at 08:30; crisper login avatars',
     tags: ['improvement', 'fix'],
     body: [

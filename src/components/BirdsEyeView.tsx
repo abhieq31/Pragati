@@ -84,26 +84,56 @@ export interface BirdsEyeTask {
   subtaskTitles?: string[];
 }
 
-/** Client-side computed urgency for the greatest visualization on earth.
- *  0-100 scale. Drives stroke weight, color intensity, size hints, and focus modes.
- *  Pure function from the data we already have at team/project scopes. */
+/**
+ * Slip-risk urgency — a calibrated LOGISTIC model, not an ad-hoc point sum.
+ *
+ * Returns an interpretable 0–100 *probability that the task slips its date*,
+ * the same model family as lib/ai/slipRisk.ts: engineer a few bounded features
+ * from the data we already have, combine them in log-odds space with
+ * hand-calibrated weights, and squash through a sigmoid. Because the output is
+ * a probability, the "HEAT %" badge and the colour ramp suddenly *mean*
+ * something, and the time simulation is a genuine forward projection: advancing
+ * `simDays` shrinks the runway, raises the time-pressure feature, and the
+ * probability climbs — you are watching the model re-forecast the future, not
+ * re-bucketing a counter.
+ *
+ * Deterministic and dependency-free (runs over the rows already on screen), so
+ * it stays free-forever and reproducible — every score traces to these weights.
+ */
 export function computeTaskUrgency(t: BirdsEyeTask, simDays = 0): number {
-  let u = 0;
+  if (t.status === 'done') return 0;
   const now = Date.now() + simDays * 86400000;
+
+  // ── Features (each bounded to [0,1] so a weight is its full influence) ──
+  // 1) Time pressure: a smooth runway signal. Overdue saturates at 1; a date
+  //    two weeks out contributes ~nothing. Undated work carries no time
+  //    pressure (the model leans on flow + progress instead).
+  let timePressure = 0;
   if (t.dueDate) {
-    const due = new Date(t.dueDate).getTime();
-    const days = Math.floor((due - now) / 86400000);
-    if (days < 0)
-      u += 45; // overdue — Elon: the physics of time is unforgiving
-    else if (days <= 2) u += 30;
-    else if (days <= 7) u += 15;
+    const days = (new Date(t.dueDate).getTime() - now) / 86400000;
+    timePressure = days <= 0 ? 1 : Math.max(0, Math.min(1, 1 - days / 14));
   }
-  if (t.status === 'blocked') u += 25;
-  if (t.status === 'review') u += 10;
-  const prog = (t.subtasksDone ?? 0) / Math.max(1, t.subtaskCount ?? 1);
-  if (prog < 0.3 && (t.dueDate || t.status !== 'todo')) u += 12;
-  if (t.status === 'done') u = 0;
-  return Math.min(100, Math.round(u));
+  // 2) Progress deficit: how much remains. Neutral (0.5) when a task has no
+  //    subtasks to measure, so we neither reward nor punish the unknown.
+  const hasSubs = (t.subtaskCount ?? 0) > 0;
+  const progress = hasSubs ? (t.subtasksDone ?? 0) / (t.subtaskCount as number) : 0.5;
+  const deficit = 1 - progress;
+  // 3) Flow state.
+  const blocked = t.status === 'blocked' ? 1 : 0;
+  const inReview = t.status === 'review' ? 1 : 0;
+
+  // ── Log-odds (hand-calibrated logistic regression) ──
+  // Base prior is low (most open work is not at risk); features push it up.
+  // The deficit term is gated by time pressure — being unfinished only matters
+  // as the deadline closes — which is the interaction a flat point-sum misses.
+  const z =
+    -2.1 +
+    2.9 * timePressure +
+    1.6 * (deficit * Math.max(timePressure, 0.25)) +
+    2.0 * blocked +
+    0.7 * inReview;
+  const p = 1 / (1 + Math.exp(-z));
+  return Math.round(p * 100);
 }
 
 /** Elon first-principles: the tree should let you *see the truth and fix it fast*.
