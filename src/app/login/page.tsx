@@ -603,51 +603,52 @@ export default function LoginPage() {
                     avatar (the returning-user echo of the brand mark's orbit),
                     with a soft breathing halo, so re-entry feels alive. */}
                   <div className="flex flex-col items-center text-center mb-7">
-                    <div className="relative mb-5" style={{ width: 96, height: 96 }}>
-                      {/* Breathing halo */}
+                    <div
+                      className="relative mb-5 grid place-items-center"
+                      style={{ width: 104, height: 104 }}
+                    >
+                      {/* Breathing brand halo */}
                       <div
                         aria-hidden
                         className="absolute inset-0 rounded-full"
                         style={{
-                          background: 'radial-gradient(circle, rgba(21,101,192,0.26) 0%, transparent 68%)',
+                          background: 'radial-gradient(circle, rgba(21,101,192,0.30) 0%, transparent 70%)',
                           animation: 'glow-pulse 3.4s ease-in-out infinite',
                         }}
                       />
-                      {/* Dashed orbit rings — slow, opposite directions. */}
+                      {/* Crisp brand-gradient ring around a clean circular avatar —
+                          the returning-user echo of the brand mark, polished. */}
                       <div
-                        aria-hidden
-                        className="absolute inset-0 rounded-full pin-orbit-a"
-                        style={{ border: '1.5px dashed rgba(21,101,192,0.30)' }}
-                      />
-                      <div
-                        aria-hidden
-                        className="absolute rounded-full pin-orbit-b"
-                        style={{ inset: 10, border: '1.5px dashed rgba(46,125,50,0.28)' }}
-                      />
-                      {/* Avatar tile — the member's photo when set, else monogram. */}
-                      {deviceAvatar.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={deviceAvatar.image}
-                          alt=""
-                          className="absolute inset-[18px] rounded-[20px] object-cover"
-                          style={{ boxShadow: '0 10px 28px rgba(21,101,192,0.34)' }}
-                        />
-                      ) : (
-                        <div
-                          className="absolute inset-[18px] rounded-[20px] flex items-center justify-center text-2xl select-none"
-                          style={{
-                            background:
-                              deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
-                            color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
-                            fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
-                            fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
-                            boxShadow: '0 10px 28px rgba(21,101,192,0.34)',
-                          }}
-                        >
-                          {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+                        className="relative rounded-full p-[3px]"
+                        style={{
+                          background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
+                          boxShadow: '0 14px 34px -8px rgba(21,101,192,0.45)',
+                        }}
+                      >
+                        <div className="rounded-full p-[3px] bg-white">
+                          {deviceAvatar.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={deviceAvatar.image}
+                              alt=""
+                              className="block w-20 h-20 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div
+                              className="w-20 h-20 rounded-full flex items-center justify-center text-2xl select-none"
+                              style={{
+                                background:
+                                  deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                                color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
+                                fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
+                                fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
+                              }}
+                            >
+                              {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                     <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.22em] mb-1.5 fade-up-1">
                       Welcome back
@@ -961,37 +962,45 @@ export default function LoginPage() {
           }}
           aria-live="polite"
         >
-          <div className="relative mb-6" style={{ width: 88, height: 88 }}>
+          <div className="relative mb-6 grid place-items-center" style={{ width: 96, height: 96 }}>
             <div
               aria-hidden
               className="absolute inset-0 rounded-full"
               style={{
-                background: 'radial-gradient(circle, rgba(66,165,245,0.30) 0%, transparent 68%)',
+                background: 'radial-gradient(circle, rgba(66,165,245,0.36) 0%, transparent 70%)',
                 animation: 'glow-pulse 2.4s ease-in-out infinite',
               }}
             />
-            {deviceAvatar.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={deviceAvatar.image}
-                alt=""
-                className="absolute inset-[10px] rounded-[22px] object-cover"
-                style={{ boxShadow: '0 14px 36px rgba(21,101,192,0.45)' }}
-              />
-            ) : (
-              <div
-                className="absolute inset-[10px] rounded-[22px] flex items-center justify-center text-xl select-none"
-                style={{
-                  background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
-                  color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
-                  fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
-                  fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
-                  boxShadow: '0 14px 36px rgba(21,101,192,0.45)',
-                }}
-              >
-                {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+            <div
+              className="relative rounded-full p-[3px]"
+              style={{
+                background: 'conic-gradient(from 210deg, #1769C8, #43A047, #1976D2, #1769C8)',
+                boxShadow: '0 16px 40px -8px rgba(21,101,192,0.55)',
+              }}
+            >
+              <div className="rounded-full p-[3px]" style={{ background: '#0B1F3A' }}>
+                {deviceAvatar.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={deviceAvatar.image}
+                    alt=""
+                    className="block w-[74px] h-[74px] rounded-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-[74px] h-[74px] rounded-full flex items-center justify-center text-xl select-none"
+                    style={{
+                      background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                      color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
+                      fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
+                      fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
+                    }}
+                  >
+                    {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
           <div className="font-display text-2xl font-black text-white tracking-tight fade-up-1">
             Welcome back{deviceName ? `, ${deviceName.split(/\s+/)[0]}` : ''}

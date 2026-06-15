@@ -63,6 +63,30 @@ export function minuteInTz(now: Date, tz: string): number {
   return Number(new Intl.DateTimeFormat('en-US', { timeZone: tz, minute: '2-digit' }).format(now));
 }
 
+/* ── Fixed daily send time ──────────────────────────────────────────────────
+   Pragati sends ONE brief to everyone at 08:30 (workspace timezone), every
+   day. There is no per-user send time — that was deliberately deleted: a
+   single, predictable 08:30 brief is the product, and removing it deletes the
+   fragile per-user hour-matching machinery with it. The hour is overridable
+   with DIGEST_DEFAULT_HOUR for a different workspace; the minute is fixed. */
+export const DIGEST_SEND_MINUTE = 30;
+export function digestSendMinuteOfDay(): number {
+  return defaultDigestHour() * 60 + DIGEST_SEND_MINUTE;
+}
+
+/** Is a scheduled tick at/after today's 08:30 send time? A manual run
+ *  (scheduledHour undefined) is always open. Combined with the per-day
+ *  idempotency stamp, the first tick at/after 08:30 sends the whole workspace
+ *  exactly once; earlier ticks wait, later ticks find everyone already stamped.
+ *  Pure. */
+export function digestWindowOpen(
+  scheduledHour: number | undefined,
+  scheduledMinute: number | undefined,
+): boolean {
+  if (scheduledHour === undefined) return true;
+  return scheduledHour * 60 + (scheduledMinute ?? 0) >= digestSendMinuteOfDay();
+}
+
 /** Local calendar day key (YYYY-MM-DD) in `tz` — the idempotency key that
  *  guarantees at-most-once delivery per user per local day, no matter how
  *  many times (or from how many triggers) the endpoint is hit. Pure. */
@@ -691,6 +715,22 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
 
   const aphorism = closingLine();
 
+  // ── Executive line — the whole day compressed to one signal, leading with a
+  // directive rather than an inventory (signal over noise). Sits right under
+  // the greeting so the higher-level read lands before any list does.
+  const dayShape = counts.length ? counts.join(' · ') : 'nothing due';
+  const directive = sections.overdue.length
+    ? 'Clear the overdue first — momentum follows.'
+    : sections.today.length
+      ? 'One focused pass and today is done.'
+      : sections.soon.length
+        ? 'Nothing due today — get ahead of what’s coming.'
+        : 'Plate’s clear. Spend the room on your single highest-leverage move.';
+  const execSummary = `<div style="margin:0 0 16px;padding:13px 15px;border:1px solid #e2e8f0;border-radius:12px;background:linear-gradient(180deg,#f8fafc,#ffffff);">
+    <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#64748b;margin-bottom:4px;">The shape of today</div>
+    <div style="font-size:14.5px;color:#0f172a;line-height:1.5;font-weight:600;">${escapeHtml(dayShape.charAt(0).toUpperCase() + dayShape.slice(1))}. <span style="font-weight:500;color:#334155;">${escapeHtml(directive)}</span></div>
+  </div>`;
+
   const html = `<!doctype html><html><body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
@@ -700,6 +740,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       </td></tr>
       <tr><td style="padding:26px;">
         <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)}</div>
+        ${execSummary}
         ${momentum}
         ${emptyNote}
         ${focusHtml}
@@ -882,7 +923,6 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
   };
 
   const todayKey = localDateKey(now, tz);
-  const fallbackHour = defaultDigestHour();
 
   // A one-shot run targets a single user on demand (a test, or a welcome send
   // on first opt-in) and bypasses the hour/idempotency/empty filters so it
@@ -894,12 +934,19 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     return { ...summary, disabled: true };
   }
 
+  // One fixed send window for the whole workspace (08:30). A scheduled tick
+  // before that does nothing; the first tick at/after 08:30 sends everyone,
+  // and the idempotency stamp keeps every later tick that day a no-op.
+  if (!isOneShot && !digestWindowOpen(opts.scheduledHour, opts.scheduledMinute)) {
+    return summary;
+  }
+
   const recipientFilter = opts.onlyUserId
     ? { _id: new mongoose.Types.ObjectId(opts.onlyUserId) }
     : { active: { $ne: false }, notifDailyDigest: true };
 
   const users = await User.find(recipientFilter)
-    .select('_id name email notifyEmail role digestHour digestMinute lastDigestSentOn')
+    .select('_id name email notifyEmail role lastDigestSentOn')
     .limit(1000)
     .lean();
 
@@ -907,11 +954,6 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     .map((u) => ({ user: u, email: resolveDigestEmail(u as any) }))
     .filter((r) => {
       summary.considered += 1;
-      // Per-user send time: on an hourly scheduled run, only this hour's users.
-      if (!isOneShot && !digestHourMatches((r.user as any).digestHour, opts.scheduledHour, fallbackHour)) {
-        summary.skippedWrongHour += 1;
-        return false;
-      }
       // Idempotency: never send the same user twice in one local day, however
       // many triggers fire (Vercel cron + GitHub Action + a manual run).
       if (!isOneShot && (r.user as any).lastDigestSentOn === todayKey) {
@@ -1059,10 +1101,10 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
       })),
     };
 
-    if (!digestHasContent(sections) && !settings.sendWhenEmpty && !forceSend) {
-      summary.skippedNoTasks += 1;
-      continue;
-    }
+    // The brief goes out EVERY day — even with nothing due. An empty plate is
+    // itself signal ("you're clear — here's the leverage move"), and it still
+    // carries the momentum line, the foresight read, the leadership pulse and
+    // the day's insight, so the higher-level view always lands. (No empty-skip.)
 
     // Free-tier guard: never attempt more sends than the provider's daily
     // allowance. Whoever is left over is counted (and surfaced to the admin)

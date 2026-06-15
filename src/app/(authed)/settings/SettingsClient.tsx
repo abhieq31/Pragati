@@ -610,26 +610,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
     lastRunAt?: string | null;
     workspaceEnabled?: boolean;
   } | null>(null);
-  // Preferred send hour (0–23, workspace tz). null = workspace default hour.
-  const [digestHour, setDigestHour] = useState<number | null>(
-    typeof (initialUser as any).digestHour === 'number' ? (initialUser as any).digestHour : null,
-  );
-  const [digestMinute, setDigestMinute] = useState<number>(
-    typeof (initialUser as any).digestMinute === 'number' ? (initialUser as any).digestMinute : 0,
-  );
-
-  async function saveTime(nextHour: number | null, nextMinute: number) {
-    setDigestHour(nextHour);
-    setDigestMinute(nextMinute);
-    try {
-      await api('/users/me', {
-        method: 'PATCH',
-        body: { digestHour: nextHour, digestMinute: nextMinute },
-      });
-    } catch {
-      /* keep optimistic value; a refresh will reconcile */
-    }
-  }
 
   useEffect(() => {
     api('/me/digest-health')
@@ -695,40 +675,10 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 text-sm text-slate-600 dark:text-white/60 leading-relaxed flex-1">
             {enabled && (
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-[12px] font-semibold text-slate-500 dark:text-white/50">Send at</span>
-                <select
-                  value={digestHour === null ? '' : String(digestHour)}
-                  onChange={(e) =>
-                    saveTime(e.target.value === '' ? null : Number(e.target.value), digestMinute)
-                  }
-                  aria-label="Daily email hour"
-                  className="text-[12px] rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                >
-                  <option value="">Default ({String(health?.defaultHour ?? 8).padStart(2, '0')}:00)</option>
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <option key={h} value={String(h)}>
-                      {String(h).padStart(2, '0')}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-slate-300">:</span>
-                <select
-                  value={String(digestMinute)}
-                  onChange={(e) => saveTime(digestHour, Number(e.target.value))}
-                  aria-label="Daily email minute"
-                  className="text-[12px] rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.04] px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                >
-                  {Array.from({ length: 12 }, (_, index) => index * 5).map((minute) => (
-                    <option key={minute} value={minute}>
-                      {String(minute).padStart(2, '0')}
-                    </option>
-                  ))}
-                </select>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">24h</span>
-                <span className="text-[11px] text-slate-400 dark:text-white/35">
-                  {health?.timeZoneLabel ? `(${health.timeZoneLabel})` : ''}
-                </span>
+              <div className="mt-2 text-[12px] text-slate-500 dark:text-white/55">
+                Delivered{' '}
+                <span className="font-semibold text-slate-700 dark:text-white/75">every day at 8:30 AM</span>
+                {health?.timeZoneLabel ? ` (${health.timeZoneLabel})` : ' IST'} — one brief, every morning.
               </div>
             )}
             {health && (!health.mailerConfigured || !health.cronSecretSet) && (

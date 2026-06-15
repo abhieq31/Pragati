@@ -31,6 +31,16 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
+    title: 'One daily brief at 08:30; crisper login avatars',
+    tags: ['improvement', 'fix'],
+    body: [
+      'The daily email now goes to everyone at a single fixed time — 08:30 (workspace timezone), every morning, even on a clear day. The per-user send-time picker is gone: one predictable brief, and the fragile per-user hour-matching is deleted with it.',
+      'Each brief now opens with an executive top-line — the shape of the day in one sentence, leading with the move that matters, before any list.',
+      'Polished the returning-user avatars (the Quick-PIN “welcome back” screen and the post-unlock loading veil) into a clean circular photo with a crisp brand-gradient ring.',
+    ],
+  },
+  {
+    date: '2026-06-15',
     title: 'Team page repair + bird’s-eye / My Day polish; delete dead multi-tenant code',
     tags: ['fix', 'improvement'],
     body: [
