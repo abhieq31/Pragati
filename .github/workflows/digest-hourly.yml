@@ -1,8 +1,8 @@
 name: Daily-digest scheduled trigger
 
-# The per-user digest send-time feature needs the digest endpoint to be hit
-# every five minutes: on each tick the server sends only to users whose chosen
-# 24-hour time matches, and is idempotent per day, so repeated ticks are safe.
+# The fixed 08:30 daily digest needs the endpoint to be hit every five minutes:
+# only the 08:30–08:34 workspace-time tick sends the opted-in batch, and the
+# per-user daily stamp makes parallel/repeated ticks safe.
 #
 # Vercel Hobby crons run at most once a day, so this free GitHub Action is the
 # five-minute trigger. It just curls the endpoint with the shared secret.
