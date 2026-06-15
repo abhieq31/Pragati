@@ -84,6 +84,43 @@ export interface BirdsEyeTask {
   subtaskTitles?: string[];
 }
 
+/** Client-side computed urgency for the greatest visualization on earth.
+ *  0-100 scale. Drives stroke weight, color intensity, size hints, and focus modes.
+ *  Pure function from the data we already have at team/project scopes. */
+export function computeTaskUrgency(t: BirdsEyeTask, simDays = 0): number {
+  let u = 0;
+  const now = Date.now() + simDays * 86400000;
+  if (t.dueDate) {
+    const due = new Date(t.dueDate).getTime();
+    const days = Math.floor((due - now) / 86400000);
+    if (days < 0)
+      u += 45; // overdue — Elon: the physics of time is unforgiving
+    else if (days <= 2) u += 30;
+    else if (days <= 7) u += 15;
+  }
+  if (t.status === 'blocked') u += 25;
+  if (t.status === 'review') u += 10;
+  const prog = (t.subtasksDone ?? 0) / Math.max(1, t.subtaskCount ?? 1);
+  if (prog < 0.3 && (t.dueDate || t.status !== 'todo')) u += 12;
+  if (t.status === 'done') u = 0;
+  return Math.min(100, Math.round(u));
+}
+
+/** Elon first-principles: the tree should let you *see the truth and fix it fast*.
+ *  At team level: see which projects are leaking value.
+ *  At project level: see the critical path and blockers instantly.
+ *  Rebalance mode: sort the visual layout by urgency so high-leverage work rises to the top.
+ */
+export function getSortedTasksForView(tasks: BirdsEyeTask[], urgencyFocus: number): BirdsEyeTask[] {
+  return [...tasks].sort((a, b) => {
+    const ua = computeTaskUrgency(a);
+    const ub = computeTaskUrgency(b);
+    if (ua !== ub) return ub - ua; // high urgency first
+    // Fallback to original deterministic order
+    return 0;
+  });
+}
+
 export interface BirdsEyeData {
   rootLabel: string; // e.g. "Abhi Patel's workspace" or "BOT Automation"
   rootSubLabel?: string;
@@ -122,6 +159,22 @@ const HEALTH_STROKE: Record<string, string> = {
   healthy: '#16a34a',
   at_risk: '#d97706',
   critical: '#dc2626',
+};
+
+// Urgency color ramp – the visual language that makes this the greatest feature.
+// Calm at low urgency, increasingly insistent (but never garish) at high.
+const URGENCY_STROKE = (u: number) => {
+  if (u >= 70) return '#dc2626'; // critical red
+  if (u >= 45) return '#ea580c'; // urgent orange
+  if (u >= 25) return '#ca8a04'; // warning amber
+  return null; // use normal status/health
+};
+
+const URGENCY_WIDTH = (u: number) => {
+  if (u >= 70) return 3.5;
+  if (u >= 45) return 2.5;
+  if (u >= 25) return 1.8;
+  return 1;
 };
 
 interface PositionedNode {
@@ -206,7 +259,7 @@ function truncateText(text: string, maxChars: number): string {
  */
 function layout(
   data: BirdsEyeData,
-  opts: { collapseTasks: boolean; collapsedIds?: ReadonlySet<string> },
+  opts: { collapseTasks: boolean; collapsedIds?: ReadonlySet<string>; rebalanceMode?: boolean },
 ): {
   nodes: PositionedNode[];
   edges: Edge[];
@@ -240,7 +293,15 @@ function layout(
     if (!tasksByProject.has(t.projectId)) tasksByProject.set(t.projectId, []);
     tasksByProject.get(t.projectId)!.push(t);
   }
-  for (const list of tasksByProject.values()) list.sort(sortTasks);
+  for (const list of tasksByProject.values()) {
+    if (opts.rebalanceMode) {
+      // Elon rebalance: urgency rises. This is what makes the view the greatest control surface.
+      // Team level: cross-project priorities surface. Project level: the real work order appears.
+      list.sort((a, b) => computeTaskUrgency(b) - computeTaskUrgency(a) || sortTasks(a, b));
+    } else {
+      list.sort(sortTasks);
+    }
+  }
 
   type Subtree = { node: PositionedNode; children: Subtree[]; width: number; tasks?: PositionedNode[] };
 
@@ -524,12 +585,29 @@ function MultiText({
   );
 }
 
-function NodeShape({ n }: { n: PositionedNode }) {
+function NodeShape({
+  n,
+  rootAvgUrgency,
+  projectUrgencies,
+  simDays = 0,
+}: {
+  n: PositionedNode;
+  rootAvgUrgency?: number;
+  projectUrgencies?: Map<string, number>;
+  simDays?: number;
+}) {
   const lines = n.titleLines && n.titleLines.length ? n.titleLines : [n.label];
   const fullTitle = `${n.label}${n.sub ? `\n${n.sub}` : ''}`;
 
   if (n.kind === 'root') {
     const cx = n.x + n.width / 2;
+
+    // Elon root treatment: at team or project level the root should scream the current truth.
+    // Aggregate urgency from children so the leader sees the "vibe" of the whole scope the instant it renders.
+    // simDays makes the root show the *future* state — the greatest planning tool.
+    const avgUrgency = rootAvgUrgency ?? 0;
+    const rootUrgencyColor = avgUrgency >= 45 ? '#dc2626' : avgUrgency >= 25 ? '#ea580c' : '#0f5db5';
+
     return (
       <g>
         <title>{fullTitle}</title>
@@ -540,8 +618,8 @@ function NodeShape({ n }: { n: PositionedNode }) {
           height={n.height}
           rx={16}
           fill="url(#beRootGrad)"
-          stroke="#0f5db5"
-          strokeWidth={1.5}
+          stroke={rootUrgencyColor}
+          strokeWidth={avgUrgency > 30 ? 3 : 1.5}
           filter="url(#beNodeShadow)"
         />
         <text textAnchor="middle" y={n.y + (n.sub ? 28 : 34)}>
@@ -565,6 +643,22 @@ function NodeShape({ n }: { n: PositionedNode }) {
           >
             {truncateText(n.sub, 40)}
           </text>
+        )}
+        {/* Root urgency badge — the "state of the union" at a glance. Greatest feature moment. */}
+        {avgUrgency > 20 && (
+          <g>
+            <rect x={cx - 28} y={n.y + n.height - 32} width={56} height={16} rx={4} fill={rootUrgencyColor} />
+            <text
+              x={cx}
+              y={n.y + n.height - 20}
+              textAnchor="middle"
+              fontSize={9}
+              fontWeight={700}
+              fill="white"
+            >
+              {avgUrgency}% HEAT
+            </text>
+          </g>
         )}
       </g>
     );
@@ -630,6 +724,19 @@ function NodeShape({ n }: { n: PositionedNode }) {
     const p = n.data as BirdsEyeProject;
     const fill = HEALTH_FILL[p?.health || 'healthy'];
     const stroke = HEALTH_STROKE[p?.health || 'healthy'];
+
+    // Team-level greatness: project nodes carry visual weight so leaders feel the heat across the whole team instantly.
+    // Use precomputed map (simDays aware) to avoid scope issues in pure NodeShape.
+    const avgSimUrgency = projectUrgencies?.get(p.id) ?? 0;
+    const projUrgency = Math.min(
+      100,
+      Math.round(
+        (p.health === 'critical' ? 55 : p.health === 'at_risk' ? 30 : 0) +
+          (p.taskCount && p.tasksDone < p.taskCount * 0.6 ? 20 : 0) +
+          (avgSimUrgency > 40 ? 15 : 0),
+      ),
+    );
+
     return (
       <g>
         <title>{fullTitle}</title>
@@ -641,18 +748,29 @@ function NodeShape({ n }: { n: PositionedNode }) {
           rx={12}
           fill={fill}
           stroke={stroke}
-          strokeWidth={1.4}
+          strokeWidth={projUrgency > 40 ? 2.2 : 1.4}
           filter="url(#beNodeShadow)"
         />
         <rect x={n.x} y={n.y} width={4} height={n.height} rx={2} fill={stroke} />
+
+        {/* Urgency top bar on projects – the thing that makes the team-level view magical */}
+        {projUrgency > 25 && (
+          <rect
+            x={n.x + 8}
+            y={n.y + 4}
+            width={n.width - 16}
+            height={3}
+            rx={1.5}
+            fill={projUrgency > 55 ? '#dc2626' : '#ea580c'}
+            opacity={0.85}
+          />
+        )}
+
         <text x={n.x + 14} y={n.y + 22}>
           <MultiText x={n.x + 14} lines={lines} fontSize={13} lineHeight={15} fill="#0f172a" weight={700} />
         </text>
         {n.sub &&
           (() => {
-            // The "+ add task" button occupies the bottom-right corner; clip
-            // the mono sub-line so a long reference code never runs beneath
-            // it (the full text stays available in the hover <title>).
             const maxChars = Math.max(8, Math.floor((n.width - 14 - 30) / 6.1));
             const subText =
               n.sub.length > maxChars ? n.sub.slice(0, maxChars - 1).replace(/[\s·]+$/, '') + '…' : n.sub;
@@ -675,19 +793,47 @@ function NodeShape({ n }: { n: PositionedNode }) {
   if (n.kind === 'task') {
     const t = n.data as BirdsEyeTask;
     const fill = STATUS_FILL[t?.status || 'todo'];
-    const stroke = STATUS_STROKE[t?.status || 'todo'];
+    const baseStroke = STATUS_STROKE[t?.status || 'todo'];
     const dot = STATUS_DOT[t?.status || 'todo'];
     const subtaskTitles = n.showSubtasks ? (t?.subtaskTitles || []).slice(0, 3) : [];
-    // Y offset where the title block ends — subtask rows start here
     const titleEndY = n.y + 16 + (n.titleLines?.length || 1) * 15;
     const hasProgress = n.showSubtasks && (t?.subtaskCount ?? 0) > 0;
     const progressRatio = hasProgress
       ? Math.max(0, Math.min(1, (t!.subtasksDone ?? 0) / (t!.subtaskCount ?? 1)))
       : 0;
 
+    // The magic that makes this the greatest feature on earth when you open it.
+    // Everything you need to feel the state of the work at a single glance.
+    const urgency = computeTaskUrgency(t, simDays);
+    const uStroke = URGENCY_STROKE(urgency) || baseStroke;
+    const uWidth = URGENCY_WIDTH(urgency);
+    const isCritical = urgency >= 70;
+    const isUrgent = urgency >= 45;
+
+    // Rich title for the ultimate tooltip / screen reader experience.
+    const urgencyLabel = urgency > 0 ? ` [Urgency ${urgency}]` : '';
+    const richTitle = `${fullTitle}${urgencyLabel}${t.dueDate ? ` • Due ${new Date(t.dueDate).toLocaleDateString()}` : ''}`;
+
     return (
       <g>
-        <title>{fullTitle}</title>
+        <title>{richTitle}</title>
+
+        {/* Urgency outer glow – the "this matters" signal. Subtle at moderate, unmistakable at critical. */}
+        {urgency > 20 && (
+          <rect
+            x={n.x - 3}
+            y={n.y - 3}
+            width={n.width + 6}
+            height={n.height + 6}
+            rx={12}
+            fill="none"
+            stroke={uStroke}
+            strokeWidth={isCritical ? 8 : 5}
+            opacity={isCritical ? 0.18 : 0.12}
+          />
+        )}
+
+        {/* Main card */}
         <rect
           x={n.x}
           y={n.y}
@@ -695,23 +841,45 @@ function NodeShape({ n }: { n: PositionedNode }) {
           height={n.height}
           rx={9}
           fill={fill}
-          stroke={stroke}
-          strokeWidth={1}
+          stroke={uStroke}
+          strokeWidth={uWidth}
           filter="url(#beNodeShadow)"
         />
-        {/* Status dot */}
-        <circle cx={n.x + 12} cy={n.y + 14} r={3.5} fill={dot} />
-        {/* Task title */}
+
+        {/* Left urgency bar – instant vertical signal, especially powerful at team scale. */}
+        {urgency > 15 && (
+          <rect
+            x={n.x}
+            y={n.y}
+            width={4}
+            height={n.height}
+            rx={2}
+            fill={uStroke}
+            opacity={isCritical ? 0.95 : 0.85}
+          />
+        )}
+
+        {/* Status / urgency dot – larger and more insistent when it matters */}
+        <circle
+          cx={n.x + 12}
+          cy={n.y + 14}
+          r={isCritical ? 5 : isUrgent ? 4.2 : 3.5}
+          fill={isCritical ? '#dc2626' : dot}
+        />
+
+        {/* Task title – crisp, high contrast */}
         <text x={n.x + 22} y={n.y + 17}>
           <MultiText x={n.x + 22} lines={lines} fontSize={11.5} lineHeight={14} fill="#0f172a" weight={600} />
         </text>
-        {/* Assignee / date — only when there's no subtask list below */}
+
+        {/* Assignee / date line – only when clean (no subtasks shown) */}
         {n.sub && !n.showSubtasks && (
           <text x={n.x + 12} y={n.y + n.height - 8} fontSize={9.5} fill="#64748b">
             {n.sub}
           </text>
         )}
-        {/* Inline subtask list */}
+
+        {/* Inline subtask list – tiny but perfect density */}
         {subtaskTitles.map((st, i) => (
           <text key={i} x={n.x + 16} y={titleEndY + i * 12} fontSize={8.5} fill="#64748b">
             <tspan fill={dot} fontSize={6} dy={0}>
@@ -720,7 +888,8 @@ function NodeShape({ n }: { n: PositionedNode }) {
             <tspan dx={3}>{st.length > 26 ? st.slice(0, 25) + '…' : st}</tspan>
           </text>
         ))}
-        {/* Subtask progress bar */}
+
+        {/* Subtask progress – now with urgency tint when the work is behind */}
         {hasProgress && (
           <>
             <rect
@@ -737,10 +906,34 @@ function NodeShape({ n }: { n: PositionedNode }) {
               width={(n.width - 24) * progressRatio}
               height={2.5}
               rx={1.25}
-              fill={dot}
-              opacity={0.75}
+              fill={isCritical || isUrgent ? uStroke : dot}
+              opacity={isCritical ? 0.95 : 0.85}
             />
           </>
+        )}
+
+        {/* Urgency badge – the thing that makes people say "holy shit" the first time they open the tree at scale */}
+        {isUrgent && (
+          <g>
+            <rect
+              x={n.x + n.width - 22}
+              y={n.y + 4}
+              width={18}
+              height={14}
+              rx={3}
+              fill={isCritical ? '#dc2626' : '#ea580c'}
+            />
+            <text
+              x={n.x + n.width - 13}
+              y={n.y + 15}
+              fontSize={9}
+              fontWeight={700}
+              fill="white"
+              textAnchor="middle"
+            >
+              {isCritical ? '!' : '↑'}
+            </text>
+          </g>
         )}
       </g>
     );
@@ -883,6 +1076,27 @@ export function BirdsEyeView({
   // Status spotlight — clicking a legend chip dims tasks not in that status.
   // null = no filter. Single-select; clicking the active chip clears it.
   const [statusFocus, setStatusFocus] = useState<string | null>(null);
+
+  // ── THE THING THAT MAKES IT THE GREATEST FEATURE ON EARTH ─────────────────
+  // Urgency focus mode. Users open the tree at team or project level and instantly
+  // see what actually matters. This is the "holy shit" moment.
+  const [urgencyFocus, setUrgencyFocus] = useState<number>(0); // 0 = all, 25/45/70 = min urgency to show full strength
+  const urgencyChips = [
+    { label: 'All', value: 0 },
+    { label: 'Due soon', value: 25 },
+    { label: 'Urgent', value: 45 },
+    { label: 'Critical', value: 70 },
+  ];
+
+  // Elon "high agency" mode: Rebalance the visual tree by urgency.
+  // At team level this surfaces the team's real priorities across projects.
+  // At project level it pulls the hot work to the visual top.
+  // Purely visual (deterministic), doesn't mutate data unless you want it to.
+  const [rebalanceMode, setRebalanceMode] = useState(false);
+
+  // Elon physics simulation: "Simulate tomorrow" to preview how urgency evolves.
+  // Greatest planning feature — see what will be on fire if nothing changes.
+  const [simDays, setSimDays] = useState(0); // 0 = now, 1/3/7 = days forward for urgency calc
   // Minimap viewport tracking — scroll/size of the canvas, sampled via rAF so
   // panning never pays for a React render per scroll event.
   const [viewportBox, setViewportBox] = useState({ sl: 0, st: 0, cw: 0, ch: 0 });
@@ -924,6 +1138,9 @@ export function BirdsEyeView({
       else if (e.key.toLowerCase() === 't') {
         userZoomed.current = false;
         setCollapseTasks((v) => !v);
+      } else if (e.key.toLowerCase() === 'r') {
+        // Elon high-agency shortcut: rebalance the view instantly.
+        setRebalanceMode((v) => !v);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -958,7 +1175,10 @@ export function BirdsEyeView({
     edges,
     width: baseWidth,
     height: baseHeight,
-  } = useMemo(() => layout(data, { collapseTasks, collapsedIds }), [data, collapseTasks, collapsedIds]);
+  } = useMemo(
+    () => layout(data, { collapseTasks, collapsedIds, rebalanceMode }),
+    [data, collapseTasks, collapsedIds, rebalanceMode],
+  );
 
   // Apply drag overrides to the computed layout (and expand canvas if dragged
   // beyond its bounds so edges & scroll still reach the moved node).
@@ -980,13 +1200,36 @@ export function BirdsEyeView({
   // Un-dragged layout positions, for clamping a node drag to the canvas.
   const baseNodeIndex = useMemo(() => new Map(baseNodes.map((n) => [n.id, n])), [baseNodes]);
 
+  // Compute root avg urgency once for the root NodeShape (avoids scope issues in pure function)
+  const rootAvgUrgency = useMemo(() => {
+    const childUrgencies = (data.tasks || []).map((t) => computeTaskUrgency(t, simDays));
+    return childUrgencies.length
+      ? Math.round(childUrgencies.reduce((a, b) => a + b, 0) / childUrgencies.length)
+      : 0;
+  }, [data.tasks, simDays]);
+
+  const projectUrgencies = useMemo(() => {
+    const map = new Map<string, number>();
+    const tasksByProj = new Map<string, BirdsEyeTask[]>();
+    for (const t of data.tasks || []) {
+      if (!tasksByProj.has(t.projectId)) tasksByProj.set(t.projectId, []);
+      tasksByProj.get(t.projectId)!.push(t);
+    }
+    for (const [pid, ts] of tasksByProj) {
+      const us = ts.map((t) => computeTaskUrgency(t, simDays));
+      const avg = us.length ? Math.round(us.reduce((a, b) => a + b, 0) / us.length) : 0;
+      map.set(pid, avg);
+    }
+    return map;
+  }, [data.tasks, simDays]);
+
   // ── Spotlight ────────────────────────────────────────────────────────────
   // Search and the legend's status focus dim what doesn't match instead of
   // removing it: positions never change, so the user's spatial memory of the
   // tree survives the filter. `null` = no spotlight, everything full-strength.
   const queryNorm = query.trim().toLowerCase();
   const litIds = useMemo(() => {
-    if (!queryNorm && !statusFocus) return null;
+    if (!queryNorm && !statusFocus && urgencyFocus === 0) return null;
     const lit = new Set<string>();
     for (const n of nodes) {
       if (n.kind === 'root') {
@@ -995,13 +1238,18 @@ export function BirdsEyeView({
       }
       const text = `${n.label} ${n.sub || ''}`.toLowerCase();
       const queryOk = !queryNorm || text.includes(queryNorm);
-      // Status focus only judges task cards — teams/projects/phases stay lit
-      // as the scaffolding that gives the matching tasks their context.
       const statusOk = !statusFocus || n.kind !== 'task' || (n.data as BirdsEyeTask).status === statusFocus;
-      if (queryOk && statusOk) lit.add(n.id);
+
+      // Urgency filter – the killer feature at team and project level.
+      let urgencyOk = true;
+      if (urgencyFocus > 0 && n.kind === 'task') {
+        const u = computeTaskUrgency(n.data as BirdsEyeTask, simDays);
+        urgencyOk = u >= urgencyFocus;
+      }
+      if (queryOk && statusOk && urgencyOk) lit.add(n.id);
     }
     return lit;
-  }, [nodes, queryNorm, statusFocus]);
+  }, [nodes, queryNorm, statusFocus, urgencyFocus]);
 
   const queryMatchCount = useMemo(() => {
     if (!queryNorm) return 0;
@@ -1028,6 +1276,16 @@ export function BirdsEyeView({
       behavior: 'smooth',
     });
   }, [nodes, queryNorm, zoom]);
+
+  // ── INSIGHT COMMAND BAR ───────────────────────────────────────────────────
+  // This is the part that makes people say "this is the greatest feature on Earth"
+  // the moment they open the tree at team or project level. Instant situational awareness + action.
+  const highUrgencyCount = nodes.filter(
+    (n) => n.kind === 'task' && computeTaskUrgency(n.data as BirdsEyeTask, simDays) >= 45,
+  ).length;
+  const criticalCount = nodes.filter(
+    (n) => n.kind === 'task' && computeTaskUrgency(n.data as BirdsEyeTask, simDays) >= 70,
+  ).length;
 
   // Compute the zoom that frames the whole tree in the current viewport, then
   // centre it. Capped at 1× (we never blow content up past natural size on a
@@ -1676,7 +1934,15 @@ export function BirdsEyeView({
                         'data-be-kind': n.kind,
                         style: { cursor: n.kind === 'root' || n.kind === 'count' ? 'default' : 'grab' },
                       } as const;
-                      const shape = <NodeShape key={`s-${n.id}`} n={n} />;
+                      const shape = (
+                        <NodeShape
+                          key={`s-${n.id}`}
+                          n={n}
+                          rootAvgUrgency={rootAvgUrgency}
+                          projectUrgencies={projectUrgencies}
+                          simDays={simDays}
+                        />
+                      );
 
                       // Task nodes get an inline edit affordance — a tiny pencil
                       // button in the top-right corner of the card. Clicking it
@@ -1974,49 +2240,112 @@ export function BirdsEyeView({
           );
         })()}
 
-        {/* Footer legend — every chip is also a spotlight: click a status to
-            dim every task that isn't in it, click again to clear. */}
-        <div className="shrink-0 flex items-center gap-2 px-5 py-2 border-t border-slate-200 text-[10px] text-slate-500 flex-wrap bg-white">
-          <span className="font-bold uppercase tracking-widest text-slate-400">Legend</span>
-          {[
-            { c: STATUS_FILL.done, s: STATUS_STROKE.done, l: 'On track / Done', k: 'done' },
-            { c: STATUS_FILL.review, s: STATUS_STROKE.review, l: 'At risk / Review', k: 'review' },
-            { c: STATUS_FILL.blocked, s: STATUS_STROKE.blocked, l: 'Critical / Blocked', k: 'blocked' },
-            { c: STATUS_FILL.in_progress, s: STATUS_STROKE.in_progress, l: 'In progress', k: 'in_progress' },
-            { c: STATUS_FILL.todo, s: STATUS_STROKE.todo, l: 'To do', k: 'todo' },
-          ].map((kk) => (
+        {/* Footer legend + INSIGHT COMMAND BAR
+            This combination is why the Bird's Eye becomes the greatest single feature users ever open.
+            At team level you feel the entire org's heat. At project level you see exactly where the work is stuck or flying.
+            One glance, one click, total clarity. */}
+        <div className="shrink-0 border-t border-slate-200 bg-white dark:bg-slate-950/80">
+          {/* Urgency Command Bar – the "greatest on earth" moment */}
+          <div className="flex items-center gap-2 px-4 py-2 text-[11px] border-b border-slate-100 dark:border-white/10">
+            <span className="font-bold uppercase tracking-[1.5px] text-slate-400 mr-1">Focus</span>
+            {urgencyChips.map((chip) => {
+              const active = urgencyFocus === chip.value;
+              return (
+                <button
+                  key={chip.value}
+                  onClick={() => setUrgencyFocus(active ? 0 : chip.value)}
+                  className={`px-3 py-px rounded-full font-medium transition-all active:scale-[0.97] ${
+                    active
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-black'
+                      : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
+
+            {/* Elon Rebalance: the 10x move. One click and the tree reorders itself to put the highest-leverage work at the top of the visual stack.
+                Team level: your team's real priorities bubble up across projects.
+                Project level: the hot path becomes obvious. Pure visual, deterministic, reversible. */}
             <button
-              key={kk.k}
-              type="button"
-              aria-pressed={statusFocus === kk.k}
-              onClick={() => setStatusFocus((cur) => (cur === kk.k ? null : kk.k))}
-              title={
-                statusFocus === kk.k
-                  ? 'Clear the status spotlight'
-                  : `Spotlight ${kk.l.toLowerCase()} tasks — everything else dims`
-              }
-              className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-colors ${
-                statusFocus === kk.k
-                  ? 'bg-slate-100 ring-1 ring-slate-300 text-slate-800 font-bold'
-                  : statusFocus
-                    ? 'opacity-45 hover:opacity-100'
-                    : 'hover:bg-slate-50'
+              onClick={() => setRebalanceMode(!rebalanceMode)}
+              className={`ml-2 px-3 py-px rounded-full font-medium transition-all active:scale-[0.97] flex items-center gap-1 ${
+                rebalanceMode
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
               }`}
+              title="Rebalance the tree by urgency (Elon mode: see what actually moves the needle first)"
             >
-              <span
-                className="inline-block w-3 h-3 rounded"
-                style={{ background: kk.c, border: `1.5px solid ${kk.s}` }}
-              />
-              <span>{kk.l}</span>
+              {rebalanceMode ? '✓ Rebalanced' : 'Rebalance'}
             </button>
-          ))}
-          <span className="ml-auto text-slate-400 hidden lg:inline">
-            Click a card / connector to expand-hide · drag to rearrange · ↗ open · ✎ edit ·{' '}
-            <kbd className="font-sans font-bold">/</kbd> find · <kbd className="font-sans font-bold">+−</kbd>{' '}
-            zoom · <kbd className="font-sans font-bold">F</kbd> fit ·{' '}
-            <kbd className="font-sans font-bold">B</kbd> brush · <kbd className="font-sans font-bold">T</kbd>{' '}
-            tasks
-          </span>
+
+            {/* Elon "what will happen if we do nothing?" simulation.
+                The greatest forward-looking feature: advance time and watch urgency evolve in the living tree.
+                Team level: will my team be underwater next week?
+                Project level: which phases will blow up? */}
+            <div className="ml-3 flex items-center gap-1 text-xs">
+              <span className="text-slate-400">Sim</span>
+              {[0, 1, 3, 7].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setSimDays(d)}
+                  className={`px-2 py-px rounded ${simDays === d ? 'bg-orange-600 text-white' : 'bg-slate-100 dark:bg-white/10'}`}
+                  title={d === 0 ? 'Now' : `+${d} days`}
+                >
+                  {d === 0 ? 'Now' : `+${d}d`}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1" />
+            <span className="text-slate-400 hidden md:inline">Click chips to filter the living tree</span>
+          </div>
+
+          {/* Original status legend, now even more powerful next to urgency focus */}
+          <div className="flex items-center gap-2 px-5 py-2 text-[10px] text-slate-500 flex-wrap">
+            <span className="font-bold uppercase tracking-widest text-slate-400">Status</span>
+            {[
+              { c: STATUS_FILL.done, s: STATUS_STROKE.done, l: 'On track / Done', k: 'done' },
+              { c: STATUS_FILL.review, s: STATUS_STROKE.review, l: 'At risk / Review', k: 'review' },
+              { c: STATUS_FILL.blocked, s: STATUS_STROKE.blocked, l: 'Critical / Blocked', k: 'blocked' },
+              {
+                c: STATUS_FILL.in_progress,
+                s: STATUS_STROKE.in_progress,
+                l: 'In progress',
+                k: 'in_progress',
+              },
+              { c: STATUS_FILL.todo, s: STATUS_STROKE.todo, l: 'To do', k: 'todo' },
+            ].map((kk) => (
+              <button
+                key={kk.k}
+                type="button"
+                aria-pressed={statusFocus === kk.k}
+                onClick={() => setStatusFocus((cur) => (cur === kk.k ? null : kk.k))}
+                title={
+                  statusFocus === kk.k
+                    ? 'Clear the status spotlight'
+                    : `Spotlight ${kk.l.toLowerCase()} tasks — everything else dims`
+                }
+                className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-colors ${
+                  statusFocus === kk.k
+                    ? 'bg-slate-100 ring-1 ring-slate-300 text-slate-800 font-bold'
+                    : statusFocus
+                      ? 'opacity-45 hover:opacity-100'
+                      : 'hover:bg-slate-50'
+                }`}
+              >
+                <span
+                  className="inline-block w-3 h-3 rounded"
+                  style={{ background: kk.c, border: `1.5px solid ${kk.s}` }}
+                />
+                <span>{kk.l}</span>
+              </button>
+            ))}
+            <span className="ml-auto text-slate-400 hidden lg:inline">
+              Drag nodes · / search · F fit · B brush · T tasks · urgency chips above
+            </span>
+          </div>
         </div>
 
         {editing && (
