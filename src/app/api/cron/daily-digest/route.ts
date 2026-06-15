@@ -3,8 +3,7 @@ import { requireRole, requireUser } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import {
   buildAndSendDailyDigests,
-  defaultDigestHour,
-  digestTimeMatches,
+  digestWindowOpen,
   hourInTz,
   minuteInTz,
   digestTimeZone,
@@ -66,11 +65,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // A scheduled (cron-secret) tick honours each user's chosen send hour and
-    // is idempotent per day — so it's safe to fire hourly (Vercel cron and/or
-    // the free GitHub Action). A manual admin run (?force or just authed,
-    // no secret) serves everyone now, ignoring the hour. `?force=1` lets an
-    // admin override the hour filter on a secret-authed call too.
+    // A scheduled (cron-secret) tick sends the whole opted-in batch only in
+    // the fixed 08:30 workspace-time window and is idempotent per day, so both
+    // Vercel Cron and the five-minute GitHub Action can safely trigger it.
+    // A manual admin run (?force or just authed, no secret) serves everyone
+    // immediately. `?force=1` does the same on a secret-authenticated call.
     const force = req.nextUrl.searchParams.get('force') === '1';
     const now = new Date();
     const tz = digestTimeZone();
@@ -80,9 +79,7 @@ export async function GET(req: NextRequest) {
     const summary = await buildAndSendDailyDigests({ scheduledHour, scheduledMinute });
     // Same beat, second channel: the zero-cost Web Push fan-out. Failures
     // here must never fail the email run — push is best-effort by design.
-    const pushWindowOpen =
-      scheduledHour === undefined ||
-      digestTimeMatches(defaultDigestHour(), 0, scheduledHour, scheduledMinute, defaultDigestHour());
+    const pushWindowOpen = digestWindowOpen(scheduledHour, scheduledMinute);
     const push = pushWindowOpen
       ? await sendDailyBriefPushes({ now }).catch(() => ({ users: 0, delivered: 0 }))
       : { users: 0, delivered: 0 };
