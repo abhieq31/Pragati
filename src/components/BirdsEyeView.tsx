@@ -977,6 +977,8 @@ export function BirdsEyeView({
   }, [baseNodes, baseWidth, baseHeight, overrides]);
 
   const nodeIndex = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  // Un-dragged layout positions, for clamping a node drag to the canvas.
+  const baseNodeIndex = useMemo(() => new Map(baseNodes.map((n) => [n.id, n])), [baseNodes]);
 
   // ── Spotlight ────────────────────────────────────────────────────────────
   // Search and the legend's status focus dim what doesn't match instead of
@@ -1094,8 +1096,16 @@ export function BirdsEyeView({
     startY: number;
     baseDx: number;
     baseDy: number;
+    // The node's un-dragged layout position — lets pointer-move clamp the drag
+    // so a node can never be pushed off the top-left of the canvas and clip.
+    baseX: number;
+    baseY: number;
     moved: boolean;
   } | null>(null);
+  // Distinguishes single-click (toggle this node's branch) from double-click
+  // (open the node's detail page): a single click waits briefly to see whether
+  // a second one is coming.
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Translate viewport pointer coords into SVG coords (accounts for zoom + scroll).
   function toSvgPoint(clientX: number, clientY: number): { x: number; y: number } | null {
@@ -1140,12 +1150,15 @@ export function BirdsEyeView({
       const kind = nodeEl.getAttribute('data-be-kind');
       if (kind === 'root' || kind === 'count') return;
       const existing = overrides[id] || { dx: 0, dy: 0 };
+      const base = baseNodeIndex.get(id);
       drag.current = {
         id,
         startX: e.clientX,
         startY: e.clientY,
         baseDx: existing.dx,
         baseDy: existing.dy,
+        baseX: base?.x ?? 0,
+        baseY: base?.y ?? 0,
         moved: false,
       };
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -1175,10 +1188,17 @@ export function BirdsEyeView({
       const dy = (e.clientY - drag.current.startY) / zoom;
       if (!drag.current.moved && (Math.abs(dx) > 2 || Math.abs(dy) > 2)) drag.current.moved = true;
       if (drag.current.moved) {
-        setOverrides((o) => ({
-          ...o,
-          [drag.current!.id]: { dx: drag.current!.baseDx + dx, dy: drag.current!.baseDy + dy },
-        }));
+        const d = drag.current;
+        // Clamp so the node's absolute position never crosses the top-left edge
+        // (x,y >= MARGIN). Dragging left/up past the origin used to push the
+        // node to negative coords, off the fixed 0..width viewBox → the node
+        // clipped and the view "broke". The canvas still grows right/bottom.
+        const MARGIN = 8;
+        let ndx = d.baseDx + dx;
+        let ndy = d.baseDy + dy;
+        if (d.baseX + ndx < MARGIN) ndx = MARGIN - d.baseX;
+        if (d.baseY + ndy < MARGIN) ndy = MARGIN - d.baseY;
+        setOverrides((o) => ({ ...o, [d.id]: { dx: ndx, dy: ndy } }));
       }
       return;
     }
@@ -1787,61 +1807,38 @@ export function BirdsEyeView({
                         </g>
                       ) : null;
 
-                      // Clicking the centre of a collapsible card expands/hides
-                      // its subtree (same as the − toggle). Navigation for those
-                      // cards moves to the dedicated ↗ button so a body click
-                      // never surprises with a new tab. Non-collapsible cards
-                      // (tasks without subtasks) keep click-to-open.
-                      const openBtn =
-                        navHref && canCollapse ? (
-                          <g
-                            data-be-action="open"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.open(navHref, '_blank', 'noopener,noreferrer');
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <title>
-                              Open this{' '}
-                              {n.kind === 'team' ? 'team' : n.kind === 'project' ? 'project' : 'task'} page
-                            </title>
-                            <circle
-                              cx={n.x + n.width - 30}
-                              cy={n.y + 11}
-                              r={8}
-                              fill="#ffffff"
-                              stroke="#cbd5e1"
-                              strokeWidth={0.8}
-                            />
-                            <path
-                              d={`M ${n.x + n.width - 33} ${n.y + 14} L ${n.x + n.width - 27} ${n.y + 8} M ${n.x + n.width - 31} ${n.y + 8} h 4 v 4`}
-                              stroke="#475569"
-                              strokeWidth={1.1}
-                              fill="none"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </g>
-                        ) : null;
-
-                      const body = canCollapse ? (
+                      // One interaction model for every node:
+                      //   • single click → toggle this node's branch (open/hide
+                      //     the children/subtasks), the most common move;
+                      //   • double click → open the node's detail page.
+                      // A single click waits ~250ms to confirm a second isn't
+                      // coming, so a double-click never also fires the toggle.
+                      const interactive = canCollapse || !!navHref;
+                      const body = (
                         <g
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            toggleCollapsed(n.id);
+                            if (clickTimer.current) clearTimeout(clickTimer.current);
+                            clickTimer.current = setTimeout(() => {
+                              clickTimer.current = null;
+                              if (canCollapse) toggleCollapsed(n.id);
+                            }, 250);
                           }}
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (clickTimer.current) {
+                              clearTimeout(clickTimer.current);
+                              clickTimer.current = null;
+                            }
+                            if (navHref) window.open(navHref, '_blank', 'noopener,noreferrer');
+                          }}
+                          style={interactive ? { cursor: 'pointer' } : undefined}
                         >
+                          {navHref && <title>Click to open/hide · double-click to open the page</title>}
                           {shape}
                         </g>
-                      ) : navHref ? (
-                        <a href={navHref} target="_blank" rel="noreferrer">
-                          {shape}
-                        </a>
-                      ) : (
-                        shape
                       );
 
                       // Spotlight: anything outside the current search/status
@@ -1851,7 +1848,6 @@ export function BirdsEyeView({
                       return (
                         <g key={n.id} {...dragProps} className="be-node-g" opacity={dimmed ? 0.13 : 1}>
                           {body}
-                          {openBtn}
                           {collapseBtn}
                           {addBtn}
                           {editBtn}
