@@ -149,12 +149,14 @@ export default function TeamDetailPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const me = useCurrentUser();
   const isLead = me?.role === 'lead' || me?.role === 'admin';
-  // Two views, not three. The old "Team progress" tab duplicated the "Projects"
-  // tab (same per-project bars), so they're merged into one Projects overview
-  // (team-wide summary + per-project rows). "Work" answers the lead's daily
-  // question — who is doing what — by grouping tasks under each person; an IC
-  // sees only their own. Both roles open on Work.
-  const [view, setView] = useState<'work' | 'projects'>('work');
+  // The old "Team progress" tab duplicated the "Projects" tab (same per-project
+  // bars), so they're merged into one Projects overview (team-wide summary +
+  // per-project rows). "Work" answers the lead's daily question — who is doing
+  // what — by grouping tasks under each person; an IC sees only their own.
+  // "Foresight" (lead/admin only) sits between the two — the predictive capacity
+  // read, on demand rather than taking up permanent vertical space. Everyone
+  // opens on Work.
+  const [view, setView] = useState<'work' | 'foresight' | 'projects'>('work');
 
   async function load() {
     setLoadError('');
@@ -503,9 +505,6 @@ export default function TeamDetailPage() {
         </div>
       </section>
 
-      {/* ── Team Foresight — capacity outlook over the heavy engine (lead/admin) ── */}
-      {isLead && <TeamForesight teamId={id} />}
-
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-4">
           <Card
@@ -599,6 +598,7 @@ export default function TeamDetailPage() {
             {(
               [
                 ['work', isLead ? 'Work' : 'My tasks'],
+                ...(isLead ? [['foresight', 'Foresight']] : []),
                 ['projects', 'Projects'],
               ] as [string, string][]
             ).map(([k, l]) => (
@@ -685,6 +685,9 @@ export default function TeamDetailPage() {
                 </div>
               </Card>
             ))}
+
+          {/* ── Foresight — predictive capacity outlook (lead/admin only) ──── */}
+          {view === 'foresight' && isLead && <TeamForesight teamId={id} />}
 
           {view === 'projects' && (
             <div className="space-y-4">
