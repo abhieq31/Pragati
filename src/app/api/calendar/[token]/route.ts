@@ -5,6 +5,7 @@ import { Task } from '@/models/Task';
 import { Project } from '@/models/Project';
 import { handleError } from '@/lib/http';
 import { appBaseUrl, effectiveDue } from '@/lib/digest';
+import { projectRef } from '@/lib/projectRef';
 import { renderAgendaIcs, type IcsTask } from '@/lib/ics';
 
 export const runtime = 'nodejs';
@@ -44,26 +45,29 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       status: { $ne: 'done' },
       $or: [{ ccTcd: { $gte: lower, $lt: upper } }, { ccTcd: null, dueDate: { $gte: lower, $lt: upper } }],
     })
-      .select('_id title status priority dueDate ccTcd projectId updatedAt')
+      .select('_id title description status priority dueDate ccTcd projectId updatedAt')
       .limit(300)
       .lean();
 
     const projIds = [...new Set(tasks.map((t: any) => String(t.projectId)).filter(Boolean))];
     const projects = projIds.length
       ? await Project.find({ _id: { $in: projIds } })
-          .select('_id name')
+          .select('_id name code ccNo')
           .lean()
       : [];
-    const projName = new Map(projects.map((p: any) => [String(p._id), p.name]));
+    const projById = new Map(projects.map((p: any) => [String(p._id), p]));
 
     const items: IcsTask[] = [];
     for (const t of tasks as any[]) {
       const due = effectiveDue(t);
       if (!due) continue;
+      const proj = t.projectId ? projById.get(String(t.projectId)) : null;
       items.push({
         id: String(t._id),
         title: t.title,
-        projectName: t.projectId ? projName.get(String(t.projectId)) || null : null,
+        projectName: proj?.name || null,
+        projectRef: proj ? projectRef(proj) : null,
+        description: t.description || null,
         due,
         status: t.status,
         priority: t.priority || null,

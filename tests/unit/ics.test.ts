@@ -60,6 +60,43 @@ describe('renderAgendaIcs', () => {
     assert.match(ics, /LAST-MODIFIED:20260611T093000Z/);
   });
 
+  it('includes the task description and project reference in the body', () => {
+    const ics = renderAgendaIcs({
+      calendarName: 'X',
+      appUrl: 'https://pragati.example',
+      now,
+      tasks: [
+        {
+          id: 't9',
+          title: 'Department head approval',
+          projectName: 'SOP Revision',
+          projectRef: 'CC-2026-042',
+          description: 'Route the revised SOP to the department head for sign-off before the effective date.',
+          due: new Date('2026-06-23T00:00:00Z'),
+          status: 'in_progress',
+          priority: 'medium',
+        },
+      ],
+    });
+    // The DESCRIPTION is a single (folded) line — unfold before matching.
+    const unfolded = ics.replace(/\r\n /g, '');
+    // Description text leads the body…
+    assert.match(unfolded, /DESCRIPTION:Route the revised SOP/);
+    // …and the project line carries name + reference (\n is escaped in iCal).
+    assert.match(unfolded, /Project: SOP Revision \(CC-2026-042\)/);
+    assert.match(unfolded, /Status: in progress/);
+  });
+
+  it('truncates an over-long description to a preview', () => {
+    const long = 'word '.repeat(200).trim();
+    const ics = renderAgendaIcs({
+      calendarName: 'X',
+      tasks: [{ id: 't10', title: 'Long', description: long, due: new Date('2026-06-12T00:00:00Z') }],
+    });
+    // Unfold continuation lines, then confirm the ellipsis marks a trimmed body.
+    assert.match(ics.replace(/\r\n /g, ''), /…/);
+  });
+
   it('emits SEQUENCE 0 when the task has no updatedAt', () => {
     const ics = renderAgendaIcs({
       calendarName: 'X',

@@ -10,6 +10,10 @@ export interface IcsTask {
   id: string;
   title: string;
   projectName?: string | null;
+  /** User-facing project reference (ccNo || code), resolved by the caller. */
+  projectRef?: string | null;
+  /** The task's own description/body — the context a subscriber wants on hover. */
+  description?: string | null;
   /** Effective due date (ccTcd || dueDate), already resolved by the caller. */
   due: Date;
   status?: string;
@@ -18,6 +22,16 @@ export interface IcsTask {
    *  clients (Outlook especially) actually update a moved event instead of
    *  keeping the stale date. */
   updatedAt?: Date | null;
+}
+
+// A task description can run long; a calendar hover-card only wants the gist.
+// Trim to a sane preview so the feed stays light and the popover readable.
+const DESCRIPTION_PREVIEW_MAX = 280;
+function previewText(s: string): string {
+  const clean = s.replace(/\s+/g, ' ').trim();
+  return clean.length > DESCRIPTION_PREVIEW_MAX
+    ? clean.slice(0, DESCRIPTION_PREVIEW_MAX - 1).trimEnd() + '…'
+    : clean;
 }
 
 // SEQUENCE must be a monotonically increasing integer per UID. Seconds since
@@ -84,11 +98,24 @@ export function renderAgendaIcs(input: {
   for (const t of input.tasks) {
     const dayAfter = new Date(t.due.getTime() + 24 * 60 * 60 * 1000);
     const summary = `${t.title}${t.projectName ? ` · ${t.projectName}` : ''}`;
-    const descParts = [
+    // The project line carries the user-facing reference (ccNo || code) — the
+    // same identifier shown everywhere in the app — alongside the name.
+    const ref = (t.projectRef || '').trim();
+    const projectLine = t.projectName
+      ? `Project: ${t.projectName}${ref ? ` (${ref})` : ''}`
+      : ref
+        ? `Project: ${ref}`
+        : '';
+    const desc = previewText(t.description || '');
+    // Description first (the why/what a subscriber wants on hover), then a blank
+    // separator, then the at-a-glance metadata and the deep link.
+    const meta = [
+      projectLine,
       t.status ? `Status: ${String(t.status).replace(/_/g, ' ')}` : '',
       t.priority ? `Priority: ${t.priority}` : '',
       input.appUrl ? `${input.appUrl}/tasks/${t.id}` : '',
     ].filter(Boolean);
+    const descParts = desc ? [desc, '', ...meta] : meta;
     lines.push(
       'BEGIN:VEVENT',
       `UID:task-${t.id}@pragati`,
