@@ -18,6 +18,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!t) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     if (!t.requiresQaSignoff)
       return NextResponse.json({ error: 'Task does not require QA sign-off' }, { status: 400 });
+    // An e-signature is a one-time, attributable act — never overwrite an
+    // existing one (21 CFR Part 11 §11.70 signature/record linking).
+    if ((t as any).qaSignoffAt)
+      return NextResponse.json({ error: 'This task has already been signed off' }, { status: 409 });
 
     // Capture the meaning of the signature (21 CFR Part 11 §11.50). The client
     // may post { reason }; we never require it, but we record whatever is given
@@ -26,10 +30,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const reason =
       (typeof body?.reason === 'string' && body.reason.trim()) || 'QA sign-off — reviewed and approved';
 
+    // Atomic conditional write: only the FIRST signer wins, even if two leads
+    // sign the same task in the same instant. A load-modify-save would let the
+    // later save silently overwrite the earlier signer's attribution.
     const signedAt = new Date();
+    const res = await Task.updateOne(
+      { _id: params.id, qaSignoffAt: null },
+      { $set: { qaSignoffUserId: user.sub, qaSignoffAt: signedAt } },
+    );
+    if (res.matchedCount === 0)
+      return NextResponse.json({ error: 'This task has already been signed off' }, { status: 409 });
+    // Reflect the win on the in-memory doc for the response + audit payload.
     t.qaSignoffUserId = user.sub as any;
     t.qaSignoffAt = signedAt;
-    await t.save();
 
     void recordTaskFlowEvent({
       taskId: params.id,

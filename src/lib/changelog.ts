@@ -31,6 +31,17 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
+    title: 'Reliability & performance hardening (first-principles audit)',
+    tags: ['fix', 'improvement', 'security'],
+    body: [
+      'QA sign-off is now an atomic, one-time act — a concurrent double-sign can no longer overwrite the first signer’s e-signature (21 CFR Part 11 §11.70).',
+      '“My tasks” and the team board now bound and project their task queries, and a new index on subtasks.assigneeId turns the “my subtasks” lookup from a collection scan into an index seek — no more unbounded reads as task history grows.',
+      'The daily-email settings now warn when the scheduled trigger looks stale (hasn’t run in over an hour), so a paused cron/Action fails loudly instead of silently dropping everyone’s digest.',
+      'Removed dead export scaffolding from the bird’s-eye view.',
+    ],
+  },
+  {
+    date: '2026-06-15',
     title: 'Bird’s-eye view: one-click SVG/PNG export, copy-to-clipboard',
     tags: ['feature', 'improvement'],
     body: [

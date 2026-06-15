@@ -25,7 +25,10 @@ export async function GET(req: NextRequest) {
     const userId = user.sub;
 
     const [tasks, allProjects] = await Promise.all([
-      Task.find({ assigneeId: userId }).lean(),
+      // Bounded: a user's assigned-task history can grow without limit; cap the
+      // worst case so this page can't load thousands of rows. The JS sort below
+      // still orders whatever comes back.
+      Task.find({ assigneeId: userId }).limit(1000).lean(),
       Project.find({ $or: [NOT_PERSONAL, { ownerId: userId }] })
         .select('_id code name lifecycle')
         .lean(),
@@ -40,8 +43,13 @@ export async function GET(req: NextRequest) {
       return ad - bd;
     });
 
-    // collect subtasks assigned to the user too
-    const subtaskHolders = await Task.find({ 'subtasks.assigneeId': userId }).lean();
+    // Collect subtasks assigned to the user too. Projected to just the fields we
+    // read (never the whole task doc) and bounded — and served by the new
+    // { 'subtasks.assigneeId': 1 } index instead of a collection scan.
+    const subtaskHolders = await Task.find({ 'subtasks.assigneeId': userId })
+      .select('title projectId subtasks')
+      .limit(1000)
+      .lean();
     const subtasks: any[] = [];
     for (const t of subtaskHolders) {
       const p = pMap.get(String(t.projectId));

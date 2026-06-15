@@ -848,8 +848,6 @@ export function BirdsEyeView({
       return new Set();
     }
   });
-  const [svgExportPending, setSvgExportPending] = useState(false);
-  const svgExportRestore = useRef<{ collapseTasks: boolean; collapsedIds: Set<string> } | null>(null);
   // Brief "copied" acknowledgement on the copy-image export button.
   const [copiedImg, setCopiedImg] = useState(false);
   // Brush / annotation layer — freeform polylines over the canvas so a lead
@@ -1324,18 +1322,6 @@ export function BirdsEyeView({
     // would risk a double export. Fire once when the hidden view has mounted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoExport, mounted]);
-
-  function requestExpandedSvgExport() {
-    if (svgExportPending) return;
-    svgExportRestore.current = {
-      collapseTasks,
-      collapsedIds: new Set(collapsedIds),
-    };
-    setSvgExportPending(true);
-    // The SVG must be laid out from expanded state before it is cloned.
-    setCollapseTasks(false);
-    setCollapsedIds(new Set());
-  }
 
   if (!mounted) return null;
   return createPortal(
