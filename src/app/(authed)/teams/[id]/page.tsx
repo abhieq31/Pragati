@@ -497,7 +497,7 @@ export default function TeamDetailPage() {
                   <span className="text-3xl font-black text-white/90 select-none">
                     {team.name.charAt(0).toUpperCase()}
                   </span>
-                </button>
+                </div>
               )}
               {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
                 <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
