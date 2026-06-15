@@ -1869,7 +1869,6 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             </div>
           )}
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
-            {!project.isPersonal && !project.archived && <ForecastChip projectId={project.id} />}
             {project.isPersonal && (
               <span className="tag border border-violet-200 bg-violet-50 text-violet-700 font-semibold inline-flex items-center gap-1.5">
                 <Lock size={11} /> Private
@@ -1885,6 +1884,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
             )}
             {!project.isPersonal && <LifecycleTag lifecycle={project.lifecycle} />}
             <PriorityTag priority={project.priority} />
+            {!project.isPersonal && !project.archived && <ForecastChip projectId={project.id} />}
           </div>
           {/* Description — owner can hover to reveal edit affordance, click to edit inline */}
           {editingDesc ? (

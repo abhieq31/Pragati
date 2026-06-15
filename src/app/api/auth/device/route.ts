@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const user = await User.findById(
       userId,
-      'name username pinHash lockedAt avatarLetter avatarBg avatarFont',
+      'name username pinHash lockedAt avatarLetter avatarBg avatarFont avatarImage',
     ).lean();
     if (!user) return NextResponse.json({ trusted: false });
     return NextResponse.json({
@@ -31,6 +31,9 @@ export async function GET(req: NextRequest) {
       avatarLetter: (user as any).avatarLetter || '',
       avatarBg: (user as any).avatarBg || '',
       avatarFont: typeof (user as any).avatarFont === 'number' ? (user as any).avatarFont : 0,
+      // The uploaded photo, when present — so the Quick-PIN greeting + the
+      // "Welcome back" splash show the member's real face, not just initials.
+      avatarImage: (user as any).avatarImage || '',
     });
   } catch (e) {
     return handleError(e);

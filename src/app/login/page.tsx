@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
 import { BirdsEyeLoader } from '@/components/BirdsEyeLoader';
-import { BUILTIN_QUOTES, dailyQuoteOffset, type Quote } from '@/lib/quotes';
+import { BUILTIN_QUOTES, dailyQuoteOffset, readingMs, type Quote } from '@/lib/quotes';
 import { ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { AVATAR_FONTS, avatarFg } from '@/components/ui';
 
@@ -19,10 +19,11 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, attributed wisdom from seven builders (Jobs, Naval, Bezos, Musk,
-   Franklin, Jensen, Ellison). Built-ins ship with the app; /api/quotes swaps
-   in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
-   without a redeploy. Daily-seeded start so the day has "a quote of the day". */
+/* Rotating, unattributed wisdom — a single builder's voice on first
+   principles, simplification, and execution. The name is never shown, only the
+   line. Built-ins ship with the app; /api/quotes swaps in the operator's live
+   feed (QUOTES_FEED_URL) so the library keeps growing without a redeploy.
+   Daily-seeded start so the day has "a quote of the day". */
 
 const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
 
@@ -69,9 +70,13 @@ function RotatingQuote() {
       .catch(() => {});
   }, []);
 
+  // Self-scheduling rotation: each quote stays up for its own reading time
+  // (proportional to length), so a long line isn't cut off and a short one
+  // doesn't linger. Re-runs after every advance to size the next dwell.
   useEffect(() => {
     if (quotes.length < 2) return;
-    const t = setInterval(() => {
+    const dwell = readingMs(quotes[i % quotes.length]?.text || '');
+    const t = setTimeout(() => {
       setShow(false);
       setTimeout(() => {
         setI((n) => {
@@ -83,9 +88,9 @@ function RotatingQuote() {
         });
         setShow(true);
       }, 400);
-    }, 8000);
-    return () => clearInterval(t);
-  }, [quotes.length]);
+    }, dwell);
+    return () => clearTimeout(t);
+  }, [i, quotes]);
 
   const q = quotes[i % quotes.length];
   return (
@@ -176,10 +181,16 @@ export default function LoginPage() {
   const [deviceName, setDeviceName] = useState('');
   // Monogram avatar for the trusted device, so the greeting matches the
   // avatar the user picked in settings rather than plain initials.
-  const [deviceAvatar, setDeviceAvatar] = useState<{ letter: string; bg: string; font: number }>({
+  const [deviceAvatar, setDeviceAvatar] = useState<{
+    letter: string;
+    bg: string;
+    font: number;
+    image: string;
+  }>({
     letter: '',
     bg: '',
     font: 0,
+    image: '',
   });
   const [pin, setPin] = useState('');
   // Wrong-PIN shake + success takeover. `unlocked` swaps the PIN pad for a
@@ -205,11 +216,17 @@ export default function LoginPage() {
       avatarLetter?: string;
       avatarBg?: string;
       avatarFont?: number;
+      avatarImage?: string;
     }>('/auth/device')
       .then((d) => {
         if (d.trusted && d.hasPin && !d.locked) {
           setDeviceName(d.name || '');
-          setDeviceAvatar({ letter: d.avatarLetter || '', bg: d.avatarBg || '', font: d.avatarFont ?? 0 });
+          setDeviceAvatar({
+            letter: d.avatarLetter || '',
+            bg: d.avatarBg || '',
+            font: d.avatarFont ?? 0,
+            image: d.avatarImage || '',
+          });
           setMode('unlock');
         }
       })
@@ -607,19 +624,30 @@ export default function LoginPage() {
                         className="absolute rounded-full pin-orbit-b"
                         style={{ inset: 10, border: '1.5px dashed rgba(46,125,50,0.28)' }}
                       />
-                      {/* Avatar tile */}
-                      <div
-                        className="absolute inset-[18px] rounded-[20px] flex items-center justify-center text-2xl select-none"
-                        style={{
-                          background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
-                          color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
-                          fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
-                          fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
-                          boxShadow: '0 10px 28px rgba(21,101,192,0.34)',
-                        }}
-                      >
-                        {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
-                      </div>
+                      {/* Avatar tile — the member's photo when set, else monogram. */}
+                      {deviceAvatar.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={deviceAvatar.image}
+                          alt=""
+                          className="absolute inset-[18px] rounded-[20px] object-cover"
+                          style={{ boxShadow: '0 10px 28px rgba(21,101,192,0.34)' }}
+                        />
+                      ) : (
+                        <div
+                          className="absolute inset-[18px] rounded-[20px] flex items-center justify-center text-2xl select-none"
+                          style={{
+                            background:
+                              deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                            color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
+                            fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
+                            fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
+                            boxShadow: '0 10px 28px rgba(21,101,192,0.34)',
+                          }}
+                        >
+                          {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.22em] mb-1.5 fade-up-1">
                       Welcome back
@@ -942,18 +970,28 @@ export default function LoginPage() {
                 animation: 'glow-pulse 2.4s ease-in-out infinite',
               }}
             />
-            <div
-              className="absolute inset-[10px] rounded-[22px] flex items-center justify-center text-xl select-none"
-              style={{
-                background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
-                color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
-                fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
-                fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
-                boxShadow: '0 14px 36px rgba(21,101,192,0.45)',
-              }}
-            >
-              {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
-            </div>
+            {deviceAvatar.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={deviceAvatar.image}
+                alt=""
+                className="absolute inset-[10px] rounded-[22px] object-cover"
+                style={{ boxShadow: '0 14px 36px rgba(21,101,192,0.45)' }}
+              />
+            ) : (
+              <div
+                className="absolute inset-[10px] rounded-[22px] flex items-center justify-center text-xl select-none"
+                style={{
+                  background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                  color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
+                  fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
+                  fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
+                  boxShadow: '0 14px 36px rgba(21,101,192,0.45)',
+                }}
+              >
+                {(deviceAvatar.letter || getInitials(deviceName)).slice(0, 2).toUpperCase()}
+              </div>
+            )}
           </div>
           <div className="font-display text-2xl font-black text-white tracking-tight fade-up-1">
             Welcome back{deviceName ? `, ${deviceName.split(/\s+/)[0]}` : ''}

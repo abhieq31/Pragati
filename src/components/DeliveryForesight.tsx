@@ -10,12 +10,15 @@ import {
   Gauge,
   AlertTriangle,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 
 /**
  * Delivery Foresight — the quiet surface over a deliberately heavy engine
- * (src/lib/ai/deliveryForesight.ts). One card: a reliability ring, a single
- * plain-language verdict, a thin metric line and a throughput sparkline.
+ * (src/lib/ai/deliveryForesight.ts). Collapsed by default to a single
+ * milestone line (the reliability achievement + status); the full forecast —
+ * reliability ring, verdict, metric line, throughput sparkline, riskiest task
+ * — expands on hover (and on tap/click, for touch). Minimal until you want it.
  *
  * Two shapes, decided server-side by the viewer:
  *   • self      — the full forecast (plate-clear date, the riskiest task).
@@ -189,6 +192,11 @@ export function DeliveryForesight({ userId, isSelf }: { userId: string; isSelf: 
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  // Collapsed by default; hover peeks the full forecast, a click pins it open
+  // (so touch devices — which have no hover — can expand it too).
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hovered || pinned;
 
   useEffect(() => {
     let alive = true;
@@ -213,106 +221,141 @@ export function DeliveryForesight({ userId, isSelf }: { userId: string; isSelf: 
   if (!loading && data && !data.self && !data.hasSignal) return null;
 
   const accent = data && data.self ? STATUS_STYLE[data.status] : STATUS_STYLE.on_track;
+  const ringFg = data ? ringColor(data.reliability) : '#94a3b8';
+
+  // ── Loading: a single quiet line, not a full skeleton card ───────────────
+  if (loading || !data) {
+    return (
+      <section className="card overflow-hidden p-0 fade-up-stagger" style={{ animationDelay: '80ms' }}>
+        <div className="flex items-center gap-2.5 px-4 py-3">
+          <span className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-white/5 animate-pulse shrink-0" />
+          <span className="h-3.5 w-40 rounded bg-slate-100 dark:bg-white/5 animate-pulse" />
+          <span className="ml-auto h-3.5 w-20 rounded bg-slate-100 dark:bg-white/5 animate-pulse" />
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="card overflow-hidden p-0 fade-up-stagger" style={{ animationDelay: '80ms' }}>
+    <section
+      className="card overflow-hidden p-0 fade-up-stagger"
+      style={{ animationDelay: '80ms' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div
         aria-hidden
         className="h-[3px] w-full"
         style={{ background: `linear-gradient(90deg, ${accent.ring}, ${accent.ring}00)` }}
       />
-      <div className="px-5 py-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span
-            className="w-7 h-7 rounded-lg grid place-items-center shrink-0"
-            style={{ background: accent.bg, color: accent.fg }}
-          >
-            <Sparkles size={15} />
+
+      {/* ── Collapsed milestone line — the achievement at a glance. The whole
+          row is the expand control: hover peeks, click pins. ─────────────── */}
+      <button
+        type="button"
+        onClick={() => setPinned((p) => !p)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2.5 px-4 py-3 text-left"
+      >
+        <span
+          className="w-6 h-6 rounded-lg grid place-items-center shrink-0"
+          style={{ background: accent.bg, color: accent.fg }}
+        >
+          <Sparkles size={13} />
+        </span>
+        <span className="text-[13px] font-bold text-slate-800 dark:text-white leading-tight shrink-0">
+          Delivery Foresight
+        </span>
+        {/* The milestone: reliability score + its plain-language label. */}
+        <span className="inline-flex items-baseline gap-1 shrink-0">
+          <span className="text-[14px] font-black tabular-nums leading-none" style={{ color: ringFg }}>
+            {data.reliability}
           </span>
-          <div className="min-w-0">
-            <h3 className="text-[14px] font-bold text-slate-800 dark:text-white leading-tight flex items-center gap-2">
-              Delivery Foresight
-              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-300 dark:text-white/30">
-                predictive
-              </span>
-            </h3>
-            <p className="text-[10.5px] text-slate-400 leading-snug">
-              {isSelf
-                ? 'A forecast from how you actually deliver — not a stat sheet.'
-                : 'Delivery rhythm, learned from completed work.'}
-            </p>
-          </div>
-          {data && data.self && (
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: ringFg }}>
+            {data.reliabilityLabel}
+          </span>
+        </span>
+        <span className="ml-auto flex items-center gap-2 shrink-0">
+          {data.self && (
             <span
-              className="ml-auto inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shrink-0"
+              className="hidden sm:inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
               style={{ background: accent.bg, color: accent.fg }}
             >
               {accent.label}
             </span>
           )}
-        </div>
+          <ChevronDown
+            size={15}
+            className={`text-slate-300 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          />
+        </span>
+      </button>
 
-        {loading || !data ? (
-          <div className="flex items-center gap-5">
-            <div className="w-[76px] h-[76px] rounded-full bg-slate-100 dark:bg-white/5 animate-pulse shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="h-3.5 w-3/4 rounded bg-slate-100 dark:bg-white/5 animate-pulse" />
-              <div className="h-3 w-1/2 rounded bg-slate-100 dark:bg-white/5 animate-pulse" />
-              <div className="h-7 w-32 rounded bg-slate-50 dark:bg-white/[0.03] animate-pulse" />
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-start gap-5">
-            <ReliabilityRing score={data.reliability} label={data.reliabilityLabel} />
+      {/* ── Expanded forecast — the full read, revealed on hover/click ─────── */}
+      <div
+        className={`grid transition-all duration-300 ease-out ${
+          open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-4 pb-4 pt-1">
+            <p className="text-[10.5px] text-slate-400 leading-snug mb-3">
+              {isSelf
+                ? 'A forecast from how you actually deliver — not a stat sheet.'
+                : 'Delivery rhythm, learned from completed work.'}
+            </p>
+            <div className="flex items-start gap-5">
+              <ReliabilityRing score={data.reliability} label={data.reliabilityLabel} />
 
-            <div className="flex-1 min-w-0">
-              <p className="text-[13.5px] font-semibold text-slate-700 dark:text-white/80 leading-snug">
-                {data.self ? data.headline : data.publicHeadline}
-              </p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13.5px] font-semibold text-slate-700 dark:text-white/80 leading-snug">
+                  {data.self ? data.headline : data.publicHeadline}
+                </p>
 
-              {/* Thin metric line — the few numbers that matter, never a wall. */}
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] font-medium">
-                {data.typicalTurnaroundDays != null && (
-                  <Metric icon={Timer}>~{data.typicalTurnaroundDays}d turnaround</Metric>
+                {/* Thin metric line — the few numbers that matter, never a wall. */}
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] font-medium">
+                  {data.typicalTurnaroundDays != null && (
+                    <Metric icon={Timer}>~{data.typicalTurnaroundDays}d turnaround</Metric>
+                  )}
+                  <Metric icon={Gauge}>{data.throughputPerWeek}/wk</Metric>
+                  <span className="inline-flex items-center">
+                    <TrendChip trend={data.trend} />
+                  </span>
+                  {data.self && data.clearDateP80 && (
+                    <Metric icon={CalendarClock}>clears ~{fmtClear(data.clearDateP80)}</Metric>
+                  )}
+                  {data.peakDay && (
+                    <span className="text-slate-400 dark:text-white/40">peak {data.peakDay}s</span>
+                  )}
+                </div>
+
+                {/* Sparkline of recent weekly throughput. */}
+                {data.spark && data.spark.some((v) => v > 0) && (
+                  <div className="mt-3 flex items-end gap-2">
+                    <Sparkline data={data.spark} />
+                    <span className="text-[9px] text-slate-300 dark:text-white/25 mb-0.5 leading-none">
+                      12-wk output
+                    </span>
+                  </div>
                 )}
-                <Metric icon={Gauge}>{data.throughputPerWeek}/wk</Metric>
-                <span className="inline-flex items-center">
-                  <TrendChip trend={data.trend} />
-                </span>
-                {data.self && data.clearDateP80 && (
-                  <Metric icon={CalendarClock}>clears ~{fmtClear(data.clearDateP80)}</Metric>
-                )}
-                {data.peakDay && (
-                  <span className="text-slate-400 dark:text-white/40">peak {data.peakDay}s</span>
+
+                {/* Self only: the single riskiest task, when there is one. */}
+                {data.self && data.topRisk && data.status === 'at_risk' && (
+                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200/70 dark:border-amber-400/20 bg-amber-50/60 dark:bg-amber-500/[0.07] px-3 py-2">
+                    <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                    <span className="text-[12px] text-slate-600 dark:text-white/70 min-w-0">
+                      <span className="font-semibold truncate">{data.topRisk.title}</span>
+                      <span className="text-slate-400">
+                        {' '}
+                        · {Math.round(data.topRisk.slipProb * 100)}% to slip — start it first
+                      </span>
+                    </span>
+                  </div>
                 )}
               </div>
-
-              {/* Sparkline of recent weekly throughput. */}
-              {data.spark && data.spark.some((v) => v > 0) && (
-                <div className="mt-3 flex items-end gap-2">
-                  <Sparkline data={data.spark} />
-                  <span className="text-[9px] text-slate-300 dark:text-white/25 mb-0.5 leading-none">
-                    12-wk output
-                  </span>
-                </div>
-              )}
-
-              {/* Self only: the single riskiest task, when there is one. */}
-              {data.self && data.topRisk && data.status === 'at_risk' && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200/70 dark:border-amber-400/20 bg-amber-50/60 dark:bg-amber-500/[0.07] px-3 py-2">
-                  <AlertTriangle size={14} className="text-amber-500 shrink-0" />
-                  <span className="text-[12px] text-slate-600 dark:text-white/70 min-w-0">
-                    <span className="font-semibold truncate">{data.topRisk.title}</span>
-                    <span className="text-slate-400">
-                      {' '}
-                      · {Math.round(data.topRisk.slipProb * 100)}% to slip — start it first
-                    </span>
-                  </span>
-                </div>
-              )}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

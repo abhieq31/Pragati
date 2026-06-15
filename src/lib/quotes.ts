@@ -1,17 +1,17 @@
 /**
- * Login-screen wisdom — drawn from a fixed canon of books on building and
- * leading: High Output Management, Only the Paranoid Survive, The Hard Thing
- * About Hard Things, The Innovator's Dilemma, Outliers, The Singularity Is
- * Near, Snow Crash, and Positioning — plus Jensen Huang's own lines.
+ * Login-screen wisdom — lines drawn from *The Book of Elon* (the curated
+ * almanack of Elon Musk's own words), chosen to resonate with what Pragati is
+ * for: executing fast and well, deleting needless process, simplifying, reading
+ * delivery honestly, and seeking hard feedback.
  *
- * Display rule: NO attribution is ever rendered. The words stand alone.
- * (`author` is kept on the type for internal curation and feed validation
- * only — the login page never shows it.)
+ * Display rule: NO attribution is ever rendered. The words stand alone — the
+ * login page shows the line, never the name or the source. (`author` is kept on
+ * the type for internal curation only and is never surfaced in the UI.)
  *
  * No-repeat rule: the login page rotates through a per-device shuffled queue
- * and never repeats a quote until the whole library is exhausted. At one
- * quote per 8 seconds across 40+ quotes, that guarantees no repetition for
- * well over five minutes of reading.
+ * and never repeats a quote until the whole library is exhausted. Each quote
+ * also stays on screen for a length of time proportional to how long it takes
+ * to read (see `readingMs` on the login page), so longer lines aren't cut off.
  *
  * The library can still be refreshed forever without a redeploy by hosting a
  * JSON array of {text, author} and setting QUOTES_FEED_URL — /api/quotes
@@ -24,166 +24,86 @@ export interface Quote {
 }
 
 export const BUILTIN_QUOTES: Quote[] = [
-  // ── High Output Management ──────────────────────────────────────────────
+  // ── Execute fast and well ────────────────────────────────────────────────
+  { text: 'The point is ensuring we execute ultrafast and well.', author: 'The Book of Elon' },
   {
-    text: 'A manager’s output is the output of his organization plus the output of the neighboring organizations under his influence.',
-    author: 'High Output Management',
+    text: 'Find the design necessity of every part and every process.',
+    author: 'The Book of Elon',
+  },
+  { text: 'Physically go to where the problem is, immediately.', author: 'The Book of Elon' },
+  { text: 'Eliminate what isn’t necessary to solve the key problem.', author: 'The Book of Elon' },
+  {
+    text: 'The first goal is to make the damn thing work—we’ll optimize it later.',
+    author: 'The Book of Elon',
+  },
+  { text: 'Somebody has to do the real work.', author: 'The Book of Elon' },
+  // ── Simplify ─────────────────────────────────────────────────────────────
+  {
+    text: 'Simplicity is our mantra. It creates both reliability and low cost.',
+    author: 'The Book of Elon',
   },
   {
-    text: 'The art of management lies in selecting the one, two, or three activities that provide leverage well beyond the others — and concentrating on them.',
-    author: 'High Output Management',
+    text: 'It’s a lot of minimizing things that can go wrong and maximizing the efficiency of the simple things.',
+    author: 'The Book of Elon',
+  },
+  { text: 'It’s easy to say “simplify,” but it’s very difficult to do it.', author: 'The Book of Elon' },
+  // ── Time is the one thing you can’t scrap ────────────────────────────────
+  { text: 'If a timeline is long, it’s wrong.', author: 'The Book of Elon' },
+  {
+    text: 'It’s okay to scrap equipment or money. It’s not okay to scrap time.',
+    author: 'The Book of Elon',
+  },
+  // ── First principles & truth ─────────────────────────────────────────────
+  {
+    text: 'Start somewhere. Then be prepared to question your assumptions, fix what you did wrong, and adapt to reality.',
+    author: 'The Book of Elon',
   },
   {
-    text: 'Stressing output is the key to improving productivity; looking to increase activity can result in just the opposite.',
-    author: 'High Output Management',
+    text: 'The first-principles approach is a good way to figure out counterintuitive solutions.',
+    author: 'The Book of Elon',
+  },
+  { text: 'Physics is law. Everything else is a recommendation.', author: 'The Book of Elon' },
+  { text: 'It’s OK to be wrong. Just don’t be confident and wrong.', author: 'The Book of Elon' },
+  {
+    text: 'Being tenacious and super focused on the truth is extremely important. Look for feedback from all sources.',
+    author: 'The Book of Elon',
+  },
+  // ── Feedback ─────────────────────────────────────────────────────────────
+  { text: 'I’m a huge believer in taking feedback.', author: 'The Book of Elon' },
+  {
+    text: 'Pay close attention to negative feedback, and solicit it, particularly from friends. It’s incredibly helpful.',
+    author: 'The Book of Elon',
+  },
+  // ── Teams & ownership ────────────────────────────────────────────────────
+  {
+    text: 'Always view yourself as working for the good of the company and never your department.',
+    author: 'The Book of Elon',
   },
   {
-    text: 'How you handle your own time is the single most important aspect of being a role model and leader.',
-    author: 'High Output Management',
+    text: 'Wherever the smartest, most driven people are choosing to work, that company is going to win.',
+    author: 'The Book of Elon',
   },
   {
-    text: 'Training is, quite simply, one of the highest-leverage activities a manager can perform.',
-    author: 'High Output Management',
+    text: 'There is something special—far more rewarding than money—about working with an epic team to make breakthroughs.',
+    author: 'The Book of Elon',
   },
   {
-    text: 'A genuinely effective indicator covers the output of the work, not simply the activity involved.',
-    author: 'High Output Management',
+    text: 'As long as we push hard and are not complacent, the future is going to be great.',
+    author: 'The Book of Elon',
   },
+  // ── Work & resolve ───────────────────────────────────────────────────────
+  { text: 'Don’t aspire to glory; aspire to work.', author: 'The Book of Elon' },
+  { text: 'Nobody ever changed the world on forty hours a week.', author: 'The Book of Elon' },
   {
-    text: 'Reports are more a medium of self-discipline than a way to communicate information.',
-    author: 'High Output Management',
+    text: 'Go do it. Just go out there and do it. People are far too afraid to try. Don’t be afraid to fail. Just go.',
+    author: 'The Book of Elon',
   },
+  { text: 'Look fear straight in the eye and it will disappear.', author: 'The Book of Elon' },
   {
-    text: 'When a person is not doing his job, there can only be two reasons: he either can’t do it, or won’t.',
-    author: 'High Output Management',
+    text: 'Come hell or high water, we are going to make this work.',
+    author: 'The Book of Elon',
   },
-  // ── Only the Paranoid Survive ───────────────────────────────────────────
-  {
-    text: 'Success breeds complacency. Complacency breeds failure. Only the paranoid survive.',
-    author: 'Only the Paranoid Survive',
-  },
-  {
-    text: 'A strategic inflection point is when the fundamentals of a business are about to change.',
-    author: 'Only the Paranoid Survive',
-  },
-  {
-    text: 'Bad companies are destroyed by crisis. Good companies survive them. Great companies are improved by them.',
-    author: 'Only the Paranoid Survive',
-  },
-  { text: 'Let chaos reign, then rein in chaos.', author: 'Only the Paranoid Survive' },
-  {
-    text: 'The person who is the star of a previous era is often the last one to adapt to change.',
-    author: 'Only the Paranoid Survive',
-  },
-  // ── The Hard Thing About Hard Things ────────────────────────────────────
-  {
-    text: 'Hard things are hard because there are no easy answers or recipes.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Take care of the people, the products, and the profits — in that order.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Every time you make the hard, correct decision you become a bit more courageous; every time you make the easy, wrong decision you become a bit more cowardly.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Spend zero time on what you could have done, and devote all of your time on what you might do.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'There are no shortcuts to knowledge, especially knowledge gained from personal experience.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Build a culture that rewards people for getting problems into the open, where they can be solved.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  {
-    text: 'Sometimes an organization doesn’t need a solution; it just needs clarity.',
-    author: 'The Hard Thing About Hard Things',
-  },
-  // ── The Innovator's Dilemma ─────────────────────────────────────────────
-  { text: 'Markets that do not exist cannot be analyzed.', author: "The Innovator's Dilemma" },
-  {
-    text: 'The very decision-making processes that are key to the success of established companies are the same processes that reject disruptive ideas.',
-    author: "The Innovator's Dilemma",
-  },
-  {
-    text: 'Disruption starts simpler and cheaper at the low end — and then it climbs.',
-    author: "The Innovator's Dilemma",
-  },
-  {
-    text: 'Listening only to your best customers can be precisely how you lose the future.',
-    author: "The Innovator's Dilemma",
-  },
-  // ── Outliers ────────────────────────────────────────────────────────────
-  {
-    text: 'Practice isn’t the thing you do once you’re good. It’s the thing you do that makes you good.',
-    author: 'Outliers',
-  },
-  {
-    text: 'Success arises out of a predictable and powerful set of circumstances and opportunities — and the readiness to seize them.',
-    author: 'Outliers',
-  },
-  {
-    text: 'Hard work is a prison sentence only if it does not have meaning.',
-    author: 'Outliers',
-  },
-  {
-    text: 'Autonomy, complexity, and a connection between effort and reward — the three qualities work must have to be satisfying.',
-    author: 'Outliers',
-  },
-  {
-    text: 'No one who rises before dawn three hundred sixty days a year fails to make his family rich.',
-    author: 'Outliers',
-  },
-  // ── The Singularity Is Near ─────────────────────────────────────────────
-  {
-    text: 'We won’t experience a hundred years of progress in this century — it will be more like twenty thousand years of progress, at today’s rate.',
-    author: 'The Singularity Is Near',
-  },
-  {
-    text: 'Our intuition about the future is linear. The reality of technology is exponential.',
-    author: 'The Singularity Is Near',
-  },
-  {
-    text: 'An invention has to make sense in the world in which it is finished, not the world in which it is started.',
-    author: 'The Singularity Is Near',
-  },
-  // ── Snow Crash ──────────────────────────────────────────────────────────
-  {
-    text: 'The world is full of power and energy, and a person can go far by just skimming off a tiny bit of it.',
-    author: 'Snow Crash',
-  },
-  { text: 'Condense fact from the vapor of nuance.', author: 'Snow Crash' },
-  // ── Positioning ─────────────────────────────────────────────────────────
-  {
-    text: 'Positioning is not what you do to a product. It is what you do to the mind.',
-    author: 'Positioning',
-  },
-  { text: 'It is better to be first than it is to be better.', author: 'Positioning' },
-  {
-    text: 'The mind screens and rejects much of the information offered it. It accepts only what matches its prior state.',
-    author: 'Positioning',
-  },
-  {
-    text: 'Don’t try to create something new and different in the mind. Work with what’s already there.',
-    author: 'Positioning',
-  },
-  // ── Jensen Huang ────────────────────────────────────────────────────────
-  { text: 'I want you to be in a state of urgency. Not panic — urgency.', author: 'Jensen Huang' },
-  { text: 'Run. Don’t walk.', author: 'Jensen Huang' },
-  { text: 'The mission is the boss.', author: 'Jensen Huang' },
-  {
-    text: 'I don’t wear a watch, because the most important time is now.',
-    author: 'Jensen Huang',
-  },
-  {
-    text: 'Greatness is not intelligence. Greatness comes from character — and character is formed through struggle.',
-    author: 'Jensen Huang',
-  },
+  { text: 'Failure is essentially irrelevant unless it is catastrophic.', author: 'The Book of Elon' },
 ];
 
 /** Deterministic daily starting point so everyone who opens the login page on
@@ -192,4 +112,16 @@ export function dailyQuoteOffset(count: number, now: Date = new Date()): number 
   if (count <= 0) return 0;
   const day = Math.floor(now.getTime() / 86_400_000);
   return day % count;
+}
+
+/**
+ * How long a quote should stay on screen — proportional to how long it takes to
+ * read, so a one-liner doesn't linger and a long line isn't whisked away before
+ * it's read. ~200 wpm (≈ 360 ms/word) over a small base, clamped so the
+ * rotation never feels either frantic or stalled.
+ */
+export function readingMs(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const ms = 2600 + words * 360;
+  return Math.min(Math.max(ms, 6000), 16000);
 }
