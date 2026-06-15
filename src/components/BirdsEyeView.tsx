@@ -233,7 +233,7 @@ interface Edge {
 // stays scannable from above. Sizes tuned to keep the default (tasks-collapsed)
 // view clean — individual projects expand to show task detail on demand.
 const NODE_WIDTH = { root: 280, team: 226, project: 240, phase: 210, task: 220, count: 202 } as const;
-const NODE_HEIGHT = { root: 68, team: 66, project: 68, phase: 58, task: 46, count: 32 } as const;
+const NODE_HEIGHT = { root: 88, team: 66, project: 68, phase: 58, task: 46, count: 32 } as const;
 // Air between things is what separates "aerial view" from "circuit diagram".
 // These gaps were widened after the dense first pass read as congested: the
 // auto-fit always frames the whole tree anyway, so extra whitespace costs a
@@ -652,7 +652,7 @@ function NodeShape({
           strokeWidth={avgUrgency > 30 ? 3 : 1.5}
           filter="url(#beNodeShadow)"
         />
-        <text textAnchor="middle" y={n.y + (n.sub ? 28 : 34)}>
+        <text textAnchor="middle" y={n.y + (n.sub ? 28 : 43)}>
           <MultiText
             x={cx}
             lines={lines}
@@ -664,23 +664,27 @@ function NodeShape({
           />
         </text>
         {n.sub && (
-          <text
-            x={cx}
-            y={n.y + n.height - 14}
-            textAnchor="middle"
-            fontSize={11}
-            fill="rgba(255,255,255,0.88)"
-          >
+          <text x={cx} y={n.y + 54} textAnchor="middle" fontSize={11} fill="rgba(255,255,255,0.88)">
             {truncateText(n.sub, 40)}
           </text>
         )}
-        {/* Root urgency badge — the "state of the union" at a glance. Greatest feature moment. */}
+        {/* Heat gets a dedicated footer row so it never competes with the
+            project reference / task-count subtitle above it. */}
         {avgUrgency > 20 && (
           <g>
-            <rect x={cx - 28} y={n.y + n.height - 32} width={56} height={16} rx={4} fill={rootUrgencyColor} />
+            <rect
+              x={cx - 34}
+              y={n.y + n.height - 22}
+              width={68}
+              height={16}
+              rx={8}
+              fill={rootUrgencyColor}
+              stroke="rgba(255,255,255,0.38)"
+              strokeWidth={0.7}
+            />
             <text
               x={cx}
-              y={n.y + n.height - 20}
+              y={n.y + n.height - 10.5}
               textAnchor="middle"
               fontSize={9}
               fontWeight={700}
@@ -1665,8 +1669,10 @@ export function BirdsEyeView({
           .be-node-g { transition: none !important; }
         }
       `}</style>
+      {/* The map is the workspace, not a dialog inside it: use the complete
+          viewport so wide trees and the command bar get every available pixel. */}
       <div
-        className="absolute inset-2 sm:inset-6 rounded-2xl bg-white shadow-2xl flex flex-col be-swoop overflow-hidden"
+        className="absolute inset-0 bg-white shadow-2xl flex flex-col be-swoop overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header — full-width band above the canvas. Title block left, controls
