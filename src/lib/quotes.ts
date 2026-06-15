@@ -1,9 +1,12 @@
 /**
- * Login-screen wisdom — lines drawn from *The Almanack of Naval Ravikant*
- * (Eric Jorgenson's compilation of Naval's writing, tweets, and podcast
- * transcripts), chosen to resonate with what Pragati is for: building
- * leverage through code and systems, applying specific knowledge, judging
- * what to do next, and letting small daily work compound into delivery.
+ * Login-screen wisdom — Naval Ravikant and the bookshelf he points to.
+ * Lines drawn from *The Almanack of Naval Ravikant* (Eric Jorgenson's
+ * compilation of Naval's writing, tweets, and podcasts) plus the authors he
+ * most recommends — Charlie Munger, Marcus Aurelius, Seneca, Bruce Lee,
+ * Nassim Taleb, Richard Feynman, James Clear, David Deutsch, and more —
+ * chosen to resonate with what Pragati is for: building leverage through code
+ * and systems, applying specific knowledge, judging what to do next, and
+ * letting small daily work compound into delivery.
  *
  * Display rule: NO attribution is ever rendered. The words stand alone — the
  * login page shows the line, never the name or the source. (`author` is kept on
@@ -135,6 +138,97 @@ export const BUILTIN_QUOTES: Quote[] = [
   {
     text: 'The Internet has massively broadened the possible space of careers.',
     author: 'The Almanack of Naval Ravikant',
+  },
+
+  // ═══ From the shelf Naval points to — the books he recommends ═════════════
+  // Same display rule: the source is never shown, only the line. The `author`
+  // key records the true book/voice for honest curation.
+
+  // ── Compounding & patience (Charlie Munger · Poor Charlie’s Almanack) ─────
+  {
+    text: 'The first rule of compounding: never interrupt it unnecessarily.',
+    author: 'Charlie Munger, Poor Charlie’s Almanack',
+  },
+  {
+    text: 'Spend each day trying to be a little wiser than you were when you woke up.',
+    author: 'Charlie Munger, Poor Charlie’s Almanack',
+  },
+  { text: 'Take a simple idea and take it seriously.', author: 'Charlie Munger, Poor Charlie’s Almanack' },
+  {
+    text: 'The big money is not in the buying and selling, but in the waiting.',
+    author: 'Charlie Munger, Poor Charlie’s Almanack',
+  },
+  // ── Systems & habits (James Clear · Atomic Habits) ───────────────────────
+  {
+    text: 'You do not rise to the level of your goals. You fall to the level of your systems.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'Habits are the compound interest of self-improvement.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.',
+    author: 'Will Durant, The Story of Philosophy',
+  },
+  // ── Obstacle as path, mind over events (Marcus Aurelius · Meditations) ────
+  {
+    text: 'The impediment to action advances action. What stands in the way becomes the way.',
+    author: 'Marcus Aurelius, Meditations',
+  },
+  {
+    text: 'You have power over your mind — not outside events. Realize this, and you will find strength.',
+    author: 'Marcus Aurelius, Meditations',
+  },
+  {
+    text: 'Waste no more time arguing about what a good man should be. Be one.',
+    author: 'Marcus Aurelius, Meditations',
+  },
+  { text: 'Confine yourself to the present.', author: 'Marcus Aurelius, Meditations' },
+  // ── Don’t waste the time you have (Seneca · Letters from a Stoic) ─────────
+  {
+    text: 'It is not that we have a short time to live, but that we waste much of it.',
+    author: 'Seneca, On the Shortness of Life',
+  },
+  { text: 'While we are postponing, life speeds by.', author: 'Seneca, Letters from a Stoic' },
+  // ── Mastery by subtraction (Bruce Lee · Striking Thoughts) ───────────────
+  {
+    text: 'I fear not the man who has practiced 10,000 kicks once, but the man who has practiced one kick 10,000 times.',
+    author: 'Bruce Lee, Striking Thoughts',
+  },
+  {
+    text: 'It’s not the daily increase but daily decrease. Hack away at the unessential.',
+    author: 'Bruce Lee, Striking Thoughts',
+  },
+  {
+    text: 'Absorb what is useful, discard what is useless, and add what is specifically your own.',
+    author: 'Bruce Lee, Striking Thoughts',
+  },
+  // ── First principles & honest thinking (Feynman · Deutsch · Kahneman) ─────
+  {
+    text: 'The first principle is that you must not fool yourself — and you are the easiest person to fool.',
+    author: 'Richard Feynman',
+  },
+  {
+    text: 'Problems are inevitable. Problems are soluble.',
+    author: 'David Deutsch, The Beginning of Infinity',
+  },
+  {
+    text: 'Nothing in life is as important as you think it is, while you are thinking about it.',
+    author: 'Daniel Kahneman, Thinking, Fast and Slow',
+  },
+  // ── Skin in the game, against renting your time (Nassim Taleb) ────────────
+  {
+    text: 'The three most harmful addictions are heroin, carbohydrates, and a monthly salary.',
+    author: 'Nassim Taleb, The Bed of Procrustes',
+  },
+  {
+    text: 'An idea starts to be interesting when you get scared of taking it to its logical conclusion.',
+    author: 'Nassim Taleb, The Bed of Procrustes',
+  },
+  {
+    text: 'When we are no longer able to change a situation, we are challenged to change ourselves.',
+    author: 'Viktor Frankl, Man’s Search for Meaning',
   },
 ];
 

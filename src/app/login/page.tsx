@@ -19,13 +19,14 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, unattributed wisdom — Naval Ravikant on leverage, specific
-   knowledge, judgment, and compounding daily work into outsized outcomes,
-   the philosophy behind why Pragati exists. The name is never shown, only the
-   line. Built-ins ship with the app; /api/quotes swaps in the operator's live
-   feed (QUOTES_FEED_URL) so the library keeps growing without a redeploy.
-   Daily-seeded start so the day has "a quote of the day". Never repeats until
-   the whole library has been shown (see unseenQuoteIndices below). */
+/* Rotating, unattributed wisdom — Naval Ravikant and the books he recommends
+   (Munger, Marcus Aurelius, Seneca, Bruce Lee, Taleb, Feynman, …) on leverage,
+   specific knowledge, judgment, and compounding daily work into outsized
+   outcomes, the philosophy behind why Pragati exists. No name is ever shown,
+   only the line. Built-ins ship with the app; /api/quotes swaps in the
+   operator's live feed (QUOTES_FEED_URL) so the library keeps growing without
+   a redeploy. Never repeats until the whole library has been shown (see
+   unseenQuoteIndices / pickUnseen below). */
 
 // Bumped to v2 when the library moved from the old pool to the Naval set — the
 // ledger is positional, so a fresh key avoids old indices pre-marking new lines.
