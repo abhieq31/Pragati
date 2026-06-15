@@ -50,9 +50,7 @@ export type Capability =
   /** Delete any shared project (owners can always delete their own). */
   | 'projects.delete_any'
   /** Delete tasks/phases in projects the actor does not own. */
-  | 'tasks.delete_any'
-  /** Tenant registry + cross-tenant provisioning (multi-tenant runtime). */
-  | 'tenants.manage';
+  | 'tasks.delete_any';
 
 const LEAD_UP: Role[] = ['lead', 'admin', 'master_admin'];
 const ADMIN_UP: Role[] = ['admin', 'master_admin'];
@@ -70,7 +68,6 @@ export const CAPABILITIES: Record<Capability, readonly Role[]> = {
   'projects.create_shared': LEAD_UP,
   'projects.delete_any': ADMIN_UP,
   'tasks.delete_any': ADMIN_UP,
-  'tenants.manage': ['master_admin'],
 };
 
 /** Whether `role` holds `capability`. Accepts raw/legacy role strings. */

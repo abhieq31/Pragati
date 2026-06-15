@@ -13,9 +13,8 @@ import { User } from '@/models/User';
 export type Role = 'contributor' | 'lead' | 'admin' | 'master_admin';
 // Legacy stored values that should be coerced on read (kept for backward
 // compatibility with documents written before the role enum was tightened).
-// `master_admin` is the multi-tenant superuser — dormant until the runtime
-// flag PRAGATI_MULTI_TENANT=true is set, but recognised everywhere so that
-// promoting a user to it doesn't fall back to "contributor".
+// Legacy stored values that should be coerced on read (kept for backward
+// compatibility with documents written before the role enum was tightened).
 export type StoredRole = Role | 'pm' | 'employee';
 
 export interface JwtPayload {
@@ -63,15 +62,13 @@ export function isLead(role?: string | null): boolean {
 }
 
 // The 'admin' role is the workspace owner with full visibility across every
-// team and project. Master-admin is a strict superset (also includes tenant
-// provisioning), so it satisfies admin checks everywhere admin is required.
+// team and project.
 export function isAdmin(role?: string | null): boolean {
   const r = normalizeRole(role);
   return r === 'admin' || r === 'master_admin';
 }
 
-/** Master admin — the platform operator. Dormant in single-tenant mode but
- *  the role check is wired so future multi-tenant features can gate on it. */
+/** Master admin — the platform operator (dormant capability for future scaling). */
 export function isMasterAdmin(role?: string | null): boolean {
   return normalizeRole(role) === 'master_admin';
 }
