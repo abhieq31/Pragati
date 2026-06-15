@@ -815,7 +815,12 @@ export function BirdsEyeView({
   // Default collapsed — shows compact count chips per project so the initial
   // view is clean. The user can expand all tasks with "Show tasks" or collapse
   // individual project task stacks with the − button on each project node.
-  const [collapseTasks, setCollapseTasks] = useState(data.scope !== 'project');
+  // Open with tasks EXPANDED for a project or a team — those scopes are bounded
+  // and the whole point is to see the actual work, not a count chip (a collapsed
+  // team view is mostly empty canvas — low yield). Only the workspace scope (all
+  // teams at once) defaults to collapsed, where expanding everything would be a
+  // wall; the user expands the branches they care about.
+  const [collapseTasks, setCollapseTasks] = useState(data.scope === 'workspace');
   const [editing, setEditing] = useState<{ node: PositionedNode; clientX: number; clientY: number } | null>(
     null,
   );

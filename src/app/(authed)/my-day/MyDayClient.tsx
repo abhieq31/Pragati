@@ -474,7 +474,7 @@ function WhiteboardFAB() {
         onClick={() => setOpen(true)}
         title="Open whiteboard"
         aria-label="Open whiteboard"
-        className="fixed bottom-6 right-6 z-40 rounded-2xl border border-slate-200 bg-white grid place-items-center text-blue-700 transition-all hover:-translate-y-0.5 hover:border-blue-200 active:scale-95 dark:border-white/10 dark:bg-[#262624] dark:text-blue-300"
+        className="fixed bottom-6 right-[5.5rem] z-40 rounded-2xl border border-slate-200 bg-white grid place-items-center text-blue-700 transition-all hover:-translate-y-0.5 hover:border-blue-200 active:scale-95 dark:border-white/10 dark:bg-[#262624] dark:text-blue-300"
         style={{
           width: 52,
           height: 52,
@@ -492,7 +492,7 @@ function WhiteboardFAB() {
               className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
               onClick={() => setOpen(false)}
             />
-            <div className="relative ml-auto w-full max-w-4xl h-full bg-white dark:bg-[#1e1e1c] shadow-2xl flex flex-col fade-in-soft">
+            <div className="relative w-full h-full bg-white dark:bg-[#1e1e1c] shadow-2xl flex flex-col fade-in-soft">
               <div
                 className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-white/[0.07] shrink-0"
                 style={{ background: 'linear-gradient(to right, rgba(21,101,192,0.06), transparent)' }}
@@ -533,7 +533,7 @@ function NotesFAB() {
         onClick={() => setOpen(true)}
         title="Open notes"
         aria-label="Open notes"
-        className="fixed bottom-6 right-[5.5rem] z-40 grid h-[52px] w-[52px] place-items-center rounded-2xl border border-amber-200 bg-white text-amber-600 transition-all hover:-translate-y-0.5 hover:border-amber-300 active:scale-95 dark:border-amber-500/20 dark:bg-[#262624] dark:text-amber-400"
+        className="fixed bottom-6 right-6 z-40 grid h-[52px] w-[52px] place-items-center rounded-2xl border border-amber-200 bg-white text-amber-600 transition-all hover:-translate-y-0.5 hover:border-amber-300 active:scale-95 dark:border-amber-500/20 dark:bg-[#262624] dark:text-amber-400"
         style={{ boxShadow: '0 12px 32px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.07)' }}
       >
         <FileText size={22} />

@@ -31,6 +31,17 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
+    title: 'Team page repair + bird’s-eye / My Day polish; delete dead multi-tenant code',
+    tags: ['fix', 'improvement'],
+    body: [
+      'Fixed the team detail header (a bad merge had corrupted the avatar markup and left two duplicate Export/bird’s-eye controls) — it now renders one clean Export and a single, minimal hero.',
+      'The bird’s-eye view opens with tasks expanded for a team or project — the work is visible immediately instead of a near-empty canvas with one collapsed count. Only the all-teams workspace view still opens collapsed.',
+      'My Day: swapped the Whiteboard and Notes floating buttons, and the whiteboard now opens full-screen.',
+      'Deleted dead code: the unused multi-tenant scaffolding (no document ever carried a tenantId) and a stale diagnostic CI workflow.',
+    ],
+  },
+  {
+    date: '2026-06-15',
     title: 'Reliability & performance hardening (first-principles audit)',
     tags: ['fix', 'improvement', 'security'],
     body: [

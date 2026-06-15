@@ -494,79 +494,44 @@ export default function TeamDetailPage() {
                   disabled={avatarUploading}
                   className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
                 >
-                  <span className="text-3xl font-black text-white/90 select-none">
-                    {team.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                  Remove
+                </button>
               )}
-              {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
-                <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
-                  {avatarUploading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Camera size={18} className="text-white" />
-                  )}
-                </div>
+              {isOwnerOrAdmin && (
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarFileChange}
+                />
               )}
             </div>
-            {isOwnerOrAdmin && avatarImage && (
-              <button
-                onClick={removeAvatar}
-                disabled={avatarUploading}
-                className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
-              >
-                Remove
-              </button>
-            )}
-            {isOwnerOrAdmin && (
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarFileChange}
-              />
-            )}
-          </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
-                    {team.name}
-                  </h1>
-                  {/* Human label for the team's operating function — the raw enum
-                      ("rtb") is a database detail, not UI copy. */}
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
-                      (
-                        {
-                          rtb: 'bg-blue-50 text-blue-700 border-blue-200',
-                          ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                        } as Record<string, string>
-                      )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    {FUNCTION_LABEL[team.function] || team.function}
-                  </span>
-                </div>
-                {team.description && (
-                  <p className="text-sm text-slate-500 dark:text-white/50 mt-1.5 leading-snug">
-                    {team.description}
-                  </p>
-                )}
+            <div className="flex-1 min-w-0 sm:pb-1">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
+                  {team.name}
+                </h1>
+                {/* Human label for the team's operating function — the raw enum
+                    ("rtb") is a database detail, not UI copy. */}
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                    (
+                      {
+                        rtb: 'bg-blue-50 text-blue-700 border-blue-200',
+                        ctb: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                      } as Record<string, string>
+                    )[team.function] || 'bg-slate-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {FUNCTION_LABEL[team.function] || team.function}
+                </span>
               </div>
-
-              {(isOwnerOrAdmin || isLead) && (
-                <div className="shrink-0 flex items-center gap-1.5">
-                  <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
-                  <ExportMenu
-                    onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
-                    onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
-                    onBirdEyeSvg={() => setShowBirdEye(true)}
-                  />
-                </div>
+              {team.description && (
+                <p className="text-sm text-slate-500 dark:text-white/50 mt-1.5 leading-snug">
+                  {team.description}
+                </p>
               )}
             </div>
           </div>
