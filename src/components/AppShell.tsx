@@ -59,6 +59,7 @@ import {
   Layers,
   Globe,
   ExternalLink,
+  GitBranch, // for the macro tree
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -354,6 +355,8 @@ export default function AppShell({
   // footer so it's always reachable without scrolling.
   const leadNav: NavItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
+    // Elon greatest BirdsEye: Prominent global access to the 10x macro tree across the app.
+    { href: '/?tree=1', label: "Bird's Eye (10x Real-time Macro)", icon: Layers, iconColor: '#0ea5e9', iconBg: '#e0f2fe' },
     { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
@@ -401,6 +404,8 @@ export default function AppShell({
 
   const contributorNav: NavItem[] = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
+    // Elon greatest BirdsEye: Prominent global access to the 10x macro tree across the app.
+    { href: '/?tree=1', label: "Bird's Eye (10x Real-time Macro)", icon: Layers, iconColor: '#0ea5e9', iconBg: '#e0f2fe' },
     { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];

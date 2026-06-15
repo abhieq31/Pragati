@@ -22,6 +22,16 @@
 
 ## Highlights
 
+**ELON 10x VISION (this is the control room):**
+- **Bird's Eye View** is the *only* macro lens you need: living deterministic SVG tree of the entire org, now with real-time slip-risk (red ! badges, thick borders, reasons in tooltip) + Work Mixer urgency (bold highlights for high-score items) overlaid. Auto-opens for leads. Edits are optimistic + audited. Search, drag, brush, export, keyboard — all first-class. **Greatest possible**: Real-time updates across the app, mixer/slip visuals in every node, live across dashboard/projects/teams.
+- Work Mixer + SlipRisk + Foresight = the physics brain. Pure, explainable, zero-cost. Real-time as possible (visibility + 15s + events + Broadcast + optimistic UI).
+- Delete noise: Personal toys stay private; the tree shows truth at scale. The app is now the tree + actionable signals.
+- Result: See the whole board, know what to do *before* it slips, act instantly, in real-time. 10x better than any other PM tool because it's built on first principles, not feature checklists.
+
+If you're reading this as an investor or operator: This is how you get radical visibility and delivery without surveillance bloat or black-box AI. The invariants (deterministic core, hand-rolled auth, full audit) make it production-grade for regulated environments while the tree makes it delightful for everyone. 
+
+Ship fast. Delete what doesn't serve the tree. Make it feel alive. Real-time. 10x.
+
 - **Admin console** — `/admin` puts the whole workspace on one server-rendered page: people/team/project/task counts, an attention queue (locked accounts, pending invites, forced password resets), the latest audit activity, and one-click entry into every admin surface. Admins see *everything* (every team, every shared project) — except personal projects, which stay private to their owners by design. One capability matrix (`src/lib/permissions.ts`) drives both the UI and the API, so what a role sees is exactly what it can do.
 - **Bird's-eye view** — a full-screen, interactive SVG tree of `team → project → task → assignee`. Click any card (or the connector leading to it) to expand or hide its branch, drag cards to rearrange, sketch over the canvas with the brush, quick-edit assignee/TCD inline, and export the exact on-screen view as PDF, SVG, or image. Opens from the dashboard, team detail, or project detail page.
 - **Early warning, learned per person** — the dashboard quietly flags open work that is *likely to miss its date* before it does: a tiny model learns each person's real median cycle time and past-due rate from their own history and weighs it against the runway left and competing open work. No external AI service, no extra queries — computed in-process over data already loaded, every score traceable to a line of code (`src/lib/ai/slipRisk.ts`).
