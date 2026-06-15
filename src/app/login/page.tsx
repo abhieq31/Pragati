@@ -20,17 +20,18 @@ function getInitials(name: string) {
 }
 
 /* Rotating, unattributed wisdom — Naval Ravikant and the books he recommends
-   (Munger, Marcus Aurelius, Seneca, Bruce Lee, Taleb, Feynman, …) on leverage,
-   specific knowledge, judgment, and compounding daily work into outsized
-   outcomes, the philosophy behind why Pragati exists. No name is ever shown,
-   only the line. Built-ins ship with the app; /api/quotes swaps in the
-   operator's live feed (QUOTES_FEED_URL) so the library keeps growing without
-   a redeploy. Never repeats until the whole library has been shown (see
+   (Munger, Marcus Aurelius, Seneca, Bruce Lee, James Clear, Feynman, …),
+   curated to what Pragati is for: doing the work — focus, finishing, cutting
+   the unessential, and compounding small daily progress into delivery. No name
+   is ever shown, only the line. Built-ins ship with the app; /api/quotes swaps
+   in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
+   without a redeploy. Never repeats until the whole library has been shown (see
    unseenQuoteIndices / pickUnseen below). */
 
-// Bumped to v2 when the library moved from the old pool to the Naval set — the
-// ledger is positional, so a fresh key avoids old indices pre-marking new lines.
-const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v2';
+// Bumped when the library is re-curated (the ledger is positional, so a fresh
+// key avoids old indices pre-marking different lines): v2 = Elon→Naval pool,
+// v3 = trimmed to the execution/delivery theme.
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v3';
 
 /** Indices not yet shown on this device; resets only once the whole set is
  *  exhausted. Takes the current library size — the list is dynamic (built-ins
