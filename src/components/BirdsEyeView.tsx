@@ -15,6 +15,7 @@ import {
   Eraser,
   Plus,
   Search,
+  Copy,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { DatePicker } from '@/components/DatePicker';
@@ -797,12 +798,17 @@ export function BirdsEyeView({
   data,
   onClose,
   onChange,
+  autoExport,
 }: {
   data: BirdsEyeData;
   onClose: () => void;
   /** Fires after a Bird's-Eye edit (assignee/TCD) persists — lets the host
    *  page re-fetch its data without forcing a hard reload. */
   onChange?: () => void;
+  /** When set, the view mounts hidden, expands the whole tree, immediately
+   *  downloads it in the given format, then closes — powering the Export
+   *  menu's one-click "Bird's-eye SVG/PNG" without ever showing the modal. */
+  autoExport?: 'svg' | 'png' | null;
 }) {
   const [mounted, setMounted] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -842,8 +848,8 @@ export function BirdsEyeView({
       return new Set();
     }
   });
-  const [svgExportPending, setSvgExportPending] = useState(false);
-  const svgExportRestore = useRef<{ collapseTasks: boolean; collapsedIds: Set<string> } | null>(null);
+  // Brief "copied" acknowledgement on the copy-image export button.
+  const [copiedImg, setCopiedImg] = useState(false);
   // Brush / annotation layer — freeform polylines over the canvas so a lead
   // can sketch on top of the structure during a brainstorm. Persists per scope.
   type BrushStroke = { color: string; width: number; points: { x: number; y: number }[] };
@@ -1215,38 +1221,116 @@ export function BirdsEyeView({
     setBrushStrokes([]);
   }
 
-  const exportSvg = useCallback(() => {
-    if (!svgRef.current) return;
+  // A standalone clone of the live tree for export: the exact on-screen pixels,
+  // on a white page, at intrinsic size (zoom-independent). Shared by every
+  // export format so SVG, PNG and clipboard always agree.
+  const buildExportClone = useCallback((): SVGSVGElement | null => {
+    if (!svgRef.current) return null;
     const clone = svgRef.current.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute('width', String(width));
+    clone.setAttribute('height', String(height));
+    clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    clone.removeAttribute('style');
     const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     bg.setAttribute('width', String(width));
     bg.setAttribute('height', String(height));
     bg.setAttribute('fill', '#ffffff');
     clone.insertBefore(bg, clone.firstChild);
-    const xml = new XMLSerializer().serializeToString(clone);
-    const blob = new Blob([`<?xml version="1.0"?>\n${xml}`], { type: 'image/svg+xml' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `pragati-birds-eye-${new Date().toISOString().slice(0, 10)}.svg`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }, [height, width]);
+    return clone;
+  }, [width, height]);
 
-  function requestExpandedSvgExport() {
-    if (svgExportPending) return;
-    svgExportRestore.current = {
-      collapseTasks,
-      collapsedIds: new Set(collapsedIds),
-    };
-    setSvgExportPending(true);
-    // The SVG must be laid out from expanded state before it is cloned.
+  const triggerDownload = useCallback(
+    (blob: Blob, ext: string) => {
+      const slug =
+        (data.rootLabel || 'view')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+          .slice(0, 40) || 'view';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `pragati-birds-eye-${slug}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    },
+    [data.rootLabel],
+  );
+
+  const exportSvg = useCallback(() => {
+    const clone = buildExportClone();
+    if (!clone) return;
+    const xml = new XMLSerializer().serializeToString(clone);
+    triggerDownload(new Blob([`<?xml version="1.0"?>\n${xml}`], { type: 'image/svg+xml' }), 'svg');
+  }, [buildExportClone, triggerDownload]);
+
+  // Rasterise the clone to a crisp 2× PNG via an offscreen canvas. Returns the
+  // blob so the same path powers both "download PNG" and "copy to clipboard".
+  const renderPngBlob = useCallback((): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const clone = buildExportClone();
+      if (!clone) return resolve(null);
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svg64 = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(xml)))}`;
+      const img = new Image();
+      img.onload = () => {
+        const scale = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(null);
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((b) => resolve(b), 'image/png');
+      };
+      img.onerror = () => resolve(null);
+      img.src = svg64;
+    });
+  }, [buildExportClone, width, height]);
+
+  const exportPng = useCallback(async () => {
+    const blob = await renderPngBlob();
+    if (blob) triggerDownload(blob, 'png');
+  }, [renderPngBlob, triggerDownload]);
+
+  const copyPng = useCallback(async () => {
+    try {
+      const blob = await renderPngBlob();
+      const Clip = (window as any).ClipboardItem;
+      if (!blob || !navigator.clipboard?.write || !Clip) return;
+      await navigator.clipboard.write([new Clip({ 'image/png': blob })]);
+      setCopiedImg(true);
+      setTimeout(() => setCopiedImg(false), 1600);
+    } catch {
+      /* clipboard blocked (permissions / unsupported) — silent */
+    }
+  }, [renderPngBlob]);
+
+  // Headless one-shot export (Export menu → "Bird's-eye SVG/PNG"). Mount hidden,
+  // expand the whole tree so the file is complete, let it paint, download, close.
+  useEffect(() => {
+    if (!autoExport || !mounted) return;
     setCollapseTasks(false);
     setCollapsedIds(new Set());
-  }
+    const t = setTimeout(() => {
+      if (autoExport === 'png') void exportPng();
+      else exportSvg();
+      onClose();
+    }, 200);
+    return () => clearTimeout(t);
+    // exportSvg/exportPng are stable callbacks; re-running on their identity
+    // would risk a double export. Fire once when the hidden view has mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoExport, mounted]);
 
   if (!mounted) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm overlay-in" onClick={onClose}>
+    <div
+      className={`fixed inset-0 z-[60] ${autoExport ? '' : 'bg-slate-900/70 backdrop-blur-sm overlay-in'}`}
+      style={autoExport ? { opacity: 0, pointerEvents: 'none' } : undefined}
+      aria-hidden={autoExport ? true : undefined}
+      onClick={autoExport ? undefined : onClose}
+    >
       {/* Opening choreography — the card swoops in while the tree itself
           settles from a higher "altitude" (scaled up, slightly transparent)
           down to its fitted size: the literal feeling of a bird's-eye view
@@ -1412,14 +1496,36 @@ export function BirdsEyeView({
               </>
             )}
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
-            <button
-              onClick={exportSvg}
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Download this view as an SVG"
-            >
-              <Download size={13} />
-              <span className="hidden sm:inline">SVG</span>
-            </button>
+            {/* Export group — same view, three takeaways: a vector SVG, a crisp
+                2× PNG, or the image straight onto the clipboard to paste into a
+                deck or chat. */}
+            <div className="inline-flex items-center rounded-lg bg-blue-600 overflow-hidden shadow-sm">
+              <button
+                onClick={exportSvg}
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 text-white hover:bg-blue-700 transition-colors"
+                title="Download this view as a vector SVG"
+              >
+                <Download size={13} />
+                <span className="hidden sm:inline">SVG</span>
+              </button>
+              <span className="w-px h-4 bg-white/25" />
+              <button
+                onClick={exportPng}
+                className="text-[11px] font-bold px-2.5 py-1.5 text-white hover:bg-blue-700 transition-colors"
+                title="Download this view as a high-resolution PNG"
+              >
+                PNG
+              </button>
+              <span className="w-px h-4 bg-white/25" />
+              <button
+                onClick={copyPng}
+                className="inline-flex items-center px-2 py-1.5 text-white hover:bg-blue-700 transition-colors"
+                title="Copy the image to your clipboard"
+                aria-label="Copy image to clipboard"
+              >
+                {copiedImg ? <Check size={13} /> : <Copy size={13} />}
+              </button>
+            </div>
             <span className="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block" />
             <button
               onClick={onClose}

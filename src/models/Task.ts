@@ -151,6 +151,10 @@ const TaskSchema = new Schema(
 );
 
 TaskSchema.index({ assigneeId: 1 });
+// "My tasks" also surfaces subtasks assigned to the user. Without this the
+// { 'subtasks.assigneeId': userId } lookup is a full collection scan; this
+// multikey index turns it into an index seek as task history grows.
+TaskSchema.index({ 'subtasks.assigneeId': 1 });
 TaskSchema.index({ projectId: 1 });
 TaskSchema.index({ projectId: 1, position: 1, createdAt: 1 });
 TaskSchema.index({ projectId: 1, status: 1 });

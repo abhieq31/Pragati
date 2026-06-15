@@ -46,7 +46,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         { privateToUserId: { $exists: false } },
         { privateToUserId: user!.sub },
       ],
-    }).lean();
+      // Bounded: a long-lived team's board can accumulate thousands of tasks;
+      // cap the worst case so one big team can't pull an unbounded result set.
+    })
+      .limit(4000)
+      .lean();
     const users = await User.find({ _id: { $in: tasks.map((t) => t.assigneeId).filter(Boolean) } }).lean();
     const uMap = new Map(users.map((u) => [String(u._id), u.name]));
     const pMap = new Map(projects.map((p) => [String(p._id), p]));

@@ -30,6 +30,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-06-15',
+    title: 'Reliability & performance hardening (first-principles audit)',
+    tags: ['fix', 'improvement', 'security'],
+    body: [
+      'QA sign-off is now an atomic, one-time act — a concurrent double-sign can no longer overwrite the first signer’s e-signature (21 CFR Part 11 §11.70).',
+      '“My tasks” and the team board now bound and project their task queries, and a new index on subtasks.assigneeId turns the “my subtasks” lookup from a collection scan into an index seek — no more unbounded reads as task history grows.',
+      'The daily-email settings now warn when the scheduled trigger looks stale (hasn’t run in over an hour), so a paused cron/Action fails loudly instead of silently dropping everyone’s digest.',
+      'Removed dead export scaffolding from the bird’s-eye view.',
+    ],
+  },
+  {
+    date: '2026-06-15',
+    title: 'Bird’s-eye view: one-click SVG/PNG export, copy-to-clipboard',
+    tags: ['feature', 'improvement'],
+    body: [
+      'The Export menu’s “Bird Eye View · SVG” now downloads the map directly instead of opening the viewer, and a new “· PNG” option exports a crisp 2× image — both rendered headlessly from the same data, with the whole tree expanded so the file is complete.',
+      'Inside the viewer, the single SVG button became an export group: vector SVG, high-res PNG, or copy the image straight to your clipboard to paste into a deck or chat.',
+    ],
+  },
+  {
     date: '2026-06-14',
     title: 'Delivery Foresight — a predictive read on profiles, briefs and teams',
     tags: ['feature', 'improvement'],

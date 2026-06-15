@@ -1232,6 +1232,9 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set());
   const { showToast, ToastEl } = useToast();
   const [showBirdEye, setShowBirdEye] = useState(false);
+  // Headless bird's-eye export — the Export menu downloads the map (SVG/PNG)
+  // directly instead of opening the interactive view.
+  const [birdEyeExport, setBirdEyeExport] = useState<'svg' | 'png' | null>(null);
   // Inline ccNo editor (owner only)
   const [editingCcNo, setEditingCcNo] = useState(false);
   const [ccNoDraft, setCcNoDraft] = useState('');
@@ -1346,6 +1349,43 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
   // never crash the whole page on a partial payload.
   const tasks: any[] = Array.isArray((project as any).tasks) ? (project as any).tasks : [];
   const phases: any[] = Array.isArray((project as any).phases) ? (project as any).phases : [];
+
+  // The bird's-eye tree — built once from data already on the page, shared by
+  // the interactive view and the headless Export-menu download (SVG/PNG).
+  const birdEyeData = {
+    rootLabel: project.name,
+    rootSubLabel: `${project.code || 'Project'} · ${tasks.length} task${tasks.length === 1 ? '' : 's'}`,
+    scope: 'project' as const,
+    teams: [] as { id: string; name: string; ownerName?: string | null }[],
+    projects: [
+      {
+        id: project.id,
+        code: project.code,
+        name: project.name,
+        teamId: null,
+        health: 'healthy' as const,
+        taskCount: tasks.length,
+        tasksDone: tasks.filter((t: any) => t.status === 'done').length,
+        dueDate: project.dueDate || null,
+        ownerName: project.ownerName || null,
+      },
+    ],
+    tasks: tasks.map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      projectId: project.id,
+      status: t.status,
+      assigneeName: t.assigneeName ?? null,
+      dueDate: (t.ccTcd || t.dueDate) ?? null,
+      phaseName: phases.find((ph: any) => ph.id === (t.phaseId || null))?.name ?? null,
+      position: t.position ?? Number.MAX_SAFE_INTEGER,
+      phasePosition:
+        phases.find((ph: any) => ph.id === (t.phaseId || null))?.position ?? Number.MAX_SAFE_INTEGER,
+      subtaskCount: t.subtaskCount,
+      subtasksDone: t.subtasksDone,
+      subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
+    })),
+  };
 
   // Priority-weighted progress — a critical task done moves the bar more
   // than a low one. See src/lib/progress.ts.
@@ -1989,7 +2029,8 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               }
               onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
               onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
-              onBirdEyeSvg={() => setShowBirdEye(true)}
+              onBirdEyeSvg={() => setBirdEyeExport('svg')}
+              onBirdEyePng={() => setBirdEyeExport('png')}
             />
             {isAdmin && !project.isPersonal && (
               <Link
@@ -2397,46 +2438,13 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           }}
         />
       )}
-      {showBirdEye && project && (
-        <BirdsEyeView
-          onClose={() => setShowBirdEye(false)}
-          onChange={load}
-          data={{
-            rootLabel: project.name,
-            rootSubLabel: `${project.code || 'Project'} · ${(tasks || []).length} task${(tasks || []).length === 1 ? '' : 's'}`,
-            scope: 'project',
-            teams: [],
-            projects: [
-              {
-                id: project.id,
-                code: project.code,
-                name: project.name,
-                teamId: null,
-                health: 'healthy',
-                taskCount: (tasks || []).length,
-                tasksDone: (tasks || []).filter((t: any) => t.status === 'done').length,
-                dueDate: project.dueDate || null,
-                ownerName: project.ownerName || null,
-              },
-            ],
-            tasks: (tasks || []).map((t: any) => ({
-              id: t.id,
-              title: t.title,
-              projectId: project.id,
-              status: t.status,
-              assigneeName: t.assigneeName ?? null,
-              dueDate: (t.ccTcd || t.dueDate) ?? null,
-              phaseName: (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.name ?? null,
-              position: t.position ?? Number.MAX_SAFE_INTEGER,
-              phasePosition:
-                (phases || []).find((ph: any) => ph.id === (t.phaseId || null))?.position ??
-                Number.MAX_SAFE_INTEGER,
-              subtaskCount: t.subtaskCount,
-              subtasksDone: t.subtasksDone,
-              subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
-            })),
-          }}
-        />
+      {showBirdEye && (
+        <BirdsEyeView onClose={() => setShowBirdEye(false)} onChange={load} data={birdEyeData} />
+      )}
+
+      {/* Headless one-shot export from the Export menu — no modal, just a file. */}
+      {birdEyeExport && (
+        <BirdsEyeView autoExport={birdEyeExport} onClose={() => setBirdEyeExport(null)} data={birdEyeData} />
       )}
     </div>
   );

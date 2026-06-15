@@ -142,6 +142,9 @@ export default function TeamDetailPage() {
   const [newMember, setNewMember] = useState('');
   const [activityMember, setActivityMember] = useState<any | null>(null);
   const [showBirdEye, setShowBirdEye] = useState(false);
+  // Headless bird's-eye export — set by the Export menu to download the map
+  // (SVG/PNG) directly, without opening the interactive view.
+  const [birdEyeExport, setBirdEyeExport] = useState<'svg' | 'png' | null>(null);
   // Team avatar — loaded on mount, updated on upload/remove
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [avatarHover, setAvatarHover] = useState(false);
@@ -310,6 +313,37 @@ export default function TeamDetailPage() {
   ).length;
   const cover = FUNCTION_COVER[team.function] || DEFAULT_COVER;
 
+  // The bird's-eye tree — built once from data already on the page, shared by
+  // the interactive view and the headless Export-menu download.
+  const birdEyeData = {
+    rootLabel: team.name,
+    rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
+    scope: 'team' as const,
+    teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
+    projects: (team.projects || []).map((p: any) => ({
+      id: p.id,
+      code: p.ccNo || p.code,
+      name: p.name,
+      teamId: team.id,
+      health: 'healthy' as const,
+      taskCount: p.taskCount ?? 0,
+      tasksDone: p.tasksDone ?? 0,
+      dueDate: p.dueDate ?? null,
+      ownerName: p.ownerName ?? null,
+    })),
+    tasks: (board || []).map((t: any) => ({
+      id: t.id,
+      title: t.title,
+      projectId: t.projectId,
+      status: t.status,
+      assigneeName: t.assigneeName ?? null,
+      dueDate: (t.ccTcd || t.dueDate) ?? null,
+      subtaskCount: t.subtaskCount,
+      subtasksDone: t.subtasksDone,
+      subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
+    })),
+  };
+
   return (
     <div className="space-y-6">
       {/* Per-member activity peek — leads/admins click the graph icon on a
@@ -379,33 +413,86 @@ export default function TeamDetailPage() {
           </div>
         </ModalPortal>
       )}
-      {/* ── Team header — minimal identity + actions, then a stat strip.
-          No cover banner: a compact, dense header that gets straight to the
-          numbers, matching the rest of the app. ─────────────────────────── */}
-      <section className="card p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-5">
-          {/* Avatar — neutral framed; owner/admin can replace it on hover. The
-              function tint lives on the small fallback tile, not a full banner. */}
-          <div className="shrink-0 flex flex-col items-center gap-1">
-            <div
-              className={`relative rounded-2xl p-[3px] bg-white dark:bg-[#262624] ring-1 ring-slate-200 dark:ring-white/10 shadow-sm ${
-                isOwnerOrAdmin ? 'cursor-pointer' : ''
-              }`}
-              onMouseEnter={() => setAvatarHover(true)}
-              onMouseLeave={() => setAvatarHover(false)}
-              onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
-              title={isOwnerOrAdmin ? 'Change team avatar' : undefined}
-            >
-              {avatarImage ? (
-                <img
-                  src={avatarImage}
-                  alt={`${team.name} avatar`}
-                  className="w-[68px] h-[68px] rounded-[14px] object-cover"
-                />
-              ) : (
-                <div
-                  className="w-[68px] h-[68px] rounded-[14px] flex items-center justify-center"
-                  style={{ background: cover }}
+      {/* ── Team hero — function-tinted cover, avatar straddling, summary strip ── */}
+      <section className="card overflow-hidden p-0">
+        <div className="relative h-24 sm:h-28 overflow-hidden" style={{ background: cover }}>
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              opacity: 0.5,
+              background: 'radial-gradient(120% 150% at 12% -30%, rgba(255,255,255,0.4), transparent 50%)',
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              opacity: 0.16,
+              backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1.4px)',
+              backgroundSize: '15px 15px',
+            }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-16"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.14), transparent)' }}
+          />
+          {(isOwnerOrAdmin || isLead) && (
+            <div className="absolute top-3 right-3 flex items-center gap-1.5">
+              <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
+              <ExportMenu
+                onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+                onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+                onBirdEyeSvg={() => setBirdEyeExport('svg')}
+                onBirdEyePng={() => setBirdEyeExport('png')}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="px-5 sm:px-6 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+            {/* Avatar straddling the cover (owner/admin can change on hover). */}
+            <div className="-mt-12 shrink-0 flex flex-col items-center gap-1">
+              <div
+                className="relative cursor-pointer rounded-2xl p-[3px] bg-white dark:bg-[#262624] shadow-lg"
+                onMouseEnter={() => setAvatarHover(true)}
+                onMouseLeave={() => setAvatarHover(false)}
+                onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
+                title={isOwnerOrAdmin ? 'Change team avatar' : undefined}
+              >
+                {avatarImage ? (
+                  <img
+                    src={avatarImage}
+                    alt={`${team.name} avatar`}
+                    className="w-[72px] h-[72px] rounded-[14px] object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-[72px] h-[72px] rounded-[14px] flex items-center justify-center"
+                    style={{ background: cover }}
+                  >
+                    <span className="text-3xl font-black text-white/90 select-none">
+                      {team.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
+                  <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
+                    {avatarUploading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Camera size={18} className="text-white" />
+                    )}
+                  </div>
+                )}
+              </div>
+              {isOwnerOrAdmin && avatarImage && (
+                <button
+                  onClick={removeAvatar}
+                  disabled={avatarUploading}
+                  className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
                 >
                   <span className="text-3xl font-black text-white/90 select-none">
                     {team.name.charAt(0).toUpperCase()}
@@ -750,39 +837,13 @@ export default function TeamDetailPage() {
           )}
         </div>
       </div>
-      {showBirdEye && team && (
-        <BirdsEyeView
-          onClose={() => setShowBirdEye(false)}
-          onChange={load}
-          data={{
-            rootLabel: team.name,
-            rootSubLabel: `${(team.projects || []).length} project${(team.projects || []).length === 1 ? '' : 's'} · ${(board || []).length} task${(board || []).length === 1 ? '' : 's'}`,
-            scope: 'team',
-            teams: [{ id: team.id, name: team.name, ownerName: team.leadName }],
-            projects: (team.projects || []).map((p: any) => ({
-              id: p.id,
-              code: p.ccNo || p.code,
-              name: p.name,
-              teamId: team.id,
-              health: 'healthy',
-              taskCount: p.taskCount ?? 0,
-              tasksDone: p.tasksDone ?? 0,
-              dueDate: p.dueDate ?? null,
-              ownerName: p.ownerName ?? null,
-            })),
-            tasks: (board || []).map((t: any) => ({
-              id: t.id,
-              title: t.title,
-              projectId: t.projectId,
-              status: t.status,
-              assigneeName: t.assigneeName ?? null,
-              dueDate: (t.ccTcd || t.dueDate) ?? null,
-              subtaskCount: t.subtaskCount,
-              subtasksDone: t.subtasksDone,
-              subtaskTitles: (t.subtaskTitles || []).slice(0, 5),
-            })),
-          }}
-        />
+      {showBirdEye && (
+        <BirdsEyeView onClose={() => setShowBirdEye(false)} onChange={load} data={birdEyeData} />
+      )}
+
+      {/* Headless one-shot export from the Export menu — no modal, just a file. */}
+      {birdEyeExport && (
+        <BirdsEyeView autoExport={birdEyeExport} onClose={() => setBirdEyeExport(null)} data={birdEyeData} />
       )}
     </div>
   );
