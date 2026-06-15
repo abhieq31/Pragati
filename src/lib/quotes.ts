@@ -1,8 +1,13 @@
 /**
- * Login-screen wisdom — lines drawn from *The Book of Elon* (the curated
- * almanack of Elon Musk's own words), chosen to resonate with what Pragati is
- * for: executing fast and well, deleting needless process, simplifying, reading
- * delivery honestly, and seeking hard feedback.
+ * Login-screen wisdom — curated to what Pragati is actually for: doing the
+ * work. Every line speaks to execution, focus, finishing, cutting the
+ * unessential, and compounding small daily progress into delivery — not wealth,
+ * career, or self-help in the abstract.
+ *
+ * Sourced from Naval Ravikant and the bookshelf he points to — Charlie Munger,
+ * Marcus Aurelius, Seneca, Bruce Lee, James Clear, Richard Feynman, David
+ * Deutsch, Daniel Kahneman, Will Durant, Viktor Frankl — but only the lines
+ * that map to getting work shipped.
  *
  * Display rule: NO attribution is ever rendered. The words stand alone — the
  * login page shows the line, never the name or the source. (`author` is kept on
@@ -24,86 +29,151 @@ export interface Quote {
 }
 
 export const BUILTIN_QUOTES: Quote[] = [
-  // ── Execute fast and well ────────────────────────────────────────────────
-  { text: 'The point is ensuring we execute ultrafast and well.', author: 'The Book of Elon' },
+  // ── Do the work — action beats talk ──────────────────────────────────────
+  { text: 'Inspiration is perishable — act on it immediately.', author: 'The Almanack of Naval Ravikant' },
+  { text: 'Impatience with actions, patience with results.', author: 'The Almanack of Naval Ravikant' },
   {
-    text: 'Find the design necessity of every part and every process.',
-    author: 'The Book of Elon',
-  },
-  { text: 'Physically go to where the problem is, immediately.', author: 'The Book of Elon' },
-  { text: 'Eliminate what isn’t necessary to solve the key problem.', author: 'The Book of Elon' },
-  {
-    text: 'The first goal is to make the damn thing work—we’ll optimize it later.',
-    author: 'The Book of Elon',
-  },
-  { text: 'Somebody has to do the real work.', author: 'The Book of Elon' },
-  // ── Simplify ─────────────────────────────────────────────────────────────
-  {
-    text: 'Simplicity is our mantra. It creates both reliability and low cost.',
-    author: 'The Book of Elon',
+    text: 'Reading is faster than listening. Doing is faster than watching.',
+    author: 'The Almanack of Naval Ravikant',
   },
   {
-    text: 'It’s a lot of minimizing things that can go wrong and maximizing the efficiency of the simple things.',
-    author: 'The Book of Elon',
-  },
-  { text: 'It’s easy to say “simplify,” but it’s very difficult to do it.', author: 'The Book of Elon' },
-  // ── Time is the one thing you can’t scrap ────────────────────────────────
-  { text: 'If a timeline is long, it’s wrong.', author: 'The Book of Elon' },
-  {
-    text: 'It’s okay to scrap equipment or money. It’s not okay to scrap time.',
-    author: 'The Book of Elon',
-  },
-  // ── First principles & truth ─────────────────────────────────────────────
-  {
-    text: 'Start somewhere. Then be prepared to question your assumptions, fix what you did wrong, and adapt to reality.',
-    author: 'The Book of Elon',
+    text: 'Knowing is not enough; we must apply. Willing is not enough; we must do.',
+    author: 'Bruce Lee, Striking Thoughts',
   },
   {
-    text: 'The first-principles approach is a good way to figure out counterintuitive solutions.',
-    author: 'The Book of Elon',
-  },
-  { text: 'Physics is law. Everything else is a recommendation.', author: 'The Book of Elon' },
-  { text: 'It’s OK to be wrong. Just don’t be confident and wrong.', author: 'The Book of Elon' },
-  {
-    text: 'Being tenacious and super focused on the truth is extremely important. Look for feedback from all sources.',
-    author: 'The Book of Elon',
-  },
-  // ── Feedback ─────────────────────────────────────────────────────────────
-  { text: 'I’m a huge believer in taking feedback.', author: 'The Book of Elon' },
-  {
-    text: 'Pay close attention to negative feedback, and solicit it, particularly from friends. It’s incredibly helpful.',
-    author: 'The Book of Elon',
-  },
-  // ── Teams & ownership ────────────────────────────────────────────────────
-  {
-    text: 'Always view yourself as working for the good of the company and never your department.',
-    author: 'The Book of Elon',
+    text: 'If you spend too much time thinking about a thing, you’ll never get it done.',
+    author: 'Bruce Lee, Striking Thoughts',
   },
   {
-    text: 'Wherever the smartest, most driven people are choosing to work, that company is going to win.',
-    author: 'The Book of Elon',
+    text: 'The impediment to action advances action. What stands in the way becomes the way.',
+    author: 'Marcus Aurelius, Meditations',
   },
   {
-    text: 'There is something special—far more rewarding than money—about working with an epic team to make breakthroughs.',
-    author: 'The Book of Elon',
+    text: 'Waste no more time arguing about what a good man should be. Be one.',
+    author: 'Marcus Aurelius, Meditations',
   },
   {
-    text: 'As long as we push hard and are not complacent, the future is going to be great.',
-    author: 'The Book of Elon',
+    text: 'Get active in your own rescue — and do it while you can.',
+    author: 'Marcus Aurelius, Meditations',
   },
-  // ── Work & resolve ───────────────────────────────────────────────────────
-  { text: 'Don’t aspire to glory; aspire to work.', author: 'The Book of Elon' },
-  { text: 'Nobody ever changed the world on forty hours a week.', author: 'The Book of Elon' },
+
+  // ── Focus — the one thing in front of you ────────────────────────────────
+  { text: 'If you can’t decide, the answer is no.', author: 'The Almanack of Naval Ravikant' },
   {
-    text: 'Go do it. Just go out there and do it. People are far too afraid to try. Don’t be afraid to fail. Just go.',
-    author: 'The Book of Elon',
+    text: 'A busy calendar and a busy mind will destroy your ability to do great things.',
+    author: 'The Almanack of Naval Ravikant',
   },
-  { text: 'Look fear straight in the eye and it will disappear.', author: 'The Book of Elon' },
   {
-    text: 'Come hell or high water, we are going to make this work.',
-    author: 'The Book of Elon',
+    text: 'Who you work with and what you work on matter more than how hard you work.',
+    author: 'The Almanack of Naval Ravikant',
   },
-  { text: 'Failure is essentially irrelevant unless it is catastrophic.', author: 'The Book of Elon' },
+  {
+    text: 'Concentrate every minute on doing what’s in front of you, with precise and genuine seriousness.',
+    author: 'Marcus Aurelius, Meditations',
+  },
+  { text: 'Confine yourself to the present.', author: 'Marcus Aurelius, Meditations' },
+  { text: 'Take a simple idea and take it seriously.', author: 'Charlie Munger, Poor Charlie’s Almanack' },
+  {
+    text: 'Nothing in life is as important as you think it is, while you are thinking about it.',
+    author: 'Daniel Kahneman, Thinking, Fast and Slow',
+  },
+  {
+    text: 'If a man knows not to which port he sails, no wind is favorable.',
+    author: 'Seneca, Letters from a Stoic',
+  },
+
+  // ── Simplify — cut the unessential ───────────────────────────────────────
+  {
+    text: 'It’s not the daily increase but daily decrease. Hack away at the unessential.',
+    author: 'Bruce Lee, Striking Thoughts',
+  },
+  {
+    text: 'Absorb what is useful, discard what is useless, and add what is specifically your own.',
+    author: 'Bruce Lee, Striking Thoughts',
+  },
+
+  // ── Compound — small reps, every day ─────────────────────────────────────
+  {
+    text: 'The first rule of compounding: never interrupt it unnecessarily.',
+    author: 'Charlie Munger, Poor Charlie’s Almanack',
+  },
+  {
+    text: 'Spend each day trying to be a little wiser than you were when you woke up.',
+    author: 'Charlie Munger, Poor Charlie’s Almanack',
+  },
+  {
+    text: 'It is remarkable how much long-term advantage you get by being consistently not stupid, instead of trying to be very intelligent.',
+    author: 'Charlie Munger, Poor Charlie’s Almanack',
+  },
+  { text: 'Habits are the compound interest of self-improvement.', author: 'James Clear, Atomic Habits' },
+  {
+    text: 'Success is the product of daily habits — not once-in-a-lifetime transformations.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'You do not rise to the level of your goals. You fall to the level of your systems.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'Goals are good for setting a direction, but systems are best for making progress.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'You should be far more concerned with your current trajectory than your current results.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'Every action you take is a vote for the type of person you wish to become.',
+    author: 'James Clear, Atomic Habits',
+  },
+  {
+    text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.',
+    author: 'Will Durant, The Story of Philosophy',
+  },
+
+  // ── Time — don’t postpone ────────────────────────────────────────────────
+  {
+    text: 'It is not that we have a short time to live, but that we waste much of it.',
+    author: 'Seneca, On the Shortness of Life',
+  },
+  { text: 'While we are postponing, life speeds by.', author: 'Seneca, Letters from a Stoic' },
+  {
+    text: 'Begin at once to live, and count each separate day as a separate life.',
+    author: 'Seneca, Letters from a Stoic',
+  },
+
+  // ── Mastery — earned by repetition ───────────────────────────────────────
+  {
+    text: 'I fear not the man who has practiced 10,000 kicks once, but the man who has practiced one kick 10,000 times.',
+    author: 'Bruce Lee, Striking Thoughts',
+  },
+  {
+    text: 'Become the best in the world at what you do. Keep redefining what you do until this is true.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  {
+    text: 'Building specific knowledge will feel like play to you but will look like work to others.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+
+  // ── See it straight — honest judgment & problems ─────────────────────────
+  {
+    text: 'The first principle is that you must not fool yourself — and you are the easiest person to fool.',
+    author: 'Richard Feynman',
+  },
+  {
+    text: 'Problems are inevitable. Problems are soluble.',
+    author: 'David Deutsch, The Beginning of Infinity',
+  },
+  { text: 'Clear thinking requires courage.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'When we are no longer able to change a situation, we are challenged to change ourselves.',
+    author: 'Viktor Frankl, Man’s Search for Meaning',
+  },
+
+  // ── Build with people — teams that deliver ───────────────────────────────
+  { text: 'Play long-term games with long-term people.', author: 'The Almanack of Naval Ravikant' },
+  { text: 'Praise specifically, criticize generally.', author: 'The Almanack of Naval Ravikant' },
 ];
 
 /** Deterministic daily starting point so everyone who opens the login page on

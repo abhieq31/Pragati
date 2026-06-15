@@ -31,6 +31,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
+    title: 'Login screen: quotes on doing the work',
+    tags: ['improvement', 'fix'],
+    body: [
+      'The rotating login quote is now curated to what Pragati is for — doing the work: action over talk, focus on the one thing in front of you, cutting the unessential, and compounding small daily progress into delivery. Drawn from Naval Ravikant and the books he recommends (Munger, Marcus Aurelius, Seneca, Bruce Lee, James Clear, Feynman, Deutsch), keeping only the lines that speak to execution — not wealth or career in the abstract.',
+      'Fixed the repeat: the page used to re-open on the same daily quote on every visit (and never record it as seen). It now advances to a line this device hasn’t shown yet and remembers it, so no quote returns until every other one has had its turn — and never two in a row.',
+    ],
+  },
+  {
+    date: '2026-06-15',
     title: 'Bird’s-eye: real slip-risk model, single/double-click, drag fix',
     tags: ['feature', 'fix', 'improvement'],
     body: [
