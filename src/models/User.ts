@@ -20,14 +20,37 @@ const UserSchema = new Schema(
     },
 
     // ── Identity fields ─────────────────────────────────────────────────
+    // These can be set manually or overwritten by LDAP sync.
+    // When ldapSyncedAt is present, the UI shows them as read-only.
     title: { type: String, default: '' },
     department: { type: String, default: '' },
-    employeeId: { type: String, default: '' },
+    employeeId: { type: String, default: '' }, // e.g. sAMAccountName / employeeID from AD
     phone: { type: String, default: '' },
-    location: { type: String, default: '' },
-    managerName: { type: String, default: '' },
-    // Soft organisational grouping for directory pickers.
+    location: { type: String, default: '' }, // office / site
+    managerName: { type: String, default: '' }, // display name of manager from AD
+    // Soft organisational grouping — used by directory pickers to group and
+    // filter people (e.g. by business unit, plant, or company within the
+    // group). Free-text so admins can drop people into any grouping they
+    // already use in HRIS / AD without us prescribing a taxonomy. NOT a
+    // tenant boundary — every user remains visible across the workspace;
+    // this is purely a presentation/filter dimension for scaling pickers.
     organisation: { type: String, default: '' },
+
+    // ── LDAP sync metadata ──────────────────────────────────────────────
+    // Populated by the future LDAP sync job.
+    // LDAP attribute → field mapping (Active Directory / OpenLDAP):
+    //   displayName / cn        → name
+    //   mail                    → email
+    //   title                   → title
+    //   department              → department
+    //   employeeID / sAMAccountName → employeeId
+    //   telephoneNumber         → phone
+    //   l (locality)            → location
+    //   manager (DN → resolved) → managerName
+    //   distinguishedName       → ldapDn
+    ldapDn: { type: String, default: '' }, // Distinguished Name
+    ldapSyncedAt: { type: Date, default: null }, // null = not yet synced
+    ldapAttributes: { type: Schema.Types.Mixed, default: null }, // raw AD attrs for debugging
 
     // ── First-login flag ────────────────────────────────────────────────
     mustChangePassword: { type: Boolean, default: false },

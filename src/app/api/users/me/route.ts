@@ -136,13 +136,16 @@ export async function PATCH(req: NextRequest) {
     if (d.avatarImage !== undefined) (user as any).avatarImage = d.avatarImage;
     if (d.soundDropEnabled !== undefined) (user as any).soundDropEnabled = d.soundDropEnabled;
 
-    const identity = ManualIdentityBody.safeParse(body);
-    if (identity.success) {
-      const id = identity.data;
-      if (id.name !== undefined) user.name = id.name as any;
-      if (id.department !== undefined) user.department = id.department as any;
-      if (id.employeeId !== undefined) user.employeeId = id.employeeId as any;
-      if (id.managerName !== undefined) user.managerName = id.managerName as any;
+    // Apply identity fields only when NOT LDAP-synced
+    if (!user.ldapSyncedAt) {
+      const identity = ManualIdentityBody.safeParse(body);
+      if (identity.success) {
+        const id = identity.data;
+        if (id.name !== undefined) user.name = id.name as any;
+        if (id.department !== undefined) user.department = id.department as any;
+        if (id.employeeId !== undefined) user.employeeId = id.employeeId as any;
+        if (id.managerName !== undefined) user.managerName = id.managerName as any;
+      }
     }
 
     await user.save();

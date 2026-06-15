@@ -9,7 +9,8 @@
  * operator-hosted feed (INSIGHTS_FEED_URL) for those who want a live stream,
  * mirroring the quotes-feed pattern. Pure + dependency-free + unit-testable.
  *
- * Single-tenant deployments set PRAGATI_INDUSTRY. The
+ * Multi-tenant: each Tenant picks its `industry` from the master-admin console
+ * (see models/Tenant). Single-tenant deployments set PRAGATI_INDUSTRY. The
  * default is 'general' — universal leverage principles that fit any team.
  *
  * Tone: demanding but humane. Every insight is meant to advance the work AND
@@ -197,9 +198,10 @@ const LIBRARY: Partial<Record<Industry, Insight[]>> = {
   ],
 };
 
-/** Resolve the active industry for the current deployment. */
-export function resolveIndustry(): Industry {
-  const raw = (process.env.PRAGATI_INDUSTRY || 'general').trim().toLowerCase();
+/** Resolve the active industry for the current deployment. Multi-tenant
+ *  passes the tenant's stored value; single-tenant reads PRAGATI_INDUSTRY. */
+export function resolveIndustry(tenantIndustry?: string | null): Industry {
+  const raw = (tenantIndustry || process.env.PRAGATI_INDUSTRY || 'general').trim().toLowerCase();
   return (raw in INDUSTRY_LABELS ? raw : 'general') as Industry;
 }
 

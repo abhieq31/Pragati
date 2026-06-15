@@ -1,17 +1,6 @@
 // helpers to turn Mongoose docs into plain JSON-safe shapes
 
-// Typed boundary per Elon audit - reduces `as any` swarm. Start with core DTOs.
-export interface SerializedUser {
-  id?: string;
-  email: string;
-  username?: string | null;
-  name: string;
-  role: string;
-  // ... add more as used
-  [key: string]: any; // transitional to kill 449 anys gradually
-}
-
-type Any = Record<string, any>; // keep for now during transition, goal is strong types
+type Any = Record<string, any>;
 
 function id(v: any): string | undefined {
   if (!v) return undefined;
