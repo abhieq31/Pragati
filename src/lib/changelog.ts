@@ -31,6 +31,15 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
+    title: 'Login screen: Naval Ravikant on leverage, judgment, and compounding',
+    tags: ['improvement'],
+    body: [
+      'The rotating login quote is now a curated set of lines from The Almanack of Naval Ravikant — leverage, specific knowledge, judgment, long-term games, and compounding — chosen to echo why Pragati exists, not generic motivation.',
+      'The no-repeat rotation is unchanged: each device works through the full set once, in a fresh order, before any line repeats.',
+    ],
+  },
+  {
+    date: '2026-06-15',
     title: 'Bird’s-eye: real slip-risk model, single/double-click, drag fix',
     tags: ['feature', 'fix', 'improvement'],
     body: [

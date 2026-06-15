@@ -1,8 +1,9 @@
 /**
- * Login-screen wisdom — lines drawn from *The Book of Elon* (the curated
- * almanack of Elon Musk's own words), chosen to resonate with what Pragati is
- * for: executing fast and well, deleting needless process, simplifying, reading
- * delivery honestly, and seeking hard feedback.
+ * Login-screen wisdom — lines drawn from *The Almanack of Naval Ravikant*
+ * (Eric Jorgenson's compilation of Naval's writing, tweets, and podcast
+ * transcripts), chosen to resonate with what Pragati is for: building
+ * leverage through code and systems, applying specific knowledge, judging
+ * what to do next, and letting small daily work compound into delivery.
  *
  * Display rule: NO attribution is ever rendered. The words stand alone — the
  * login page shows the line, never the name or the source. (`author` is kept on
@@ -24,86 +25,85 @@ export interface Quote {
 }
 
 export const BUILTIN_QUOTES: Quote[] = [
-  // ── Execute fast and well ────────────────────────────────────────────────
-  { text: 'The point is ensuring we execute ultrafast and well.', author: 'The Book of Elon' },
+  // ── Leverage: build it once, let it work ────────────────────────────────
   {
-    text: 'Find the design necessity of every part and every process.',
-    author: 'The Book of Elon',
-  },
-  { text: 'Physically go to where the problem is, immediately.', author: 'The Book of Elon' },
-  { text: 'Eliminate what isn’t necessary to solve the key problem.', author: 'The Book of Elon' },
-  {
-    text: 'The first goal is to make the damn thing work—we’ll optimize it later.',
-    author: 'The Book of Elon',
-  },
-  { text: 'Somebody has to do the real work.', author: 'The Book of Elon' },
-  // ── Simplify ─────────────────────────────────────────────────────────────
-  {
-    text: 'Simplicity is our mantra. It creates both reliability and low cost.',
-    author: 'The Book of Elon',
+    text: 'Code and media are permissionless leverage. They’re the leverage behind the newly rich.',
+    author: 'The Almanack of Naval Ravikant',
   },
   {
-    text: 'It’s a lot of minimizing things that can go wrong and maximizing the efficiency of the simple things.',
-    author: 'The Book of Elon',
+    text: 'All the returns in life, whether in wealth, relationships, or knowledge, come from compound interest.',
+    author: 'The Almanack of Naval Ravikant',
   },
-  { text: 'It’s easy to say “simplify,” but it’s very difficult to do it.', author: 'The Book of Elon' },
-  // ── Time is the one thing you can’t scrap ────────────────────────────────
-  { text: 'If a timeline is long, it’s wrong.', author: 'The Book of Elon' },
+  { text: 'You’re not going to get rich renting out your time.', author: 'The Almanack of Naval Ravikant' },
+  { text: 'Earn with your mind, not your time.', author: 'The Almanack of Naval Ravikant' },
+  // ── Specific knowledge & judgment ────────────────────────────────────────
   {
-    text: 'It’s okay to scrap equipment or money. It’s not okay to scrap time.',
-    author: 'The Book of Elon',
-  },
-  // ── First principles & truth ─────────────────────────────────────────────
-  {
-    text: 'Start somewhere. Then be prepared to question your assumptions, fix what you did wrong, and adapt to reality.',
-    author: 'The Book of Elon',
+    text: 'Specific knowledge is knowledge that you cannot be trained for.',
+    author: 'The Almanack of Naval Ravikant',
   },
   {
-    text: 'The first-principles approach is a good way to figure out counterintuitive solutions.',
-    author: 'The Book of Elon',
-  },
-  { text: 'Physics is law. Everything else is a recommendation.', author: 'The Book of Elon' },
-  { text: 'It’s OK to be wrong. Just don’t be confident and wrong.', author: 'The Book of Elon' },
-  {
-    text: 'Being tenacious and super focused on the truth is extremely important. Look for feedback from all sources.',
-    author: 'The Book of Elon',
-  },
-  // ── Feedback ─────────────────────────────────────────────────────────────
-  { text: 'I’m a huge believer in taking feedback.', author: 'The Book of Elon' },
-  {
-    text: 'Pay close attention to negative feedback, and solicit it, particularly from friends. It’s incredibly helpful.',
-    author: 'The Book of Elon',
-  },
-  // ── Teams & ownership ────────────────────────────────────────────────────
-  {
-    text: 'Always view yourself as working for the good of the company and never your department.',
-    author: 'The Book of Elon',
+    text: 'Specific knowledge is found by pursuing your genuine curiosity and passion rather than whatever is hot right now.',
+    author: 'The Almanack of Naval Ravikant',
   },
   {
-    text: 'Wherever the smartest, most driven people are choosing to work, that company is going to win.',
-    author: 'The Book of Elon',
+    text: 'Become the best in the world at what you do. Keep redefining what you do until this is true.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  { text: 'Clear thinking requires courage.', author: 'The Almanack of Naval Ravikant' },
+  // ── Decisions & momentum ─────────────────────────────────────────────────
+  { text: 'If you can’t decide, the answer is no.', author: 'The Almanack of Naval Ravikant' },
+  { text: 'Set and enforce an aspiration rate for yourself.', author: 'The Almanack of Naval Ravikant' },
+  { text: 'Inspiration is perishable — act on it immediately.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'Embrace accountability, and take business risks under your own name. Society will reward you with responsibility, equity, and leverage.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  // ── Long-term games, long-term people ────────────────────────────────────
+  { text: 'Play long-term games with long-term people.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'Choose business partners with high intelligence, energy, and, above all, integrity.',
+    author: 'The Almanack of Naval Ravikant',
   },
   {
-    text: 'There is something special—far more rewarding than money—about working with an epic team to make breakthroughs.',
-    author: 'The Book of Elon',
+    text: 'Don’t partner with cynics and pessimists. Their beliefs are self-fulfilling.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  { text: 'Praise specifically, criticize generally.', author: 'The Almanack of Naval Ravikant' },
+  // ── Calm execution, sustainable pace ─────────────────────────────────────
+  {
+    text: 'A fit body, a calm mind, a house full of love. These things cannot be bought. They must be earned.',
+    author: 'The Almanack of Naval Ravikant',
   },
   {
-    text: 'As long as we push hard and are not complacent, the future is going to be great.',
-    author: 'The Book of Elon',
+    text: 'Happiness is a choice you make and a skill you develop.',
+    author: 'The Almanack of Naval Ravikant',
   },
-  // ── Work & resolve ───────────────────────────────────────────────────────
-  { text: 'Don’t aspire to glory; aspire to work.', author: 'The Book of Elon' },
-  { text: 'Nobody ever changed the world on forty hours a week.', author: 'The Book of Elon' },
   {
-    text: 'Go do it. Just go out there and do it. People are far too afraid to try. Don’t be afraid to fail. Just go.',
-    author: 'The Book of Elon',
+    text: 'Anger is a hot coal that burns you more than the person you’re aiming at.',
+    author: 'The Almanack of Naval Ravikant',
   },
-  { text: 'Look fear straight in the eye and it will disappear.', author: 'The Book of Elon' },
   {
-    text: 'Come hell or high water, we are going to make this work.',
-    author: 'The Book of Elon',
+    text: 'Desire is a contract you make with yourself to be unhappy until you get what you want.',
+    author: 'The Almanack of Naval Ravikant',
   },
-  { text: 'Failure is essentially irrelevant unless it is catastrophic.', author: 'The Book of Elon' },
+  // ── Always learning ──────────────────────────────────────────────────────
+  {
+    text: 'Learn to sell, learn to build. If you can do both, you will be unstoppable.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  { text: 'Read what you love until you love to read.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'Free education is abundant. It’s the desire to learn that’s scarce.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  {
+    text: 'The most important skill for getting rich is becoming a perpetual learner.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  {
+    text: 'The Internet has massively broadened the possible space of careers.',
+    author: 'The Almanack of Naval Ravikant',
+  },
 ];
 
 /** Deterministic daily starting point so everyone who opens the login page on

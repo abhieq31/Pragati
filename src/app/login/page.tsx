@@ -19,11 +19,13 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, unattributed wisdom — a single builder's voice on first
-   principles, simplification, and execution. The name is never shown, only the
+/* Rotating, unattributed wisdom — Naval Ravikant on leverage, specific
+   knowledge, judgment, and compounding daily work into outsized outcomes,
+   the philosophy behind why Pragati exists. The name is never shown, only the
    line. Built-ins ship with the app; /api/quotes swaps in the operator's live
    feed (QUOTES_FEED_URL) so the library keeps growing without a redeploy.
-   Daily-seeded start so the day has "a quote of the day". */
+   Daily-seeded start so the day has "a quote of the day". Never repeats until
+   the whole library has been shown (see unseenQuoteIndices below). */
 
 const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
 
@@ -80,9 +82,15 @@ function RotatingQuote() {
       setShow(false);
       setTimeout(() => {
         setI((n) => {
-          // Prefer a quote this device hasn't seen yet; wrap when exhausted.
+          // Pick at random from quotes this device hasn't seen yet (never the
+          // current one); once exhausted, reshuffle from the full set so every
+          // quote is shown — in a new order each pass — before anything repeats.
           const unseen = unseenQuoteIndices(quotes.length).filter((x) => x !== n);
-          const next = unseen.length > 0 ? unseen[0] : (n + 1) % quotes.length;
+          const pool =
+            unseen.length > 0
+              ? unseen
+              : Array.from({ length: quotes.length }, (_, x) => x).filter((x) => x !== n);
+          const next = pool[Math.floor(Math.random() * pool.length)];
           markQuoteSeen(next);
           return next;
         });
