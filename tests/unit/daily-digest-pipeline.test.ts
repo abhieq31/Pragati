@@ -229,6 +229,36 @@ beforeEach(() => {
 });
 
 describe('buildAndSendDailyDigests → Brevo (end to end over HTTP)', () => {
+  it('sends the opted-in batch at 08:30 only', async () => {
+    const before = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 29 });
+    assert.equal(before.sent, 0);
+    assert.equal(before.considered, 0);
+
+    const onTime = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 30 });
+    assert.equal(onTime.considered, 2, 'all opted-in users are considered together');
+    assert.equal(onTime.sent, 1, 'the user with a chosen deliverable email receives the brief');
+    assert.equal(onTime.skippedNoEmail, 1);
+    assert.equal(inbox[0].to, 'asha@example.com');
+
+    inbox.length = 0;
+    const late = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 35 });
+    assert.equal(late.sent, 0, 'a late scheduler tick must not send a delayed brief');
+    assert.equal(inbox.length, 0);
+  });
+
+  it('does not send twice when the user is already stamped for the local day', async () => {
+    const todayKey = digest.localDateKey(now, digest.digestTimeZone());
+    (users[0] as any).lastDigestSentOn = todayKey;
+    try {
+      const summary = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 30 });
+      assert.equal(summary.sent, 0);
+      assert.equal(summary.skippedAlreadySent, 1);
+      assert.equal(inbox.length, 0);
+    } finally {
+      delete (users[0] as any).lastDigestSentOn;
+    }
+  });
+
   it('sends one digest per opted-in deliverable user with the right content', async () => {
     const summary = await digest.buildAndSendDailyDigests({ now });
 
@@ -297,9 +327,9 @@ describe('buildAndSendDailyDigests → Brevo (end to end over HTTP)', () => {
     assert.match(inbox[0].html, /all clear|nothing due/i, 'bola has no tasks — empty-state body');
   });
 
-  it('stops at the free daily cap and reports who was skipped', async () => {
-    // A second deliverable recipient + sendWhenEmpty so she reaches the send
-    // step despite having no tasks; with a cap of 1, asha sends, dora doesn't.
+  it('attempts every opted-in deliverable recipient even above the configured provider cap', async () => {
+    // The cap is operational information, not a reason to silently omit a
+    // person from the promised 08:30 batch.
     users.push({
       _id: 'dddddddddddddddddddddd01',
       name: 'Dora Capped',
@@ -312,12 +342,11 @@ describe('buildAndSendDailyDigests → Brevo (end to end over HTTP)', () => {
     try {
       const summary = await digest.buildAndSendDailyDigests({ now });
       assert.equal(summary.cap, 1);
-      assert.equal(summary.sent, 1);
-      assert.equal(summary.skippedCapReached, 1);
-      assert.equal(inbox.length, 1, 'only one email actually left');
-      // The run record persists the cap stats for the admin panel.
+      assert.equal(summary.sent, 2);
+      assert.equal(summary.skippedCapReached, 0);
+      assert.equal(inbox.length, 2, 'every deliverable opted-in user is attempted');
       assert.equal(lastRunWrites.length, 1);
-      assert.equal(lastRunWrites[0].lastRunSummary.skippedCapReached, 1);
+      assert.equal(lastRunWrites[0].lastRunSummary.skippedCapReached, 0);
       assert.equal(lastRunWrites[0].lastRunSummary.cap, 1);
     } finally {
       users.pop();
