@@ -27,11 +27,13 @@ function getInitials(name: string) {
    Daily-seeded start so the day has "a quote of the day". Never repeats until
    the whole library has been shown (see unseenQuoteIndices below). */
 
-const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v1';
+// Bumped to v2 when the library moved from the old pool to the Naval set — the
+// ledger is positional, so a fresh key avoids old indices pre-marking new lines.
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v2';
 
-/** Indices not yet shown on this device; resets when the set is exhausted.
- *  Takes the current library size — the list is dynamic (built-ins now,
- *  the operator's live feed once /api/quotes responds). */
+/** Indices not yet shown on this device; resets only once the whole set is
+ *  exhausted. Takes the current library size — the list is dynamic (built-ins
+ *  now, the operator's live feed once /api/quotes responds). */
 function unseenQuoteIndices(count: number): number[] {
   const all = Array.from({ length: count }, (_, i) => i);
   try {
@@ -55,19 +57,45 @@ function markQuoteSeen(i: number) {
   }
 }
 
+/** A random index this device hasn't shown yet (never `exclude`). Only once
+ *  every quote has been shown does the ledger reset and a fresh full pass
+ *  begin — the single point at which any line can recur, and never two in a
+ *  row. So no quote repeats until all the others have had their turn. */
+function pickUnseen(count: number, exclude?: number): number {
+  if (count <= 0) return 0;
+  const unseen = unseenQuoteIndices(count).filter((x) => x !== exclude);
+  const pool =
+    unseen.length > 0 ? unseen : Array.from({ length: count }, (_, x) => x).filter((x) => x !== exclude);
+  if (pool.length === 0) return exclude ?? 0;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function RotatingQuote() {
   const [quotes, setQuotes] = useState<Quote[]>(BUILTIN_QUOTES);
+  // Deterministic seed only so server and first client render match (no
+  // localStorage on the server); the mount effect immediately advances off it
+  // to a genuinely-unseen line, so revisiting the page never re-opens on the
+  // same quote.
   const [i, setI] = useState(() => dailyQuoteOffset(BUILTIN_QUOTES.length));
   const [show, setShow] = useState(true);
 
+  // First real pick: leave the deterministic seed for an unseen line and record
+  // it. This is what kills the "same quote every visit" repeat — the old code
+  // re-seeded to the daily offset on every load and never marked it seen.
+  useEffect(() => {
+    const first = pickUnseen(BUILTIN_QUOTES.length);
+    markQuoteSeen(first);
+    setI(first);
+  }, []);
+
+  // Live feed (if QUOTES_FEED_URL is configured) can grow the library without a
+  // redeploy. Just adopt the content; the next advance draws from the new,
+  // larger unseen pool — no reseed to a fixed offset, which would repeat.
   useEffect(() => {
     fetch('/api/quotes')
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d?.quotes?.length) {
-          setQuotes(d.quotes);
-          setI(dailyQuoteOffset(d.quotes.length));
-        }
+        if (d?.quotes?.length) setQuotes(d.quotes);
       })
       .catch(() => {});
   }, []);
@@ -80,20 +108,12 @@ function RotatingQuote() {
     const dwell = readingMs(quotes[i % quotes.length]?.text || '');
     const t = setTimeout(() => {
       setShow(false);
+      // Compute + record the next line outside the state updater (no side
+      // effects in a reducer): an unseen index, never the current one.
+      const next = pickUnseen(quotes.length, i);
+      markQuoteSeen(next);
       setTimeout(() => {
-        setI((n) => {
-          // Pick at random from quotes this device hasn't seen yet (never the
-          // current one); once exhausted, reshuffle from the full set so every
-          // quote is shown — in a new order each pass — before anything repeats.
-          const unseen = unseenQuoteIndices(quotes.length).filter((x) => x !== n);
-          const pool =
-            unseen.length > 0
-              ? unseen
-              : Array.from({ length: quotes.length }, (_, x) => x).filter((x) => x !== n);
-          const next = pool[Math.floor(Math.random() * pool.length)];
-          markQuoteSeen(next);
-          return next;
-        });
+        setI(next);
         setShow(true);
       }, 400);
     }, dwell);

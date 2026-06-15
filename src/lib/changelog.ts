@@ -32,10 +32,10 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     date: '2026-06-15',
     title: 'Login screen: Naval Ravikant on leverage, judgment, and compounding',
-    tags: ['improvement'],
+    tags: ['improvement', 'fix'],
     body: [
       'The rotating login quote is now a curated set of lines from The Almanack of Naval Ravikant — leverage, specific knowledge, judgment, long-term games, and compounding — chosen to echo why Pragati exists, not generic motivation.',
-      'The no-repeat rotation is unchanged: each device works through the full set once, in a fresh order, before any line repeats.',
+      'Fixed the repeat: the page used to re-open on the same daily quote on every visit (and never record it as seen). It now advances to a line this device hasn’t shown yet and remembers it, so no quote returns until every other one has had its turn — and never two in a row.',
     ],
   },
   {

@@ -36,6 +36,15 @@ export const BUILTIN_QUOTES: Quote[] = [
   },
   { text: 'You’re not going to get rich renting out your time.', author: 'The Almanack of Naval Ravikant' },
   { text: 'Earn with your mind, not your time.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'Apply specific knowledge, with leverage, and eventually you will get what you deserve.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  { text: 'Productize yourself.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'You will get rich by giving society what it wants but does not yet know how to get — at scale.',
+    author: 'The Almanack of Naval Ravikant',
+  },
   // ── Specific knowledge & judgment ────────────────────────────────────────
   {
     text: 'Specific knowledge is knowledge that you cannot be trained for.',
@@ -46,20 +55,34 @@ export const BUILTIN_QUOTES: Quote[] = [
     author: 'The Almanack of Naval Ravikant',
   },
   {
+    text: 'Building specific knowledge will feel like play to you but will look like work to others.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  { text: 'Sales skills are a form of specific knowledge.', author: 'The Almanack of Naval Ravikant' },
+  {
     text: 'Become the best in the world at what you do. Keep redefining what you do until this is true.',
     author: 'The Almanack of Naval Ravikant',
   },
   { text: 'Clear thinking requires courage.', author: 'The Almanack of Naval Ravikant' },
   // ── Decisions & momentum ─────────────────────────────────────────────────
   { text: 'If you can’t decide, the answer is no.', author: 'The Almanack of Naval Ravikant' },
+  { text: 'Impatience with actions, patience with results.', author: 'The Almanack of Naval Ravikant' },
   { text: 'Set and enforce an aspiration rate for yourself.', author: 'The Almanack of Naval Ravikant' },
   { text: 'Inspiration is perishable — act on it immediately.', author: 'The Almanack of Naval Ravikant' },
   {
     text: 'Embrace accountability, and take business risks under your own name. Society will reward you with responsibility, equity, and leverage.',
     author: 'The Almanack of Naval Ravikant',
   },
+  {
+    text: 'Arm yourself with specific knowledge, accountability, and leverage.',
+    author: 'The Almanack of Naval Ravikant',
+  },
   // ── Long-term games, long-term people ────────────────────────────────────
   { text: 'Play long-term games with long-term people.', author: 'The Almanack of Naval Ravikant' },
+  {
+    text: 'If you can’t see yourself working with someone for life, don’t work with them for a day.',
+    author: 'The Almanack of Naval Ravikant',
+  },
   {
     text: 'Choose business partners with high intelligence, energy, and, above all, integrity.',
     author: 'The Almanack of Naval Ravikant',
@@ -68,6 +91,7 @@ export const BUILTIN_QUOTES: Quote[] = [
     text: 'Don’t partner with cynics and pessimists. Their beliefs are self-fulfilling.',
     author: 'The Almanack of Naval Ravikant',
   },
+  { text: 'Escape competition through authenticity.', author: 'The Almanack of Naval Ravikant' },
   { text: 'Praise specifically, criticize generally.', author: 'The Almanack of Naval Ravikant' },
   // ── Calm execution, sustainable pace ─────────────────────────────────────
   {
@@ -86,9 +110,17 @@ export const BUILTIN_QUOTES: Quote[] = [
     text: 'Desire is a contract you make with yourself to be unhappy until you get what you want.',
     author: 'The Almanack of Naval Ravikant',
   },
+  {
+    text: 'Work as hard as you can — even though who you work with and what you work on matter more than how hard you work.',
+    author: 'The Almanack of Naval Ravikant',
+  },
   // ── Always learning ──────────────────────────────────────────────────────
   {
     text: 'Learn to sell, learn to build. If you can do both, you will be unstoppable.',
+    author: 'The Almanack of Naval Ravikant',
+  },
+  {
+    text: 'Reading is faster than listening. Doing is faster than watching.',
     author: 'The Almanack of Naval Ravikant',
   },
   { text: 'Read what you love until you love to read.', author: 'The Almanack of Naval Ravikant' },
