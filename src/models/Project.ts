@@ -76,16 +76,6 @@ const ProjectSchema = new Schema(
     // "CAPA#", "INC#". Free text so each team can match its own document
     // numbering scheme. Empty string renders as the generic "Ref #".
     refLabel: { type: String, default: '' },
-
-    // ── Daily support-ticket tracking ────────────────────────────────────
-    // Opt-in per project (at creation, or later from project settings). When
-    // on, the project carries a daily log of support-ticket counts — open
-    // backlog, newly logged, resolved — in the TicketLog collection, surfaced
-    // on the project page, in every report, and in the daily brief/email.
-    // `ticketLabel` lets a team name what they count (default "Support
-    // tickets"), e.g. "Helpdesk tickets", "Open incidents".
-    trackTickets: { type: Boolean, default: false },
-    ticketLabel: { type: String, default: 'Support tickets' },
   },
   { timestamps: true },
 );

@@ -43,15 +43,7 @@ function bar(pct: number): string {
   return `<div class="bar"><div class="bar-fill" style="width:${clamped}%;background:${color}"></div></div>`;
 }
 
-import { teamTicketHtmlSection, teamTicketCsvLines, type TeamTicketReportData } from '@/lib/ticketReport';
-
-export function buildTeamReportHtml(
-  team: any,
-  progress: any,
-  board: any[],
-  exportedBy = '',
-  tickets?: TeamTicketReportData | null,
-): string {
+export function buildTeamReportHtml(team: any, progress: any, board: any[], exportedBy = ''): string {
   const generated = new Date().toLocaleString();
   const projects: any[] = progress?.projects || team?.projects || [];
   const members: any[] = progress?.members || team?.members || [];
@@ -306,8 +298,6 @@ export function buildTeamReportHtml(
     <div class="legend">${distLegend}</div>
     <div class="dist">${distSegments || '<div class="seg" style="flex:1;background:#eef2f7"></div>'}</div>
 
-    ${teamTicketHtmlSection(tickets)}
-
     <h2>Projects — health &amp; progress</h2>
     <table><thead><tr><th>Project</th><th>Health</th><th style="text-align:right">Tasks</th><th style="text-align:right">Overdue</th><th style="text-align:right">Blocked</th><th>Progress</th><th style="text-align:right">%</th></tr></thead>
     <tbody>${projectRows || '<tr><td colspan="7" class="muted">No projects.</td></tr>'}</tbody></table>
@@ -363,12 +353,7 @@ function byTcd(a: any, b: any): number {
   return (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0);
 }
 
-export function buildTeamReportCsv(
-  team: any,
-  board: any[],
-  exportedBy = '',
-  tickets?: TeamTicketReportData | null,
-): string {
+export function buildTeamReportCsv(team: any, board: any[], exportedBy = ''): string {
   const tasks: any[] = [...(board || [])].sort(byTcd);
   const now = new Date();
   const header = [
@@ -415,8 +400,7 @@ export function buildTeamReportCsv(
     ['', ''],
   ].map(([k, v]) => [k, v].map(csvCell).join(','));
 
-  const ticketLines = teamTicketCsvLines(tickets);
-  return '﻿' + [...metaBlock, ...ticketLines, header.map(csvCell).join(','), ...rows].join('\r\n');
+  return '﻿' + [...metaBlock, header.map(csvCell).join(','), ...rows].join('\r\n');
 }
 
 function triggerDownload(content: string, mime: string, filename: string) {
@@ -431,30 +415,19 @@ function triggerDownload(content: string, mime: string, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function downloadTeamCsv(
-  team: any,
-  board: any[],
-  exportedBy = '',
-  tickets?: TeamTicketReportData | null,
-) {
+export function downloadTeamCsv(team: any, board: any[], exportedBy = '') {
   const safeName = String(team?.name || 'team')
     .replace(/[^a-z0-9]+/gi, '-')
     .toLowerCase();
   triggerDownload(
-    buildTeamReportCsv(team, board, exportedBy, tickets),
+    buildTeamReportCsv(team, board, exportedBy),
     'text/csv;charset=utf-8',
     `${safeName}-tasks-${new Date().toISOString().slice(0, 10)}.csv`,
   );
 }
 
-export function downloadTeamReport(
-  team: any,
-  progress: any,
-  board: any[],
-  exportedBy = '',
-  tickets?: TeamTicketReportData | null,
-) {
-  const html = buildTeamReportHtml(team, progress, board, exportedBy, tickets);
+export function downloadTeamReport(team: any, progress: any, board: any[], exportedBy = '') {
+  const html = buildTeamReportHtml(team, progress, board, exportedBy);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -472,17 +445,11 @@ export function downloadTeamReport(
 // Open the report in a new tab as a preview, with a floating "Save as PDF /
 // Print" action so the user controls when the print dialog opens. Auto-firing
 // it on open was jarring — they couldn't skim the report first.
-export function printTeamReport(
-  team: any,
-  progress: any,
-  board: any[],
-  exportedBy = '',
-  tickets?: TeamTicketReportData | null,
-) {
-  const html = buildTeamReportHtml(team, progress, board, exportedBy, tickets);
+export function printTeamReport(team: any, progress: any, board: any[], exportedBy = '') {
+  const html = buildTeamReportHtml(team, progress, board, exportedBy);
   const w = window.open('', '_blank');
   if (!w) {
-    downloadTeamReport(team, progress, board, exportedBy, tickets);
+    downloadTeamReport(team, progress, board, exportedBy);
     return;
   }
   const withPrintBar = html.replace(

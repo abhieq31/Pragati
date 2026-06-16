@@ -30,17 +30,6 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    date: '2026-06-16',
-    title: 'Daily support-ticket tracking — count, trend, and roll-up everywhere',
-    tags: ['feature'],
-    highlight: true,
-    body: [
-      'Pick the new “Support Ticket Tracker” workflow template when creating a project and the team logs three numbers each morning — open backlog, new, resolved. Built for teams like Quality Informatics who report a daily ticket count upward. (An existing project can opt in later from a quiet “Track tickets” action.)',
-      'Behind the one-field entry sits real, auditable math: week-over-week backlog movement, 7-day inflow vs. throughput (net flow), a least-squares trend, a robust MAD-based anomaly flag on the day’s reading, and a “clears in ~N days at current pace” projection — no LLM, fully reproducible.',
-      'The count flows everywhere it’s asked for: a live panel on the project, a section in every report (Excel gets its own Support Tickets sheet; PDF/HTML/CSV for projects and teams), and a roll-up in the lead/admin Morning Brief and the 08:30 email — combined team total plus a per-project breakdown.',
-    ],
-  },
-  {
     date: '2026-06-15',
     title: 'Login screen: quotes on doing the work',
     tags: ['improvement', 'fix'],
