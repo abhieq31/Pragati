@@ -2044,6 +2044,32 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
               onBirdEyeSvg={() => setBirdEyeExport('svg')}
               onBirdEyePng={() => setBirdEyeExport('png')}
             />
+            {/* Quiet opt-in for an existing project — the new-project path is the
+                Support Ticket Tracker template; this lets a lead switch it on
+                later without it ever being a prominent toggle. */}
+            {isLead && !project.trackTickets && !project.isPersonal && (
+              <button
+                onClick={async () => {
+                  try {
+                    await api(`/projects/${project.id}`, {
+                      method: 'PATCH',
+                      body: { trackTickets: true },
+                    });
+                    setProject((p: any) => ({
+                      ...p,
+                      trackTickets: true,
+                      ticketLabel: p.ticketLabel || 'Support tickets',
+                    }));
+                  } catch (e: any) {
+                    alert(e.message || 'Could not enable ticket tracking.');
+                  }
+                }}
+                className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors"
+                title="Log a daily support-ticket count on this project"
+              >
+                <Ticket size={13} /> Track tickets
+              </button>
+            )}
             {isAdmin && !project.isPersonal && (
               <Link
                 href={`/audit?targetType=project&targetId=${project.id}`}
@@ -2136,34 +2162,11 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
         ))}
       </div>
 
-      {/* Daily support-ticket tracker — the panel when on; a one-tap enable
-          prompt for leads when off. Personal projects never show it. */}
-      {project.trackTickets ? (
+      {/* Daily support-ticket tracker — shown only when the project tracks
+          tickets (turned on by the Support Ticket Tracker workflow template, or
+          the quiet "Track tickets" action in the project actions row). */}
+      {project.trackTickets && (
         <SupportTicketPanel projectId={project.id} initialLabel={project.ticketLabel} />
-      ) : (
-        isLead &&
-        !project.personal && (
-          <button
-            onClick={async () => {
-              try {
-                await api(`/projects/${project.id}`, {
-                  method: 'PATCH',
-                  body: { trackTickets: true },
-                });
-                setProject((p: any) => ({
-                  ...p,
-                  trackTickets: true,
-                  ticketLabel: p.ticketLabel || 'Support tickets',
-                }));
-              } catch (e: any) {
-                alert(e.message || 'Could not enable ticket tracking.');
-              }
-            }}
-            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-2xl py-3 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-all"
-          >
-            <Ticket size={15} /> Track a daily support-ticket count on this project
-          </button>
-        )
       )}
 
       {/* View toggle */}

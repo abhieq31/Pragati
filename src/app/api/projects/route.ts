@@ -222,10 +222,11 @@ export async function POST(req: NextRequest) {
       gxpImpact: isPersonal ? 'none' : body.gxpImpact || 'none',
       regulatoryRefs: isPersonal ? '' : lc.regulatoryRefs,
       phases: phaseDocs,
-      // Opt-in daily support-ticket tracking. The label defaults server-side
-      // so an empty string from the form still reads sensibly.
-      trackTickets: !!body.trackTickets,
-      ticketLabel: body.trackTickets ? body.ticketLabel?.trim() || 'Support tickets' : 'Support tickets',
+      // Daily support-ticket tracking. Driven by the Support Ticket Tracker
+      // template (the lifecycle is the source of truth), with the explicit flag
+      // honoured too; never for personal projects. Label defaults server-side.
+      trackTickets: !isPersonal && (body.lifecycle === 'support_tracking' || !!body.trackTickets),
+      ticketLabel: body.ticketLabel?.trim() || 'Support tickets',
     });
 
     // Seed tasks from custom or template phases

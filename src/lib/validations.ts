@@ -57,6 +57,8 @@ export const ProjectLifecycleEnum = z.enum([
   'training_program',
   'product_recall',
   'discrepancy_qi',
+  // Operational — enables the project's daily support-ticket count.
+  'support_tracking',
 ]);
 
 export const GxpImpactEnum = z.enum(['none', 'low', 'medium', 'high']);
