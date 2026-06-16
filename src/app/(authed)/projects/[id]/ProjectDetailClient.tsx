@@ -39,6 +39,7 @@ import {
   ScrollText,
   Eye,
   Sparkles,
+  Ticket,
   ChevronDown,
 } from 'lucide-react';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
@@ -49,6 +50,7 @@ import { TaskCompletePop } from '@/components/TaskCompletePop';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { ExportMenu } from '@/components/ExportMenu';
 import { printProjectReport, downloadProjectReport, downloadProjectCsv } from './report';
+import { SupportTicketPanel } from '@/components/SupportTicketPanel';
 import dynamic from 'next/dynamic';
 // Heavy interactive SVG canvas — only load it when a viewer actually opens it.
 const BirdsEyeView = dynamic(() => import('@/components/BirdsEyeView').then((m) => m.BirdsEyeView), {
@@ -2027,8 +2029,18 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                       window.location.href = `/api/projects/${project.id}/export`;
                     }
               }
-              onPdf={() => printProjectReport(project, phases, me?.name || me?.email || '')}
-              onCsv={() => downloadProjectCsv(project, phases, me?.name || me?.email || '')}
+              onPdf={async () => {
+                const tickets = project.trackTickets
+                  ? await api(`/projects/${project.id}/tickets`).catch(() => null)
+                  : null;
+                printProjectReport(project, phases, me?.name || me?.email || '', tickets as any);
+              }}
+              onCsv={async () => {
+                const tickets = project.trackTickets
+                  ? await api(`/projects/${project.id}/tickets`).catch(() => null)
+                  : null;
+                downloadProjectCsv(project, phases, me?.name || me?.email || '', tickets as any);
+              }}
               onBirdEyeSvg={() => setBirdEyeExport('svg')}
               onBirdEyePng={() => setBirdEyeExport('png')}
             />
@@ -2123,6 +2135,36 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
           </div>
         ))}
       </div>
+
+      {/* Daily support-ticket tracker — the panel when on; a one-tap enable
+          prompt for leads when off. Personal projects never show it. */}
+      {project.trackTickets ? (
+        <SupportTicketPanel projectId={project.id} initialLabel={project.ticketLabel} />
+      ) : (
+        isLead &&
+        !project.personal && (
+          <button
+            onClick={async () => {
+              try {
+                await api(`/projects/${project.id}`, {
+                  method: 'PATCH',
+                  body: { trackTickets: true },
+                });
+                setProject((p: any) => ({
+                  ...p,
+                  trackTickets: true,
+                  ticketLabel: p.ticketLabel || 'Support tickets',
+                }));
+              } catch (e: any) {
+                alert(e.message || 'Could not enable ticket tracking.');
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-2xl py-3 text-sm text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-all"
+          >
+            <Ticket size={15} /> Track a daily support-ticket count on this project
+          </button>
+        )
+      )}
 
       {/* View toggle */}
       <div

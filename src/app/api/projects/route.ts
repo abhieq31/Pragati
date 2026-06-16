@@ -222,6 +222,10 @@ export async function POST(req: NextRequest) {
       gxpImpact: isPersonal ? 'none' : body.gxpImpact || 'none',
       regulatoryRefs: isPersonal ? '' : lc.regulatoryRefs,
       phases: phaseDocs,
+      // Opt-in daily support-ticket tracking. The label defaults server-side
+      // so an empty string from the form still reads sensibly.
+      trackTickets: !!body.trackTickets,
+      ticketLabel: body.trackTickets ? body.ticketLabel?.trim() || 'Support tickets' : 'Support tickets',
     });
 
     // Seed tasks from custom or template phases

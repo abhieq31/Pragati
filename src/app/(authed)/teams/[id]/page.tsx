@@ -442,8 +442,14 @@ export default function TeamDetailPage() {
             <div className="absolute top-3 right-3 flex items-center gap-1.5">
               <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
               <ExportMenu
-                onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
-                onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+                onPdf={async () => {
+                  const tickets = await api(`/teams/${id}/tickets`).catch(() => null);
+                  printTeamReport(team, progress, board, me?.name || me?.email || '', tickets as any);
+                }}
+                onCsv={async () => {
+                  const tickets = await api(`/teams/${id}/tickets`).catch(() => null);
+                  downloadTeamCsv(team, board, me?.name || me?.email || '', tickets as any);
+                }}
                 onBirdEyeSvg={() => setBirdEyeExport('svg')}
                 onBirdEyePng={() => setBirdEyeExport('png')}
               />
