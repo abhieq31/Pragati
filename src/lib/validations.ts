@@ -57,6 +57,8 @@ export const ProjectLifecycleEnum = z.enum([
   'training_program',
   'product_recall',
   'discrepancy_qi',
+  // Operational — enables the project's daily support-ticket count.
+  'support_tracking',
 ]);
 
 export const GxpImpactEnum = z.enum(['none', 'low', 'medium', 'high']);
@@ -153,6 +155,10 @@ export const ProjectCreateSchema = z.object({
       }),
     )
     .optional(),
+  // Opt-in daily support-ticket tracking (open / logged / resolved per day),
+  // surfaced in reports and the daily brief. `ticketLabel` names what's counted.
+  trackTickets: z.boolean().optional(),
+  ticketLabel: z.string().max(40).optional(),
 });
 export type ProjectCreateInput = z.infer<typeof ProjectCreateSchema>;
 
@@ -171,6 +177,9 @@ export const ProjectUpdateSchema = z.object({
   // user-pickable name of the reference scheme ("CC#", "SOP#", "CAPA#", …).
   ccNo: z.string().max(60).optional(),
   refLabel: z.string().max(20).optional(),
+  // Toggle daily support-ticket tracking on/off and rename what's counted.
+  trackTickets: z.boolean().optional(),
+  ticketLabel: z.string().max(40).optional(),
   // E-signature fields for controlled status changes on shared projects
   // (21 CFR Part 11 §11.10/§11.50). The route re-verifies `password` and
   // records `remarks` (the reason) verbatim in the audit trail. Optional here
@@ -179,6 +188,25 @@ export const ProjectUpdateSchema = z.object({
   remarks: z.string().max(1000).optional(),
 });
 export type ProjectUpdateInput = z.infer<typeof ProjectUpdateSchema>;
+
+/* ── Support-ticket daily reading ──────────────────────────────────────────
+   The body for POST /api/projects/[id]/tickets — one day's count. Counts are
+   non-negative integers; only `open` is conceptually required, but all default
+   to 0 so a partial reading is still valid. `date` is an optional YYYY-MM-DD
+   override (default: today in the workspace timezone) so a missed day can be
+   back-filled. */
+const ticketCount = z.number().int().min(0).max(1_000_000);
+export const TicketLogCreateSchema = z.object({
+  open: ticketCount.optional(),
+  logged: ticketCount.optional(),
+  resolved: ticketCount.optional(),
+  note: z.string().max(500).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
+    .optional(),
+});
+export type TicketLogCreateInput = z.infer<typeof TicketLogCreateSchema>;
 
 // Requires PM password re-entry for destructive project deletion (21 CFR 11 audit intent).
 export const DeleteProjectSchema = z.object({

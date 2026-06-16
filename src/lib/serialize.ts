@@ -127,6 +127,8 @@ export function project(p: any, extras: Any = {}) {
     personal: !!(p.isPersonal || p.personal),
     ccNo: p.ccNo || '',
     refLabel: p.refLabel || '',
+    trackTickets: !!p.trackTickets,
+    ticketLabel: p.ticketLabel || 'Support tickets',
     createdAt: date(p.createdAt),
     ...extras,
   };

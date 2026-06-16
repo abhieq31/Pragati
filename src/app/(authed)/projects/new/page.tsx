@@ -15,6 +15,7 @@ import {
   BookmarkPlus,
   Lock,
   Pencil,
+  Ticket,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
@@ -56,6 +57,11 @@ const LIFECYCLE_GROUPS = [
       { value: 'deviation', label: 'Deviation', hint: 'Unplanned event needing investigation' },
       { value: 'capa', label: 'CAPA', hint: 'Corrective + preventive action' },
       { value: 'deviation_capa', label: 'Deviation + CAPA', hint: 'Combined deviation→CAPA flow' },
+      {
+        value: 'support_tracking',
+        label: 'Support Ticket Tracker',
+        hint: 'Daily open / new / resolved count',
+      },
     ],
   },
   {
@@ -374,6 +380,11 @@ export default function NewProjectPage() {
   // project and may flip the toggle.
   const [personal, setPersonal] = useState(!isLead);
 
+  // Daily support-ticket tracking is enabled by ONE thing only — picking the
+  // "Support Ticket Tracker" workflow template — so it never shows as a
+  // standalone always-on toggle. The label lets the team rename what they count.
+  const [ticketLabel, setTicketLabel] = useState('Support tickets');
+
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -517,6 +528,9 @@ export default function NewProjectPage() {
           teamId: finalPersonal ? undefined : form.teamId || undefined,
           startDate: form.startDate || undefined,
           dueDate: form.dueDate || undefined,
+          // Ticket tracking follows the template choice — never a toggle.
+          trackTickets: tracksTickets,
+          ticketLabel: ticketLabel.trim() || 'Support tickets',
           useTemplate: false,
           // Drop blank phase names and empty task titles so an unfilled row
           // can't save a broken, nameless stage into the workflow.
@@ -548,6 +562,10 @@ export default function NewProjectPage() {
 
   // Whether the current lifecycle selection is a non-generic built-in
   const hasBuiltInLifecycle = form.lifecycle !== 'generic' && !customTemplateId;
+
+  // Ticket tracking turns on iff the Support Ticket Tracker template is the
+  // active selection on a shared project — nothing else exposes it.
+  const tracksTickets = !personal && !customTemplateId && form.lifecycle === 'support_tracking';
 
   return (
     <div className="max-w-3xl pb-20">
@@ -984,6 +1002,32 @@ export default function NewProjectPage() {
                     </span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Support Ticket Tracker — the one place ticket tracking is turned
+                on. Only shows when this template is the active selection, so it
+                never reads as an always-on toggle. */}
+            {tracksTickets && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-blue-600 mb-1.5">
+                  <Ticket size={13} /> Daily ticket tracking is on
+                </div>
+                <p className="text-xs text-slate-400 mb-2">
+                  This project will log a daily count — open / new / resolved — shown on the project, in every
+                  report, and in the daily brief &amp; email.
+                </p>
+                <label className="label">What are you counting?</label>
+                <input
+                  className="input"
+                  value={ticketLabel}
+                  onChange={(e) => setTicketLabel(e.target.value)}
+                  placeholder="Support tickets"
+                  maxLength={40}
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  e.g. “Support tickets”, “Helpdesk tickets”, “Open incidents”.
+                </p>
               </div>
             )}
 

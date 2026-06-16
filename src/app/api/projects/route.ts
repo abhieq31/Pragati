@@ -222,6 +222,11 @@ export async function POST(req: NextRequest) {
       gxpImpact: isPersonal ? 'none' : body.gxpImpact || 'none',
       regulatoryRefs: isPersonal ? '' : lc.regulatoryRefs,
       phases: phaseDocs,
+      // Daily support-ticket tracking. Driven by the Support Ticket Tracker
+      // template (the lifecycle is the source of truth), with the explicit flag
+      // honoured too; never for personal projects. Label defaults server-side.
+      trackTickets: !isPersonal && (body.lifecycle === 'support_tracking' || !!body.trackTickets),
+      ticketLabel: body.ticketLabel?.trim() || 'Support tickets',
     });
 
     // Seed tasks from custom or template phases

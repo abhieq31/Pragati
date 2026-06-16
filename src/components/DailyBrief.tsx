@@ -1,7 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Sunrise, X, CheckCircle2, ShieldCheck, AlertTriangle, Users, Bell, BellRing } from 'lucide-react';
+import {
+  Sunrise,
+  X,
+  CheckCircle2,
+  ShieldCheck,
+  AlertTriangle,
+  Users,
+  Bell,
+  BellRing,
+  Ticket,
+} from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { useCurrentUser } from '@/components/CurrentUserContext';
 import { QUIP_NAME_KEY } from '@/components/LoadingQuip';
@@ -55,6 +65,7 @@ interface Brief {
     blocked: { id: string; title: string; projectName: string | null; days: number }[];
     signoffsPending: number;
     overdueByMember: { name: string; count: number }[];
+    tickets?: BriefTickets;
   };
   workspace?: {
     doneYesterday: number;
@@ -62,7 +73,42 @@ interface Brief {
     activeProjects: number;
     risky: { id: string; name: string; overdue: number }[];
     auditHighlights: { summary: string; at: string }[];
+    tickets?: BriefTickets;
   };
+}
+
+interface BriefTickets {
+  totalOpen: number;
+  loggedToday: number;
+  resolvedToday: number;
+  netFlow7: number;
+  wow: string;
+  headline: string;
+  projects: { name: string; open: number; loggedToday: number; resolvedToday: number; wow: string }[];
+}
+
+/** Compact support-ticket line for the lead/admin brief. */
+function TicketsLine({ t }: { t: BriefTickets }) {
+  if (!t || t.projects.length === 0) return null;
+  return (
+    <div className="mt-2 flex items-start gap-1.5">
+      <Ticket size={11} className="mt-[3px] shrink-0 text-blue-500 dark:text-blue-400" />
+      <div className="text-[11px] text-slate-500 dark:text-white/40 min-w-0">
+        <span className="font-semibold text-slate-700 dark:text-white/70">{t.totalOpen} open</span> · +
+        {t.loggedToday}/−{t.resolvedToday} today · <span className="font-medium">{t.wow}</span>
+        {t.projects.length > 1 && (
+          <span className="text-slate-400 dark:text-white/30">
+            {' '}
+            ·{' '}
+            {t.projects
+              .slice(0, 3)
+              .map((p) => `${p.name} ${p.open}`)
+              .join(', ')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function dismissKey(): string {
@@ -251,7 +297,10 @@ export function DailyBrief() {
 
           {/* Team pulse — leads only. */}
           {team &&
-            (team.blocked.length > 0 || team.signoffsPending > 0 || team.overdueByMember.length > 0) && (
+            (team.blocked.length > 0 ||
+              team.signoffsPending > 0 ||
+              team.overdueByMember.length > 0 ||
+              !!team.tickets) && (
               <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/[0.05]">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Users size={11} className="text-slate-400 dark:text-white/30" />
@@ -296,6 +345,7 @@ export function DailyBrief() {
                     </span>
                   )}
                 </div>
+                {team.tickets && <TicketsLine t={team.tickets} />}
               </div>
             )}
 
@@ -346,6 +396,7 @@ export function DailyBrief() {
                   ))}
                 </div>
               )}
+              {workspace.tickets && <TicketsLine t={workspace.tickets} />}
             </div>
           )}
 

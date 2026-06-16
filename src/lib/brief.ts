@@ -7,6 +7,8 @@ import { AuditLog } from '@/models/AuditLog';
 import { normalizeRole, type Role } from '@/lib/auth';
 import { getLeadScope, projectsVisibleFilter, NOT_PERSONAL } from '@/lib/leadScope';
 import { bucketTasks, dayWindowInTz, digestTimeZone, type DigestTask } from '@/lib/digest';
+import { buildTeamTicketRollup } from '@/lib/ticketRollup';
+import { wowText } from '@/lib/tickets';
 
 /**
  * Daily Brief — the channel-agnostic "what's on your plate today" object.
@@ -68,6 +70,7 @@ export interface DailyBrief {
     blocked: BriefBlockedItem[];
     signoffsPending: number;
     overdueByMember: { name: string; count: number }[];
+    tickets?: BriefTickets;
   };
   workspace?: {
     doneYesterday: number;
@@ -75,6 +78,45 @@ export interface DailyBrief {
     activeProjects: number;
     risky: { id: string; name: string; overdue: number }[];
     auditHighlights: { summary: string; at: string }[];
+    tickets?: BriefTickets;
+  };
+}
+
+/** Support-ticket rollup carried in a lead/admin brief — a combined headline
+ *  plus the per-project standing counts management asks for each morning. */
+export interface BriefTickets {
+  totalOpen: number;
+  loggedToday: number;
+  resolvedToday: number;
+  netFlow7: number;
+  wow: string;
+  headline: string;
+  projects: { name: string; open: number; loggedToday: number; resolvedToday: number; wow: string }[];
+}
+
+/** Build the compact ticket rollup for a lead/admin brief from the tracking
+ *  projects they can see. Returns undefined when none carry a reading. */
+async function buildBriefTickets(
+  projects: { _id: any; code?: string; ccNo?: string; name: string; ticketLabel?: string }[],
+): Promise<BriefTickets | undefined> {
+  if (projects.length === 0) return undefined;
+  const rollup = await buildTeamTicketRollup(projects);
+  if (rollup.projects.length === 0) return undefined;
+  const c = rollup.combined;
+  return {
+    totalOpen: rollup.totalOpen,
+    loggedToday: c.loggedToday,
+    resolvedToday: c.resolvedToday,
+    netFlow7: c.netFlow7,
+    wow: wowText(c),
+    headline: c.headline,
+    projects: rollup.projects.slice(0, 6).map((p) => ({
+      name: p.name,
+      open: p.summary.open,
+      loggedToday: p.summary.loggedToday,
+      resolvedToday: p.summary.resolvedToday,
+      wow: wowText(p.summary),
+    })),
   };
 }
 
@@ -249,10 +291,22 @@ export async function buildDailyBrief(
     const nameOf = new Map(names.map((u: any) => [String(u._id), u.name]));
 
     for (const t of blockedDocs) if (t.projectId) projectIds.add(String(t.projectId));
+
+    // Support-ticket rollup across the lead's visible tracking projects.
+    const trackingProjects = await Project.find({
+      ...projectsVisibleFilter(scope),
+      trackTickets: true,
+      archived: { $ne: true },
+    })
+      .select('code ccNo name ticketLabel')
+      .limit(100)
+      .lean();
+
     brief.team = {
       blocked: [], // filled after project names resolve
       signoffsPending,
       overdueByMember: top.map(([id, count]) => ({ name: nameOf.get(id) || 'Unassigned', count })),
+      tickets: await buildBriefTickets(trackingProjects as any[]),
     };
   }
 
@@ -298,6 +352,16 @@ export async function buildDailyBrief(
       .map((g) => ({ id: String(g._id), name: nameOf.get(String(g._id)) || 'A project', overdue: g.overdue }))
       .sort((a, b) => b.overdue - a.overdue);
 
+    // Workspace-wide support-ticket rollup across all shared tracking projects.
+    const trackingProjects = await Project.find({
+      ...NOT_PERSONAL,
+      trackTickets: true,
+      archived: { $ne: true },
+    })
+      .select('code ccNo name ticketLabel')
+      .limit(300)
+      .lean();
+
     brief.workspace = {
       doneYesterday,
       overdueTotal: ranked.reduce((sum, p) => sum + p.overdue, 0),
@@ -308,6 +372,7 @@ export async function buildDailyBrief(
         summary: a.summary || '',
         at: new Date(a.createdAt).toISOString(),
       })),
+      tickets: await buildBriefTickets(trackingProjects as any[]),
     };
   }
 
