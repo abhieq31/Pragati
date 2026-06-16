@@ -337,55 +337,14 @@ export interface RenderInput {
       blocked: { id: string; title: string; projectName: string | null; days: number }[];
       signoffsPending: number;
       overdueByMember: { name: string; count: number }[];
-      tickets?: DigestTickets;
     };
     workspace?: {
       doneYesterday: number;
       overdueTotal: number;
       activeProjects: number;
       risky: { id: string; name: string; overdue: number }[];
-      tickets?: DigestTickets;
     };
   } | null;
-}
-
-/** Support-ticket rollup carried in a lead/admin brief (mirrors BriefTickets in
- *  lib/brief — kept structurally identical here to avoid a runtime import
- *  cycle, since brief.ts imports helpers from this file). */
-export interface DigestTickets {
-  totalOpen: number;
-  loggedToday: number;
-  resolvedToday: number;
-  netFlow7: number;
-  wow: string;
-  headline: string;
-  projects: { name: string; open: number; loggedToday: number; resolvedToday: number; wow: string }[];
-}
-
-/** The support-ticket block for the digest email — a compact, management-facing
- *  card. Returns '' when there's nothing to show. */
-function ticketsEmailBlock(t: DigestTickets | undefined, label: string): string {
-  if (!t || t.projects.length === 0) return '';
-  const netColor = t.netFlow7 > 0 ? '#dc2626' : t.netFlow7 < 0 ? '#16a34a' : '#475569';
-  const rows = t.projects
-    .map(
-      (p) =>
-        `<tr><td style="padding:6px 8px;border-bottom:1px solid #eef2f7;font-size:12.5px;color:#0f172a;">${escapeHtml(p.name)}</td><td style="padding:6px 8px;border-bottom:1px solid #eef2f7;font-size:12.5px;font-weight:700;color:#0f172a;text-align:right;">${p.open}</td><td style="padding:6px 8px;border-bottom:1px solid #eef2f7;font-size:11.5px;color:#475569;text-align:center;">+${p.loggedToday} / −${p.resolvedToday}</td><td style="padding:6px 8px;border-bottom:1px solid #eef2f7;font-size:11.5px;color:#64748b;">${escapeHtml(p.wow)}</td></tr>`,
-    )
-    .join('');
-  return `<div style="margin:16px 0;padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#64748b;margin-bottom:8px;">${escapeHtml(label)}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:8px;">
-      <tr>
-        <td style="padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#0f172a;">${t.totalOpen}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Open now</div></td>
-        <td style="width:8px;"></td>
-        <td style="padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#475569;">+${t.loggedToday} / −${t.resolvedToday}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">In / Out today</div></td>
-        <td style="width:8px;"></td>
-        <td style="padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;text-align:center;"><div style="font-size:20px;font-weight:800;color:${netColor};">${t.netFlow7 > 0 ? '+' : ''}${t.netFlow7}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Net · 7d</div></td>
-      </tr>
-    </table>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows}</table>
-  </div>`;
 }
 
 /** One line of role framing under the greeting. Deliberately copy, not data —
@@ -690,7 +649,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
                 .join(' &nbsp;•&nbsp; ')}</div>`
             : ''
         }
-        ${ticketsEmailBlock(leadershipBrief.team.tickets, 'Support tickets')}
       </div>`
     : leadershipBrief?.workspace
       ? `<div style="margin:0 0 22px;padding:16px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;">
@@ -710,7 +668,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
                   .join(' &nbsp;•&nbsp; ')}</div>`
               : ''
           }
-          ${ticketsEmailBlock(leadershipBrief.workspace.tickets, 'Support tickets')}
         </div>`
       : '';
 
@@ -825,15 +782,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
   if (winsYesterday > 0) {
     lines.push(`You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday.`, '');
   }
-  const ticketsText = (t: DigestTickets | undefined) => {
-    if (!t || t.projects.length === 0) return;
-    lines.push(
-      'SUPPORT TICKETS',
-      `Open now: ${t.totalOpen} · In/Out today: +${t.loggedToday}/−${t.resolvedToday} · ${t.wow}`,
-    );
-    for (const p of t.projects) lines.push(`  • ${p.name}: ${p.open} open (${p.wow})`);
-    lines.push('');
-  };
   if (leadershipBrief?.team) {
     lines.push(
       'TEAM PULSE',
@@ -841,7 +789,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       `Blocked: ${leadershipBrief.team.blocked.length} · Sign-offs: ${leadershipBrief.team.signoffsPending} · Team overdue: ${leadershipBrief.team.overdueByMember.reduce((sum, member) => sum + member.count, 0)}`,
       '',
     );
-    ticketsText(leadershipBrief.team.tickets);
   } else if (leadershipBrief?.workspace) {
     lines.push(
       'WORKSPACE PULSE',
@@ -849,7 +796,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       `Closed yesterday: ${leadershipBrief.workspace.doneYesterday} · Overdue: ${leadershipBrief.workspace.overdueTotal} · Active projects: ${leadershipBrief.workspace.activeProjects}`,
       '',
     );
-    ticketsText(leadershipBrief.workspace.tickets);
   }
   if (focus) {
     const pn = projLabel(focus.projectId);

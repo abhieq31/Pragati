@@ -39,10 +39,7 @@ export type LifecycleKey =
   | 'vendor_qualification'
   | 'training_program'
   | 'product_recall'
-  | 'discrepancy_qi'
-  // Operational — turns on the project's daily support-ticket count
-  // (open / new / resolved). The only place ticket tracking is switched on.
-  | 'support_tracking';
+  | 'discrepancy_qi';
 
 export type LifecycleGroup = 'General' | 'Life Sciences' | 'Personal';
 
@@ -1819,44 +1816,6 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
             qa: true,
             gxp: true,
           },
-        ],
-      },
-    ],
-  },
-
-  // The one place daily support-ticket tracking is switched on: choosing this
-  // template sets Project.trackTickets, so the project shows the daily-count
-  // panel and rolls the figure into reports and the morning brief. The phases
-  // below are a light support-desk cadence around that daily ritual.
-  support_tracking: {
-    label: 'Support Ticket Tracker',
-    description:
-      'Track a daily support-ticket count — open backlog, new, and resolved. Logs the number your team reviews each stand-up and reports upward; the app computes the trend, net flow, anomalies and a clear-ETA.',
-    regulatoryRefs: '',
-    group: 'Life Sciences',
-    phases: [
-      {
-        name: 'Set up tracking',
-        tasks: [
-          { title: 'Define ticket sources & categories', type: 'task' },
-          { title: 'Agree the daily count definition (open / new / resolved)', type: 'task' },
-          { title: 'Set the daily logging owner & time', type: 'task' },
-        ],
-      },
-      {
-        name: 'Daily operations',
-        tasks: [
-          { title: 'Log today’s ticket count', type: 'task' },
-          { title: 'Triage & assign new tickets', type: 'task' },
-          { title: 'Clear high-priority backlog', type: 'task' },
-        ],
-      },
-      {
-        name: 'Review & report',
-        tasks: [
-          { title: 'Daily stand-up count review', type: 'review' },
-          { title: 'Weekly backlog trend review', type: 'review' },
-          { title: 'Escalate recurring / systemic issues', type: 'task' },
         ],
       },
     ],

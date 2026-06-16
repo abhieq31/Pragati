@@ -3,12 +3,10 @@ import { connectDB } from '@/lib/db';
 import { Project } from '@/models/Project';
 import { Task } from '@/models/Task';
 import { User } from '@/models/User';
-import { TicketLog } from '@/models/TicketLog';
 import { isLead, requireUser } from '@/lib/auth';
 import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { rateLimit } from '@/lib/rateLimit';
 import { handleError } from '@/lib/http';
-import { summarizeTickets, ticketArrow, type TicketEntry, type TicketSummary } from '@/lib/tickets';
 import ExcelJS from 'exceljs';
 
 export const runtime = 'nodejs';
@@ -858,66 +856,6 @@ function buildTeamScheduleSheet(wb: ExcelJS.Workbook, project: any, tasks: any[]
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   SHEET — Support Tickets (only when the project tracks a daily count)
-════════════════════════════════════════════════════════════════════════════ */
-function buildTicketsSheet(
-  wb: ExcelJS.Workbook,
-  project: any,
-  entries: (TicketEntry & { note?: string })[],
-  s: TicketSummary,
-) {
-  const ws = wb.addWorksheet('Support Tickets', {
-    properties: { tabColor: { argb: C.brandBlue } },
-  });
-  ws.columns = [{ width: 14 }, { width: 10 }, { width: 10 }, { width: 11 }, { width: 9 }, { width: 44 }];
-  let r = 1;
-  hdr(ws, r, 6, `${project.ticketLabel || 'Support tickets'} — daily count`, C.brandBlue, 'FFFFFFFF', 13);
-  r += 2;
-
-  const wow =
-    s.openWoWPct !== null
-      ? `${ticketArrow(s.openWoWDelta)} ${Math.abs(s.openWoWPct)}% wk/wk`
-      : s.direction !== 'flat'
-        ? `backlog ${s.direction}`
-        : 'steady';
-  const kv: Array<[string, string]> = [
-    ['Open now', String(s.open)],
-    ['New today', String(s.loggedToday)],
-    ['Resolved today', String(s.resolvedToday)],
-    ['Net flow (7d)', `${s.netFlow7 > 0 ? '+' : ''}${s.netFlow7}`],
-    ['Avg open (7d)', String(s.avgOpen7)],
-    ['Backlog wk/wk', wow],
-    ['Clears in', s.clearEtaDays !== null ? `~${s.clearEtaDays} days` : '—'],
-    ['Summary', s.headline],
-  ];
-  for (const [k, v] of kv) {
-    setVal(ws, r, 1, k, { bold: true, color: C.subHeaderFg });
-    ws.mergeCells(r, 2, r, 6);
-    setVal(ws, r, 2, v);
-    r++;
-  }
-  r += 1;
-
-  const tableHeaderRow = r;
-  colHdr(ws, r, ['Date', 'Open', 'New', 'Resolved', 'Net', 'Note']);
-  r++;
-  for (const e of [...entries].reverse()) {
-    setVal(ws, r, 1, e.dateKey);
-    setVal(ws, r, 2, e.open, { align: 'center' });
-    setVal(ws, r, 3, e.logged, { align: 'center' });
-    setVal(ws, r, 4, e.resolved, { align: 'center' });
-    const net = e.logged - e.resolved;
-    setVal(ws, r, 5, net, {
-      align: 'center',
-      color: net > 0 ? C.critical : net < 0 ? C.done : C.subHeaderFg,
-    });
-    setVal(ws, r, 6, e.note || '');
-    r++;
-  }
-  ws.views = [{ state: 'frozen', ySplit: tableHeaderRow }];
-}
-
-/* ════════════════════════════════════════════════════════════════════════════
    ROUTE HANDLER
 ════════════════════════════════════════════════════════════════════════════ */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -960,24 +898,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     wb.properties.date1904 = false;
 
     buildSummarySheet(wb, project, tasks as any[], phaseMap);
-    // Support-ticket sheet — only when the project tracks a daily count.
-    if ((project as any).trackTickets) {
-      const rows = await TicketLog.find({ projectId: project._id })
-        .select('dateKey open logged resolved note')
-        .sort({ dateKey: 1 })
-        .limit(400)
-        .lean();
-      if (rows.length) {
-        const entries = rows.map((r: any) => ({
-          dateKey: r.dateKey,
-          open: r.open || 0,
-          logged: r.logged || 0,
-          resolved: r.resolved || 0,
-          note: r.note || '',
-        }));
-        buildTicketsSheet(wb, project, entries, summarizeTickets(entries));
-      }
-    }
     buildTasksSheet(wb, project, tasks as any[], users as any[]);
     buildTeamScheduleSheet(wb, project, tasks as any[], users as any[]);
     buildBottleneckSheet(wb, project, tasks as any[], users as any[]);

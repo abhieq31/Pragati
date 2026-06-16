@@ -59,14 +59,7 @@ function lcLabel(lc: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-import { ticketHtmlSection, ticketCsvLines, type TicketReportData } from '@/lib/ticketReport';
-
-export function buildProjectReportHtml(
-  project: any,
-  phases: any[],
-  exportedBy = '',
-  tickets?: TicketReportData | null,
-): string {
+export function buildProjectReportHtml(project: any, phases: any[], exportedBy = ''): string {
   const generated = new Date().toLocaleString();
   const now = new Date();
   const tasks: any[] = Array.isArray(project?.tasks) ? project.tasks : [];
@@ -236,8 +229,6 @@ export function buildProjectReportHtml(
       <div class="kpi"><div class="n">${(phases || []).length}</div><div class="l">Phases</div></div>
     </div>
 
-    ${ticketHtmlSection(tickets)}
-
     <h2>Status distribution</h2>
     <div class="legend">${distLegend}</div>
     <div class="dist">${distSegments || '<div class="seg" style="flex:1;background:#eef2f7"></div>'}</div>
@@ -273,12 +264,7 @@ function csvCell(v: any): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function buildProjectReportCsv(
-  project: any,
-  phases: any[] = [],
-  exportedBy = '',
-  tickets?: TicketReportData | null,
-): string {
+export function buildProjectReportCsv(project: any, phases: any[] = [], exportedBy = ''): string {
   const now = new Date();
   const tasks: any[] = [...(Array.isArray(project?.tasks) ? project.tasks : [])].sort(byTcd);
   const ref = project?.isPersonal ? 'Personal' : project?.code || '';
@@ -386,13 +372,8 @@ export function buildProjectReportCsv(
 
   const metaRows = meta.map(([k, v]) => [k, v].map(csvCell).join(','));
   const tasksHeader = ['Tasks', ''].map(csvCell).join(',');
-  // The support-ticket log (when this project tracks it) goes between the meta
-  // block and the task table so it sits with the other project-level figures.
-  const ticketLines = ticketCsvLines(tickets);
   // BOM + CRLF so Excel/Sheets open UTF-8 + line breaks correctly.
-  return (
-    '﻿' + [...metaRows, ...ticketLines, tasksHeader, header.map(csvCell).join(','), ...rows].join('\r\n')
-  );
+  return '﻿' + [...metaRows, tasksHeader, header.map(csvCell).join(','), ...rows].join('\r\n');
 }
 
 function triggerDownload(content: string, mime: string, filename: string) {
@@ -413,42 +394,27 @@ function safeName(project: any): string {
     .toLowerCase();
 }
 
-export function downloadProjectCsv(
-  project: any,
-  phases: any[] = [],
-  exportedBy = '',
-  tickets?: TicketReportData | null,
-) {
+export function downloadProjectCsv(project: any, phases: any[] = [], exportedBy = '') {
   triggerDownload(
-    buildProjectReportCsv(project, phases, exportedBy, tickets),
+    buildProjectReportCsv(project, phases, exportedBy),
     'text/csv;charset=utf-8',
     `${safeName(project)}-tasks-${new Date().toISOString().slice(0, 10)}.csv`,
   );
 }
 
-export function downloadProjectReport(
-  project: any,
-  phases: any[],
-  exportedBy = '',
-  tickets?: TicketReportData | null,
-) {
+export function downloadProjectReport(project: any, phases: any[], exportedBy = '') {
   triggerDownload(
-    buildProjectReportHtml(project, phases, exportedBy, tickets),
+    buildProjectReportHtml(project, phases, exportedBy),
     'text/html;charset=utf-8',
     `${safeName(project)}-report-${new Date().toISOString().slice(0, 10)}.html`,
   );
 }
 
-export function printProjectReport(
-  project: any,
-  phases: any[],
-  exportedBy = '',
-  tickets?: TicketReportData | null,
-) {
-  const html = buildProjectReportHtml(project, phases, exportedBy, tickets);
+export function printProjectReport(project: any, phases: any[], exportedBy = '') {
+  const html = buildProjectReportHtml(project, phases, exportedBy);
   const w = window.open('', '_blank');
   if (!w) {
-    downloadProjectReport(project, phases, exportedBy, tickets);
+    downloadProjectReport(project, phases);
     return;
   }
   // Inject a floating action bar with a "Save as PDF" trigger, hidden on print.

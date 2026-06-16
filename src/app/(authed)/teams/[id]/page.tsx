@@ -413,54 +413,12 @@ export default function TeamDetailPage() {
           </div>
         </ModalPortal>
       )}
-      {/* ── Team hero — function-tinted cover, avatar straddling, summary strip ── */}
-      <section className="card overflow-hidden p-0">
-        <div className="relative h-24 sm:h-28 overflow-hidden" style={{ background: cover }}>
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              opacity: 0.5,
-              background: 'radial-gradient(120% 150% at 12% -30%, rgba(255,255,255,0.4), transparent 50%)',
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{
-              opacity: 0.16,
-              backgroundImage: 'radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1.4px)',
-              backgroundSize: '15px 15px',
-            }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-16"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.14), transparent)' }}
-          />
-          {(isOwnerOrAdmin || isLead) && (
-            <div className="absolute top-3 right-3 flex items-center gap-1.5">
-              <BirdEyeButton scopeKey={`team:${id}`} onClick={() => setShowBirdEye(true)} />
-              <ExportMenu
-                onPdf={async () => {
-                  const tickets = await api(`/teams/${id}/tickets`).catch(() => null);
-                  printTeamReport(team, progress, board, me?.name || me?.email || '', tickets as any);
-                }}
-                onCsv={async () => {
-                  const tickets = await api(`/teams/${id}/tickets`).catch(() => null);
-                  downloadTeamCsv(team, board, me?.name || me?.email || '', tickets as any);
-                }}
-                onBirdEyeSvg={() => setBirdEyeExport('svg')}
-                onBirdEyePng={() => setBirdEyeExport('png')}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="px-5 sm:px-6 pb-5">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-            {/* Avatar straddling the cover (owner/admin can change on hover). */}
-            <div className="-mt-12 shrink-0 flex flex-col items-center gap-1">
+      {/* Quiet, information-first team header: identity and primary actions only. */}
+      <section className="card p-5 sm:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            {/* Owner/admin can change the avatar directly without a decorative cover. */}
+            <div className="shrink-0 flex flex-col items-center gap-1">
               <div
                 className="relative cursor-pointer rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-[#262624]"
                 onMouseEnter={() => setAvatarHover(true)}
