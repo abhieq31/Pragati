@@ -158,6 +158,7 @@ import {
   localDateKey,
   digestHourMatches,
   digestTimeMatches,
+  digestWindowOpen,
   defaultDigestHour,
 } from '../../src/lib/digest';
 
@@ -188,8 +189,23 @@ describe('per-user digest scheduling', () => {
     assert.equal(digestHourMatches(3, undefined, 8), true);
   });
 
-  it('defaultDigestHour is 8 unless overridden', () => {
+  it('keeps the product-wide delivery hour fixed at 08:00', () => {
     assert.equal(defaultDigestHour(), 8);
+    process.env.DIGEST_DEFAULT_HOUR = '11';
+    try {
+      assert.equal(defaultDigestHour(), 8, 'deployment config cannot move the promised 08:30 delivery');
+    } finally {
+      delete process.env.DIGEST_DEFAULT_HOUR;
+    }
+  });
+
+  it('opens only for the exact 08:30 scheduler window', () => {
+    assert.equal(digestWindowOpen(8, 29), false);
+    assert.equal(digestWindowOpen(8, 30), true);
+    assert.equal(digestWindowOpen(8, 34), true, 'allow scheduler startup jitter');
+    assert.equal(digestWindowOpen(8, 35), false, 'do not send a late daily brief');
+    assert.equal(digestWindowOpen(9, 0), false);
+    assert.equal(digestWindowOpen(undefined, undefined), true, 'manual runs remain available');
   });
 
   it('catches up delayed minute-level runs without sending before the requested time', () => {

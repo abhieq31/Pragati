@@ -2,10 +2,9 @@
 
 /**
  * Custom Bird's-Eye glyph used as the trigger icon across the app.
- * A compact tree-of-nodes with a glowing root, brand-blue branches and
- * emerald leaves — reads as "see the whole structure from above". The
- * outer lens is dropped in favour of more visual breathing room around
- * the tree itself, which renders better at small sizes.
+ * An eye-shaped overview lens containing a tiny top-down hierarchy. The eye
+ * makes the action recognisable at a glance; the connected nodes distinguish
+ * it from a generic preview/visibility control.
  *
  * Pass `blink` to draw attention on first paint — pulses the icon twice
  * then settles. Useful as a feature-discovery cue without a tour modal.
@@ -33,44 +32,28 @@ export function BirdEyeIcon({
       className={`${blink ? 'pragati-birdeye-blink' : ''} ${className}`.trim()}
     >
       <title>{title}</title>
-      {/* Soft gradient lens — gives the icon presence without a hard border */}
-      <defs>
-        <radialGradient id="be-lens" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#1565C0" stopOpacity="0.10" />
-          <stop offset="100%" stopColor="#1565C0" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <circle cx="12" cy="12" r="11" fill="url(#be-lens)" />
-      <circle
-        cx="12"
-        cy="12"
-        r="10.5"
-        stroke="currentColor"
-        strokeOpacity="0.35"
-        strokeWidth="1.1"
-        fill="none"
-      />
-
-      {/* Branches — drawn before nodes so node fills cover the join cleanly */}
-      <path d="M12 5.5 V11" stroke="#1565C0" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Overview lens. */}
       <path
-        d="M12 11 L6.5 16.2 M12 11 L17.5 16.2 M12 11 V16.2"
-        stroke="#1565C0"
+        d="M2.5 12s3.45-6 9.5-6 9.5 6 9.5 6-3.45 6-9.5 6-9.5-6-9.5-6Z"
+        fill="currentColor"
+        fillOpacity="0.08"
+        stroke="currentColor"
         strokeWidth="1.5"
-        strokeLinecap="round"
+        strokeLinejoin="round"
       />
 
-      {/* Root node — brand blue, prominent */}
-      <circle cx="12" cy="5.5" r="2" fill="#1565C0" />
-      <circle cx="12" cy="5.5" r="2" fill="white" fillOpacity="0.18" />
-
-      {/* Mid junction */}
-      <circle cx="12" cy="11" r="1.2" fill="#1565C0" />
-
-      {/* Three leaf nodes — emerald, slightly different sizes for life */}
-      <circle cx="6.5" cy="17" r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
-      <circle cx="12" cy="17" r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
-      <circle cx="17.5" cy="17" r="1.6" fill="#10b981" stroke="white" strokeWidth="0.6" />
+      {/* Top-down hierarchy inside the lens. */}
+      <path
+        d="M12 8.6v2.1m0 0-3.5 2.7m3.5-2.7 3.5 2.7M12 10.7v2.7"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="8.1" r="1.65" fill="currentColor" />
+      <circle cx="8.25" cy="14.2" r="1.25" fill="white" stroke="currentColor" strokeWidth="1.15" />
+      <circle cx="12" cy="14.2" r="1.25" fill="white" stroke="currentColor" strokeWidth="1.15" />
+      <circle cx="15.75" cy="14.2" r="1.25" fill="white" stroke="currentColor" strokeWidth="1.15" />
     </svg>
   );
 }

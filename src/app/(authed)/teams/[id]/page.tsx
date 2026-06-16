@@ -462,7 +462,7 @@ export default function TeamDetailPage() {
             {/* Avatar straddling the cover (owner/admin can change on hover). */}
             <div className="-mt-12 shrink-0 flex flex-col items-center gap-1">
               <div
-                className="relative cursor-pointer rounded-2xl p-[3px] bg-white dark:bg-[#262624] shadow-lg"
+                className="relative cursor-pointer rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-white/10 dark:bg-[#262624]"
                 onMouseEnter={() => setAvatarHover(true)}
                 onMouseLeave={() => setAvatarHover(false)}
                 onClick={() => isOwnerOrAdmin && avatarInputRef.current?.click()}
@@ -472,22 +472,22 @@ export default function TeamDetailPage() {
                   <img
                     src={avatarImage}
                     alt={`${team.name} avatar`}
-                    className="w-[72px] h-[72px] rounded-[14px] object-cover"
+                    className="h-16 w-16 rounded-xl object-cover"
                   />
                 ) : (
                   <div
-                    className="w-[72px] h-[72px] rounded-[14px] flex items-center justify-center"
+                    className="flex h-16 w-16 items-center justify-center rounded-xl"
                     style={{ background: cover }}
                   >
-                    <span className="text-3xl font-black text-white/90 select-none">
+                    <span className="select-none text-2xl font-black text-white/90">
                       {team.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
                 {isOwnerOrAdmin && (avatarHover || avatarUploading) && (
-                  <div className="absolute inset-[3px] rounded-[14px] bg-black/40 flex items-center justify-center">
+                  <div className="absolute inset-1 flex items-center justify-center rounded-xl bg-black/40">
                     {avatarUploading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                     ) : (
                       <Camera size={18} className="text-white" />
                     )}
@@ -498,7 +498,7 @@ export default function TeamDetailPage() {
                 <button
                   onClick={removeAvatar}
                   disabled={avatarUploading}
-                  className="text-[10.5px] text-slate-400 hover:text-red-500 transition-colors"
+                  className="text-[10.5px] text-slate-400 transition-colors hover:text-red-500"
                 >
                   Remove
                 </button>
@@ -514,15 +514,13 @@ export default function TeamDetailPage() {
               )}
             </div>
 
-            <div className="flex-1 min-w-0 sm:pb-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-tight text-slate-900 dark:text-white break-words">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="break-words text-xl font-black leading-tight tracking-tight text-slate-900 dark:text-white sm:text-2xl">
                   {team.name}
                 </h1>
-                {/* Human label for the team's operating function — the raw enum
-                    ("rtb") is a database detail, not UI copy. */}
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
+                  className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                     (
                       {
                         rtb: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -535,12 +533,29 @@ export default function TeamDetailPage() {
                 </span>
               </div>
               {team.description && (
-                <p className="text-sm text-slate-500 dark:text-white/50 mt-1.5 leading-snug">
+                <p className="mt-1.5 max-w-2xl text-sm leading-snug text-slate-500 dark:text-white/50">
                   {team.description}
                 </p>
               )}
             </div>
           </div>
+
+          {(isOwnerOrAdmin || isLead) && (
+            <div className="flex shrink-0 items-center gap-1.5 self-start">
+              <BirdEyeButton
+                scopeKey={`team:${id}`}
+                onClick={() => setShowBirdEye(true)}
+                label="Bird’s-eye"
+                className="border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.04]"
+              />
+              <ExportMenu
+                onPdf={() => printTeamReport(team, progress, board, me?.name || me?.email || '')}
+                onCsv={() => downloadTeamCsv(team, board, me?.name || me?.email || '')}
+                onBirdEyeSvg={() => setBirdEyeExport('svg')}
+                onBirdEyePng={() => setBirdEyeExport('png')}
+              />
+            </div>
+          )}
         </div>
 
         {/* Stat strip — the team at a glance, from data already on screen. */}

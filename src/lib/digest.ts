@@ -33,26 +33,24 @@ export function digestTimeZone(): string {
   return process.env.DIGEST_TZ?.trim() || DEFAULT_TZ;
 }
 
-/** The provider's free daily send allowance. Defaults to Brevo's free tier
- *  (300/day); override with BREVO_DAILY_CAP when on a paid plan or a different
- *  provider. The scheduled run never attempts more than this many sends, so
- *  the digest can't silently eat into quota other emails may need — and the
- *  admin panel can show exactly how close to the ceiling the workspace is. */
+/** The provider's reported daily send allowance. Defaults to Brevo's free
+ * tier (300/day); override with BREVO_DAILY_CAP when on a paid plan or another
+ * provider. This is operational telemetry only: the application still
+ * attempts every opted-in recipient and records any provider rejections. */
 export function digestDailyCap(): number {
   const n = parseInt(process.env.BREVO_DAILY_CAP || '', 10);
   return Number.isFinite(n) && n > 0 ? n : 300;
 }
 
-/** The hour (0–23, workspace timezone) a user gets their digest when they
- *  haven't picked one. 8 = 8 AM, matching the historical 08:30 default.
- *  Override with DIGEST_DEFAULT_HOUR. */
+/** The fixed workspace-time hour for the daily brief. Product contract:
+ * everyone receives it at 08:30; this is intentionally not configurable per
+ * user or deployment. */
 export function defaultDigestHour(): number {
-  const n = parseInt(process.env.DIGEST_DEFAULT_HOUR || '', 10);
-  return Number.isFinite(n) && n >= 0 && n <= 23 ? n : 8;
+  return 8;
 }
 
-/** The wall-clock hour (0–23) in `tz` for instant `now`. Used to match each
- *  user's chosen send hour against an hourly cron tick. Pure. */
+/** The wall-clock hour (0–23) in `tz` for instant `now`. Used to decide
+ * whether a scheduler tick is inside the fixed 08:30 delivery window. Pure. */
 export function hourInTz(now: Date, tz: string): number {
   const h = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false }).format(now);
   const n = parseInt(h, 10);
@@ -67,24 +65,28 @@ export function minuteInTz(now: Date, tz: string): number {
    Pragati sends ONE brief to everyone at 08:30 (workspace timezone), every
    day. There is no per-user send time — that was deliberately deleted: a
    single, predictable 08:30 brief is the product, and removing it deletes the
-   fragile per-user hour-matching machinery with it. The hour is overridable
-   with DIGEST_DEFAULT_HOUR for a different workspace; the minute is fixed. */
+   fragile per-user hour-matching machinery with it. */
 export const DIGEST_SEND_MINUTE = 30;
+export const DIGEST_SEND_WINDOW_MINUTES = 5;
 export function digestSendMinuteOfDay(): number {
   return defaultDigestHour() * 60 + DIGEST_SEND_MINUTE;
 }
 
-/** Is a scheduled tick at/after today's 08:30 send time? A manual run
- *  (scheduledHour undefined) is always open. Combined with the per-day
- *  idempotency stamp, the first tick at/after 08:30 sends the whole workspace
- *  exactly once; earlier ticks wait, later ticks find everyone already stamped.
- *  Pure. */
+/** Is this scheduled tick the 08:30 delivery tick?
+ *
+ * Schedulers can start a few seconds late, so 08:30–08:34 is treated as the
+ * same 08:30 run. Earlier ticks wait and later ticks do not send a delayed
+ * brief. Manual/admin runs (scheduledHour undefined) remain available on
+ * demand. The per-day idempotency stamp prevents duplicate delivery if both
+ * Vercel Cron and the five-minute GitHub Action hit this window. Pure. */
 export function digestWindowOpen(
   scheduledHour: number | undefined,
   scheduledMinute: number | undefined,
 ): boolean {
   if (scheduledHour === undefined) return true;
-  return scheduledHour * 60 + (scheduledMinute ?? 0) >= digestSendMinuteOfDay();
+  const tick = scheduledHour * 60 + (scheduledMinute ?? 0);
+  const sendAt = digestSendMinuteOfDay();
+  return tick >= sendAt && tick < sendAt + DIGEST_SEND_WINDOW_MINUTES;
 }
 
 /** Local calendar day key (YYYY-MM-DD) in `tz` — the idempotency key that
@@ -914,11 +916,11 @@ export interface RunOptions {
    *  proof it works. */
   welcome?: boolean;
   onlyUserId?: string;
-  /** Scheduled (hourly) run: only send to users whose chosen send hour equals
-   *  this (workspace-tz) hour, and stamp each as sent-today so re-ticks never
-   *  double-send. Omit for a manual "send now" run, which serves everyone. */
+  /** Scheduled run's current workspace-time hour. Omit for a manual "send
+   *  now" run, which serves everyone immediately. */
   scheduledHour?: number;
-  /** Current minute for a frequent scheduler. Matched in five-minute windows. */
+  /** Scheduled run's current workspace-time minute. 08:30–08:34 is the one
+   *  daily delivery window. */
   scheduledMinute?: number;
 }
 
@@ -931,11 +933,11 @@ export interface RunSummary {
   sent: number;
   skippedNoEmail: number;
   skippedNoTasks: number;
-  /** Recipients whose chosen send hour isn't this tick (hourly scheduled run). */
+  /** Retained in the run summary for backwards-compatible admin reporting. */
   skippedWrongHour: number;
   /** Recipients already sent their digest earlier today (idempotency). */
   skippedAlreadySent: number;
-  /** Recipients not attempted because the free daily send cap was reached. */
+  /** Legacy admin-reporting field; no recipients are intentionally cap-skipped. */
   skippedCapReached: number;
   failed: number;
   /** Provider reason for the FIRST failed send — turns a silent 0-sent run
@@ -988,9 +990,10 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     return { ...summary, disabled: true };
   }
 
-  // One fixed send window for the whole workspace (08:30). A scheduled tick
-  // before that does nothing; the first tick at/after 08:30 sends everyone,
-  // and the idempotency stamp keeps every later tick that day a no-op.
+  // One fixed send window for the whole workspace (08:30–08:34). Every active,
+  // opted-in user with a deliverable notification address is selected in the
+  // same batch; the idempotency stamp prevents duplicates from parallel
+  // schedulers. Ticks outside the window do not send delayed mail.
   if (!isOneShot && !digestWindowOpen(opts.scheduledHour, opts.scheduledMinute)) {
     return summary;
   }
@@ -1078,8 +1081,6 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
   // rows so the digest matches whatever the member changed it to in the app.
   const projRef = new Map<string, string>(projDocs.map((p: any) => [String(p._id), projectRef(p)]));
 
-  const forceSend = isOneShot;
-
   // One curated, industry-tuned insight per day, shared across the workspace
   // (a common "thought for the day"). Single-tenant reads PRAGATI_INDUSTRY;
   // the multi-tenant path will resolve the tenant's stored niche here.
@@ -1159,15 +1160,6 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     // itself signal ("you're clear — here's the leverage move"), and it still
     // carries the momentum line, the foresight read, the leadership pulse and
     // the day's insight, so the higher-level view always lands. (No empty-skip.)
-
-    // Free-tier guard: never attempt more sends than the provider's daily
-    // allowance. Whoever is left over is counted (and surfaced to the admin)
-    // rather than silently bounced by the provider. Test sends bypass — they
-    // are one email to the admin verifying delivery.
-    if (!forceSend && summary.sent >= summary.cap) {
-      summary.skippedCapReached += 1;
-      continue;
-    }
 
     const role = normalizeRole((r.user as any).role);
     let leadershipBrief: RenderInput['leadershipBrief'] = null;

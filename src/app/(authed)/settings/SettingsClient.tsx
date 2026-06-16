@@ -688,31 +688,6 @@ function DailyDigestToggle({ initialUser }: { initialUser: any }) {
                 preference is saved and takes effect the moment your admin completes setup.
               </p>
             )}
-            {/* Delivery IS configured, but the scheduled trigger hasn't run
-                recently — the hourly cron / 5-min Action that the per-user send
-                time depends on may be paused. Without this, a stale trigger
-                fails silently (no email, no error). Only surfaced while the
-                digest is on, so it's actionable, not noise. */}
-            {(() => {
-              if (
-                !health ||
-                !enabled ||
-                !health.mailerConfigured ||
-                !health.cronSecretSet ||
-                health.workspaceEnabled === false
-              )
-                return null;
-              const last = health.lastRunAt ? new Date(health.lastRunAt).getTime() : null;
-              const stale = last === null || Date.now() - last > 70 * 60_000;
-              if (!stale) return null;
-              return (
-                <p className="mt-1.5 text-[11.5px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-2.5 py-1.5">
-                  Your daily email may not be sending — the scheduled job{' '}
-                  {last === null ? 'hasn’t run yet' : `last ran ${formatDateTime(health.lastRunAt!)}`}. If
-                  this persists, ask your admin to check the digest trigger (hourly cron / scheduled Action).
-                </p>
-              );
-            })()}
             {canEnable ? (
               <div className="mt-2 flex items-center gap-2 flex-wrap">
                 {editingEmail ? (
