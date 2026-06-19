@@ -42,6 +42,7 @@ const FirstTimeTour = dynamic(() => import('./FirstTimeTour').then((m) => m.Firs
 import {
   LayoutDashboard,
   FolderKanban,
+  FileSpreadsheet,
   Users,
   UsersRound,
   ShieldCheck,
@@ -356,6 +357,7 @@ export default function AppShell({
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
     { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
+    { href: '/csv-activity', label: 'CSV Activity', icon: FileSpreadsheet, iconColor: '#0E7490', iconBg: '#E0F7FA' },
   ];
   const adminExtra: NavItem[] = [
     {
@@ -403,6 +405,7 @@ export default function AppShell({
     { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
     { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
+    { href: '/csv-activity', label: 'CSV Activity', icon: FileSpreadsheet, iconColor: '#0E7490', iconBg: '#E0F7FA' },
   ];
 
   const myDayItem: NavItem = {

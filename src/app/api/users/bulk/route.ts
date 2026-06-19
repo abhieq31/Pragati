@@ -100,6 +100,10 @@ export async function POST(req: NextRequest) {
           passwordHash: bcrypt.hashSync(defaultPassword(name, employeeId), 10),
           role: 'contributor',
           mustChangePassword: true,
+          // Bulk-imported accounts must also get the guided tour on first
+          // login — the model default is `true`, so opt in explicitly like
+          // the single-create, register, and bootstrap paths.
+          hasSeenTour: false,
         });
         created.push({ username: r.username, name });
       } catch {

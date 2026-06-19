@@ -275,8 +275,29 @@ export function formatFullDate(s?: string | Date | null) {
 
 export function daysUntil(s?: string | Date | null) {
   if (!s) return null;
+  // Date-only strings (YYYY-MM-DD) are pinned to local noon; full timestamps
+  // (the form a Mongoose `Date` serialises to — UTC midnight for a date-only
+  // due date) are taken as-is. We then compare *calendar days* in local time,
+  // not raw millisecond deltas, so "due today" is always 0, "tomorrow" is 1,
+  // and "yesterday" is -1 regardless of timezone or the hour of the day.
   const d = typeof s === 'string' && s.length === 10 ? new Date(s + 'T12:00:00') : new Date(s);
-  return Math.round((d.getTime() - Date.now()) / 86400000);
+  if (isNaN(d.getTime())) return null;
+  const dueDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.round((dueDay - today) / 86400000);
+}
+
+/** Single source of truth for "is this work past its date". A task is overdue
+ *  only when its due *calendar day* is strictly before today (local time) and
+ *  it isn't already done — so a task due today never reads as overdue. Use this
+ *  everywhere instead of `new Date(due) < new Date()`, which (because date-only
+ *  dues are stored at UTC midnight) wrongly flags due-today work as overdue
+ *  from the early morning onward in any positive-offset timezone (e.g. IST). */
+export function isOverdue(due?: string | Date | null, status?: string | null): boolean {
+  if (!due || status === 'done') return false;
+  const d = daysUntil(due);
+  return d !== null && d < 0;
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────

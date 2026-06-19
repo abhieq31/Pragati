@@ -29,7 +29,16 @@ const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m
   ssr: false,
   loading: () => <div className="h-40 skeleton rounded-xl" />,
 });
-import { Card, ProgressBar, LifecycleTag, StatusTag, RoleBadge, formatDate, TaskLink } from '@/components/ui';
+import {
+  Card,
+  ProgressBar,
+  LifecycleTag,
+  StatusTag,
+  RoleBadge,
+  formatDate,
+  isOverdue,
+  TaskLink,
+} from '@/components/ui';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { downloadTeamReport, printTeamReport, downloadTeamCsv } from './report';
 import { ExportMenu } from '@/components/ExportMenu';
@@ -38,7 +47,7 @@ import { Select } from '@/components/Select';
 /* One task line, reused by the Work view (grouped by person for leads, flat for
    an IC). When grouped under a person we drop the redundant assignee chip. */
 function TeamTaskRow({ t, showAssignee }: { t: any; showAssignee: boolean }) {
-  const overdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
+  const overdue = isOverdue(t.dueDate, t.status);
   return (
     <div className="py-2.5 flex items-center gap-3 text-sm">
       <div className="flex-1 min-w-0">
@@ -309,7 +318,7 @@ export default function TeamDetailPage() {
   const heroPct = heroTaskTotal ? Math.round((heroTaskDone / heroTaskTotal) * 100) : 0;
   const heroOpen = visibleBoard.filter((t: any) => t.status !== 'done').length;
   const heroOverdue = visibleBoard.filter(
-    (t: any) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done',
+    (t: any) => isOverdue(t.dueDate, t.status),
   ).length;
   const cover = FUNCTION_COVER[team.function] || DEFAULT_COVER;
 
@@ -672,7 +681,7 @@ export default function TeamDetailPage() {
                       {groups.map((g) => {
                         const open = g.tasks.filter((t) => t.status !== 'done').length;
                         const overdue = g.tasks.filter(
-                          (t) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done',
+                          (t) => isOverdue(t.dueDate, t.status),
                         ).length;
                         return (
                           <div key={g.id}>

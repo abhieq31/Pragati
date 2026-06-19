@@ -4,7 +4,14 @@ import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLiveRefresh } from '@/lib/client/useLiveRefresh';
-import { formatDate, daysUntil, ProgressBar, LIFECYCLE_LABELS, STATUS_COLORS } from '@/components/ui';
+import {
+  formatDate,
+  daysUntil,
+  isOverdue,
+  ProgressBar,
+  LIFECYCLE_LABELS,
+  STATUS_COLORS,
+} from '@/components/ui';
 import { DatePicker } from '@/components/DatePicker';
 import { UserAvatar } from '@/components/AvatarRegistry';
 import { useIsLead } from '@/components/CurrentUserContext';
@@ -316,10 +323,7 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
 
   const overdueTasks = useMemo(
     () =>
-      openTasks.filter((t) => {
-        const due = t.ccTcd || t.dueDate;
-        return due && new Date(due) < new Date();
-      }),
+      openTasks.filter((t) => isOverdue(t.ccTcd || t.dueDate, t.status)),
     [openTasks],
   );
 
@@ -734,7 +738,7 @@ function SummaryTaskPopup({
             {sorted.map((t) => {
               const due = t.ccTcd || t.dueDate;
               const dueIn = daysUntil(due);
-              const overdue = due && new Date(due) < new Date();
+              const overdue = isOverdue(due, t.status);
               return (
                 <li key={t.id}>
                   <Link
@@ -996,13 +1000,13 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
           const isDone = t.status === 'done';
           const due = t.ccTcd || t.dueDate;
           const dueIn = daysUntil(due);
-          const isOverdue = !isDone && !!due && dueIn !== null && dueIn < 0;
+          const overdue = isOverdue(due, t.status);
           const isBlocked = t.status === 'blocked';
 
           const [dotColor, dotTitle] = ((): [string, string] => {
             if (isDone) return ['#10b981', 'Done'];
             if (isBlocked) return ['#ef4444', 'Blocked'];
-            if (isOverdue) return ['#ef4444', 'Overdue'];
+            if (overdue) return ['#ef4444', 'Overdue'];
             if (dueIn !== null && dueIn <= 3) return ['#d97706', 'Due soon'];
             if (t.status === 'in_progress') return ['#1565C0', 'In progress'];
             if (t.status === 'review') return ['#7c3aed', 'In review'];
@@ -1035,7 +1039,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                       : formatDate(due);
           const dateTone = isDone
             ? 'text-slate-300 dark:text-white/20'
-            : isOverdue
+            : overdue
               ? 'text-red-600 dark:text-red-400 font-bold'
               : dueIn !== null && dueIn <= 3
                 ? 'text-amber-700 dark:text-amber-400 font-bold'
@@ -1081,7 +1085,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                       {t.title}
                     </span>
 
-                    {stateMeta && !isBlocked && !isOverdue && (
+                    {stateMeta && !isBlocked && !overdue && (
                       <span
                         className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
                         style={{ color: stateMeta.fg, background: stateMeta.bg }}
@@ -1090,17 +1094,17 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
                       </span>
                     )}
 
-                    {isOverdue && (
+                    {overdue && (
                       <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-md">
                         Overdue
                       </span>
                     )}
-                    {isBlocked && !isOverdue && (
+                    {isBlocked && !overdue && (
                       <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-md">
                         Blocked
                       </span>
                     )}
-                    {t.slipRisk && !isDone && !isOverdue && !isBlocked && (
+                    {t.slipRisk && !isDone && !overdue && !isBlocked && (
                       <span
                         title={`Early warning: ${t.slipRisk.reason}`}
                         className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 px-1.5 py-0.5 rounded-md cursor-help"
@@ -1312,7 +1316,7 @@ function ProjectRow({
 function TaskTableRow({ t }: { t: TeamTask }) {
   const due = t.ccTcd || t.dueDate;
   const dueIn = daysUntil(due);
-  const overdue = due && new Date(due) < new Date() && t.status !== 'done';
+  const overdue = isOverdue(due, t.status);
 
   return (
     <tr className="group hover:bg-slate-50/80 transition-colors">
@@ -1385,10 +1389,7 @@ function TaskTableRow({ t }: { t: TeamTask }) {
 function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
   const myTasks = tasks.filter((t) => t.assigneeId === myId && t.status !== 'done');
   const myDone = tasks.filter((t) => t.assigneeId === myId && t.status === 'done').length;
-  const myOverdue = myTasks.filter((t) => {
-    const due = t.ccTcd || t.dueDate;
-    return due && new Date(due) < new Date();
-  }).length;
+  const myOverdue = myTasks.filter((t) => isOverdue(t.ccTcd || t.dueDate, t.status)).length;
 
   if (myTasks.length === 0 && myDone === 0) return null;
 
@@ -1421,7 +1422,7 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
           {myTasks.slice(0, 15).map((t) => {
             const due = t.ccTcd || t.dueDate;
             const dueIn = daysUntil(due);
-            const overdue = due && new Date(due) < new Date() && t.status !== 'done';
+            const overdue = isOverdue(due, t.status);
             const dotColor =
               t.status === 'in_progress'
                 ? '#3B82F6'
@@ -1967,10 +1968,7 @@ function MyFocusPanel({ tasks, projects, myId }: { tasks: TeamTask[]; projects: 
       projectId,
       project: projMap.get(projectId),
       tasks: ts,
-      overdue: ts.filter((t) => {
-        const due = t.ccTcd || t.dueDate;
-        return due && new Date(due) < new Date();
-      }).length,
+      overdue: ts.filter((t) => isOverdue(t.ccTcd || t.dueDate, t.status)).length,
     }))
     .sort((a, b) => b.overdue - a.overdue || b.tasks.length - a.tasks.length);
 
@@ -2128,7 +2126,7 @@ function ContributorRow({
               {sorted.slice(0, 5).map((t) => {
                 const due = t.ccTcd || t.dueDate;
                 const dueIn = daysUntil(due);
-                const overdue = due && new Date(due) < new Date();
+                const overdue = isOverdue(due, t.status);
                 return (
                   <li key={t.id}>
                     <Link

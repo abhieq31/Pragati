@@ -201,6 +201,11 @@ export async function POST(req: NextRequest) {
       // Sign in with the standard default (FirstName@employeeId), then set
       // your own password on first login.
       mustChangePassword: true,
+      // Admin-provisioned accounts must still get the guided tour on first
+      // login — the model default is `true` (for migration safety of existing
+      // users), so new accounts have to opt in explicitly, exactly like the
+      // self-register and bootstrap paths do.
+      hasSeenTour: false,
     });
     await logOperation({
       action: 'user.create',

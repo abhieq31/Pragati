@@ -22,6 +22,25 @@ function fmtDate(d: any): string {
     : dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// Whole-calendar-day difference in local time (mirrors `daysUntil` in the app's
+// shared ui helpers): a date-only due stored at UTC midnight still resolves to
+// the right local day, so "due today" reads as 0 — never overdue. Kept local so
+// this report generator stays self-contained.
+function dueDaysFromNow(d: any): number | null {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return null;
+  const dueDay = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const t = new Date();
+  const today = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  return Math.round((dueDay - today) / 86400000);
+}
+function isTaskOverdue(target: any, status: any): boolean {
+  if (status === 'done') return false;
+  const d = dueDaysFromNow(target);
+  return d !== null && d < 0;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   todo: 'To do',
   in_progress: 'In progress',
@@ -54,7 +73,7 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
 
   const totalTasks = tasks.length;
   const doneTasks = tasks.filter((t) => t.status === 'done').length;
-  const overdueTasks = tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== 'done');
+  const overdueTasks = tasks.filter((t) => isTaskOverdue(t.dueDate, t.status));
   const overdue = overdueTasks.length;
   const blocked = tasks.filter((t) => t.status === 'blocked').length;
   const overallPct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
@@ -75,7 +94,7 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
   for (const t of tasks) {
     const key = t.projectCode || t.projectName || '—';
     const s = projStats.get(key) || { overdue: 0, blocked: 0, dueSoon: 0 };
-    if (t.status !== 'done' && t.dueDate && new Date(t.dueDate) < now) s.overdue++;
+    if (isTaskOverdue(t.dueDate, t.status)) s.overdue++;
     if (t.status === 'blocked') s.blocked++;
     if (t.status !== 'done' && t.dueDate && new Date(t.dueDate) >= now && new Date(t.dueDate) <= soonCutoff)
       s.dueSoon++;
@@ -208,7 +227,7 @@ export function buildTeamReportHtml(team: any, progress: any, board: any[], expo
         .sort(byTcd)
         .map((t) => {
           const target = t.ccTcd || t.dueDate;
-          const od = target && new Date(target) < new Date() && t.status !== 'done';
+          const od = isTaskOverdue(target, t.status);
           return `<tr>
         <td>${esc(t.title || '')}</td>
         <td>${esc(t.assigneeName || 'Unassigned')}</td>
@@ -372,8 +391,8 @@ export function buildTeamReportCsv(team: any, board: any[], exportedBy = ''): st
   ];
   const rows = tasks.map((t) => {
     const target = t.ccTcd || t.dueDate;
-    const overdue = target && new Date(target) < now && t.status !== 'done';
-    const daysOver = overdue ? Math.round((now.getTime() - new Date(target).getTime()) / 86400000) : '';
+    const overdue = isTaskOverdue(target, t.status);
+    const daysOver = overdue ? Math.abs(dueDaysFromNow(target) as number) : '';
     const subs = (t.subtaskCount ?? 0) > 0 ? `${t.subtasksDone ?? 0}/${t.subtaskCount}` : '';
     return [
       t.ccNo || '',

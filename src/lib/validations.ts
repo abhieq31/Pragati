@@ -338,3 +338,46 @@ export const WorkflowTemplateUpdateSchema = z.object({
   phases: z.array(WorkflowTemplatePhaseSchema).optional(),
 });
 export type WorkflowTemplateUpdateInput = z.infer<typeof WorkflowTemplateUpdateSchema>;
+
+/* ── CSV Activity tracker (digitizes the IDP team's Excel sheet) ─────────────
+   Stage keys/statuses mirror src/lib/csvStages.ts. The API normalizes stage
+   cells server-side, so the schema is permissive about the array itself and
+   only guards the value shapes. */
+
+export const CsvStageKeyEnum = z.enum(['cs', 'cdd_val', 'oq', 'cdd_prod', 'vsr', 'shf']);
+export const CsvStageStatusEnum = z.enum(['pending', 'in_progress', 'na', 'done']);
+
+const CsvStageCellSchema = z.object({
+  key: CsvStageKeyEnum,
+  docNo: z.string().max(200).default(''),
+  // Accept an ISO/date string or null; the route parses it into a Date.
+  approvalDate: z.string().max(40).nullable().optional(),
+  status: CsvStageStatusEnum.default('pending'),
+});
+
+const CsvRowSchema = z.object({
+  formatNumber: z.string().max(200).default(''),
+  formatTitle: z.string().max(300).default(''),
+  elogbookTitle: z.string().max(300).default(''),
+  sites: z.string().max(200).default(''),
+  stages: z.array(CsvStageCellSchema).default([]),
+});
+
+export const CsvActivityCreateSchema = z.object({
+  changeControlNo: z.string().min(1).max(120),
+  prNo: z.string().max(60).optional(),
+  title: z.string().max(300).optional(),
+  description: z.string().max(2000).optional(),
+  rows: z.array(CsvRowSchema).default([]),
+});
+
+export const CsvActivityUpdateSchema = z.object({
+  changeControlNo: z.string().min(1).max(120).optional(),
+  prNo: z.string().max(60).optional(),
+  title: z.string().max(300).optional(),
+  description: z.string().max(2000).optional(),
+  rows: z.array(CsvRowSchema).optional(),
+});
+
+export type CsvActivityCreateInput = z.infer<typeof CsvActivityCreateSchema>;
+export type CsvActivityUpdateInput = z.infer<typeof CsvActivityUpdateSchema>;
