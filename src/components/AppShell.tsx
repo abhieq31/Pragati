@@ -8,6 +8,7 @@ import { PragatiMark } from './PragatiMark';
 import { CurrentUserProvider } from './CurrentUserContext';
 import { AvatarRegistryProvider } from './AvatarRegistry';
 import { NotificationBell } from './NotificationBell';
+import { CommandPalette } from './CommandPalette';
 import { SidebarCalendar, clearSidebarCalendarCache } from './SidebarCalendar';
 import { clearActivityGraphCache } from './ActivityGraph';
 import { api } from '@/lib/client/api';
@@ -59,6 +60,7 @@ import {
   Layers,
   Globe,
   ExternalLink,
+  Search,
 } from 'lucide-react';
 
 export interface CurrentUser {
@@ -192,6 +194,8 @@ export default function AppShell({
 
   // Keyboard shortcuts modal state
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Cmd/Ctrl+K command palette state
+  const [paletteOpen, setPaletteOpen] = useState(false);
   // "G then X" two-key navigation buffer
   const gPressedRef = useRef(false);
   const gTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -240,6 +244,20 @@ export default function AppShell({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [toggleDark]);
+
+  // Cmd/Ctrl+K opens the command palette. Unlike the single-letter 'G…'
+  // sequence, a modifier chord is unambiguous typed-text input, so — like
+  // Cmd/Ctrl+D above — it fires even while a field is focused.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // ── Idle auto-logout ────────────────────────────────────────────────
   // 21 CFR Part 11 §11.10(d): unattended sessions must not stay open.
@@ -564,6 +582,37 @@ export default function AppShell({
             </button>
           </div>
         )}
+      </div>
+
+      {/* Command palette trigger — icon-only in the collapsed rail, a full
+          "Search… ⌘K" pill when expanded. */}
+      <div className={`px-3 pt-3 ${showCollapsed ? 'flex justify-center' : ''}`}>
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          title="Search (⌘K)"
+          className={`flex items-center gap-2 rounded-lg text-[12px] font-medium transition-colors ${
+            showCollapsed ? 'p-2 justify-center' : 'w-full px-2.5 py-1.5'
+          } ${
+            dark
+              ? 'text-white/40 hover:text-white/70 bg-white/[0.04] hover:bg-white/[0.08]'
+              : 'text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100'
+          }`}
+        >
+          <Search size={14} className="shrink-0" />
+          {!showCollapsed && (
+            <>
+              <span className="flex-1 text-left">Search</span>
+              <span
+                className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md ${
+                  dark ? 'bg-white/10 text-white/40' : 'bg-white text-slate-400 border border-slate-200'
+                }`}
+              >
+                ⌘K
+              </span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Nav items */}
@@ -1271,6 +1320,7 @@ export default function AppShell({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
+                    { keys: ['⌘', 'K'], label: 'Command palette' },
                     { keys: ['G', 'D'], label: 'Dashboard' },
                     { keys: ['G', 'P'], label: 'Projects' },
                     { keys: ['G', 'T'], label: 'Teams' },
@@ -1314,6 +1364,16 @@ export default function AppShell({
               </div>
             </div>
           )}
+
+          <CommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            dark={dark}
+            user={{ name: user.name, role: user.role, username: user.username }}
+            onToggleDark={toggleDark}
+            onOpenShortcuts={() => setShortcutsOpen(true)}
+            onLogout={logout}
+          />
 
           {/* Idle session warning — 5 min before automatic sign-out */}
           {idleWarning && (
