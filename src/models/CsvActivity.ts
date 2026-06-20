@@ -39,6 +39,10 @@ const RowSchema = new Schema(
 
 const CsvActivitySchema = new Schema(
   {
+    // The team that owns this sheet — CSV Activity lives inside a team's QMS
+    // module, gated by Team.modules.qms.enabled. Membership is the access
+    // boundary (see guardTeamMember).
+    teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
     changeControlNo: { type: String, required: true, maxlength: 120 }, // "C/CC/PCC/2026/0765"
     prNo: { type: String, default: '' }, // "108743"
     title: { type: String, default: '' },
@@ -50,8 +54,8 @@ const CsvActivitySchema = new Schema(
   { timestamps: true },
 );
 
+CsvActivitySchema.index({ teamId: 1, createdAt: -1 });
 CsvActivitySchema.index({ changeControlNo: 1 });
-CsvActivitySchema.index({ createdAt: -1 });
 
 export type CsvActivityDoc = InferSchemaType<typeof CsvActivitySchema> & {
   _id: mongoose.Types.ObjectId;

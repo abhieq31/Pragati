@@ -33,6 +33,7 @@ interface Row {
 }
 interface Sheet {
   id: string;
+  teamId: string;
   changeControlNo: string;
   prNo: string;
   title: string;
@@ -46,7 +47,13 @@ const STATUS_STYLE: Record<CsvStageStatus, { bg: string; fg: string }> = {
   na: { bg: '#f1f5f9', fg: '#64748b' },
 };
 
-export default function CsvSheetClient({ initialSheet }: { initialSheet: Sheet }) {
+export default function CsvSheetClient({
+  initialSheet,
+  teamName = 'Team',
+}: {
+  initialSheet: Sheet;
+  teamName?: string;
+}) {
   const isLead = useIsLead();
   const router = useRouter();
   const { showToast, ToastEl } = useToast();
@@ -151,7 +158,7 @@ export default function CsvSheetClient({ initialSheet }: { initialSheet: Sheet }
     if (!confirm(`Delete the entire sheet ${sheet.changeControlNo}? This cannot be undone.`)) return;
     try {
       await api(`/csv-activity/${sheet.id}`, { method: 'DELETE' });
-      router.push('/csv-activity');
+      router.push(`/teams/${sheet.teamId}`);
     } catch (e: any) {
       showToast(e.message || 'Could not delete the sheet.', 'err');
     }
@@ -165,8 +172,11 @@ export default function CsvSheetClient({ initialSheet }: { initialSheet: Sheet }
   return (
     <div className="space-y-4 max-w-[1400px]">
       {ToastEl}
-      <Link href="/csv-activity" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600">
-        <ArrowLeft size={15} /> All CSV activity sheets
+      <Link
+        href={`/teams/${sheet.teamId}`}
+        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600"
+      >
+        <ArrowLeft size={15} /> {teamName} · QMS
       </Link>
 
       <div className="flex items-start justify-between gap-4 flex-wrap">

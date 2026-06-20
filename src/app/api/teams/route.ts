@@ -8,7 +8,7 @@ import { can } from '@/lib/permissions';
 import { handleError, readBody } from '@/lib/http';
 import { team as teamS } from '@/lib/serialize';
 import { User } from '@/models/User';
-import { TeamFunctionEnum } from '@/lib/validations';
+import { TeamFunctionEnum, TeamModulesSchema } from '@/lib/validations';
 import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -19,6 +19,7 @@ const Create = z.object({
   leadId: z.string().optional(),
   memberIds: z.array(z.string()).optional(),
   function: TeamFunctionEnum.optional(),
+  modules: TeamModulesSchema.optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       leadId: body.leadId || undefined,
       memberIds: body.memberIds || (body.leadId ? [body.leadId] : []),
       function: body.function || 'general',
+      modules: body.modules || undefined,
     });
     await logOperation({
       action: 'team.create',

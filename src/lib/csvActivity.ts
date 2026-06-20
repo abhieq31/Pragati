@@ -39,6 +39,7 @@ export function serializeCsvActivity(doc: CsvActivityDoc) {
   const rows = (doc.rows || []) as any[];
   return {
     id: String(doc._id),
+    teamId: String(doc.teamId),
     changeControlNo: doc.changeControlNo,
     prNo: doc.prNo || '',
     title: doc.title || '',

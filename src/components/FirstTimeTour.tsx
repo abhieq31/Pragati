@@ -15,7 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 
-const STORAGE_KEY = 'pragati-tour-v4';
+const STORAGE_KEY = 'pragati-tour-v5';
 
 /* Hand-written accents (step counter, "you are here" captions) use a casual
    system stack — no webfont download, so the tour stays weightless. */
@@ -85,14 +85,27 @@ function buildSteps(role: string): Step[] {
       mobileTarget: '[data-mobile-tour="nav-teams"]',
       title: isLead ? 'Lead your teams' : 'Your teams',
       body: isLead
-        ? "Create teams, pick members, and steer delivery. Every team page opens its own bird's-eye view and exports reports."
-        : 'See the teams you belong to and the colleagues you deliver with.',
+        ? "Create teams, pick members, and steer delivery. Each team can switch on extra modules — Quality (QMS) tracking and a Support-ticket queue — right from its settings. Every team page also opens its own bird's-eye view and exports reports."
+        : 'See the teams you belong to and the colleagues you deliver with. If your team has Quality (QMS) tracking or a ticket queue switched on, you’ll find them as tabs on the team page.',
       icon: Users,
       iconBg: '#E8F5E9',
       iconColor: '#2E7D32',
       side: 'right',
     },
   ];
+
+  if (isLead) {
+    steps.push({
+      target: '[data-tour="nav-teams"]',
+      mobileTarget: '[data-mobile-tour="nav-teams"]',
+      title: 'Switch on team modules',
+      body: 'New: when you create or edit a team, toggle on Quality (QMS) tracking — a digital CSV/validation status sheet per change control — and a lightweight Support-ticket queue. They stay hidden until you turn them on, so teams that don’t need them never see the clutter.',
+      icon: Sparkles,
+      iconBg: '#E0F7FA',
+      iconColor: '#0E7490',
+      side: 'right',
+    });
+  }
 
   if (isAdmin) {
     steps.push({

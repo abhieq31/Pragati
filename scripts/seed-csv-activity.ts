@@ -11,6 +11,7 @@ import 'dotenv/config';
 import mongoose from 'mongoose';
 import { connectDB } from '../src/lib/db';
 import { User } from '../src/models/User';
+import { Team } from '../src/models/Team';
 import { CsvActivity } from '../src/models/CsvActivity';
 import { normalizeRows } from '../src/lib/csvActivity';
 
@@ -138,25 +139,53 @@ async function main() {
   const CHANGE_CONTROL = 'C/CC/PCC/2026/0765';
 
   const owner =
-    (await User.findOne({ role: { $in: ['master_admin', 'admin'] } }, '_id name').lean()) ||
+    (await User.findOne({ role: { $in: ['master_admin', 'admin', 'lead'] } }, '_id name').lean()) ||
     (await User.findOne({}, '_id name').lean());
   if (!owner) {
     console.error('[seed:csv-activity] No users found — seed users first.');
     await mongoose.disconnect();
     process.exit(1);
   }
+  const ownerId = (owner as any)._id;
 
-  await CsvActivity.deleteMany({ changeControlNo: CHANGE_CONTROL });
+  // CSV Activity now lives inside a team's QMS module. Attach to an existing
+  // team the owner can see (preferring one that already has QMS on), else
+  // create a dedicated IDP team with QMS enabled.
+  let team =
+    (await Team.findOne({ 'modules.qms.enabled': true })) ||
+    (await Team.findOne({ $or: [{ leadId: ownerId }, { memberIds: ownerId }] })) ||
+    (await Team.findOne({}));
+  if (!team) {
+    team = await Team.create({
+      name: 'IDP / CSV Team',
+      description: 'Computer System Validation activity tracking.',
+      leadId: ownerId,
+      memberIds: [ownerId],
+      function: 'general',
+      modules: { qms: { enabled: true }, tickets: { enabled: true } },
+    });
+  } else if (!team.modules?.qms?.enabled) {
+    team.modules = {
+      qms: { enabled: true },
+      tickets: { enabled: team.modules?.tickets?.enabled ?? false },
+    } as any;
+    await team.save();
+  }
+
+  await CsvActivity.deleteMany({ changeControlNo: CHANGE_CONTROL, teamId: team._id });
   const sheet = await CsvActivity.create({
+    teamId: team._id,
     changeControlNo: CHANGE_CONTROL,
     prNo: '108743',
     title: 'CSV activity status — IDP team',
-    createdBy: (owner as any)._id,
+    createdBy: ownerId,
     createdByName: (owner as any).name || '',
     rows: normalizeRows(rows),
   });
 
-  console.log(`[seed:csv-activity] Created ${CHANGE_CONTROL} with ${sheet.rows.length} formats.`);
+  console.log(
+    `[seed:csv-activity] Created ${CHANGE_CONTROL} with ${sheet.rows.length} formats on team "${team.name}".`,
+  );
   await mongoose.disconnect();
 }
 

@@ -94,6 +94,10 @@ export function team(t: any, extras: Any = {}) {
     leadId: id(t.leadId),
     function: t.function,
     memberIds: (t.memberIds || []).map((m: any) => id(m)),
+    modules: {
+      qms: { enabled: !!t.modules?.qms?.enabled },
+      tickets: { enabled: !!t.modules?.tickets?.enabled },
+    },
     ...extras,
   };
 }

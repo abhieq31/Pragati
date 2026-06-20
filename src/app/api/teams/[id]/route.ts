@@ -92,6 +92,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (lead) ids.add(String(lead));
       patch.memberIds = Array.from(ids);
     }
+    if (body.modules !== undefined) {
+      // Merge so flipping one module never clears the other.
+      const cur = (current as any).modules || {};
+      patch.modules = {
+        qms: { enabled: body.modules.qms?.enabled ?? cur.qms?.enabled ?? false },
+        tickets: { enabled: body.modules.tickets?.enabled ?? cur.tickets?.enabled ?? false },
+      };
+    }
 
     await Team.updateOne({ _id: params.id }, { $set: patch });
     const fresh = await Team.findById(params.id).lean();

@@ -205,6 +205,13 @@ export const TeamFunctionEnum = z.enum([
   'training',
 ]);
 
+// Opt-in team capabilities. Partial on purpose — a caller can flip one module
+// without resending the others.
+export const TeamModulesSchema = z.object({
+  qms: z.object({ enabled: z.boolean() }).partial().optional(),
+  tickets: z.object({ enabled: z.boolean() }).partial().optional(),
+});
+
 // PM-only update. Each field independently optional so callers can patch
 // just the bits they need (rename, swap lead, add/remove members).
 export const TeamUpdateSchema = z.object({
@@ -216,6 +223,7 @@ export const TeamUpdateSchema = z.object({
     .max(200)
     .optional(),
   function: TeamFunctionEnum.optional(),
+  modules: TeamModulesSchema.optional(),
 });
 export type TeamUpdateInput = z.infer<typeof TeamUpdateSchema>;
 
@@ -364,6 +372,7 @@ const CsvRowSchema = z.object({
 });
 
 export const CsvActivityCreateSchema = z.object({
+  teamId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid team id'),
   changeControlNo: z.string().min(1).max(120),
   prNo: z.string().max(60).optional(),
   title: z.string().max(300).optional(),
@@ -381,3 +390,33 @@ export const CsvActivityUpdateSchema = z.object({
 
 export type CsvActivityCreateInput = z.infer<typeof CsvActivityCreateSchema>;
 export type CsvActivityUpdateInput = z.infer<typeof CsvActivityUpdateSchema>;
+
+/* ── Support tickets (per-team request queue) ───────────────────────────── */
+
+export const TicketStatusEnum = z.enum(['open', 'in_progress', 'waiting', 'resolved', 'closed']);
+export const TicketPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
+
+export const TicketCreateSchema = z.object({
+  teamId: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid team id'),
+  title: z.string().min(1).max(300),
+  description: z.string().max(8000).optional(),
+  requesterName: z.string().max(200).optional(),
+  assigneeId: nullableObjectId,
+  priority: TicketPriorityEnum.optional(),
+  category: z.string().max(120).optional(),
+});
+
+export const TicketUpdateSchema = z.object({
+  title: z.string().min(1).max(300).optional(),
+  description: z.string().max(8000).optional(),
+  requesterName: z.string().max(200).optional(),
+  assigneeId: nullableObjectId,
+  priority: TicketPriorityEnum.optional(),
+  status: TicketStatusEnum.optional(),
+  category: z.string().max(120).optional(),
+  // Optional one-shot comment append on any update.
+  comment: z.string().min(1).max(4000).optional(),
+});
+
+export type TicketCreateInput = z.infer<typeof TicketCreateSchema>;
+export type TicketUpdateInput = z.infer<typeof TicketUpdateSchema>;

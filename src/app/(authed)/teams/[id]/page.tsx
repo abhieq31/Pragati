@@ -29,6 +29,16 @@ const ActivityGraph = dynamic(() => import('@/components/ActivityGraph').then((m
   ssr: false,
   loading: () => <div className="h-40 skeleton rounded-xl" />,
 });
+// Opt-in team modules — loaded only when the team has them enabled and the
+// viewer opens the tab, so they cost nothing for teams that don't use them.
+const QmsPanel = dynamic(() => import('./QmsPanel').then((m) => m.QmsPanel), {
+  ssr: false,
+  loading: () => <div className="h-40 skeleton rounded-xl" />,
+});
+const TicketsPanel = dynamic(() => import('./TicketsPanel').then((m) => m.TicketsPanel), {
+  ssr: false,
+  loading: () => <div className="h-40 skeleton rounded-xl" />,
+});
 import {
   Card,
   ProgressBar,
@@ -168,7 +178,7 @@ export default function TeamDetailPage() {
   // "Foresight" (lead/admin only) sits between the two — the predictive capacity
   // read, on demand rather than taking up permanent vertical space. Everyone
   // opens on Work.
-  const [view, setView] = useState<'work' | 'foresight' | 'projects'>('work');
+  const [view, setView] = useState<'work' | 'foresight' | 'projects' | 'qms' | 'tickets'>('work');
 
   async function load() {
     setLoadError('');
@@ -640,6 +650,8 @@ export default function TeamDetailPage() {
                 ['work', isLead ? 'Work' : 'My tasks'],
                 ...(isLead ? [['foresight', 'Foresight']] : []),
                 ['projects', 'Projects'],
+                ...(team.modules?.qms?.enabled ? [['qms', 'QMS']] : []),
+                ...(team.modules?.tickets?.enabled ? [['tickets', 'Tickets']] : []),
               ] as [string, string][]
             ).map(([k, l]) => (
               <button
@@ -728,6 +740,14 @@ export default function TeamDetailPage() {
 
           {/* ── Foresight — predictive capacity outlook (lead/admin only) ──── */}
           {view === 'foresight' && isLead && <TeamForesight teamId={id} />}
+
+          {/* ── QMS — quality tracking (CSV Activity), opt-in per team ──────── */}
+          {view === 'qms' && team.modules?.qms?.enabled && <QmsPanel teamId={id} isLead={isLead} />}
+
+          {/* ── Tickets — support request queue, opt-in per team ───────────── */}
+          {view === 'tickets' && team.modules?.tickets?.enabled && (
+            <TicketsPanel teamId={id} isLead={isLead} members={team.members || []} />
+          )}
 
           {view === 'projects' && (
             <div className="space-y-4">

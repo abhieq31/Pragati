@@ -1,9 +1,26 @@
 import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 
+// Opt-in team capabilities. Every module defaults OFF, so an existing team is
+// unchanged until its owner switches one on from the team form. New quality
+// tools (deviations, CAPA, audits) snap in here without new plumbing — the
+// team page reads `modules.<key>.enabled` to decide whether to show the tab.
+const ModulesSchema = new Schema(
+  {
+    qms: {
+      enabled: { type: Boolean, default: false }, // Quality (QMS) tracking — houses CSV Activity
+    },
+    tickets: {
+      enabled: { type: Boolean, default: false }, // Support ticket queue
+    },
+  },
+  { _id: false },
+);
+
 const TeamSchema = new Schema(
   {
     name: { type: String, required: true, unique: true },
     description: { type: String, default: '' },
+    modules: { type: ModulesSchema, default: () => ({}) },
     leadId: { type: Schema.Types.ObjectId, ref: 'User' },
     memberIds: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     // Operating function: general, ctb (change the business), rtb (run the

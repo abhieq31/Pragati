@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { CsvActivity } from '@/models/CsvActivity';
 import { requireUser, canMutate } from '@/lib/auth';
+import { guardTeamMember } from '@/lib/teamAuth';
 import { handleError, readBody } from '@/lib/http';
 import { CsvActivityCreateSchema } from '@/lib/validations';
 import { normalizeRows, serializeCsvActivity } from '@/lib/csvActivity';
@@ -9,14 +10,18 @@ import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
+// CSV Activity sheets live inside a team's QMS module. Every read/write is
+// gated by team membership; a ?teamId= is required to list.
 export async function GET(req: NextRequest) {
   try {
-    const { error } = await requireUser(req);
+    const { error, user } = await requireUser(req);
     if (error) return error;
     await connectDB();
-    const sheets = await CsvActivity.find().sort({ createdAt: -1 }).limit(200);
-    // List view only needs the header + a count, but serialize is cheap and
-    // keeps one shape; the grid page refetches the full sheet by id anyway.
+    const teamId = req.nextUrl.searchParams.get('teamId');
+    if (!teamId) return NextResponse.json({ error: 'teamId is required' }, { status: 400 });
+    const denied = await guardTeamMember(teamId, String(user.sub), user.role);
+    if (denied) return denied;
+    const sheets = await CsvActivity.find({ teamId }).sort({ createdAt: -1 }).limit(200);
     return NextResponse.json(sheets.map((s) => serializeCsvActivity(s)));
   } catch (e) {
     return handleError(e);
@@ -32,7 +37,10 @@ export async function POST(req: NextRequest) {
     }
     await connectDB();
     const body = await readBody(req, CsvActivityCreateSchema);
+    const denied = await guardTeamMember(body.teamId, String(user.sub), user.role);
+    if (denied) return denied;
     const sheet = await CsvActivity.create({
+      teamId: body.teamId,
       changeControlNo: body.changeControlNo,
       prNo: body.prNo || '',
       title: body.title || '',
@@ -49,6 +57,7 @@ export async function POST(req: NextRequest) {
       targetId: String(sheet._id),
       targetLabel: sheet.changeControlNo,
       summary: `Created CSV activity sheet ${sheet.changeControlNo}`,
+      meta: { teamId: body.teamId },
     });
     return NextResponse.json(serializeCsvActivity(sheet), { status: 201 });
   } catch (e) {
