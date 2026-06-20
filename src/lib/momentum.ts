@@ -20,32 +20,28 @@ export interface MomentumStats {
   doneThisWeek: number; // rolling 7 days
 }
 
-export async function momentumStats(userId: string): Promise<MomentumStats> {
-  // 120 days of completions is plenty to compute any believable streak and
-  // keeps the query small. Capped scan; only the timestamp is fetched.
-  const since = new Date();
-  since.setDate(since.getDate() - 120);
-  const completed = await Task.find(
-    { assigneeId: userId, status: 'done', completedAt: { $gte: since } },
-    'completedAt',
-  ).lean();
+const LOOKBACK_DAYS = 120;
 
+/** Pure core: turn a set of completion timestamps into the momentum numbers.
+ *  No I/O — kept separate from `momentumStats` so the streak/window logic is
+ *  unit-testable without a database. */
+export function computeMomentum(completedAts: (Date | string | null | undefined)[], now = new Date()): MomentumStats {
   const days = new Set<string>();
   let doneToday = 0;
   let doneThisWeek = 0;
-  const now = new Date();
   const todayKey = dayKey(now);
   const weekAgo = now.getTime() - 7 * 86400000;
-  for (const t of completed as any[]) {
-    if (!t.completedAt) continue;
-    const d = new Date(t.completedAt);
+  for (const raw of completedAts) {
+    if (!raw) continue;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) continue;
     days.add(dayKey(d));
     if (dayKey(d) === todayKey) doneToday++;
     if (d.getTime() >= weekAgo) doneThisWeek++;
   }
 
   let streak = 0;
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < LOOKBACK_DAYS; i++) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     if (days.has(dayKey(d))) streak++;
@@ -53,4 +49,17 @@ export async function momentumStats(userId: string): Promise<MomentumStats> {
   }
 
   return { streak, doneToday, doneThisWeek };
+}
+
+export async function momentumStats(userId: string): Promise<MomentumStats> {
+  // 120 days of completions is plenty to compute any believable streak and
+  // keeps the query small. Capped scan; only the timestamp is fetched.
+  const since = new Date();
+  since.setDate(since.getDate() - LOOKBACK_DAYS);
+  const completed = await Task.find(
+    { assigneeId: userId, status: 'done', completedAt: { $gte: since } },
+    'completedAt',
+  ).lean();
+
+  return computeMomentum((completed as any[]).map((t) => t.completedAt));
 }
