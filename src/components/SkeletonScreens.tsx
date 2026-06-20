@@ -117,7 +117,7 @@ function StatCards({ count = 4 }: { count?: number }) {
 
 function CardGridSkeleton({ count = 6, avatar = false }: { count?: number; avatar?: boolean }) {
   return (
-    <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))' }}>
+    <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="card overflow-hidden">
           <Skel className="h-1.5 w-full rounded-none" />

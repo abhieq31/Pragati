@@ -117,6 +117,8 @@ function ToastEl({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string)
         )}
       </div>
       <button
+        type="button"
+        aria-label="Dismiss notification"
         onClick={(e) => {
           e.stopPropagation();
           dismiss();

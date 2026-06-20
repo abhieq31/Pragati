@@ -61,8 +61,11 @@ export function DatePicker({
       const spaceBelow = vh - r.bottom;
       const openUp = spaceBelow < POP_HEIGHT + 12 && r.top > POP_HEIGHT + 12;
       let left = r.right - POP_WIDTH; // right-align with trigger
-      if (left < 8) left = 8; // clamp to viewport
-      if (left + POP_WIDTH > vw - 8) left = vw - POP_WIDTH - 8;
+      // Clamp to the viewport on both edges — on a viewport narrower than the
+      // popover itself (only possible below ~270px), the right-edge clamp
+      // alone could push `left` negative; re-clamp to the left edge after.
+      left = Math.min(left, vw - POP_WIDTH - 8);
+      left = Math.max(left, 8);
       const top = openUp ? r.top - POP_HEIGHT - 6 : r.bottom + 6;
       setCoords({ top, left });
     };
