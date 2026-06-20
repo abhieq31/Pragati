@@ -13,6 +13,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   try {
     const { error, user } = await requireRole(req, 'lead', 'admin');
     if (error) return error;
+    if (!mongoose.isValidObjectId(params.userId)) {
+      return NextResponse.json({ error: 'Invalid user id' }, { status: 400 });
+    }
     await connectDB();
     const denied = await guardTeamOwner(params.id, user.sub, user.role);
     if (denied) return denied;

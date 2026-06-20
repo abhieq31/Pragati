@@ -32,6 +32,24 @@ function isInfraError(msg: string) {
   return INFRA_PATTERNS.some((re) => re.test(msg));
 }
 
+// Mongoose/MongoDB throw with internal, implementation-leaking wording (field
+// paths, index names, BSON casting detail). These are really input-validation
+// failures — map them to a clean 400/409 instead of falling through to the
+// generic 500 branch, which used to forward the raw driver message verbatim.
+function isCastError(e: unknown): boolean {
+  return !!e && typeof e === 'object' && (e as any).name === 'CastError';
+}
+
+function isDuplicateKeyError(e: unknown): boolean {
+  return !!e && typeof e === 'object' && ((e as any).code === 11000 || (e as any).code === 11001);
+}
+
+function mongooseValidationMessage(e: unknown): string | null {
+  if (!e || typeof e !== 'object' || (e as any).name !== 'ValidationError' || !(e as any).errors) return null;
+  const first = Object.values((e as any).errors as Record<string, { message?: string }>)[0];
+  return first?.message || 'Validation failed';
+}
+
 // Next.js uses thrown errors as control flow: redirect(), notFound(), and the
 // DynamicServerError it raises to bail out of static rendering all surface as
 // exceptions carrying a `digest`. These are NOT failures — they must propagate
@@ -59,9 +77,24 @@ export function handleError(e: unknown) {
     statusCode: 500,
   });
 
+  if (isCastError(e)) {
+    return NextResponse.json({ error: 'Invalid id or field value' }, { status: 400 });
+  }
+  if (isDuplicateKeyError(e)) {
+    return NextResponse.json({ error: 'That value is already in use' }, { status: 409 });
+  }
+  const validationMsg = mongooseValidationMessage(e);
+  if (validationMsg) {
+    return NextResponse.json({ error: validationMsg }, { status: 400 });
+  }
+
+  // Anything left is a genuinely unexpected failure — never forward the raw
+  // driver/runtime message (it can carry stack-adjacent implementation
+  // detail), even when it isn't one of the known infra patterns above. It's
+  // already been logged + captured for the admin monitor above.
   const userMsg = isInfraError(raw)
     ? 'The service is temporarily unavailable. Please try again in a moment or contact your administrator.'
-    : raw;
+    : 'Something went wrong. Please try again or contact your administrator.';
 
   return NextResponse.json({ error: userMsg }, { status: 500 });
 }
