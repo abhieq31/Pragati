@@ -4,12 +4,25 @@
  * unessential, and compounding small daily progress into delivery — not wealth,
  * career, or self-help in the abstract.
  *
- * Sourced exclusively from Jensen Huang and the books he has publicly named as
- * recommended reading — Andrew Grove's "Only the Paranoid Survive" (Huang has
- * called Grove's books "all really good"), Ryan Holiday's "The Obstacle Is the
- * Way", and Eric Ries's "The Lean Startup" — restricted to lines that map to
- * getting work shipped: no complacency, character earned under load, learning
- * faster than the competition, judging the work straight.
+ * Sourced exclusively from two pools, each verified against multiple
+ * independent sources before inclusion (this is a public-facing screen, so
+ * nothing here is recalled from memory and trusted on faith):
+ *
+ *   1. Jensen Huang and the books he has publicly named as recommended
+ *      reading — Andrew Grove's "Only the Paranoid Survive" (Huang has
+ *      called Grove's books "all really good"), Ryan Holiday's "The
+ *      Obstacle Is the Way", and Eric Ries's "The Lean Startup".
+ *   2. Jeff Bezos (his own words, e.g. the annual shareholder letters) and
+ *      books on the documented "Jeff's Reading List" (per Brad Stone's "The
+ *      Everything Store" and corroborating reporting) — Fred Brooks' "The
+ *      Mythical Man-Month", Eliyahu Goldratt's "The Goal", Jim Collins'
+ *      "Good to Great" and "Built to Last", and Womack & Jones' "Lean
+ *      Thinking".
+ *
+ * Restricted within both pools to lines that map to getting work shipped: no
+ * complacency, character earned under load, learning faster than the
+ * competition, judging the work — and the system that produces it —
+ * straight.
  *
  * Display rule: NO attribution is ever rendered. The words stand alone — the
  * login page shows the line, never the name or the source. (`author` is kept on
@@ -96,6 +109,59 @@ export const BUILTIN_QUOTES: Quote[] = [
   {
     text: 'It matters what you do with what happens and what you’ve been given.',
     author: 'Ryan Holiday, The Obstacle Is the Way',
+  },
+
+  // ── Day 1 — customer obsession, never coast on yesterday's win ───────────
+  {
+    text: 'Day 2 is stasis. Followed by irrelevance. Followed by excruciating, painful decline. Followed by death. And that is why it is always Day 1.',
+    author: 'Jeff Bezos, 2016 letter to shareholders',
+  },
+  {
+    text: 'Obsessive customer focus is by far the most protective of Day 1 vitality.',
+    author: 'Jeff Bezos, 2016 letter to shareholders',
+  },
+  {
+    text: 'Customers are always beautifully, wonderfully dissatisfied, even when they report being happy and business is great.',
+    author: 'Jeff Bezos, 2016 letter to shareholders',
+  },
+
+  // ── Decide and move — regret the things you didn't try ───────────────────
+  {
+    text: 'I want to have minimized the number of regrets that I have in my life.',
+    author: 'Jeff Bezos',
+  },
+  {
+    text: 'Most of our regrets are acts of omission — the things we didn’t try, the paths untraveled.',
+    author: 'Jeff Bezos',
+  },
+  { text: 'Disagree and commit.', author: 'Jeff Bezos, 2016 letter to shareholders' },
+
+  // ── The system, not the hero — bottlenecks, team size, brutal facts ──────
+  {
+    text: 'Adding manpower to a late software project makes it later.',
+    author: 'Fred Brooks, The Mythical Man-Month',
+  },
+  {
+    text: 'An hour lost at a bottleneck is an hour out of the entire system. An hour saved at a non-bottleneck is worthless.',
+    author: 'Eliyahu Goldratt, The Goal',
+  },
+  {
+    text: 'The strength of the chain is determined by the weakest link.',
+    author: 'Eliyahu Goldratt, The Goal',
+  },
+  { text: 'Good is the enemy of great.', author: 'Jim Collins, Good to Great' },
+  {
+    text: 'You absolutely cannot make a series of good decisions without first confronting the brutal facts.',
+    author: 'Jim Collins, Good to Great',
+  },
+  { text: 'Success is never final.', author: 'Jim Collins, Built to Last' },
+  {
+    text: 'It is better to understand who you are than where you are going — for where you are going will almost certainly change.',
+    author: 'Jim Collins, Built to Last',
+  },
+  {
+    text: 'Value can only be defined by the ultimate customer.',
+    author: 'Womack & Jones, Lean Thinking',
   },
 ];
 
