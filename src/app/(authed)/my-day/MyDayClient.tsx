@@ -14,8 +14,6 @@ import {
   Sparkles,
   Calendar,
   Zap,
-  ChevronDown,
-  ChevronUp,
   ChevronRight,
   BookmarkCheck,
   Shield,
@@ -119,23 +117,6 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savingNote, setSavingNote] = useState(false);
   const [noteErr, setNoteErr] = useState('');
-  // Notes are secondary to the day's todos — collapsed by default so the page
-  // reads as a clean todo surface first. The choice is remembered per browser.
-  const [open, setOpen] = useState<boolean>(false);
-  useEffect(() => {
-    try {
-      setOpen(localStorage.getItem('pragati-notes-open') === '1');
-    } catch {}
-  }, []);
-  function toggleOpen() {
-    setOpen((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem('pragati-notes-open', next ? '1' : '0');
-      } catch {}
-      return next;
-    });
-  }
 
   const load = useCallback(async () => {
     try {
@@ -229,48 +210,16 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
 
   return (
     <div className="flex flex-col">
-      {/* Collapsible header — click to reveal the notes surface. Keeps the day
-          minimal and todo-first until the user actually wants their notes. */}
-      <button
-        type="button"
-        onClick={toggleOpen}
-        aria-expanded={open}
-        className="group flex items-center gap-2 mb-3 w-full text-left"
-      >
-        <div className="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-500/15 flex items-center justify-center">
-          <FileText size={13} className="text-amber-600 dark:text-amber-400" />
+      {/* The modal chrome around this panel already carries the "Notes"
+          title (see NotesFAB) — no second collapsible header needed here. */}
+      {!loading && notes.length > 0 && (
+        <div className="mb-3 text-[10px] font-bold text-slate-400 dark:text-white/30 tabular-nums">
+          {notes.length} note{notes.length === 1 ? '' : 's'}
         </div>
-        <h2 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-600 dark:text-white/50">
-          Notes
-        </h2>
-        {!loading && notes.length > 0 && (
-          <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 tabular-nums">
-            {notes.length}
-          </span>
-        )}
-        <span className="text-[9px] font-bold text-slate-300 dark:text-white/20">permanent</span>
-        <span className="ml-auto text-slate-400 dark:text-white/30 group-hover:text-slate-600 dark:group-hover:text-white/50 transition-colors">
-          {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-        </span>
-      </button>
-
-      {!open && (
-        <button
-          type="button"
-          onClick={toggleOpen}
-          className="rounded-xl border border-dashed border-slate-200 dark:border-white/[0.08] px-3 py-2.5 text-left text-[12px] text-slate-400 dark:text-white/30 hover:border-amber-300 hover:text-slate-600 dark:hover:text-white/50 transition-colors"
-        >
-          {loading
-            ? 'Loading notes…'
-            : notes.length > 0
-              ? `${notes.length} note${notes.length === 1 ? '' : 's'} — tap to open`
-              : 'Tap to jot a permanent note'}
-        </button>
       )}
 
-      {open && (
-        <>
-          {/* Add note form */}
+      <>
+        {/* Add note form */}
           <form onSubmit={addNote} className="mb-4">
             <div className="rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-white/[0.03] overflow-hidden focus-within:border-amber-400/60 dark:focus-within:border-amber-500/40 focus-within:shadow-[0_0_0_3px_rgba(245,158,11,0.08)] transition-all">
               {showTitle && (
@@ -456,8 +405,7 @@ function NotesPanel({ onSaveWhiteboardRequest }: { onSaveWhiteboardRequest?: () 
               </div>
             ))}
           </div>
-        </>
-      )}
+      </>
     </div>
   );
 }
@@ -540,28 +488,39 @@ function NotesFAB() {
       </button>
       {open && (
         <ModalPortal>
-          <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={() => setOpen(false)}>
-            <aside
-              className="h-full w-full max-w-md overflow-y-auto bg-slate-50 p-5 shadow-2xl dark:bg-[#1e1e1c]"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-5 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 flex">
+            <div
+              className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
+              onClick={() => setOpen(false)}
+            />
+            <div className="relative w-full h-full bg-slate-50 dark:bg-[#1e1e1c] shadow-2xl flex flex-col fade-in-soft">
+              <div
+                className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-white/[0.07] shrink-0"
+                style={{ background: 'linear-gradient(to right, rgba(245,158,11,0.08), transparent)' }}
+              >
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                  <FileText size={16} className="text-white" />
+                </div>
                 <div>
                   <div className="text-sm font-black text-slate-800 dark:text-white/90">Notes</div>
-                  <div className="text-[11px] text-slate-400">
+                  <div className="text-[10px] text-slate-400 dark:text-white/30">
                     Ideas and decisions, out of your task flow.
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700 dark:hover:bg-white/5"
+                  className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-white/35 hover:text-slate-700 dark:hover:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
-              <NotesPanel />
-            </aside>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="max-w-2xl mx-auto p-5">
+                  <NotesPanel />
+                </div>
+              </div>
+            </div>
           </div>
         </ModalPortal>
       )}
