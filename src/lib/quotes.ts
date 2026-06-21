@@ -4,10 +4,12 @@
  * unessential, and compounding small daily progress into delivery — not wealth,
  * career, or self-help in the abstract.
  *
- * Sourced from Naval Ravikant and the bookshelf he points to — Charlie Munger,
- * Marcus Aurelius, Seneca, Bruce Lee, James Clear, Richard Feynman, David
- * Deutsch, Daniel Kahneman, Will Durant, Viktor Frankl — but only the lines
- * that map to getting work shipped.
+ * Sourced exclusively from Jensen Huang and the books he has publicly named as
+ * recommended reading — Andrew Grove's "Only the Paranoid Survive" (Huang has
+ * called Grove's books "all really good"), Ryan Holiday's "The Obstacle Is the
+ * Way", and Eric Ries's "The Lean Startup" — restricted to lines that map to
+ * getting work shipped: no complacency, character earned under load, learning
+ * faster than the competition, judging the work straight.
  *
  * Display rule: NO attribution is ever rendered. The words stand alone — the
  * login page shows the line, never the name or the source. (`author` is kept on
@@ -29,151 +31,72 @@ export interface Quote {
 }
 
 export const BUILTIN_QUOTES: Quote[] = [
-  // ── Do the work — action beats talk ──────────────────────────────────────
-  { text: 'Inspiration is perishable — act on it immediately.', author: 'The Almanack of Naval Ravikant' },
-  { text: 'Impatience with actions, patience with results.', author: 'The Almanack of Naval Ravikant' },
+  // ── Do the work — struggle is the price of the result ────────────────────
   {
-    text: 'Reading is faster than listening. Doing is faster than watching.',
-    author: 'The Almanack of Naval Ravikant',
+    text: 'You have to suffer, struggle, and endeavor to do hard things to really appreciate what you’ve done.',
+    author: 'Jensen Huang',
+  },
+  { text: 'Action is commonplace, right action is not.', author: 'Ryan Holiday, The Obstacle Is the Way' },
+  { text: 'If you cannot fail, you cannot learn.', author: 'Eric Ries, The Lean Startup' },
+  {
+    text: 'The only way to win is to learn faster than anyone else.',
+    author: 'Eric Ries, The Lean Startup',
+  },
+
+  // ── No complacency — stay paranoid about what matters ────────────────────
+  {
+    text: 'Success breeds complacency. Complacency breeds failure. Only the paranoid survive.',
+    author: 'Andrew Grove, Only the Paranoid Survive',
   },
   {
-    text: 'Knowing is not enough; we must apply. Willing is not enough; we must do.',
-    author: 'Bruce Lee, Striking Thoughts',
+    text: 'When it comes to business, I believe in the value of paranoia.',
+    author: 'Andrew Grove, Only the Paranoid Survive',
   },
   {
-    text: 'If you spend too much time thinking about a thing, you’ll never get it done.',
-    author: 'Bruce Lee, Striking Thoughts',
+    text: 'Most companies don’t die because they are wrong; most die because they don’t commit themselves.',
+    author: 'Andrew Grove, Only the Paranoid Survive',
+  },
+  { text: 'There are two options: adapt or die.', author: 'Andrew Grove, Only the Paranoid Survive' },
+  {
+    text: 'Don’t differentiate without a difference.',
+    author: 'Andrew Grove, Only the Paranoid Survive',
   },
   {
-    text: 'The impediment to action advances action. What stands in the way becomes the way.',
-    author: 'Marcus Aurelius, Meditations',
+    text: 'Bad companies are destroyed by crisis. Good companies survive them. Great companies are improved by them.',
+    author: 'Andrew Grove, Only the Paranoid Survive',
   },
+
+  // ── Character & ownership — earned under load ─────────────────────────────
+  { text: 'I wish upon you ample doses of pain and suffering.', author: 'Jensen Huang' },
+  { text: 'Greatness is not intelligence. Greatness comes from character.', author: 'Jensen Huang' },
   {
-    text: 'Waste no more time arguing about what a good man should be. Be one.',
-    author: 'Marcus Aurelius, Meditations',
-  },
-  {
-    text: 'Get active in your own rescue — and do it while you can.',
-    author: 'Marcus Aurelius, Meditations',
+    text: 'Nobody owes you a career. Your career is literally your business. You own it as a sole proprietor.',
+    author: 'Andrew Grove, Only the Paranoid Survive',
   },
 
   // ── Focus — the one thing in front of you ────────────────────────────────
-  { text: 'If you can’t decide, the answer is no.', author: 'The Almanack of Naval Ravikant' },
   {
-    text: 'A busy calendar and a busy mind will destroy your ability to do great things.',
-    author: 'The Almanack of Naval Ravikant',
+    text: 'Remember that this moment is not your life, it’s just a moment in your life. Focus on what is in front of you, right now.',
+    author: 'Ryan Holiday, The Obstacle Is the Way',
   },
   {
-    text: 'Who you work with and what you work on matter more than how hard you work.',
-    author: 'The Almanack of Naval Ravikant',
-  },
-  {
-    text: 'Concentrate every minute on doing what’s in front of you, with precise and genuine seriousness.',
-    author: 'Marcus Aurelius, Meditations',
-  },
-  { text: 'Confine yourself to the present.', author: 'Marcus Aurelius, Meditations' },
-  { text: 'Take a simple idea and take it seriously.', author: 'Charlie Munger, Poor Charlie’s Almanack' },
-  {
-    text: 'Nothing in life is as important as you think it is, while you are thinking about it.',
-    author: 'Daniel Kahneman, Thinking, Fast and Slow',
-  },
-  {
-    text: 'If a man knows not to which port he sails, no wind is favorable.',
-    author: 'Seneca, Letters from a Stoic',
-  },
-
-  // ── Simplify — cut the unessential ───────────────────────────────────────
-  {
-    text: 'It’s not the daily increase but daily decrease. Hack away at the unessential.',
-    author: 'Bruce Lee, Striking Thoughts',
-  },
-  {
-    text: 'Absorb what is useful, discard what is useless, and add what is specifically your own.',
-    author: 'Bruce Lee, Striking Thoughts',
-  },
-
-  // ── Compound — small reps, every day ─────────────────────────────────────
-  {
-    text: 'The first rule of compounding: never interrupt it unnecessarily.',
-    author: 'Charlie Munger, Poor Charlie’s Almanack',
-  },
-  {
-    text: 'Spend each day trying to be a little wiser than you were when you woke up.',
-    author: 'Charlie Munger, Poor Charlie’s Almanack',
-  },
-  {
-    text: 'It is remarkable how much long-term advantage you get by being consistently not stupid, instead of trying to be very intelligent.',
-    author: 'Charlie Munger, Poor Charlie’s Almanack',
-  },
-  { text: 'Habits are the compound interest of self-improvement.', author: 'James Clear, Atomic Habits' },
-  {
-    text: 'Success is the product of daily habits — not once-in-a-lifetime transformations.',
-    author: 'James Clear, Atomic Habits',
-  },
-  {
-    text: 'You do not rise to the level of your goals. You fall to the level of your systems.',
-    author: 'James Clear, Atomic Habits',
-  },
-  {
-    text: 'Goals are good for setting a direction, but systems are best for making progress.',
-    author: 'James Clear, Atomic Habits',
-  },
-  {
-    text: 'You should be far more concerned with your current trajectory than your current results.',
-    author: 'James Clear, Atomic Habits',
-  },
-  {
-    text: 'Every action you take is a vote for the type of person you wish to become.',
-    author: 'James Clear, Atomic Habits',
-  },
-  {
-    text: 'We are what we repeatedly do. Excellence, then, is not an act, but a habit.',
-    author: 'Will Durant, The Story of Philosophy',
-  },
-
-  // ── Time — don’t postpone ────────────────────────────────────────────────
-  {
-    text: 'It is not that we have a short time to live, but that we waste much of it.',
-    author: 'Seneca, On the Shortness of Life',
-  },
-  { text: 'While we are postponing, life speeds by.', author: 'Seneca, Letters from a Stoic' },
-  {
-    text: 'Begin at once to live, and count each separate day as a separate life.',
-    author: 'Seneca, Letters from a Stoic',
-  },
-
-  // ── Mastery — earned by repetition ───────────────────────────────────────
-  {
-    text: 'I fear not the man who has practiced 10,000 kicks once, but the man who has practiced one kick 10,000 times.',
-    author: 'Bruce Lee, Striking Thoughts',
-  },
-  {
-    text: 'Become the best in the world at what you do. Keep redefining what you do until this is true.',
-    author: 'The Almanack of Naval Ravikant',
-  },
-  {
-    text: 'Building specific knowledge will feel like play to you but will look like work to others.',
-    author: 'The Almanack of Naval Ravikant',
+    text: 'Perception precedes action. Right action follows the right perspective.',
+    author: 'Ryan Holiday, The Obstacle Is the Way',
   },
 
   // ── See it straight — honest judgment & problems ─────────────────────────
   {
-    text: 'The first principle is that you must not fool yourself — and you are the easiest person to fool.',
-    author: 'Richard Feynman',
+    text: 'There is the event itself and the story we tell ourselves about what it means.',
+    author: 'Ryan Holiday, The Obstacle Is the Way',
   },
   {
-    text: 'Problems are inevitable. Problems are soluble.',
-    author: 'David Deutsch, The Beginning of Infinity',
+    text: 'Failure shows us the way — by showing us what isn’t the way.',
+    author: 'Ryan Holiday, The Obstacle Is the Way',
   },
-  { text: 'Clear thinking requires courage.', author: 'The Almanack of Naval Ravikant' },
   {
-    text: 'When we are no longer able to change a situation, we are challenged to change ourselves.',
-    author: 'Viktor Frankl, Man’s Search for Meaning',
+    text: 'It matters what you do with what happens and what you’ve been given.',
+    author: 'Ryan Holiday, The Obstacle Is the Way',
   },
-
-  // ── Build with people — teams that deliver ───────────────────────────────
-  { text: 'Play long-term games with long-term people.', author: 'The Almanack of Naval Ravikant' },
-  { text: 'Praise specifically, criticize generally.', author: 'The Almanack of Naval Ravikant' },
 ];
 
 /** Deterministic daily starting point so everyone who opens the login page on
