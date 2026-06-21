@@ -1,17 +1,39 @@
 # Pragati
 
-> The project tracker that sees the whole organisation as one living tree — and learns how your people actually deliver. Every project, every action, every contributor, minus the noise.
+> The project tracker that sees the whole organisation as one living tree — and learns how your people actually deliver.
 
-[![CI](https://img.shields.io/badge/CI-passing-22c55e.svg)](#testing)
+[![CI](https://github.com/abhieq31/Pragati/actions/workflows/ci.yml/badge.svg)](https://github.com/abhieq31/Pragati/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2014%20·%20MongoDB%20·%20TypeScript-1565C0.svg)](#stack)
-[![Audit trail](https://img.shields.io/badge/audit%20trail-signed%20%26%20immutable-9333EA.svg)](./docs/ARCHITECTURE.md)
+[![Audit trail](https://img.shields.io/badge/audit%20trail-append--only-9333EA.svg)](./docs/ARCHITECTURE.md)
 [![License](https://img.shields.io/badge/license-MIT-64748b.svg)](./LICENSE)
 
----
+**[Live app](https://pragatialm.vercel.app)** — sign in with a read-only demo account, no setup required:
+
+| Email | Password | Role |
+| --- | --- | --- |
+| `demo.lead@pragati.local` | `Demo@1234` | Team Lead (best first look) |
+| `demo.ic@pragati.local` | `Demo@1234` | Individual Contributor |
+
+These are seeded demo accounts on a public demo workspace — don't put anything sensitive in them. Full seed details: [`docs/DEMO_ENVIRONMENT.md`](./docs/DEMO_ENVIRONMENT.md).
+
+## 60 seconds, in motion
+
+![Pragati walkthrough — dashboard, command palette, kanban, bird's-eye view, whiteboard](./docs/screenshots/demo.gif)
+
+<table>
+<tr>
+<td width="50%"><img src="./docs/screenshots/dashboard.png" alt="Dashboard" /><br/><sub>Dashboard — up next, team projects, momentum</sub></td>
+<td width="50%"><img src="./docs/screenshots/command-palette.png" alt="Command palette" /><br/><sub>Cmd/Ctrl+K command palette — navigate, search, quick-add a task</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="./docs/screenshots/project-detail.png" alt="Project detail, Kanban view" /><br/><sub>Project detail — lifecycle phases or Kanban, your choice</sub></td>
+<td width="50%"><img src="./docs/screenshots/birds-eye-view.png" alt="Bird's-eye view" /><br/><sub>Bird's-eye view — the whole project as one living tree</sub></td>
+</tr>
+</table>
 
 ## What it is
 
-**One promise: everyone sees the whole board.** Pragati gives every person — contributor, lead, or admin — a bird's-eye view of everything moving in the team, plus a private space only they can see. It was forged in pharma QA-IT (so it carries a 21 CFR Part 11-grade audit trail and GxP lifecycles out of the box), but the model is universal: any team that wants total clarity without total surveillance. Invite-only — no public sign-ups, no marketing pages.
+**One promise: everyone sees the whole board.** Every person — contributor, lead, or admin — gets a bird's-eye view of everything moving in their team, plus a private space only they can see. Born out of pharma QA-IT, so it borrows GxP-style audit-trail and lifecycle patterns; the model itself is universal. Invite-only — no public sign-up, no marketing funnel.
 
 | Role | What they see |
 | --- | --- |
@@ -20,23 +42,57 @@
 | **Admin** | Full workspace control, user management, operations + audit log. |
 | **Master Admin** (dormant) | Cross-tenant provisioning, when multi-tenant runtime is enabled. |
 
+## Engineering at a glance
+
+A solo-built, production-deployed system — not a tutorial clone. The numbers below are generated from the repo itself (`npm test`, `find`, `git log`), not hand-typed.
+
+| | |
+| --- | --- |
+| **~57,000** lines of TypeScript | **92** API route handlers |
+| **18** Mongoose models | **43** React components |
+| **233** unit tests + **5** Playwright e2e specs, all green | **600+** commits of real iteration history |
+| Typecheck · lint · test · build gated on every push ([`ci.yml`](.github/workflows/ci.yml)) | Deployed on Vercel with scheduled cron jobs (health check, daily digest) |
+
+A few decisions worth a closer look during a code review:
+
+- **A rule-based decision engine, deliberately not an LLM.** QA severity triage, slip-risk prediction, and delivery forecasting (`src/lib/ai/*`) are hand-calibrated, fully deterministic, and unit-tested — every score traces to a line of code, not a model weight. See [`src/lib/ai/slipRisk.ts`](./src/lib/ai/slipRisk.ts) and [`src/lib/ai/deliveryForesight.ts`](./src/lib/ai/deliveryForesight.ts).
+- **One capability matrix drives the UI and the API.** [`src/lib/permissions.ts`](./src/lib/permissions.ts) is the single source of truth for who can do what — imported by route handlers and components alike, so the two can never disagree.
+- **A natural-language quick-add parser with zero dependencies.** Typing "Ship the QA report urgent tomorrow" into the command palette extracts a due date, priority, and clean title — one small regex-driven module ([`src/lib/quickAddParse.ts`](./src/lib/quickAddParse.ts)), fully unit-tested, no NLP library.
+- **A scaling story that's mostly already built.** [`docs/SCALING.md`](./docs/SCALING.md) walks through the tenant-as-shard data model and exactly which env var flips on each growth lever — most of it shipped and dormant, not hypothetical.
+
+## How it's put together
+
+```mermaid
+flowchart LR
+  Browser["Browser (client components)"] -->|httpOnly JWT cookie| Edge["Next.js route handler / RSC"]
+  Edge -->|validateSession| Auth["lib/auth + lib/jwt"]
+  Edge -->|await connectDB| DB[("MongoDB / Mongoose")]
+  Edge -->|Zod validate| Validations["lib/validations"]
+  Edge -->|logOperation| Audit[("Audit log\n(append-only)")]
+  Edge -->|serialize| Browser
+```
+
+Reads go straight from server components to Mongoose data builders; mutations flow through validated API route handlers that write an audit entry on every change. Full breakdown, component tree, and the role/capability matrix: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). How this shape scales from one workspace to many tenants: [`docs/SCALING.md`](./docs/SCALING.md).
+
 ## Highlights
 
 - **Admin console** — `/admin` puts the whole workspace on one server-rendered page: people/team/project/task counts, an attention queue (locked accounts, pending invites, forced password resets), the latest audit activity, and one-click entry into every admin surface. Admins see *everything* (every team, every shared project) — except personal projects, which stay private to their owners by design. One capability matrix (`src/lib/permissions.ts`) drives both the UI and the API, so what a role sees is exactly what it can do.
+- **Command palette (⌘K)** — jump to any page or admin surface, run quick actions, or live-search projects and teams without leaving the keyboard. Includes **Quick Add**: type free text like "Renew SSL cert urgent tomorrow" and a small deterministic parser pulls out the due date, priority, and a clean title — no LLM, same auditable philosophy as the QA engine below.
 - **Bird's-eye view** — a full-screen, interactive SVG tree of `team → project → task → assignee`. Click any card (or the connector leading to it) to expand or hide its branch, drag cards to rearrange, sketch over the canvas with the brush, quick-edit assignee/TCD inline, and export the exact on-screen view as PDF, SVG, or image. Opens from the dashboard, team detail, or project detail page.
 - **Early warning, learned per person** — the dashboard quietly flags open work that is *likely to miss its date* before it does: a tiny model learns each person's real median cycle time and past-due rate from their own history and weighs it against the runway left and competing open work. No external AI service, no extra queries — computed in-process over data already loaded, every score traceable to a line of code (`src/lib/ai/slipRisk.ts`).
 - **Your reference scheme, not ours** — every project carries a user-pickable reference type plus your own number, shown everywhere instead of the system-generated code. Your numbering scheme survives the tool; the tool doesn't impose one.
 - **Owner-gated deletions** — tasks and phases can only be deleted by the **project owner** (and workspace admins). Leads manage work; only the owner can destroy it. Deleting a phase never deletes its tasks — they move to *Unphased*, and the action lands in the audit trail.
 - **Lifecycle templates** — a library of structured workflows (engineering change, incident management, audits, validation, sprints, training programs, vendor qualification, …) plus Personal templates for ICs — or define your own.
-- **Signed, immutable audit trail** — every record change carries who, what, when, and why. Personal projects never enter the cross-user log. Editing a project's reference number writes a before/after record.
+- **Append-only audit trail** — every record change carries who, what, when, and why; there's no update/delete route for an audit row by application design. Personal projects never enter the cross-user log. Editing a project's reference number writes a before/after record.
 - **Mind map on My Day** — a personal node-link canvas for capturing thoughts before they become tasks. Owner-private, autosaves per user.
+- **Whiteboard & Notes** — a full-screen sketch surface and a full-screen note list, both reachable from a FAB on My Day, both owner-private.
 - **Public profiles** — a within-workspace profile at `/<username>` with a contribution heatmap, an optional GitHub link, and Follow / Unfollow for colleagues.
 - **Sidebar calendar** — a compact month grid pinned above My Day, dotted with what's due (mine / team / overdue) and a hover card listing the day's work.
 - **Dashboard "Up Next"** — colour-coded urgency pills (overdue / today / ≤2d / future) on every due-row, with filter chips (week / next week / month / until-date).
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
-- **Productivity touches** — resizable sidebar, global keyboard shortcuts (`G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
-- **A living login screen** — unattributed lines from *The Almanack of Naval Ravikant* and the books Naval recommends (Munger, Marcus Aurelius, Seneca, Bruce Lee, James Clear, Feynman, …), curated to what Pragati is for — doing the work: focus, finishing, and compounding daily progress — never repeating on a device until the whole library has cycled, refreshable forever via `QUOTES_FEED_URL` (a public JSON you host) with the built-in library as permanent fallback.
+- **Productivity touches** — resizable sidebar, global keyboard shortcuts (`⌘K` for the command palette, `G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
+- **A living login screen** — unattributed lines curated to what Pragati is for — doing the work — never repeating on a device until the whole library has cycled, refreshable forever via `QUOTES_FEED_URL` (a public JSON you host) with the built-in library as permanent fallback.
 - **AI, deep but minimal** — the rule-based engine decides everything (an architectural invariant); Gemini may only *rephrase* the already-decided Morning Brief headline (one cached call per user per day, instant fallback without a key). Plus the conversational Copilot and mind-map→tasks suggestions.
 - **Daily rundown, four channels, free forever** — every user gets a role-aware **Morning Brief** (contributors: what's on my plate; leads: team pulse; admins: workspace rundown) rendered on the dashboard, as an optional **Web Push** notification (VAPID — no vendor, no cost), as a personal **calendar feed** (subscribe once in Outlook/Google/Apple), and as an opt-in **08:30 IST email** capped to the provider's free tier. Mail is provider-agnostic (`MAIL_PROVIDER=brevo|resend|webhook`) so an org can bring its own relay. See [Daily email digest](#daily-email-digest) and [`docs/SCALING.md`](./docs/SCALING.md).
 
@@ -44,9 +100,11 @@
 
 - **Hand-rolled auth** — JWT + bcrypt + httpOnly cookie, one active session per user, idle auto-logout, brute-force lockout.
 - **Credential reuse prevention** — passwords and Quick PINs cannot repeat any of the last three used, enforced server-side on every change.
-- **Password-signed sign-offs** — controlled status changes and sensitive account edits require password re-entry plus a reason, recorded verbatim in the audit trail.
+- **Password-confirmed sign-offs** — controlled status changes and sensitive account edits require password re-entry plus a reason, recorded verbatim in the audit trail. This is re-authentication plus a recorded reason, not a claim of conformance to any specific e-signature regulation.
 - **Least-privilege destruction** — project deletion requires owner/admin + password re-auth; task and phase deletion is project-owner-only.
 - **Read-through cache** — optional Upstash Redis layer on hot aggregations (dashboard, projects, people), inert when the env vars are absent.
+
+> **On the GxP language above:** Pragati borrows audit-trail and lifecycle *shapes* that are common in regulated pharma QA-IT (who/what/when/why on every mutation, append-only by omitting any update/delete route, ownership-gated destruction). It has **not** been through a formal 21 CFR Part 11 validation exercise — there's no qualification protocol, no vendor audit, no signed validation report. Treat "GxP-inspired" as the accurate claim, not "Part 11-certified."
 
 ## Run locally
 
@@ -84,6 +142,8 @@ Demo accounts (password `Demo@1234`):
 Details: [`docs/DEMO_ENVIRONMENT.md`](./docs/DEMO_ENVIRONMENT.md).
 
 ## Production
+
+Live at **[pragatialm.vercel.app](https://pragatialm.vercel.app)**, deployed on Vercel (`bom1` / Mumbai, co-located with the Atlas cluster), with a scheduled health check and daily-digest cron ([`vercel.json`](./vercel.json)) plus a GitHub Actions production smoke test.
 
 Full launch runbook (env vars, smoke test, uptime monitor, rollback): [`docs/LAUNCH_CHECKLIST.md`](./docs/LAUNCH_CHECKLIST.md).
 
@@ -131,22 +191,23 @@ src/
 │   ├── (authed)/             # authenticated surfaces (shared AppShell layout)
 │   │   ├── page.tsx          # dashboard
 │   │   ├── projects/         # list · new · [id] detail
-│   │   ├── teams/            # list · [id] detail
+│   │   ├── teams/             # list · [id] detail
 │   │   ├── people/           # admin-only user directory
-│   │   ├── my-day/           # personal tasks + mind map
+│   │   ├── my-day/           # personal tasks + mind map + whiteboard + notes
 │   │   ├── settings/         # profile, security, preferences
 │   │   ├── audit/            # immutable operations log
 │   │   └── [username]/       # public-within-workspace profile
 │   ├── api/                  # route handlers (auth, projects, tasks, teams, users…)
 │   ├── login/                # unauthenticated entry
 │   └── globals.css           # Tailwind layer + design tokens
-├── components/               # UI — AppShell, BirdsEyeView, SidebarCalendar, ProfileView…
+├── components/               # UI — AppShell, CommandPalette, BirdsEyeView, SidebarCalendar, ProfileView…
 ├── lib/                      # server + client logic
 │   ├── ai/                   # rule-based triage + KB (never an LLM on the scoring path)
 │   ├── flow/                 # Flow Signal meaningful-activity engine
 │   ├── client/               # browser-only helpers (api client, hooks)
 │   ├── auth.ts               # JWT sign/verify, sessions, bcrypt, RBAC helpers
 │   ├── validations.ts        # central Zod schemas — the API boundary contract
+│   ├── quickAddParse.ts      # free-text → task draft parser (command palette)
 │   ├── cache.ts              # optional Upstash read-through cache
 │   └── serialize.ts          # Mongoose doc → JSON-safe shapes
 ├── models/                   # Mongoose schemas (User, Team, Project, Task, AuditLog…)
@@ -181,7 +242,7 @@ npm run e2e               # Playwright suite (needs a browser + Mongo)
 npm run smoke-prod <url>  # read-only smoke test against a live deployment
 
 # Unit tests run on the Node built-in runner via tsx (no DB / no browser):
-npx tsx --test tests/unit/*.test.ts
+npm test
 
 # Operator scripts
 npm run set-admin <email>            # promote a user to admin
@@ -197,10 +258,10 @@ npm run seed:demo                    # demo workspace seed (see Demo data above)
 
 Two layers, both runnable from a clean checkout:
 
-- **Unit** (`npx tsx --test tests/unit/*.test.ts`) — zero-infra tests on the Node built-in runner via `tsx`. Covers the rule-based triage/quality-signal math (clustering + cosine similarity) and the Flow Signal meaningful-activity engine. No database, no browser.
+- **Unit** (`npm test`) — 233 zero-infra tests on the Node built-in runner via `tsx`. Covers the rule-based triage/quality-signal math (clustering + cosine similarity), the Flow Signal meaningful-activity engine, the daily digest, and the quick-add parser. No database, no browser.
 - **End-to-end** (`npm run e2e`) — Playwright drives auth, dashboard, projects, teams and core UX flows against a real server backed by an in-memory Mongo. See [`docs/E2E.md`](./docs/E2E.md).
 
-CI runs typecheck, lint and the production build on every push (see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)).
+CI runs typecheck, lint, the full unit suite, and a production build on every push ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) — currently green, badge above is live, not decorative.
 
 ## Multi-tenant (dormant)
 

@@ -115,8 +115,18 @@ docs/                launch checklist, rollout, performance, demo env,
 
 ## Compliance touchpoints
 
-- **21 CFR Part 11** — immutable audit trail on every record mutation;
-  re-authenticated e-signatures (password + reason) for controlled actions.
-- **ALCOA+** — deactivation over deletion keeps records attributable & enduring.
-- **GAMP 5 / CSV** — deterministic, unit-testable triage scoring so any severity
-  is traceable to a line of code or a KB entry.
+These borrow audit-trail and lifecycle **shapes** that are common in regulated
+pharma QA-IT — they are design patterns this codebase implements, not a claim
+of formal validation. There is no qualification protocol, no vendor audit, no
+signed validation report behind any of the items below; "inspired by" is the
+accurate framing, not "certified for."
+
+- **21 CFR Part 11-style audit trail** — append-only by omission (no
+  update/delete route exists for an `AuditLog` row) on every record mutation;
+  password re-entry + a recorded reason for controlled actions (re-authentication,
+  not a formal electronic-signature implementation).
+- **ALCOA+-style record handling** — deactivation over deletion keeps records
+  attributable & enduring.
+- **GAMP 5 / CSV-style triage** — deterministic, unit-testable severity scoring
+  so any result is traceable to a line of code or a KB entry, not a model
+  weight.

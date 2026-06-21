@@ -12,7 +12,7 @@ is in order.
 
 ## 1. Merge the final hardening PR
 
-Open https://github.com/abhipatelz/MicroMacro/pulls and merge the most
+Open https://github.com/abhieq31/Pragati/pulls and merge the most
 recent PR (titled *"SECURITY: privilege escalation + register loophole + …"*).
 Vercel will redeploy automatically — wait for the green check on the
 deployment dashboard before continuing.
@@ -45,7 +45,7 @@ Confirmed: ☐
 From any machine with Node (your laptop is fine), run:
 
 ```bash
-git clone https://github.com/abhipatelz/MicroMacro && cd MicroMacro
+git clone https://github.com/abhieq31/Pragati && cd Pragati
 npm install
 npm run smoke-prod https://pragatialm.vercel.app
 ```
