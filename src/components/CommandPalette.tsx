@@ -16,8 +16,13 @@ import {
   Keyboard,
   LogOut,
   Globe,
+  Plus,
+  Calendar,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
+import { useToast } from './Toast';
+import { PRIORITY_COLORS } from './ui';
+import { parseQuickAdd } from '@/lib/quickAddParse';
 
 /**
  * Global Cmd/Ctrl+K command palette — jump to any page, action, project, or
@@ -41,6 +46,11 @@ interface Entry {
   sublabel?: string;
   icon: any;
   run: () => void;
+  /** Activating this entry switches the palette's mode instead of closing it. */
+  keepOpen?: boolean;
+  /** Stays visible in its section regardless of the typed search term — used
+   *  for the one entry that should always be a reachable fallback. */
+  alwaysShow?: boolean;
 }
 
 interface Section {
@@ -70,10 +80,15 @@ export function CommandPalette({
   onLogout: () => void;
 }) {
   const router = useRouter();
+  const toast = useToast();
+  const [mode, setMode] = useState<'search' | 'compose'>('search');
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [projectResults, setProjectResults] = useState<{ id: string; name: string; code?: string }[]>([]);
   const [teams, setTeams] = useState<{ id: string; name: string }[] | null>(null);
+  const [composeText, setComposeText] = useState('');
+  const [personalProject, setPersonalProject] = useState<{ id: string; name: string } | null>(null);
+  const [creating, setCreating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -82,11 +97,20 @@ export function CommandPalette({
   // Reset to a clean slate every time the palette opens, and focus the input.
   useEffect(() => {
     if (!open) return;
+    setMode('search');
     setQuery('');
+    setComposeText('');
     setActiveIndex(0);
     const raf = requestAnimationFrame(() => inputRef.current?.focus());
     return () => cancelAnimationFrame(raf);
   }, [open]);
+
+  // Re-focus the (shared) input when switching into compose mode via a click.
+  useEffect(() => {
+    if (!open) return;
+    const raf = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(raf);
+  }, [mode, open]);
 
   // Teams list is small workspace-wide data — fetch once per palette session
   // (not per keystroke) and filter client-side.
@@ -146,6 +170,20 @@ export function CommandPalette({
   const actions: Entry[] = useMemo(
     () => [
       {
+        id: 'a-quickadd',
+        label: 'Quick add task…',
+        icon: Plus,
+        keepOpen: true,
+        alwaysShow: true,
+        // Carries over whatever was already typed in search mode — typing
+        // free text that matches nothing, then creating a task from it, is
+        // the common path into this action.
+        run: () => {
+          setComposeText(query);
+          setMode('compose');
+        },
+      },
+      {
         id: 'a-dark',
         label: dark ? 'Switch to light mode' : 'Switch to dark mode',
         icon: dark ? Sun : Moon,
@@ -154,8 +192,40 @@ export function CommandPalette({
       { id: 'a-shortcuts', label: 'Keyboard shortcuts', icon: Keyboard, run: onOpenShortcuts },
       { id: 'a-logout', label: 'Sign out', icon: LogOut, run: onLogout },
     ],
-    [dark, onToggleDark, onOpenShortcuts, onLogout],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dark, onToggleDark, onOpenShortcuts, onLogout, query],
   );
+
+  const parsed = useMemo(() => parseQuickAdd(composeText), [composeText]);
+
+  async function submitQuickAdd() {
+    const title = parsed.title.trim();
+    if (!title || creating) return;
+    setCreating(true);
+    try {
+      let proj = personalProject;
+      if (!proj) {
+        proj = await api<{ id: string; name: string }>('/projects/personal');
+        setPersonalProject(proj);
+      }
+      await api('/tasks', {
+        method: 'POST',
+        body: {
+          projectId: proj.id,
+          title,
+          priority: parsed.priority,
+          dueDate: parsed.dueDate,
+          privateToMe: true,
+        },
+      });
+      toast.success('Task added', parsed.dueLabel ? `${title} · due ${parsed.dueLabel}` : title);
+      onClose();
+    } catch (e: any) {
+      toast.error('Could not add task', e?.message || 'Try again in a moment.');
+    } finally {
+      setCreating(false);
+    }
+  }
 
   const term = query.trim().toLowerCase();
   const matches = (label: string) => !term || label.toLowerCase().includes(term);
@@ -174,7 +244,7 @@ export function CommandPalette({
 
   const sections: Section[] = [
     { title: 'Pages', entries: pages.filter((p) => matches(p.label)) },
-    { title: 'Actions', entries: actions.filter((a) => matches(a.label)) },
+    { title: 'Actions', entries: actions.filter((a) => a.alwaysShow || matches(a.label)) },
     { title: 'Projects', entries: projectEntries },
     { title: 'Teams', entries: teamEntries },
   ].filter((s) => s.entries.length > 0);
@@ -192,10 +262,10 @@ export function CommandPalette({
   function activate(entry: Entry | undefined) {
     if (!entry) return;
     entry.run();
-    onClose();
+    if (!entry.keepOpen) onClose();
   }
 
-  function onKeyDown(e: React.KeyboardEvent) {
+  function onSearchKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
@@ -208,6 +278,16 @@ export function CommandPalette({
     } else if (e.key === 'Enter') {
       e.preventDefault();
       activate(flat[safeIndex]);
+    }
+  }
+
+  function onComposeKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      submitQuickAdd();
     }
   }
 
@@ -228,84 +308,140 @@ export function CommandPalette({
           border: dark ? '1px solid rgba(255,255,255,0.10)' : '1px solid #e2e8f0',
         }}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDown}
+        onKeyDown={mode === 'compose' ? onComposeKeyDown : onSearchKeyDown}
       >
         <div
           className="flex items-center gap-2.5 px-4 border-b"
           style={{ borderColor: dark ? 'rgba(255,255,255,0.08)' : '#eef2f7' }}
         >
-          <Search size={16} className={dark ? 'text-white/35' : 'text-slate-400'} />
+          {mode === 'compose' ? (
+            <Plus size={16} className={dark ? 'text-white/35' : 'text-slate-400'} />
+          ) : (
+            <Search size={16} className={dark ? 'text-white/35' : 'text-slate-400'} />
+          )}
           <input
             ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search pages, projects, teams…"
+            value={mode === 'compose' ? composeText : query}
+            onChange={(e) => (mode === 'compose' ? setComposeText(e.target.value) : setQuery(e.target.value))}
+            placeholder={mode === 'compose' ? 'Buy stamps tomorrow !!' : 'Search pages, projects, teams…'}
+            disabled={creating}
             className={`flex-1 h-12 bg-transparent outline-none text-sm ${
               dark ? 'text-white/90 placeholder:text-white/30' : 'text-slate-800 placeholder:text-slate-400'
             }`}
           />
         </div>
 
-        <div ref={listRef} className="max-h-[360px] overflow-y-auto py-2">
-          {flat.length === 0 ? (
-            <div className={`px-4 py-8 text-center text-sm ${dark ? 'text-white/30' : 'text-slate-400'}`}>
-              No matches for &ldquo;{query}&rdquo;
+        {mode === 'compose' ? (
+          <div className="px-4 py-4 min-h-[120px]">
+            <div
+              className={`text-[10px] font-bold uppercase tracking-wider mb-2.5 ${
+                dark ? 'text-white/30' : 'text-slate-400'
+              }`}
+            >
+              New task · {personalProject?.name || 'Personal'}
             </div>
-          ) : (
-            sections.map((s) => (
-              <div key={s.title} className="mb-1.5">
-                <div
-                  className={`px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider ${
-                    dark ? 'text-white/30' : 'text-slate-400'
-                  }`}
-                >
-                  {s.title}
-                </div>
-                {s.entries.map((entry) => {
-                  runningIdx += 1;
-                  const idx = runningIdx;
-                  const active = idx === safeIndex;
-                  const Icon = entry.icon;
-                  return (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      data-idx={idx}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      onClick={() => activate(entry)}
-                      className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors ${
-                        active
-                          ? dark
-                            ? 'bg-white/10 text-white'
-                            : 'bg-slate-100 text-slate-900'
-                          : dark
-                            ? 'text-white/70'
-                            : 'text-slate-600'
-                      }`}
-                    >
-                      <Icon size={15} className="shrink-0 opacity-70" />
-                      <span className="flex-1 truncate">{entry.label}</span>
-                      {entry.sublabel && (
-                        <span className={`text-[11px] shrink-0 ${dark ? 'text-white/30' : 'text-slate-400'}`}>
-                          {entry.sublabel}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+            {composeText.trim() ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`text-sm font-medium ${dark ? 'text-white/90' : 'text-slate-800'}`}>
+                  {parsed.title || composeText.trim()}
+                </span>
+                {parsed.priority && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[11px] font-semibold capitalize ${
+                      PRIORITY_COLORS[parsed.priority] ?? 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {parsed.priority}
+                  </span>
+                )}
+                {parsed.dueLabel && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                      dark ? 'bg-white/10 text-white/60' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    <Calendar size={11} />
+                    {parsed.dueLabel}
+                  </span>
+                )}
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              <div className={`text-sm ${dark ? 'text-white/30' : 'text-slate-400'}`}>
+                Try &ldquo;tomorrow&rdquo;, a weekday, or end with &ldquo;!!&rdquo; for priority.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div ref={listRef} className="max-h-[360px] overflow-y-auto py-2">
+            {flat.length === 0 ? (
+              <div className={`px-4 py-8 text-center text-sm ${dark ? 'text-white/30' : 'text-slate-400'}`}>
+                No matches for &ldquo;{query}&rdquo;
+              </div>
+            ) : (
+              sections.map((s) => (
+                <div key={s.title} className="mb-1.5">
+                  <div
+                    className={`px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider ${
+                      dark ? 'text-white/30' : 'text-slate-400'
+                    }`}
+                  >
+                    {s.title}
+                  </div>
+                  {s.entries.map((entry) => {
+                    runningIdx += 1;
+                    const idx = runningIdx;
+                    const active = idx === safeIndex;
+                    const Icon = entry.icon;
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        data-idx={idx}
+                        onMouseEnter={() => setActiveIndex(idx)}
+                        onClick={() => activate(entry)}
+                        className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors ${
+                          active
+                            ? dark
+                              ? 'bg-white/10 text-white'
+                              : 'bg-slate-100 text-slate-900'
+                            : dark
+                              ? 'text-white/70'
+                              : 'text-slate-600'
+                        }`}
+                      >
+                        <Icon size={15} className="shrink-0 opacity-70" />
+                        <span className="flex-1 truncate">{entry.label}</span>
+                        {entry.sublabel && (
+                          <span className={`text-[11px] shrink-0 ${dark ? 'text-white/30' : 'text-slate-400'}`}>
+                            {entry.sublabel}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         <div
           className={`flex items-center gap-3 px-4 py-2 border-t text-[11px] ${
             dark ? 'border-white/[0.08] text-white/35' : 'border-slate-100 text-slate-400'
           }`}
         >
-          <span>↑↓ navigate</span>
-          <span>↵ select</span>
-          <span>esc close</span>
+          {mode === 'compose' ? (
+            <>
+              <span>{creating ? 'Adding…' : '↵ add to Personal'}</span>
+              <span>esc close</span>
+            </>
+          ) : (
+            <>
+              <span>↑↓ navigate</span>
+              <span>↵ select</span>
+              <span>esc close</span>
+            </>
+          )}
         </div>
       </div>
     </div>
