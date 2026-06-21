@@ -151,6 +151,77 @@ describe('renderDigestEmail', () => {
     assert.match(out.subject, /all clear/);
     assert.match(out.html, /all clear/i);
   });
+
+  it('renders the team-pulse card for a lead with a leadershipBrief (regression: was computed but never inserted into the HTML)', () => {
+    const out = renderDigestEmail({
+      name: 'Priya',
+      role: 'lead',
+      sections: { overdue: [], today: [today], soon: [], projectUpdates: [] },
+      projectName: () => 'Alpha',
+      appUrl: 'https://x.test',
+      dateLabel: 'Monday, 8 June',
+      leadershipBrief: {
+        headline: 'Two tasks trending to slip across the team.',
+        team: {
+          blocked: [{ id: 'b1', title: 'Vendor sign-off', projectName: 'Alpha', days: 3 }],
+          signoffsPending: 2,
+          overdueByMember: [{ name: 'Dhruv', count: 1 }],
+        },
+      },
+    });
+    assert.match(out.html, /Team pulse/);
+    assert.match(out.html, /Two tasks trending to slip across the team\./);
+    assert.match(out.html, /Vendor sign-off/);
+  });
+
+  it('renders the workspace-pulse card for an admin with a leadershipBrief', () => {
+    const out = renderDigestEmail({
+      name: 'Admin',
+      role: 'admin',
+      sections: { overdue: [], today: [], soon: [], projectUpdates: [] },
+      projectName: () => null,
+      appUrl: '',
+      dateLabel: 'Monday, 8 June',
+      leadershipBrief: {
+        headline: 'Workspace is broadly on track.',
+        workspace: { doneYesterday: 5, overdueTotal: 2, activeProjects: 4, risky: [] },
+      },
+    });
+    assert.match(out.html, /Workspace pulse/);
+    assert.match(out.html, /Workspace is broadly on track\./);
+  });
+
+  it('keeps the subject short — does not splice the full leadership headline into it', () => {
+    const out = renderDigestEmail({
+      name: 'Priya',
+      role: 'lead',
+      sections: { overdue: [], today: [today], soon: [], projectUpdates: [] },
+      projectName: () => 'Alpha',
+      appUrl: 'https://x.test',
+      dateLabel: 'Monday, 8 June',
+      leadershipBrief: {
+        headline: 'A much longer sentence that would make for an ugly, truncated subject line in an inbox.',
+        team: { blocked: [], signoffsPending: 0, overdueByMember: [] },
+      },
+    });
+    assert.match(out.subject, /1 due today/);
+    assert.ok(!out.subject.includes('ugly, truncated'));
+  });
+
+  it('renders the foresight line as plain text, not a competing card', () => {
+    const out = renderDigestEmail({
+      name: 'Sam',
+      sections: { overdue: [], today: [], soon: [], projectUpdates: [] },
+      projectName: () => null,
+      appUrl: '',
+      dateLabel: 'Monday, 8 June',
+      foresightLine: 'Foresight: on pace to clear your plate by ~Jun 20.',
+    });
+    assert.match(out.html, /Foresight —/);
+    assert.match(out.html, /on pace to clear your plate by ~Jun 20\./);
+    // The old rendering wrapped this in its own bordered/filled card.
+    assert.ok(!out.html.includes('#faf5ff'));
+  });
 });
 
 import {

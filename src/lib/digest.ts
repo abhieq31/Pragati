@@ -503,7 +503,7 @@ export function renderWelcomeEmail(input: {
 <body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
-  <tr><td style="height:4px;background:linear-gradient(90deg,#1565C0,#43A047);font-size:0;line-height:0;">&nbsp;</td></tr>
+  <tr><td style="height:4px;background:#1565C0;background:linear-gradient(90deg,#1565C0,#43A047);font-size:0;line-height:0;">&nbsp;</td></tr>
   <tr><td style="padding:30px 28px 8px;">
     <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#1565C0;margin:0 0 14px;">Pragati</div>
     <h1 style="margin:0 0 10px;font-size:22px;line-height:1.3;color:#0f172a;">Welcome aboard, ${escapeHtml(first)}.</h1>
@@ -581,11 +581,11 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
   if (sections.today.length) counts.push(`${sections.today.length} due today`);
   if (sections.overdue.length) counts.push(`${sections.overdue.length} overdue`);
   if (sections.soon.length) counts.push(`${sections.soon.length} due soon`);
-  const leadershipSubject =
-    leadershipBrief && (role === 'lead' || role === 'admin' || role === 'master_admin')
-      ? leadershipBrief.headline
-      : counts.join(' · ') || 'all clear';
-  const subject = `${test ? '[Test] ' : ''}Your ${weekday} brief — ${leadershipSubject}`;
+  // Always the short counts form — the team/workspace headline used to take
+  // over the subject for leads/admins, but it's a full sentence and got
+  // brutally truncated in an inbox list. The headline still leads the
+  // leadership card in the body, where there's room for it.
+  const subject = `${test ? '[Test] ' : ''}Your ${weekday} brief — ${counts.join(' · ') || 'all clear'}`;
 
   // The focus item leads alone; don't list it twice.
   const rest = {
@@ -616,10 +616,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         )
       : '',
   ].join('');
-
-  const framingHtml = `<p style="margin:0 0 18px;font-size:13px;color:#64748b;line-height:1.5;">${escapeHtml(
-    roleFraming(role),
-  )}</p>`;
 
   const leadershipHtml = leadershipBrief?.team
     ? `<div style="margin:0 0 22px;padding:16px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;">
@@ -686,27 +682,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       </div>`
     : '';
 
-  // ── Momentum ──────────────────────────────────────────────────────────
-  const momentum =
-    winsYesterday > 0
-      ? `<div style="font-size:13px;color:#15803d;font-weight:600;margin:0 0 16px;">You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday. Keep the streak honest.</div>`
-      : '';
-
-  // ── Foresight ─────────────────────────────────────────────────────────
-  // The forward-looking counterpart to the task list: a single line computed
-  // from the recipient's own delivery history (lib/ai/deliveryForesight). The
-  // "Foresight:" prefix is stripped since the label provides it.
-  const foresightHtml = foresightLine
-    ? `<div style="margin:0 0 22px;border:1px solid #e9d5ff;border-left:4px solid #7c3aed;border-radius:12px;padding:12px 15px;background:#faf5ff;">
-        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:3px;">Foresight</div>
-        <div style="font-size:13.5px;color:#0f172a;line-height:1.45;">${escapeHtml(foresightLine.replace(/^Foresight:\s*/i, ''))}</div>
-      </div>`
-    : '';
-
-  const emptyNote = digestHasContent(sections)
-    ? ''
-    : `<div style="font-size:15px;color:#16a34a;font-weight:600;margin:6px 0 18px;">You're all clear — nothing due today. Use the room: pick the one thing with the most leverage and move it.</div>`;
-
   const openBtn = appUrl
     ? `<a href="${appUrl}/my-day" style="display:inline-block;background:#1565C0;color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:10px;">Open My Day</a>`
     : '';
@@ -717,21 +692,34 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
 
   const aphorism = closingLine();
 
-  // ── Executive line — the whole day compressed to one signal, leading with a
-  // directive rather than an inventory (signal over noise). Sits right under
-  // the greeting so the higher-level read lands before any list does.
-  const dayShape = counts.length ? counts.join(' · ') : 'nothing due';
+  // ── Opening line — ONE plain sentence under the greeting, not a stack of
+  // boxes saying overlapping things. Folds in the role framing, the day's
+  // shape, a directive, and yesterday's momentum. The "all clear" phrasing
+  // is load-bearing for the empty-state test below — keep the literal words.
+  const dayShape = counts.join(' · ');
   const directive = sections.overdue.length
     ? 'Clear the overdue first — momentum follows.'
     : sections.today.length
       ? 'One focused pass and today is done.'
       : sections.soon.length
         ? 'Nothing due today — get ahead of what’s coming.'
-        : 'Plate’s clear. Spend the room on your single highest-leverage move.';
-  const execSummary = `<div style="margin:0 0 16px;padding:13px 15px;border:1px solid #e2e8f0;border-radius:12px;background:linear-gradient(180deg,#f8fafc,#ffffff);">
-    <div style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#64748b;margin-bottom:4px;">The shape of today</div>
-    <div style="font-size:14.5px;color:#0f172a;line-height:1.5;font-weight:600;">${escapeHtml(dayShape.charAt(0).toUpperCase() + dayShape.slice(1))}. <span style="font-weight:500;color:#334155;">${escapeHtml(directive)}</span></div>
-  </div>`;
+        : 'You’re all clear today — spend the room on your single highest-leverage move.';
+  const momentumClause =
+    winsYesterday > 0 ? ` You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday.` : '';
+  const openingHtml = `<p style="margin:0 0 20px;font-size:13.5px;color:#475569;line-height:1.65;">${escapeHtml(roleFraming(role))} ${
+    dayShape
+      ? `<strong style="color:#0f172a;">${escapeHtml(dayShape.charAt(0).toUpperCase() + dayShape.slice(1))}.</strong> ${escapeHtml(directive)}`
+      : escapeHtml(directive)
+  }${momentumClause ? escapeHtml(momentumClause) : ''}</p>`;
+
+  // ── Foresight ─────────────────────────────────────────────────────────
+  // The forward-looking counterpart to the task list: a single quiet line
+  // (not a competing card) computed from the recipient's own delivery
+  // history (lib/ai/deliveryForesight). The "Foresight:" prefix is stripped
+  // since the label already provides it.
+  const foresightHtml = foresightLine
+    ? `<p style="margin:0 0 20px;font-size:13px;color:#475569;line-height:1.55;"><strong style="color:#6d28d9;">Foresight —</strong> ${escapeHtml(foresightLine.replace(/^Foresight:\s*/i, ''))}</p>`
+    : '';
 
   const html = `<!doctype html><html><body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
@@ -742,25 +730,20 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       </td></tr>
       <tr><td style="padding:26px;">
         <div style="font-size:16px;color:#0f172a;font-weight:700;margin:0 0 14px;">Good morning, ${escapeHtml(first)}</div>
-        ${execSummary}
-        ${momentum}
-        ${emptyNote}
+        ${openingHtml}
         ${focusHtml}
         ${foresightHtml}
         ${sectionsHtml}
-        ${openBtn ? `<div style="margin-top:8px;">${openBtn}</div>` : ''}
+        ${leadershipHtml}
+        ${openBtn ? `<div style="margin-top:4px;">${openBtn}</div>` : ''}
         ${
           insight
-            ? `<div style="margin-top:20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:13px 15px;">
-            <div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1565C0;margin:0 0 4px;">${escapeHtml(
-              insight.tag,
-            )} · worth a minute</div>
-            <div style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.4;">${escapeHtml(insight.title)}</div>
-            <div style="font-size:12.5px;color:#475569;line-height:1.5;margin-top:3px;">${escapeHtml(insight.body)}</div>
-          </div>`
+            ? `<div style="margin-top:22px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:12.5px;color:#64748b;line-height:1.55;"><strong style="color:#1565C0;">${escapeHtml(
+                insight.tag,
+              )} —</strong> <strong style="color:#0f172a;">${escapeHtml(insight.title)}.</strong> ${escapeHtml(insight.body)}</div>`
             : ''
         }
-        <div style="margin-top:22px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:13px;font-style:italic;color:#64748b;">“${escapeHtml(aphorism)}”</div>
+        <div style="margin-top:22px;${insight ? '' : 'padding-top:14px;border-top:1px solid #f1f5f9;'}font-size:13px;font-style:italic;color:#64748b;">“${escapeHtml(aphorism)}”</div>
       </td></tr>
       <tr><td style="padding:16px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
         <div style="font-size:12px;color:#94a3b8;line-height:1.5;">
