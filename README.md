@@ -2,7 +2,7 @@
 
 > The project tracker that sees the whole organisation as one living tree — and learns how your people actually deliver.
 
-[![CI](https://github.com/abhieq31/Pragati/actions/workflows/ci.yml/badge.svg)](https://github.com/abhieq31/Pragati/actions/workflows/ci.yml)
+[![CI](https://github.com/abhipatelz/Pragati/actions/workflows/ci.yml/badge.svg)](https://github.com/abhipatelz/Pragati/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2014%20·%20MongoDB%20·%20TypeScript-1565C0.svg)](#stack)
 [![Audit trail](https://img.shields.io/badge/audit%20trail-append--only-9333EA.svg)](./docs/ARCHITECTURE.md)
 [![License](https://img.shields.io/badge/license-MIT-64748b.svg)](./LICENSE)
