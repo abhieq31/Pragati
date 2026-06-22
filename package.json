@@ -19,6 +19,7 @@
     "backfill-usernames": "tsx scripts/backfill-usernames.ts",
     "migrate-roles": "tsx scripts/migrate-roles.ts",
     "smoke-prod": "tsx scripts/smoke-prod.ts",
+    "db:doctor": "tsx scripts/db-doctor.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/unit/*.test.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.ts\" \"tests/**/*.ts\" \"e2e/**/*.ts\"",
