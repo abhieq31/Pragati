@@ -1,4 +1,3 @@
-```ts
 import mongoose from 'mongoose';
 
 let cached: {
@@ -78,7 +77,6 @@ export async function connectDB(): Promise<typeof mongoose> {
         // Explicitly select the database instead of allowing MongoDB
         // to silently fall back to the "test" database.
         dbName: databaseName,
-
         maxPoolSize: 25,
         minPoolSize: 2,
         serverSelectionTimeoutMS: 5000,
@@ -112,4 +110,3 @@ export async function connectDB(): Promise<typeof mongoose> {
 
   return cached.conn;
 }
-```
