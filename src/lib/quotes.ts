@@ -4,21 +4,22 @@
  * unessential, and compounding small daily progress into delivery — not wealth,
  * career, or self-help in the abstract.
  *
- * Sourced exclusively from Jeff Bezos — his own words (the annual Amazon
- * shareholder letters chief among them) — and books on the documented
- * "Jeff's Reading List" (per Brad Stone's "The Everything Store" and
- * corroborating reporting): Fred Brooks' "The Mythical Man-Month", Eliyahu
- * Goldratt's "The Goal", Jim Collins' "Good to Great" and "Built to Last",
- * and Womack & Jones' "Lean Thinking". Every line was checked against
+ * Sourced exclusively from Elon Musk — his own documented words (the five-step
+ * engineering "algorithm" recorded in Walter Isaacson's "Elon Musk" chief
+ * among them) — and books he has publicly recommended on the record: Isaac
+ * Asimov's "Foundation" and Douglas Adams' "The Hitchhiker's Guide to the
+ * Galaxy" (the one he singles out as formative — its lesson that "often the
+ * question is harder than the answer"). Every line was checked against
  * multiple independent sources before inclusion — this is a public-facing
  * screen, so nothing here is recalled from memory and trusted on faith.
- * (Deliberately excluded: lines that read right out of context but trace to
- * a different, unverified book by the same author — e.g. Goldratt's "Tell me
- * how you measure me" is from "The Haystack Syndrome", not "The Goal".)
+ * (Deliberately excluded: punchy lines widely attributed to Musk on quote
+ * sites with no primary source, and book recommendations of his — Gordon's
+ * "Structures", Clark's "Ignition!" — whose memorable passages are technical
+ * rather than about getting work shipped.)
  *
- * Restricted to lines that map to getting work shipped: Day 1 urgency, bias
- * to action over waiting for certainty, bottlenecks and brutal facts over
- * wishful thinking, team-size and scheduling reality.
+ * Restricted to lines that map to getting work shipped: question the spec,
+ * delete before you optimize, persist against the odds, seek brutal feedback,
+ * and put the product above everything around it.
  *
  * Display rule: NO attribution is ever rendered. The words stand alone — the
  * login page shows the line, never the name or the source. (`author` is kept on
@@ -28,10 +29,6 @@
  * and never repeats a quote until the whole library is exhausted. Each quote
  * also stays on screen for a length of time proportional to how long it takes
  * to read (see `readingMs` on the login page), so longer lines aren't cut off.
- *
- * The library can still be refreshed forever without a redeploy by hosting a
- * JSON array of {text, author} and setting QUOTES_FEED_URL — /api/quotes
- * serves the feed with this list as permanent fallback.
  */
 
 export interface Quote {
@@ -40,105 +37,101 @@ export interface Quote {
 }
 
 export const BUILTIN_QUOTES: Quote[] = [
-  // ── Day 1 — customer obsession, never coast on yesterday's win ───────────
+  // ── The algorithm — delete before you optimize ───────────────────────────
+  // Musk's five-step process, as recorded verbatim in Walter Isaacson's
+  // biography; it is, almost word for word, a doctrine of cutting the
+  // unessential — which is exactly what this screen is here to reinforce.
   {
-    text: 'Day 2 is stasis. Followed by irrelevance. Followed by excruciating, painful decline. Followed by death. And that is why it is always Day 1.',
-    author: 'Jeff Bezos, 2016 letter to shareholders',
+    text: 'The best part is no part. The best process is no process.',
+    author: 'Elon Musk (Isaacson, Elon Musk)',
   },
   {
-    text: 'Obsessive customer focus is by far the most protective of Day 1 vitality.',
-    author: 'Jeff Bezos, 2016 letter to shareholders',
+    text: 'Question every requirement. Each should carry the name of a person, never a department — then make it less dumb.',
+    author: 'Elon Musk, the algorithm — step 1 (Isaacson)',
   },
   {
-    text: 'Customers are always beautifully, wonderfully dissatisfied, even when they report being happy and business is great.',
-    author: 'Jeff Bezos, 2016 letter to shareholders',
+    text: 'Delete any part or process you can. If you’re not adding at least 10% of them back later, you didn’t delete enough.',
+    author: 'Elon Musk, the algorithm — step 2 (Isaacson)',
   },
   {
-    text: 'Put the customer first. Invent. And be patient.',
-    author: 'Jeff Bezos',
-  },
-
-  // ── Decide and move — regret the things you didn't try ───────────────────
-  {
-    text: 'I want to have minimized the number of regrets that I have in my life.',
-    author: 'Jeff Bezos',
+    text: 'Simplify and optimize — but only after deleting. The common mistake is to optimize something that should not exist.',
+    author: 'Elon Musk, the algorithm — step 3 (Isaacson)',
   },
   {
-    text: 'Most of our regrets are acts of omission — the things we didn’t try, the paths untraveled.',
-    author: 'Jeff Bezos',
+    text: 'The most common error of a smart engineer is to optimize a thing that should not exist.',
+    author: 'Elon Musk (Isaacson, Elon Musk)',
   },
-  { text: 'Disagree and commit.', author: 'Jeff Bezos, 2016 letter to shareholders' },
   {
-    text: 'Most decisions should probably be made with somewhere around 70% of the information you wish you had. If you wait for 90%, in most cases, you’re probably being slow.',
-    author: 'Jeff Bezos, 2016 letter to shareholders',
+    text: 'Automate last. The mistake is to automate before you’ve questioned, deleted, and shaken the bugs out.',
+    author: 'Elon Musk, the algorithm — step 5 (Isaacson)',
   },
 
-  // ── Invention is experiments, and experiments fail ───────────────────────
+  // ── Ship against the odds — persistence over certainty ───────────────────
   {
-    text: 'Failure and invention are inseparable twins. To invent you have to experiment, and if you know in advance that it’s going to work, it’s not an experiment.',
-    author: 'Jeff Bezos',
+    text: 'When something is important enough, you do it even if the odds are not in your favor.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Invention requires a long-term willingness to be misunderstood.',
-    author: 'Jeff Bezos',
+    text: 'Persistence is very important. You should not give up unless you are forced to give up.',
+    author: 'Elon Musk',
   },
   {
-    text: 'If you double the number of experiments you do per year, you’re going to double your inventiveness.',
-    author: 'Jeff Bezos',
+    text: 'The first step is to establish that something is possible; then probability will occur.',
+    author: 'Elon Musk',
   },
   {
-    text: 'I think frugality drives innovation, just like other constraints do.',
-    author: 'Jeff Bezos',
-  },
-
-  // ── The system, not the hero — team size, scheduling reality ─────────────
-  {
-    text: 'Adding manpower to a late software project makes it later.',
-    author: 'Fred Brooks, The Mythical Man-Month',
+    text: 'If things are not failing, you are not innovating enough.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Nine women cannot make a baby in one month.',
-    author: 'Fred Brooks, The Mythical Man-Month',
-  },
-  {
-    text: 'Conceptual integrity is the most important consideration in system design.',
-    author: 'Fred Brooks, The Mythical Man-Month',
+    text: 'I’d rather be optimistic and wrong than pessimistic and right.',
+    author: 'Elon Musk',
   },
 
-  // ── Bottlenecks and brutal facts over wishful thinking ───────────────────
+  // ── Brutal feedback — find what's wrong and fix it ───────────────────────
   {
-    text: 'An hour lost at a bottleneck is an hour out of the entire system. An hour saved at a non-bottleneck is worthless.',
-    author: 'Eliyahu Goldratt, The Goal',
+    text: 'Solicit negative feedback, particularly from friends. They can tell you what’s actually wrong.',
+    author: 'Elon Musk',
   },
   {
-    text: 'The strength of the chain is determined by the weakest link.',
-    author: 'Eliyahu Goldratt, The Goal',
+    text: 'Focus on signal over noise. Don’t waste effort on things that don’t actually make the product better.',
+    author: 'Elon Musk',
   },
   {
-    text: 'Productivity is the act of bringing a company closer to its goal.',
-    author: 'Eliyahu Goldratt, The Goal',
-  },
-  { text: 'Good is the enemy of great.', author: 'Jim Collins, Good to Great' },
-  {
-    text: 'You absolutely cannot make a series of good decisions without first confronting the brutal facts.',
-    author: 'Jim Collins, Good to Great',
+    text: 'Constantly think about how you could be doing things better, and keep questioning yourself.',
+    author: 'Elon Musk',
   },
 
-  // ── Built to last — there are no shortcuts ────────────────────────────────
-  { text: 'Success is never final.', author: 'Jim Collins, Built to Last' },
+  // ── The product is the point ─────────────────────────────────────────────
   {
-    text: 'It is better to understand who you are than where you are going — for where you are going will almost certainly change.',
-    author: 'Jim Collins, Built to Last',
+    text: 'Great companies are built on great products.',
+    author: 'Elon Musk',
+  },
+  {
+    text: 'Brand is just a perception, and perception will match reality over time.',
+    author: 'Elon Musk',
+  },
+  {
+    text: 'I think it is possible for ordinary people to choose to be extraordinary.',
+    author: 'Elon Musk',
   },
 
-  // ── Cut the unessential — value is defined by the customer ───────────────
+  // ── From the books he recommends — ask the right question, then execute ───
   {
-    text: 'The critical starting point for lean thinking is value.',
-    author: 'Womack & Jones, Lean Thinking',
+    text: 'Often the question is harder than the answer. Phrase the question correctly, and the answer is the easy part.',
+    author: 'Elon Musk, on Douglas Adams’ The Hitchhiker’s Guide to the Galaxy',
   },
   {
-    text: 'Value can only be defined by the ultimate customer.',
-    author: 'Womack & Jones, Lean Thinking',
+    text: 'A common mistake people make when designing something completely foolproof is to underestimate the ingenuity of complete fools.',
+    author: 'Douglas Adams, The Hitchhiker’s Guide to the Galaxy',
+  },
+  {
+    text: 'Don’t Panic.',
+    author: 'Douglas Adams, The Hitchhiker’s Guide to the Galaxy',
+  },
+  {
+    text: 'To succeed, planning alone is insufficient. One must improvise as well.',
+    author: 'Isaac Asimov, Foundation',
   },
 ];
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client/api';
 import { PragatiMark } from '@/components/PragatiMark';
 import { BirdsEyeLoader } from '@/components/BirdsEyeLoader';
-import { BUILTIN_QUOTES, dailyQuoteOffset, readingMs, type Quote } from '@/lib/quotes';
+import { BUILTIN_QUOTES, dailyQuoteOffset, readingMs } from '@/lib/quotes';
 import { ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { AVATAR_FONTS, avatarFg } from '@/components/ui';
 
@@ -19,23 +19,23 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, unattributed wisdom — Naval Ravikant and the books he recommends
-   (Munger, Marcus Aurelius, Seneca, Bruce Lee, James Clear, Feynman, …),
+/* Rotating, unattributed wisdom — Elon Musk's own words (his five-step
+   engineering "algorithm" chief among them) and the books he publicly
+   recommends (Douglas Adams' Hitchhiker's Guide, Asimov's Foundation),
    curated to what Pragati is for: doing the work — focus, finishing, cutting
    the unessential, and compounding small daily progress into delivery. No name
-   is ever shown, only the line. Built-ins ship with the app; /api/quotes swaps
-   in the operator's live feed (QUOTES_FEED_URL) so the library keeps growing
-   without a redeploy. Never repeats until the whole library has been shown (see
-   unseenQuoteIndices / pickUnseen below). */
+   is ever shown, only the line. Never repeats on a device until the whole
+   library has been shown (see unseenQuoteIndices / pickUnseen below). See
+   src/lib/quotes.ts for the sourcing rules. */
 
 // Bumped when the library is re-curated (the ledger is positional, so a fresh
 // key avoids old indices pre-marking different lines): v2 = Elon→Naval pool,
-// v3 = trimmed to the execution/delivery theme.
-const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v3';
+// v3 = Bezos + his reading list, v4 = Elon Musk + the books he recommends.
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v4';
 
 /** Indices not yet shown on this device; resets only once the whole set is
- *  exhausted. Takes the current library size — the list is dynamic (built-ins
- *  now, the operator's live feed once /api/quotes responds). */
+ *  exhausted. Takes the library size so a re-curation of the list stays in
+ *  bounds. */
 function unseenQuoteIndices(count: number): number[] {
   const all = Array.from({ length: count }, (_, i) => i);
   try {
@@ -73,7 +73,6 @@ function pickUnseen(count: number, exclude?: number): number {
 }
 
 function RotatingQuote() {
-  const [quotes, setQuotes] = useState<Quote[]>(BUILTIN_QUOTES);
   // Deterministic seed only so server and first client render match (no
   // localStorage on the server); the mount effect immediately advances off it
   // to a genuinely-unseen line, so revisiting the page never re-opens on the
@@ -90,29 +89,17 @@ function RotatingQuote() {
     setI(first);
   }, []);
 
-  // Live feed (if QUOTES_FEED_URL is configured) can grow the library without a
-  // redeploy. Just adopt the content; the next advance draws from the new,
-  // larger unseen pool — no reseed to a fixed offset, which would repeat.
-  useEffect(() => {
-    fetch('/api/quotes')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.quotes?.length) setQuotes(d.quotes);
-      })
-      .catch(() => {});
-  }, []);
-
   // Self-scheduling rotation: each quote stays up for its own reading time
   // (proportional to length), so a long line isn't cut off and a short one
   // doesn't linger. Re-runs after every advance to size the next dwell.
   useEffect(() => {
-    if (quotes.length < 2) return;
-    const dwell = readingMs(quotes[i % quotes.length]?.text || '');
+    if (BUILTIN_QUOTES.length < 2) return;
+    const dwell = readingMs(BUILTIN_QUOTES[i % BUILTIN_QUOTES.length]?.text || '');
     const t = setTimeout(() => {
       setShow(false);
       // Compute + record the next line outside the state updater (no side
       // effects in a reducer): an unseen index, never the current one.
-      const next = pickUnseen(quotes.length, i);
+      const next = pickUnseen(BUILTIN_QUOTES.length, i);
       markQuoteSeen(next);
       setTimeout(() => {
         setI(next);
@@ -120,9 +107,9 @@ function RotatingQuote() {
       }, 400);
     }, dwell);
     return () => clearTimeout(t);
-  }, [i, quotes]);
+  }, [i]);
 
-  const q = quotes[i % quotes.length];
+  const q = BUILTIN_QUOTES[i % BUILTIN_QUOTES.length];
   return (
     <div
       style={{

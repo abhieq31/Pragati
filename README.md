@@ -1,6 +1,6 @@
 # Pragati
 
-> The project tracker that sees the whole organisation as one living tree — and learns how your people actually deliver.
+> Built from first principles: if everyone could see the whole board, most status meetings wouldn't need to exist. So everyone sees the whole board — one organisation, one living tree — and the system learns how your people actually deliver.
 
 [![CI](https://github.com/abhipatelz/Pragati/actions/workflows/ci.yml/badge.svg)](https://github.com/abhipatelz/Pragati/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/stack-Next.js%2014%20·%20MongoDB%20·%20TypeScript-1565C0.svg)](#stack)
@@ -14,7 +14,7 @@
 | `demo.lead@pragati.local` | `Demo@1234` | Team Lead (best first look) |
 | `demo.ic@pragati.local` | `Demo@1234` | Individual Contributor |
 
-These are seeded demo accounts on a public demo workspace — don't put anything sensitive in them. Full seed details: [`docs/DEMO_ENVIRONMENT.md`](./docs/DEMO_ENVIRONMENT.md).
+These are seeded demo accounts on a public demo workspace — don't put anything sensitive in them. They're exempt from the brute-force lockout (their password is public, so the lock would only let a passer-by take the demo down) and self-heal on the next correct sign-in, so the link above always works. Full seed details: [`docs/DEMO_ENVIRONMENT.md`](./docs/DEMO_ENVIRONMENT.md).
 
 ## 60 seconds, in motion
 
@@ -33,7 +33,7 @@ These are seeded demo accounts on a public demo workspace — don't put anything
 
 ## What it is
 
-**One promise: everyone sees the whole board.** Every person — contributor, lead, or admin — gets a bird's-eye view of everything moving in their team, plus a private space only they can see. Born out of pharma QA-IT, so it borrows GxP-style audit-trail and lifecycle patterns; the model itself is universal. Invite-only — no public sign-up, no marketing funnel.
+**One promise: everyone sees the whole board.** Question the usual requirement — *why does a contributor only get to see their own slice?* There's no good reason, so here they don't. Every person — contributor, lead, or admin — gets a bird's-eye view of everything moving in their team, plus a private space only they can see. Born out of pharma QA-IT, so it borrows GxP-style audit-trail and lifecycle patterns; the model itself is universal. Invite-only — no public sign-up, no marketing funnel.
 
 | Role | What they see |
 | --- | --- |
@@ -44,7 +44,7 @@ These are seeded demo accounts on a public demo workspace — don't put anything
 
 ## Engineering at a glance
 
-A solo-built, production-deployed system — not a tutorial clone. The numbers below are generated from the repo itself (`npm test`, `find`, `git log`), not hand-typed.
+Solo-built, in production, not a tutorial clone. The numbers below come straight from the repo — `npm test`, `find`, `git log` — not from a pitch deck. If you can't measure it, it's just an opinion.
 
 | | |
 | --- | --- |
@@ -53,9 +53,9 @@ A solo-built, production-deployed system — not a tutorial clone. The numbers b
 | **233** unit tests + **5** Playwright e2e specs, all green | **600+** commits of real iteration history |
 | Typecheck · lint · test · build gated on every push ([`ci.yml`](.github/workflows/ci.yml)) | Deployed on Vercel with scheduled cron jobs (health check, daily digest) |
 
-A few decisions worth a closer look during a code review:
+A few decisions worth a closer look during a code review. Each one started by questioning a requirement everybody else takes for granted:
 
-- **A rule-based decision engine, deliberately not an LLM.** QA severity triage, slip-risk prediction, and delivery forecasting (`src/lib/ai/*`) are hand-calibrated, fully deterministic, and unit-tested — every score traces to a line of code, not a model weight. See [`src/lib/ai/slipRisk.ts`](./src/lib/ai/slipRisk.ts) and [`src/lib/ai/deliveryForesight.ts`](./src/lib/ai/deliveryForesight.ts).
+- **A rule-based decision engine, deliberately not an LLM.** The default move is "add AI." Questioned and rejected: QA severity triage, slip-risk prediction, and delivery forecasting (`src/lib/ai/*`) are hand-calibrated, fully deterministic, and unit-tested — every score traces to a line of code, not a model weight. You can't debug a weight; you can debug a line. See [`src/lib/ai/slipRisk.ts`](./src/lib/ai/slipRisk.ts) and [`src/lib/ai/deliveryForesight.ts`](./src/lib/ai/deliveryForesight.ts).
 - **One capability matrix drives the UI and the API.** [`src/lib/permissions.ts`](./src/lib/permissions.ts) is the single source of truth for who can do what — imported by route handlers and components alike, so the two can never disagree.
 - **A natural-language quick-add parser with zero dependencies.** Typing "Ship the QA report urgent tomorrow" into the command palette extracts a due date, priority, and clean title — one small regex-driven module ([`src/lib/quickAddParse.ts`](./src/lib/quickAddParse.ts)), fully unit-tested, no NLP library.
 - **A scaling story that's mostly already built.** [`docs/SCALING.md`](./docs/SCALING.md) walks through the tenant-as-shard data model and exactly which env var flips on each growth lever — most of it shipped and dormant, not hypothetical.
@@ -92,7 +92,7 @@ Reads go straight from server components to Mongoose data builders; mutations fl
 - **Activity graph** — GitHub-style contribution heatmap with role-based achievements (Milestone Achiever, On-Time Streak, Project Finisher, Mentor, Load Balancer, …).
 - **Reports** — Excel (interactive), PDF, CSV, HTML exports for both projects and teams. Print preview before save.
 - **Productivity touches** — resizable sidebar, global keyboard shortcuts (`⌘K` for the command palette, `G D/P/T/M` to navigate, `?` for the shortcut sheet), custom team avatars, and per-page loading skeletons that mirror each real layout.
-- **A living login screen** — unattributed lines curated to what Pragati is for — doing the work — never repeating on a device until the whole library has cycled, refreshable forever via `QUOTES_FEED_URL` (a public JSON you host) with the built-in library as permanent fallback.
+- **A login screen that earns its pixels** — an unattributed line on doing the work, drawn from Elon Musk and the books he recommends, rotated so it never repeats on a device until the whole library has cycled. There was once a live-feed CMS behind it (an API route, a memo cache, an env var) to swap quotes without a redeploy. It was deleted: the words ship with the binary now. The best part is no part.
 - **AI, deep but minimal** — the rule-based engine decides everything (an architectural invariant); Gemini may only *rephrase* the already-decided Morning Brief headline (one cached call per user per day, instant fallback without a key). Plus the conversational Copilot and mind-map→tasks suggestions.
 - **Daily rundown, four channels, free forever** — every user gets a role-aware **Morning Brief** (contributors: what's on my plate; leads: team pulse; admins: workspace rundown) rendered on the dashboard, as an optional **Web Push** notification (VAPID — no vendor, no cost), as a personal **calendar feed** (subscribe once in Outlook/Google/Apple), and as an opt-in **08:30 IST email** capped to the provider's free tier. Mail is provider-agnostic (`MAIL_PROVIDER=brevo|resend|webhook`) so an org can bring its own relay. See [Daily email digest](#daily-email-digest) and [`docs/SCALING.md`](./docs/SCALING.md).
 
@@ -124,10 +124,14 @@ USE_IN_MEMORY_MONGO=true npm run dev
 
 ## Demo data
 
-Drop a believable workspace into your existing database with one command:
+Drop a believable workspace into your existing database with one command. The
+seeded workspace is themed as an Elon-style engineering org — SpaceX, Tesla and
+xAI teams (Starbase Engineering, Raptor Propulsion, Tesla Powertrain, Autopilot
+& AI, Starlink, Gigafactory Operations) running programs like Raptor 3, the 4680
+cell line, FSD v13 and a Starship flight-software release.
 
 ```bash
-npm run seed:demo                 # 30 users, 6 teams, 14 projects, mixed task statuses
+npm run seed:demo                 # 16 users, 6 teams, 12 projects, mixed task statuses
 npm run seed:demo -- --clean      # wipe demo records (real data untouched)
 ```
 
@@ -135,9 +139,9 @@ Demo accounts (password `Demo@1234`):
 
 | Email | Role |
 | --- | --- |
-| `demo.lead@pragati.local` | Team Lead (best for screen-recordings) |
-| `demo.ic@pragati.local` | Individual Contributor |
-| `demo.<first>@pragati.local` | 13 supporting contributors |
+| `demo.lead@pragati.local` | Team Lead — Elon Musk (Demo), best first look |
+| `demo.ic@pragati.local` | Individual Contributor — a propulsion engineer |
+| `demo.<handle>@pragati.local` | 14 supporting engineers |
 
 Details: [`docs/DEMO_ENVIRONMENT.md`](./docs/DEMO_ENVIRONMENT.md).
 

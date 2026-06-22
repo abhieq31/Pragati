@@ -30,6 +30,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-06-22',
+    title: 'Public demo accounts can no longer be locked out',
+    tags: ['fix', 'security'],
+    body: [
+      'The read-only demo accounts (whose password is published in the README) are now exempt from the brute-force lockout. Because the password is intentionally public, the lockout secured nothing for them and only handed any visitor a way to take the live demo down — five wrong passwords would lock the shared account until an admin cleared it by hand, and the lockout wall then refused even the correct, published password.',
+      'Demo logins no longer accrue failed-attempt counts, so they can never lock; and a successful demo login now clears any lock an earlier visitor left behind, so the demo self-heals. Real accounts are unaffected — they keep the full five-attempt lockout. The demo-account pattern (demo.*@pragati.local) is now shared between the seed and the auth path so the two can never disagree.',
+    ],
+  },
+  {
+    date: '2026-06-22',
+    title: 'Login quotes: re-sourced to Elon Musk and the books he recommends',
+    tags: ['improvement'],
+    body: [
+      'The rotating login quote is now drawn exclusively from Elon Musk’s own documented words — his five-step engineering “algorithm” (question the requirement, delete before you optimize, simplify, accelerate, automate last) chief among them — and the books he has publicly recommended (Douglas Adams’ The Hitchhiker’s Guide to the Galaxy, Asimov’s Foundation). Same theme as before: lines that map to getting work shipped, not wealth or career in the abstract.',
+      'Every line was checked against multiple independent sources before inclusion — the login screen is public, so nothing is trusted from memory. As always, no attribution is ever shown: the words stand alone.',
+      'Simplified the plumbing behind it: the optional live-feed system (a public API route, an in-memory cache, and the QUOTES_FEED_URL env var that let the quote library be swapped without a redeploy) has been deleted. The curated library now ships with the app and nothing else — fewer moving parts, one less public endpoint, same screen.',
+    ],
+  },
+  {
     date: '2026-06-15',
     title: 'Login screen: quotes on doing the work',
     tags: ['improvement', 'fix'],

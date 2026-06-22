@@ -8,6 +8,7 @@ import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
 import { rateLimit } from '@/lib/rateLimit';
 import { logOperation } from '@/lib/audit';
+import { isDemoAccount } from '@/lib/demo';
 
 export const runtime = 'nodejs';
 
@@ -98,7 +99,15 @@ export async function POST(req: NextRequest) {
       !!(user as any).securityKeyHash &&
       bcrypt.compareSync(body.password, (user as any).securityKeyHash);
 
-    if (user.lockedAt && !securityKeyOk) {
+    // Public demo accounts are never walled off by a lock. Their password is
+    // published in the README, so the lockout secures nothing and only lets a
+    // visitor DoS the shared demo by typing a wrong password five times. They
+    // fall through to normal password verification; the success path below then
+    // clears any lock an earlier visitor left behind (self-healing). See
+    // src/lib/demo.ts.
+    const demo = isDemoAccount(user.email);
+
+    if (user.lockedAt && !securityKeyOk && !demo) {
       // The account is real (we matched it above) and is locked. Telling
       // the user this is far more useful than a generic "invalid" wall —
       // a legitimate user keeps retrying with the correct password and
@@ -115,6 +124,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!passwordOk && !securityKeyOk) {
+      // Demo accounts never accrue failed attempts, so they can never lock —
+      // their password is public, so the lockout would only be a self-DoS
+      // vector. Reject the wrong password without touching the counter.
+      if (demo) {
+        return NextResponse.json(GENERIC_INVALID.body, { status: GENERIC_INVALID.status });
+      }
+
       // Atomic increment so two concurrent wrong-password requests can't
       // both read N and both write N+1. The 5th miss flips lockedAt in
       // the same round-trip; if the counter is already at the threshold
