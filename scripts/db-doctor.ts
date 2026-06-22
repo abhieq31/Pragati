@@ -53,35 +53,46 @@ async function survey(client: MongoClient) {
   console.log(`\n[doctor] target database the app reads/writes: "${TARGET_DB}"\n`);
   console.log('[doctor] user accounts per database:');
 
+  // The core workspace collections we care about when locating "missing" data.
+  const CORE = ['users', 'teams', 'projects', 'tasks'] as const;
+
   let foundOther = false;
   for (const { name } of databases) {
     if (SYSTEM_DBS.has(name)) continue;
     const db = client.db(name);
-    const collections = await db.listCollections({ name: 'users' }).toArray();
-    if (collections.length === 0) {
-      console.log(`  ${name.padEnd(24)} (no users collection)`);
+    const present = new Set((await db.listCollections().toArray()).map((c) => c.name));
+    if (!CORE.some((c) => present.has(c))) {
+      console.log(`  ${name.padEnd(24)} (no workspace collections)`);
       continue;
     }
-    const users = db.collection('users');
-    const count = await users.countDocuments();
-    const sample = await users
-      .find({}, { projection: { email: 1, role: 1 } })
-      .limit(5)
-      .toArray();
+
+    const counts: Record<string, number> = {};
+    for (const c of CORE) counts[c] = present.has(c) ? await db.collection(c).countDocuments() : 0;
+    const total = CORE.reduce((n, c) => n + counts[c], 0);
+    if (name !== TARGET_DB && total > 0) foundOther = true;
+
     const marker = name === TARGET_DB ? ' ← app uses this' : '';
-    if (name !== TARGET_DB && count > 0) foundOther = true;
-    console.log(`  ${name.padEnd(24)} ${String(count).padStart(5)} user(s)${marker}`);
-    for (const s of sample) console.log(`        · ${(s.email ?? '(no email)').padEnd(34)} ${s.role ?? ''}`);
+    const summary = CORE.map((c) => `${counts[c]} ${c}`).join(', ');
+    console.log(`  ${name.padEnd(24)} ${summary}${marker}`);
+
+    if (present.has('users') && counts.users > 0) {
+      const sample = await db
+        .collection('users')
+        .find({}, { projection: { email: 1, role: 1 } })
+        .limit(5)
+        .toArray();
+      for (const s of sample) console.log(`        · ${(s.email ?? '(no email)').padEnd(34)} ${s.role ?? ''}`);
+    }
   }
 
   if (foundOther) {
     console.log(
-      `\n[doctor] Users exist OUTSIDE "${TARGET_DB}". If those are your real accounts, recover them with:\n` +
+      `\n[doctor] Workspace data exists OUTSIDE "${TARGET_DB}". If that's your real workspace, recover it with:\n` +
         `  npx tsx scripts/db-doctor.ts --migrate <thatDbName>            # dry-run\n` +
         `  npx tsx scripts/db-doctor.ts --migrate <thatDbName> --confirm  # apply`,
     );
   } else {
-    console.log(`\n[doctor] No user accounts found in any database other than "${TARGET_DB}".`);
+    console.log(`\n[doctor] No workspace data found in any database other than "${TARGET_DB}".`);
   }
 }
 
