@@ -606,7 +606,7 @@ export default function NewProjectPage() {
               <label className="label">Project name *</label>
               <input
                 className="input"
-                placeholder="e.g. IDP Validation Q2 2026"
+                placeholder="e.g. CSV Validation Q2 2026"
                 value={form.name}
                 onChange={(e) => up('name', e.target.value)}
                 autoFocus

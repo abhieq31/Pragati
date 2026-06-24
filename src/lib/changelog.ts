@@ -30,6 +30,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-06-24',
+    title: 'Login quotes: Elon Musk and the canon he admires',
+    tags: ['improvement'],
+    body: [
+      'The rotating login quote is now drawn from Elon Musk — his own documented words and five-step engineering “algorithm” (question the requirement, delete before you optimize, simplify, accelerate, automate last) — together with the books and authors that shaped him (Isaac Asimov’s Foundation, Douglas Adams, Robert Heinlein, J.R.R. Tolkien, Peter Thiel’s Zero to One) and the inventors and leaders he names as heroes (Nikola Tesla, Benjamin Franklin, Isaac Newton, Henry Ford, Richard Feynman, Albert Einstein, Steve Jobs, Winston Churchill). Curated to what Pragati is for: building, shipping, focus, finishing, and deleting the unessential.',
+      'As always, no attribution is ever shown — the words stand alone. The library ships with the app (no feed, no CMS) and never repeats a line on a device until the whole set has cycled.',
+    ],
+  },
+  {
+    date: '2026-06-24',
+    title: 'Cleaner login & generic team Quality (QMS) tracking',
+    tags: ['improvement'],
+    body: [
+      'The login screen no longer shows the first-run “Welcome to Pragati / Set up your workspace” banner. A brand-new, empty workspace now opens straight into the create-the-first-account form; an existing workspace shows a clean sign-in.',
+      'A team’s Quality (QMS) tracking module is now presented as a generic quality-tracking section — “Quality tracking”, with one record per change control — rather than being framed around any single team’s spreadsheet. The underlying tracker is unchanged.',
+    ],
+  },
+  {
     date: '2026-06-22',
     title: 'Public demo accounts can no longer be locked out',
     tags: ['fix', 'security'],

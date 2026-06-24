@@ -19,19 +19,22 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, unattributed wisdom — Elon Musk's own words (his five-step
-   engineering "algorithm" chief among them) and the books he publicly
-   recommends (Douglas Adams' Hitchhiker's Guide, Asimov's Foundation),
-   curated to what Pragati is for: doing the work — focus, finishing, cutting
-   the unessential, and compounding small daily progress into delivery. No name
-   is ever shown, only the line. Never repeats on a device until the whole
-   library has been shown (see unseenQuoteIndices / pickUnseen below). See
-   src/lib/quotes.ts for the sourcing rules. */
+/* Rotating, unattributed wisdom — Elon Musk, the books and authors that shaped
+   him (Asimov's Foundation, Douglas Adams, Heinlein, Tolkien, Thiel's Zero to
+   One) and the inventors and leaders he names as heroes (Tesla, Franklin,
+   Newton, Ford, Feynman, Einstein, Jobs, Churchill), curated to what Pragati is
+   for: doing the work — building, shipping, focus, finishing, deleting the
+   unessential, and persisting against the odds. No name is ever shown, only the
+   line. Never repeats on a device until the whole library has been shown (see
+   unseenQuoteIndices / pickUnseen below). See src/lib/quotes.ts for the
+   sourcing rules. */
 
 // Bumped when the library is re-curated (the ledger is positional, so a fresh
 // key avoids old indices pre-marking different lines): v2 = Elon→Naval pool,
-// v3 = Bezos + his reading list, v4 = Elon Musk + the books he recommends.
-const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v4';
+// v3 = Bezos + his reading list, v4 = Elon Musk + the books he recommends,
+// v5 = Naval Ravikant + the thinkers and books he champions,
+// v6 = Elon Musk + the books, authors, and leaders he admires.
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v6';
 
 /** Indices not yet shown on this device; resets only once the whole set is
  *  exhausted. Takes the library size so a re-curation of the list stays in
@@ -174,7 +177,6 @@ function StrengthMeter({ password }: { password: string }) {
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<'login' | 'setup' | 'unlock'>('login');
-  const [isFirstRun, setIsFirstRun] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -219,9 +221,12 @@ export default function LoginPage() {
   const pinInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // On a brand-new (empty) workspace, drop straight into setup so the first
+    // lead account can be created — no banner needed. A failed status call
+    // throws and is swallowed below, so a DB hiccup never flips us into setup.
     api<{ initialized: boolean }>('/system/status')
       .then((d) => {
-        if (!d.initialized) setIsFirstRun(true);
+        if (!d.initialized) setMode('setup');
       })
       .catch(() => {});
     // Auto-switch to PIN pad for trusted devices — no opt-in button needed.
@@ -589,27 +594,6 @@ export default function LoginPage() {
                 <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
                   <span className="text-red-500 font-bold shrink-0 mt-0.5 text-sm">!</span>
                   <div className="text-sm text-red-800 leading-snug">{notice}</div>
-                </div>
-              )}
-
-              {/* First-run banner */}
-              {isFirstRun && mode === 'login' && (
-                <div className="mb-6 rounded-xl border border-forest-200 bg-forest-50 px-4 py-3 flex items-start gap-2.5 fade-in-soft">
-                  <Sparkles size={15} className="text-forest-600 shrink-0 mt-0.5" />
-                  <div className="text-xs leading-snug">
-                    <div className="font-semibold text-forest-800">
-                      Welcome to <span className="brand-wordmark">Pragati</span>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setMode('setup');
-                        setErr('');
-                      }}
-                      className="text-forest-700 font-bold underline hover:no-underline mt-0.5"
-                    >
-                      Set up your workspace →
-                    </button>
-                  </div>
                 </div>
               )}
 

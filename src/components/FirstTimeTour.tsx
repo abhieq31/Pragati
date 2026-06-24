@@ -99,7 +99,7 @@ function buildSteps(role: string): Step[] {
       target: '[data-tour="nav-teams"]',
       mobileTarget: '[data-mobile-tour="nav-teams"]',
       title: 'Switch on team modules',
-      body: 'New: when you create or edit a team, toggle on Quality (QMS) tracking — a digital CSV/validation status sheet per change control — and a lightweight Support-ticket queue. They stay hidden until you turn them on, so teams that don’t need them never see the clutter.',
+      body: 'New: when you create or edit a team, toggle on Quality (QMS) tracking and a lightweight Support-ticket queue. They stay hidden until you turn them on, so teams that don’t need them never see the clutter.',
       icon: Sparkles,
       iconBg: '#E0F7FA',
       iconColor: '#0E7490',
