@@ -18,8 +18,8 @@ interface SheetSummary {
 }
 
 /**
- * Quality (QMS) module for a team — currently the CSV Activity tracker. Lists
- * the team's change-control sheets and (for leads) lets them start a new one.
+ * Quality (QMS) module for a team — a generic quality-tracking section. Lists
+ * the team's change-control records and (for leads) lets them start a new one.
  * Rendered inside the team detail page only when Team.modules.qms.enabled.
  */
 export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }) {
@@ -61,22 +61,21 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
 
   return (
     <Card
-      title="CSV Activity"
+      title="Quality tracking"
       action={
         isLead ? (
           <button
             onClick={() => setCreating((v) => !v)}
             className="text-xs font-bold text-brand-700 hover:text-brand-800 px-2 py-1 rounded-md hover:bg-blue-50 transition-colors"
           >
-            {creating ? 'Cancel' : '+ New sheet'}
+            {creating ? 'Cancel' : '+ New record'}
           </button>
         ) : undefined
       }
     >
       {ToastEl}
       <p className="-mt-1 mb-3 text-[11px] text-slate-500 leading-snug">
-        Validation document status per Change Control — the digital version of the IDP team&apos;s Excel
-        sheet.
+        Track validation and quality status, one record per change control.
       </p>
 
       {creating && (
@@ -111,7 +110,7 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
         <div className="h-16 skeleton rounded-xl" />
       ) : sheets.length === 0 ? (
         <div className="text-sm text-slate-500 py-4">
-          {isLead ? 'No sheets yet — start one with “New sheet”.' : 'No CSV activity sheets yet.'}
+          {isLead ? 'No records yet — start one with “New record”.' : 'No quality records yet.'}
         </div>
       ) : (
         <div className="space-y-2">

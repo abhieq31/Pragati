@@ -586,7 +586,7 @@ function TeamFormModal({
                 <div className="space-y-2">
                   <ModuleToggle
                     label="Quality (QMS) tracking"
-                    hint="Track CSV / validation document status per change control."
+                    hint="Track validation and quality status for this team."
                     checked={qmsEnabled}
                     onChange={setQmsEnabled}
                   />
