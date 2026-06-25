@@ -8,19 +8,25 @@ import { requireRole } from '@/lib/auth';
 import { handleError } from '@/lib/http';
 import { rateLimit } from '@/lib/rateLimit';
 import { logOperation } from '@/lib/audit';
+import { defaultPassword, canUseDefaultPassword } from '@/lib/defaultPassword';
 
 export const runtime = 'nodejs';
 
 // Admin-only password reset: the workspace admin resets another user's
-// password and gets back a temporary password to share verbally / over
-// chat. No SMTP round-trip.
+// password and gets back the password to share verbally / over chat. No SMTP
+// round-trip.
+//
+// The reset restores the same standard default used when the account was
+// created — `FirstName@employeeId` — so there's one predictable credential an
+// admin can hand out, rather than a fresh random string each time. Accounts
+// without an employee ID fall back to a random temporary password. Either way
+// the target is forced to set their own password on next login.
 //
 // Flow:
 //   1. Admin opens /people, clicks "Reset password" on a row.
 //   2. UI calls POST /api/users/[id]/reset-password.
-//   3. Endpoint returns { tempPassword: "Pragati-..." } and flips the
-//      target's mustChangePassword flag so they're forced to set a new
-//      one on their next login.
+//   3. Endpoint returns { tempPassword, isDefault } and flips the target's
+//      mustChangePassword flag.
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
   const rand = crypto.randomBytes(8);
@@ -47,7 +53,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const target = await User.findById(params.id);
     if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const tempPassword = generateTempPassword();
+    // Restore the standard default (FirstName@employeeId) when we can; fall
+    // back to a random temp password for accounts with no employee ID.
+    const isDefault = canUseDefaultPassword(target.employeeId);
+    const tempPassword = isDefault
+      ? defaultPassword(target.name, target.employeeId)
+      : generateTempPassword();
     target.passwordHash = bcrypt.hashSync(tempPassword, 10);
     target.mustChangePassword = true;
     // Resetting the password implicitly lifts any brute-force lock —
@@ -75,6 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({
       ok: true,
       tempPassword,
+      isDefault,
       user: { id: String(target._id), email: target.email, name: target.name },
     });
   } catch (e) {

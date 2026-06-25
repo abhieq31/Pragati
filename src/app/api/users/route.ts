@@ -10,6 +10,7 @@ import { handleError, readBody } from '@/lib/http';
 import { UsernameSchema } from '@/lib/validations';
 import { logOperation } from '@/lib/audit';
 import { bustPeopleDirectoryCache } from '@/lib/peopleDirectory';
+import { defaultPassword } from '@/lib/defaultPassword';
 
 export const runtime = 'nodejs';
 
@@ -160,17 +161,6 @@ const CreateBody = z.object({
   // No job title — a person is shown by their role, nothing else.
 });
 
-/**
- * Standard default password for a new account: the person's first name
- * exactly as written, "@", then the employee ID. e.g. "Abhi Patel" +
- * "29218" → "Abhi@29218". Deterministic so it can be communicated
- * verbally; the user is forced to change it on first login.
- */
-function defaultContributorPassword(name: string, employeeId: string): string {
-  const firstName = name.trim().split(/\s+/)[0] || 'User';
-  return `${firstName}@${employeeId.trim()}`;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { error, user: caller } = await requireRole(req, 'admin');
@@ -189,7 +179,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Username already in use' }, { status: 409 });
     }
 
-    const password = defaultContributorPassword(body.name, employeeId);
+    const password = defaultPassword(body.name, employeeId);
     const user = await User.create({
       email,
       username,
