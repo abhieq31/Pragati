@@ -42,17 +42,17 @@ function uid() {
   return Math.random().toString(36).slice(2, 9);
 }
 
-// Templates the typical QA-IT lead actually reaches for, ordered by frequency.
-// Generic 'Custom / Blank' is always the first option so a lead can start fast
-// with a project that doesn't match any pre-baked template.
+// Templates a lead reaches for, ordered by frequency. Generic 'Custom / Blank'
+// is always the first option so a lead can start fast with a project that
+// doesn't match any pre-baked template.
 const LIFECYCLE_GROUPS = [
   {
-    label: 'Quality Informatics',
-    description: 'Day-to-day QA-IT lifecycles',
+    label: 'Change Management',
+    description: 'Plan and control changes',
     options: [
       { value: 'generic', label: 'Custom / Blank', hint: 'Start from scratch' },
-      { value: 'change_control', label: 'Change Control', hint: 'Planned change to a validated system' },
-      { value: 'software_change', label: 'Software Change', hint: 'Code/configuration release with QA gate' },
+      { value: 'change_control', label: 'Change Control', hint: 'Planned change to a system' },
+      { value: 'software_change', label: 'Software Change', hint: 'Code/configuration release with a review gate' },
       { value: 'deviation', label: 'Deviation', hint: 'Unplanned event needing investigation' },
       { value: 'capa', label: 'CAPA', hint: 'Corrective + preventive action' },
       { value: 'deviation_capa', label: 'Deviation + CAPA', hint: 'Combined deviation→CAPA flow' },
@@ -60,7 +60,7 @@ const LIFECYCLE_GROUPS = [
   },
   {
     label: 'Life Sciences',
-    description: 'GxP-validated lifecycles',
+    description: 'Regulated / GxP lifecycles',
     options: [
       { value: 'csv', label: 'CSV / GAMP 5', hint: 'Computer System Validation' },
       { value: 'sop', label: 'SOP Development', hint: 'Author → review → train → release' },
@@ -85,7 +85,7 @@ const LIFECYCLE_GROUPS = [
   },
   {
     label: 'General',
-    description: 'Non-GxP projects',
+    description: 'Everyday projects',
     options: [
       { value: 'agile_sprint', label: 'Agile Sprint', hint: 'Two-week development iteration' },
       { value: 'software_release', label: 'Software Release', hint: 'Generic release pipeline' },
