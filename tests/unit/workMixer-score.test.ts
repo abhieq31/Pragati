@@ -96,7 +96,7 @@ describe('scoreWorkCandidate', () => {
       base + SCORE_WEIGHTS.critical + SCORE_WEIGHTS.gxpCritical + SCORE_WEIGHTS.requiresQaSignoff,
     );
     assert.ok(stacked.reasons.includes('Critical priority'));
-    assert.ok(stacked.reasons.includes('GxP-critical'));
+    assert.ok(stacked.reasons.includes('Business-critical'));
     assert.ok(stacked.reasons.includes('Needs QA sign-off'));
   });
 

@@ -39,7 +39,7 @@ function leadIn(task: { title?: string; taskType?: string; gxpCritical?: boolean
   if (tt === 'deviation') return 'Deviation closed.';
   if (tt === 'capa') return 'CAPA closed.';
   if (tt === 'audit_finding') return 'Finding resolved.';
-  if (task.gxpCritical) return 'GxP work done.';
+  if (task.gxpCritical) return 'Critical work done.';
   if (task.priority === 'critical') return 'Critical task done.';
   if (task.priority === 'high') return 'High-priority task done.';
   return 'Task done.';

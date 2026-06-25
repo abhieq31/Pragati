@@ -1,23 +1,34 @@
 import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
-import { CSV_STAGE_KEYS, CSV_STAGE_STATUSES } from '@/lib/csvStages';
+import { STAGE_STATUSES, DEFAULT_STAGES } from '@/lib/csvStages';
 
 /**
- * CSV Activity sheet — a digital replacement for the Excel "CSV activity status"
- * sheet the IDP / CSV team maintains by hand. One document = one Change Control
- * (e.g. C/CC/PCC/2026/0765), holding a row per Format (e-logbook) being
- * validated. Each row carries the same six validation-document stages the
- * spreadsheet tracks (see src/lib/csvStages.ts), each with a document number,
- * approval date, and status.
+ * Tracker sheet — the generic grid behind a team's quality / QMS module.
+ *
+ * One document = one tracked record (e.g. a change, a release, an onboarding,
+ * an audit), holding a row per item being tracked. The *columns* (stages) are
+ * defined per sheet (`stages`), so the same structure serves any team's
+ * checklist or approval workflow — it isn't tied to any one team's process.
+ * Each row carries a cell per stage with a reference, a date, and a status.
  */
+
+// One configurable column. Keys are free-form (no fixed enum) so a team can
+// shape the tracker to its own process.
+const StageDefSchema = new Schema(
+  {
+    key: { type: String, required: true },
+    label: { type: String, default: '' },
+  },
+  { _id: false },
+);
 
 const StageCellSchema = new Schema(
   {
-    key: { type: String, enum: CSV_STAGE_KEYS as unknown as string[], required: true },
-    docNo: { type: String, default: '' },
-    approvalDate: { type: Date, default: null },
+    key: { type: String, required: true },
+    ref: { type: String, default: '' }, // free-text reference (doc / ticket / link)
+    date: { type: Date, default: null },
     status: {
       type: String,
-      enum: CSV_STAGE_STATUSES as unknown as string[],
+      enum: STAGE_STATUSES as unknown as string[],
       default: 'pending',
     },
   },
@@ -26,12 +37,9 @@ const StageCellSchema = new Schema(
 
 const RowSchema = new Schema(
   {
-    formatNumber: { type: String, default: '' }, // e.g. "F4\QA\SOP\0004-F005"
-    formatTitle: { type: String, default: '' },
-    elogbookTitle: { type: String, default: '' },
-    // Physical sites/blocks the format applies to, e.g. "F4" or "A1, A2, A3".
-    // Free text on purpose — sites are named differently across plants.
-    sites: { type: String, default: '' },
+    ref: { type: String, default: '' }, // the item's identifier / reference
+    name: { type: String, default: '' }, // the item's title / description
+    note: { type: String, default: '' }, // optional free-text tag / note
     stages: { type: [StageCellSchema], default: [] },
   },
   { _id: true, timestamps: true },
@@ -39,14 +47,16 @@ const RowSchema = new Schema(
 
 const CsvActivitySchema = new Schema(
   {
-    // The team that owns this sheet — CSV Activity lives inside a team's QMS
+    // The team that owns this sheet — the tracker lives inside a team's QMS
     // module, gated by Team.modules.qms.enabled. Membership is the access
     // boundary (see guardTeamMember).
     teamId: { type: Schema.Types.ObjectId, ref: 'Team', required: true },
-    changeControlNo: { type: String, required: true, maxlength: 120 }, // "C/CC/PCC/2026/0765"
-    prNo: { type: String, default: '' }, // "108743"
+    reference: { type: String, required: true, maxlength: 120 }, // primary record reference
+    reference2: { type: String, default: '' }, // optional secondary reference
     title: { type: String, default: '' },
     description: { type: String, default: '' },
+    // The configurable columns for this sheet. Defaults to a neutral set.
+    stages: { type: [StageDefSchema], default: () => DEFAULT_STAGES.map((s) => ({ ...s })) },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     createdByName: { type: String, default: '' },
     rows: { type: [RowSchema], default: [] },
@@ -55,7 +65,7 @@ const CsvActivitySchema = new Schema(
 );
 
 CsvActivitySchema.index({ teamId: 1, createdAt: -1 });
-CsvActivitySchema.index({ changeControlNo: 1 });
+CsvActivitySchema.index({ reference: 1 });
 
 export type CsvActivityDoc = InferSchemaType<typeof CsvActivitySchema> & {
   _id: mongoose.Types.ObjectId;

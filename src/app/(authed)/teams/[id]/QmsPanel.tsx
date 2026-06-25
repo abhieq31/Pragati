@@ -8,8 +8,8 @@ import { FileSpreadsheet, ChevronRight } from 'lucide-react';
 
 interface SheetSummary {
   id: string;
-  changeControlNo: string;
-  prNo: string;
+  reference: string;
+  reference2: string;
   title: string;
   rowCount: number;
   createdByName: string;
@@ -18,8 +18,9 @@ interface SheetSummary {
 }
 
 /**
- * Quality (QMS) module for a team — a generic quality-tracking section. Lists
- * the team's change-control records and (for leads) lets them start a new one.
+ * Quality (QMS) module for a team — a generic tracking section. Lists the team's
+ * tracker sheets and (for leads) lets them start a new one. Each sheet has its
+ * own configurable columns, so the same module fits any team's process.
  * Rendered inside the team detail page only when Team.modules.qms.enabled.
  */
 export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }) {
@@ -27,8 +28,8 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
   const { showToast, ToastEl } = useToast();
   const [sheets, setSheets] = useState<SheetSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
-  const [ccNo, setCcNo] = useState('');
-  const [prNo, setPrNo] = useState('');
+  const [reference, setReference] = useState('');
+  const [reference2, setReference2] = useState('');
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -40,12 +41,18 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    if (!ccNo.trim()) return;
+    if (!reference.trim()) return;
     setBusy(true);
     try {
       const sheet = await api<{ id: string }>('/csv-activity', {
         method: 'POST',
-        body: { teamId, changeControlNo: ccNo.trim(), prNo: prNo.trim(), title: title.trim(), rows: [] },
+        body: {
+          teamId,
+          reference: reference.trim(),
+          reference2: reference2.trim(),
+          title: title.trim(),
+          rows: [],
+        },
       });
       router.push(`/csv-activity/${sheet.id}`);
     } catch (err: any) {
@@ -75,7 +82,7 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
     >
       {ToastEl}
       <p className="-mt-1 mb-3 text-[11px] text-slate-500 leading-snug">
-        Track validation and quality status, one record per change control.
+        Track status across your own steps, one sheet per record.
       </p>
 
       {creating && (
@@ -85,13 +92,18 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
         >
           <input
             className="input"
-            placeholder="Change Control No*"
-            value={ccNo}
-            onChange={(e) => setCcNo(e.target.value)}
+            placeholder="Reference*"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
             required
             autoFocus
           />
-          <input className="input" placeholder="PR No" value={prNo} onChange={(e) => setPrNo(e.target.value)} />
+          <input
+            className="input"
+            placeholder="Reference 2"
+            value={reference2}
+            onChange={(e) => setReference2(e.target.value)}
+          />
           <div className="flex gap-2">
             <input
               className="input flex-1"
@@ -124,10 +136,10 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
                 <FileSpreadsheet size={15} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="font-semibold text-sm text-slate-800 truncate">{s.changeControlNo}</div>
+                <div className="font-semibold text-sm text-slate-800 truncate">{s.reference}</div>
                 <div className="text-[11px] text-slate-400 truncate">
-                  {s.prNo ? `PR ${s.prNo} · ` : ''}
-                  {s.rowCount} format{s.rowCount === 1 ? '' : 's'} · {overall(s)}% · {formatDate(s.createdAt)}
+                  {s.reference2 ? `${s.reference2} · ` : ''}
+                  {s.rowCount} item{s.rowCount === 1 ? '' : 's'} · {overall(s)}% · {formatDate(s.createdAt)}
                 </div>
               </div>
               <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 shrink-0" />

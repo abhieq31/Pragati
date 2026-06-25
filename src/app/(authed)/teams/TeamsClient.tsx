@@ -522,7 +522,7 @@ function TeamFormModal({
                 </label>
                 <input
                   className="input"
-                  placeholder="e.g. CSV Validation Squad"
+                  placeholder="e.g. Platform Team"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
@@ -586,7 +586,7 @@ function TeamFormModal({
                 <div className="space-y-2">
                   <ModuleToggle
                     label="Quality (QMS) tracking"
-                    hint="Track validation and quality status for this team."
+                    hint="A configurable tracker — define your own columns to follow records through any process."
                     checked={qmsEnabled}
                     onChange={setQmsEnabled}
                   />

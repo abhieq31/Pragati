@@ -136,7 +136,7 @@ export function scoreWorkCandidate(c: WorkCandidate, now: Date): WorkScore {
 
   if (c.gxpCritical) {
     score += W.gxpCritical;
-    reasons.push('GxP-critical');
+    reasons.push('Business-critical');
   }
   if (c.requiresQaSignoff) {
     score += W.requiresQaSignoff;
