@@ -23,7 +23,7 @@ async function _devSeed() {
   const existing = await User.countDocuments();
   if (existing > 0) return;
 
-  console.log('[devSeed] seeding Alembic QI team data…');
+  console.log('[devSeed] seeding demo team data…');
 
   // ── Users ──────────────────────────────────────────────────────────────────
   const people = [
@@ -31,7 +31,7 @@ async function _devSeed() {
       email: 'satya@qi.local',
       name: 'Satya Rajendran',
       role: 'lead',
-      title: 'DGM – Quality Informatics',
+      title: 'Engineering Manager',
       pw: 'satya123',
     },
     {
@@ -95,8 +95,8 @@ async function _devSeed() {
 
   // ── Team ──────────────────────────────────────────────────────────────────
   const team = await Team.create({
-    name: 'Quality Informatics',
-    description: 'Managing MES, LIMS, TRACKWISE, DOCUMENTUM and IDP Logbook systems at Alembic Pharma.',
+    name: 'Platform Engineering',
+    description: 'Building and operating the company’s internal web platform and tooling.',
     leadId: U['satya@qi.local']._id,
     memberIds: users.map((u) => u._id),
     function: 'general',
@@ -139,10 +139,10 @@ async function _devSeed() {
 
   // ── Projects from Action Plan ─────────────────────────────────────────────
 
-  // A01: IDP Logbook – Unified Login & Navigation (major ongoing project)
+  // A01: Web App – Unified Login & Navigation (major ongoing project)
   const p1 = await mkProject({
-    code: 'IDP-A01',
-    name: 'IDP Logbook: Unified Login & Navigation',
+    code: 'PLAT-A01',
+    name: 'Web App: Unified Login & Navigation',
     lifecycle: 'generic',
     start: fixed(2026, 4, 10),
     due: fixed(2026, 6, 30),
@@ -260,10 +260,10 @@ async function _devSeed() {
     },
   ]);
 
-  // A02: Year Change Numbering Fix (mostly done)
+  // A02: Year Rollover Numbering Fix (mostly done)
   const p2 = await mkProject({
-    code: 'IDP-A02',
-    name: 'Year Change Numbering Fix – eLogbooks',
+    code: 'PLAT-A02',
+    name: 'Year Rollover Numbering Fix',
     lifecycle: 'generic',
     start: fixed(2026, 4, 10),
     due: fixed(2026, 5, 4),
@@ -345,10 +345,10 @@ async function _devSeed() {
     },
   ]);
 
-  // A03: Data Loss Fix for all eLogbooks (deviation/capa lifecycle)
+  // A03: Data Loss Fix across all modules (deviation/capa lifecycle)
   const p3 = await mkProject({
-    code: 'IDP-A03',
-    name: 'Data Loss Fix – All eLogbooks (192 nos.)',
+    code: 'PLAT-A03',
+    name: 'Data Loss Fix – All Modules (192 nos.)',
     lifecycle: 'deviation_capa',
     start: fixed(2026, 4, 8),
     due: fixed(2026, 6, 30),
@@ -441,10 +441,10 @@ async function _devSeed() {
     },
   ]);
 
-  // A05: Numbering e-Logs – Phase-3 pending
+  // A05: Record Numbering – Phase-3 pending
   const p4 = await mkProject({
-    code: 'IDP-A05',
-    name: 'Numbering e-Logs: Phase-3 Pending',
+    code: 'PLAT-A05',
+    name: 'Record Numbering: Phase-3 Pending',
     lifecycle: 'sop',
     start: fixed(2026, 4, 9),
     due: fixed(2026, 4, 30),
@@ -510,10 +510,10 @@ async function _devSeed() {
     },
   ]);
 
-  // Quality Elogbook New – logbook format digitization
+  // Form Builder – new template digitization
   const p5 = await mkProject({
-    code: 'ELOG-Q3',
-    name: 'Quality eLogbook Phase-3 New Formats',
+    code: 'FORM-Q3',
+    name: 'Form Builder Phase-3 New Templates',
     lifecycle: 'validation',
     start: fixed(2026, 4, 16),
     due: fixed(2026, 6, 15),
@@ -576,10 +576,10 @@ async function _devSeed() {
     },
   ]);
 
-  // MES / LIMS ongoing support (VDC Enhancements style)
+  // Integrations ongoing support (reporting service enhancements)
   const p6 = await mkProject({
-    code: 'VDC-001',
-    name: 'VDC Enhancements – SAP Quality LB',
+    code: 'INT-001',
+    name: 'Integration Enhancements – Reporting Service',
     lifecycle: 'generic',
     start: fixed(2026, 4, 1),
     due: fixed(2026, 6, 30),
