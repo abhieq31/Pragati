@@ -64,7 +64,7 @@ const LIFECYCLE_GROUPS = [
     options: [
       { value: 'csv', label: 'CSV / GAMP 5', hint: 'Computer System Validation' },
       { value: 'sop', label: 'SOP Development', hint: 'Author → review → train → release' },
-      { value: 'audit', label: 'Audit', hint: 'Internal or external GxP audit' },
+      { value: 'audit', label: 'Audit', hint: 'Internal or external audit' },
       { value: 'validation', label: 'Validation', hint: 'Process / method validation' },
       {
         value: 'regulatory_submission',
@@ -80,7 +80,7 @@ const LIFECYCLE_GROUPS = [
       { value: 'vendor_qualification', label: 'Vendor Qualification', hint: 'Audit → gap assessment → ASL' },
       { value: 'training_program', label: 'Training Program', hint: 'Needs assessment → rollout → review' },
       { value: 'product_recall', label: 'Product Recall', hint: 'Alert → notification → prevention' },
-      { value: 'discrepancy_qi', label: 'Discrepancy – QI', hint: 'Detection → RCA → CAPA → GxP closure' },
+      { value: 'discrepancy_qi', label: 'Discrepancy', hint: 'Detection → RCA → CAPA → closure' },
     ],
   },
   {
