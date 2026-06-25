@@ -5,12 +5,12 @@ import { requireUser, canMutate } from '@/lib/auth';
 import { guardTeamMember } from '@/lib/teamAuth';
 import { handleError, readBody } from '@/lib/http';
 import { CsvActivityCreateSchema } from '@/lib/validations';
-import { normalizeRows, serializeCsvActivity } from '@/lib/csvActivity';
+import { normalizeRows, normalizeStageDefs, serializeCsvActivity } from '@/lib/csvActivity';
 import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 
-// CSV Activity sheets live inside a team's QMS module. Every read/write is
+// Tracker sheets live inside a team's QMS module. Every read/write is
 // gated by team membership; a ?teamId= is required to list.
 export async function GET(req: NextRequest) {
   try {
@@ -39,15 +39,17 @@ export async function POST(req: NextRequest) {
     const body = await readBody(req, CsvActivityCreateSchema);
     const denied = await guardTeamMember(body.teamId, String(user.sub), user.role);
     if (denied) return denied;
+    const stages = normalizeStageDefs(body.stages);
     const sheet = await CsvActivity.create({
       teamId: body.teamId,
-      changeControlNo: body.changeControlNo,
-      prNo: body.prNo || '',
+      reference: body.reference,
+      reference2: body.reference2 || '',
       title: body.title || '',
       description: body.description || '',
+      stages,
       createdBy: user.sub,
       createdByName: user.name || '',
-      rows: normalizeRows(body.rows),
+      rows: normalizeRows(body.rows, stages),
     });
     await logOperation({
       action: 'csv_activity.create',
@@ -55,8 +57,8 @@ export async function POST(req: NextRequest) {
       actor: user,
       targetType: 'csv_activity',
       targetId: String(sheet._id),
-      targetLabel: sheet.changeControlNo,
-      summary: `Created CSV activity sheet ${sheet.changeControlNo}`,
+      targetLabel: sheet.reference,
+      summary: `Created tracker sheet ${sheet.reference}`,
       meta: { teamId: body.teamId },
     });
     return NextResponse.json(serializeCsvActivity(sheet), { status: 201 });

@@ -5,7 +5,8 @@ import { requireUser, canMutate, isAdmin } from '@/lib/auth';
 import { guardTeamMember } from '@/lib/teamAuth';
 import { handleError, readBody } from '@/lib/http';
 import { CsvActivityUpdateSchema } from '@/lib/validations';
-import { normalizeRows, serializeCsvActivity } from '@/lib/csvActivity';
+import { normalizeRows, normalizeStageDefs, serializeCsvActivity } from '@/lib/csvActivity';
+import { sheetStages } from '@/lib/csvStages';
 import { logOperation } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -39,11 +40,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (denied) return denied;
 
     const body = await readBody(req, CsvActivityUpdateSchema);
-    if (body.changeControlNo !== undefined) sheet.changeControlNo = body.changeControlNo;
-    if (body.prNo !== undefined) sheet.prNo = body.prNo;
+    if (body.reference !== undefined) sheet.reference = body.reference;
+    if (body.reference2 !== undefined) sheet.reference2 = body.reference2;
     if (body.title !== undefined) sheet.title = body.title;
     if (body.description !== undefined) sheet.description = body.description;
-    if (body.rows !== undefined) sheet.rows = normalizeRows(body.rows) as any;
+    // Column changes re-shape every row, so resolve the effective stage defs
+    // first, then normalize rows against them.
+    const stages = body.stages !== undefined ? normalizeStageDefs(body.stages) : sheetStages(sheet.stages);
+    if (body.stages !== undefined) sheet.stages = stages as any;
+    if (body.rows !== undefined) sheet.rows = normalizeRows(body.rows, stages) as any;
     await sheet.save();
 
     await logOperation({
@@ -52,8 +57,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       actor: user,
       targetType: 'csv_activity',
       targetId: String(sheet._id),
-      targetLabel: sheet.changeControlNo,
-      summary: `Updated CSV activity sheet ${sheet.changeControlNo}`,
+      targetLabel: sheet.reference,
+      summary: `Updated tracker sheet ${sheet.reference}`,
       meta: { teamId: String(sheet.teamId) },
     });
     return NextResponse.json(serializeCsvActivity(sheet));
@@ -82,8 +87,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       actor: user,
       targetType: 'csv_activity',
       targetId: String(params.id),
-      targetLabel: (sheet as any).changeControlNo,
-      summary: `Deleted CSV activity sheet ${(sheet as any).changeControlNo}`,
+      targetLabel: (sheet as any).reference || (sheet as any).changeControlNo,
+      summary: `Deleted tracker sheet ${(sheet as any).reference || (sheet as any).changeControlNo || ''}`,
       meta: { teamId: String((sheet as any).teamId) },
     });
     return NextResponse.json({ ok: true });

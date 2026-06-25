@@ -30,6 +30,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-06-25',
+    title: 'Quality (QMS) tracking is now a generic, configurable tracker',
+    tags: ['feature', 'improvement'],
+    highlight: true,
+    body: [
+      'The Quality (QMS) module is no longer shaped around any one team’s process. Each tracker sheet now defines its own columns: add, rename, or remove the steps a record moves through, so the same module serves a validation checklist, an approval flow, an onboarding tracker, or a support-process pipeline — whatever the team needs.',
+      'All domain-specific wording has been replaced with neutral terms: a sheet has a Reference and an optional Reference 2; rows have an Item (reference + name) and a Note; each column cell records a Reference, a Date, and a Status. New sheets start with three editable default columns (Draft / Review / Approval).',
+      'Existing sheets are untouched — those created before columns were configurable keep their original layout automatically, and their data continues to render and export as before.',
+    ],
+  },
+  {
     date: '2026-06-24',
     title: 'Login quotes: Elon Musk and the canon he admires',
     tags: ['improvement'],

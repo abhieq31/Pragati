@@ -1,13 +1,20 @@
 import type { CsvActivityDoc } from '@/models/CsvActivity';
-import { normalizeStageCells, rowCompletion, type CsvStageCell } from '@/lib/csvStages';
+import {
+  normalizeStageCells,
+  rowCompletion,
+  sheetStages,
+  DEFAULT_STAGES,
+  type StageCell,
+  type StageDef,
+} from '@/lib/csvStages';
 
 /** Parse a date-ish string into a Date, or null. Accepts ISO and dd/mm/yyyy. */
-export function parseApprovalDate(v: string | Date | null | undefined): Date | null {
+export function parseStageDate(v: string | Date | null | undefined): Date | null {
   if (!v) return null;
   if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
   const s = String(v).trim();
   if (!s) return null;
-  // dd/mm/yyyy (the format the IDP sheet uses) — disambiguate from ISO.
+  // dd/mm/yyyy — disambiguate from ISO.
   const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (dmy) {
     const [, d, m, y] = dmy;
@@ -18,17 +25,39 @@ export function parseApprovalDate(v: string | Date | null | undefined): Date | n
   return isNaN(dt.getTime()) ? null : dt;
 }
 
-/** Normalize incoming rows (from a create/update body) into stored shape. */
-export function normalizeRows(rows: any[] | undefined | null) {
+/** Coerce a raw `stages` def list (from a request body) into a clean StageDef[]. */
+export function normalizeStageDefs(stages: any[] | undefined | null): StageDef[] {
+  if (!Array.isArray(stages)) return DEFAULT_STAGES.map((s) => ({ ...s }));
+  return sheetStages(stages);
+}
+
+/** A legacy row may carry the old pharma field names — read them as a fallback. */
+function rowRef(r: any): string {
+  return typeof r?.ref === 'string' ? r.ref : typeof r?.formatNumber === 'string' ? r.formatNumber : '';
+}
+function rowName(r: any): string {
+  if (typeof r?.name === 'string') return r.name;
+  if (typeof r?.formatTitle === 'string') return r.formatTitle;
+  if (typeof r?.elogbookTitle === 'string') return r.elogbookTitle;
+  return '';
+}
+function rowNote(r: any): string {
+  return typeof r?.note === 'string' ? r.note : typeof r?.sites === 'string' ? r.sites : '';
+}
+
+/**
+ * Normalize incoming rows (from a create/update body) into stored shape, using
+ * the sheet's stage defs to keep every row rectangular.
+ */
+export function normalizeRows(rows: any[] | undefined | null, defs: readonly StageDef[]) {
   return (rows || []).map((r) => ({
-    formatNumber: typeof r?.formatNumber === 'string' ? r.formatNumber : '',
-    formatTitle: typeof r?.formatTitle === 'string' ? r.formatTitle : '',
-    elogbookTitle: typeof r?.elogbookTitle === 'string' ? r.elogbookTitle : '',
-    sites: typeof r?.sites === 'string' ? r.sites : '',
-    stages: normalizeStageCells(r?.stages).map((c) => ({
+    ref: rowRef(r),
+    name: rowName(r),
+    note: rowNote(r),
+    stages: normalizeStageCells(r?.stages, defs).map((c) => ({
       key: c.key,
-      docNo: c.docNo,
-      approvalDate: parseApprovalDate(c.approvalDate),
+      ref: c.ref,
+      date: parseStageDate(c.date),
       status: c.status,
     })),
   }));
@@ -36,34 +65,35 @@ export function normalizeRows(rows: any[] | undefined | null) {
 
 /** Shape a stored sheet for the client. Always returns rectangular stage cells. */
 export function serializeCsvActivity(doc: CsvActivityDoc) {
-  const rows = (doc.rows || []) as any[];
+  const d = doc as any;
+  const defs = sheetStages(d.stages);
+  const rows = (d.rows || []) as any[];
   return {
-    id: String(doc._id),
-    teamId: String(doc.teamId),
-    changeControlNo: doc.changeControlNo,
-    prNo: doc.prNo || '',
-    title: doc.title || '',
-    description: doc.description || '',
-    createdBy: String(doc.createdBy),
-    createdByName: doc.createdByName || '',
-    createdAt: (doc as any).createdAt,
-    updatedAt: (doc as any).updatedAt,
+    id: String(d._id),
+    teamId: String(d.teamId),
+    // Bridge legacy field names so sheets created before the rename still read.
+    reference: d.reference || d.changeControlNo || '',
+    reference2: d.reference2 || d.prNo || '',
+    title: d.title || '',
+    description: d.description || '',
+    stages: defs,
+    createdBy: String(d.createdBy),
+    createdByName: d.createdByName || '',
+    createdAt: d.createdAt,
+    updatedAt: d.updatedAt,
     rowCount: rows.length,
     rows: rows.map((r) => {
-      const stages = normalizeStageCells(r.stages) as CsvStageCell[];
+      const stages = normalizeStageCells(r.stages, defs) as StageCell[];
       return {
         id: String(r._id),
-        formatNumber: r.formatNumber || '',
-        formatTitle: r.formatTitle || '',
-        elogbookTitle: r.elogbookTitle || '',
-        sites: r.sites || '',
+        ref: rowRef(r),
+        name: rowName(r),
+        note: rowNote(r),
         completion: rowCompletion(stages),
         stages: stages.map((c) => ({
           key: c.key,
-          docNo: c.docNo,
-          approvalDate: c.approvalDate
-            ? new Date(c.approvalDate as any).toISOString().slice(0, 10)
-            : null,
+          ref: c.ref,
+          date: c.date ? new Date(c.date as any).toISOString().slice(0, 10) : null,
           status: c.status,
         })),
       };
