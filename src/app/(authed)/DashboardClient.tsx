@@ -301,6 +301,10 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
   // first thing a brand-new admin sees, so it should point the way.
   const isFirstRun = isLead && dash.projects.length === 0;
 
+  // A brand-new contributor with nothing assigned yet gets a warm welcome
+  // pointing at their first actions, rather than an empty board.
+  const isNewContributor = !isLead && dash.teamTasks.length === 0;
+
   // ICs see their own task counts in side panels (My Tasks, Due Center) but the
   // expanded project view shows the *full* pipeline so they have the same
   // visibility their lead does into how their project is progressing. Leads
@@ -383,6 +387,8 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
         <FirstRunGuide hasTeam={dash.people.length > 0} />
       ) : (
         <>
+          {isNewContributor && <ContributorWelcome name={dash.user.name} />}
+
           {/* ── Quick check / Needs attention strip ────────────────────────
               Renders nothing when there's nothing to surface — silence is
               the correct product state. */}
@@ -794,6 +800,45 @@ function SummaryTaskPopup({
         )}
       </div>
     </FullScreenOverlay>
+  );
+}
+
+/* ── Contributor welcome ──────────────────────────────────────────────────
+   A brand-new contributor with nothing assigned would otherwise land on an
+   empty board. One warm card points at the two things they can do today —
+   plan in My Day, or search / quick-add with ⌘K — instead of dead air. */
+function ContributorWelcome({ name }: { name: string }) {
+  const first = (name || '').trim().split(/\s+/)[0] || 'there';
+  return (
+    <div
+      className="mb-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.07] bg-white dark:bg-[#2a2a28] p-5"
+      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}
+    >
+      <div className="flex items-center gap-2 mb-1.5">
+        <Sparkles size={15} className="text-blue-500" />
+        <h2 className="text-sm font-bold text-slate-800 dark:text-white/80">Welcome, {first} 👋</h2>
+      </div>
+      <p className="text-xs text-slate-500 dark:text-white/40 leading-relaxed mb-3.5">
+        Nothing’s assigned to you yet — when your lead adds tasks, they’ll show up right here. Until then,
+        you can plan your own day.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link
+          href="/my-day"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-white transition-all"
+          style={{ background: 'linear-gradient(135deg, #1256B0 0%, #1769C8 100%)' }}
+        >
+          Open My Day <ArrowRight size={13} />
+        </Link>
+        <span className="text-[11px] text-slate-400 dark:text-white/30">
+          or press{' '}
+          <kbd className="px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/10 font-mono text-[10px]">
+            ⌘K
+          </kbd>{' '}
+          to search and quick-add
+        </span>
+      </div>
+    </div>
   );
 }
 
