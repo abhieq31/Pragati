@@ -5,6 +5,7 @@ import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
 import { normalizeRole, requireUser, signToken, setAuthCookie } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
+import { isPasswordReused, pushPasswordHistory, PASSWORD_REUSE_MESSAGE } from '@/lib/passwordHistory';
 
 export const runtime = 'nodejs';
 
@@ -22,19 +23,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Password already set' }, { status: 400 });
     }
 
-    // Reuse guard — also applies to forced first-set after admin reset.
+    // Reuse guard — also applies to the forced first-set after an admin reset,
+    // and crucially rejects the current default/temp password so the user can't
+    // "change" it to the same value they just signed in with.
     const history: string[] = (user as any).passwordHistory || [];
-    for (const oldHash of history) {
-      if (bcrypt.compareSync(body.newPassword, oldHash)) {
-        return NextResponse.json(
-          { error: 'You cannot reuse one of your last 3 passwords.' },
-          { status: 400 },
-        );
-      }
+    if (isPasswordReused(body.newPassword, user.passwordHash, history)) {
+      return NextResponse.json({ error: PASSWORD_REUSE_MESSAGE }, { status: 400 });
     }
 
     const newHash = bcrypt.hashSync(body.newPassword, 10);
-    (user as any).passwordHistory = [user.passwordHash, ...history].slice(0, 3);
+    (user as any).passwordHistory = pushPasswordHistory(user.passwordHash, history);
     user.passwordHash = newHash;
     user.mustChangePassword = false;
     await user.save();

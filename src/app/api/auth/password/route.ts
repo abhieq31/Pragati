@@ -6,6 +6,7 @@ import { User } from '@/models/User';
 import { requireUser } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { rateLimit } from '@/lib/rateLimit';
+import { isPasswordReused, pushPasswordHistory, PASSWORD_REUSE_MESSAGE } from '@/lib/passwordHistory';
 
 export const runtime = 'nodejs';
 
@@ -34,20 +35,14 @@ export async function PATCH(req: NextRequest) {
     const ok = bcrypt.compareSync(body.currentPassword, user.passwordHash);
     if (!ok) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
 
-    // Reuse guard: reject if the new password matches any of the last 3.
+    // Reuse guard: reject the current password or any of the last 3.
     const history: string[] = (user as any).passwordHistory || [];
-    for (const oldHash of history) {
-      if (bcrypt.compareSync(body.newPassword, oldHash)) {
-        return NextResponse.json(
-          { error: 'You cannot reuse one of your last 3 passwords.' },
-          { status: 400 },
-        );
-      }
+    if (isPasswordReused(body.newPassword, user.passwordHash, history)) {
+      return NextResponse.json({ error: PASSWORD_REUSE_MESSAGE }, { status: 400 });
     }
 
     const newHash = bcrypt.hashSync(body.newPassword, 10);
-    // Prepend current hash to history, keep only 3 entries.
-    (user as any).passwordHistory = [user.passwordHash, ...history].slice(0, 3);
+    (user as any).passwordHistory = pushPasswordHistory(user.passwordHash, history);
     user.passwordHash = newHash;
     await user.save();
     return NextResponse.json({ ok: true });

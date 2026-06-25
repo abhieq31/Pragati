@@ -1704,9 +1704,9 @@ export const LIFECYCLES: Record<LifecycleKey, LifecycleTemplate> = {
   },
 
   discrepancy_qi: {
-    label: 'Discrepancy – Quality Informatics',
+    label: 'Discrepancy',
     description:
-      'End-to-end handling of a Quality Informatics discrepancy — from detection and root cause through CAPA, remediation, and GxP closure.',
+      'End-to-end handling of a discrepancy — from detection and root cause through CAPA, remediation, and closure.',
     regulatoryRefs: '21 CFR Part 11, GAMP 5, ALCOA+',
     group: 'Life Sciences',
     phases: [

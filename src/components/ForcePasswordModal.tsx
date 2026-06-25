@@ -58,7 +58,8 @@ export function ForcePasswordModal({ onDone }: { onDone: () => void }) {
         </div>
         <h2 className="text-xl font-black text-slate-900 text-center tracking-tight">Set your password</h2>
         <p className="text-sm text-slate-400 text-center mt-1.5 leading-snug">
-          Your account was created with a temporary password. Choose a new one to get started.
+          Your account is on a default password. Choose your own to continue — it can’t be the same one
+          you just signed in with.
         </p>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>

@@ -145,7 +145,7 @@ export async function sendEmail(msg: MailMessage): Promise<MailResult> {
   }
 
   try {
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+    const res = await postWithRetry(url, headers, body);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error(`[mailer] ${provider} send failed`, res.status, text.slice(0, 300));
@@ -156,5 +156,54 @@ export async function sendEmail(msg: MailMessage): Promise<MailResult> {
   } catch (e: any) {
     console.error(`[mailer] ${provider} send error`, e?.message);
     return { ok: false, error: e?.message || 'send_error' };
+  }
+}
+
+// A hung or briefly-overloaded provider shouldn't stall a whole digest batch
+// or silently lose one user's mail. Bound each attempt with a timeout and
+// retry once on a network error or a transient status (429/5xx) — a daily
+// digest is safe to re-attempt, and the rare duplicate beats a silent drop.
+const SEND_TIMEOUT_MS = 10_000;
+const RETRYABLE_SEND_STATUS = new Set([429, 502, 503, 504]);
+
+async function postOnce(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function postWithRetry(
+  url: string,
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await postOnce(url, headers, body);
+      if (RETRYABLE_SEND_STATUS.has(res.status) && attempt < 1) {
+        await new Promise((r) => setTimeout(r, 600));
+        continue;
+      }
+      return res;
+    } catch (e) {
+      if (attempt < 1) {
+        await new Promise((r) => setTimeout(r, 600));
+        continue;
+      }
+      throw e;
+    }
   }
 }

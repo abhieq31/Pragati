@@ -99,16 +99,18 @@ function CopyBtn({ text }: { text: string }) {
   );
 }
 
-/* ── Credentials reveal modal ─────────────────────────────────────────── */
+/* ── Credentials reveal modal (shown after an admin password reset) ─────── */
 function CredentialsModal({
   name,
   email,
   tempPassword,
+  isDefault = false,
   onClose,
 }: {
   name: string;
   email: string;
   tempPassword: string;
+  isDefault?: boolean;
   onClose: () => void;
 }) {
   return (
@@ -123,8 +125,8 @@ function CredentialsModal({
         >
           <div className="flex items-start justify-between mb-5">
             <div>
-              <div className="text-base font-bold text-slate-900">Account created</div>
-              <div className="text-sm text-slate-400 mt-0.5">Share these credentials with {name}.</div>
+              <div className="text-base font-bold text-slate-900">Password reset</div>
+              <div className="text-sm text-slate-400 mt-0.5">Share the new password with {name}.</div>
             </div>
             <button onClick={onClose} className="text-slate-300 hover:text-slate-500 ml-4 mt-0.5">
               <X size={18} />
@@ -143,7 +145,7 @@ function CredentialsModal({
             </div>
             <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3">
               <div className="text-[10px] font-bold uppercase tracking-wider text-blue-500 mb-1">
-                Temporary password
+                {isDefault ? 'Default password' : 'Temporary password'}
               </div>
               <div className="flex items-center">
                 <span className="text-sm font-mono font-semibold text-blue-800 flex-1 tracking-wide">
@@ -151,11 +153,18 @@ function CredentialsModal({
                 </span>
                 <CopyBtn text={tempPassword} />
               </div>
+              {isDefault && (
+                <div className="text-[11px] text-blue-600/80 mt-1.5 leading-snug">
+                  The standard default — first name + “@” + employee ID.
+                </div>
+              )}
             </div>
           </div>
 
           <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800 leading-snug mb-5">
-            This password is shown only once. {name} will be prompted to set their own on first login.
+            {isDefault
+              ? `${name} will be prompted to set their own password on first login.`
+              : `This password is shown only once. ${name} will be prompted to set their own on first login.`}
           </div>
 
           <button onClick={onClose} className="btn-primary w-full justify-center">
@@ -1150,7 +1159,12 @@ export default function PeopleClient({
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [justAdded, setJustAdded] = useState<string | null>(null);
-  const [creds, setCreds] = useState<{ name: string; email: string; tempPassword: string } | null>(null);
+  const [creds, setCreds] = useState<{
+    name: string;
+    email: string;
+    tempPassword: string;
+    isDefault?: boolean;
+  } | null>(null);
   const [roleConfirm, setRoleConfirm] = useState<{ user: any; targetRole: 'lead' | 'contributor' } | null>(
     null,
   );
@@ -1275,13 +1289,13 @@ export default function PeopleClient({
     }
   }
 
-  // Admin-driven password reset. Avoids the SMTP round-trip entirely:
-  // we generate a temp password server-side and surface it through the
-  // same CredentialsModal used after creating a new user.
+  // Admin-driven password reset. Avoids the SMTP round-trip entirely: the
+  // server restores the standard default (FirstName@employeeId), or a random
+  // temp password for accounts with no employee ID, and we surface it.
   async function resetPassword(user: any) {
     if (
       !confirm(
-        `Generate a new temporary password for ${user.name}?\nThey'll be forced to change it on next sign-in.`,
+        `Reset ${user.name}'s password to the default (first name + “@” + employee ID)?\nThey'll be forced to change it on next sign-in.`,
       )
     )
       return;
@@ -1289,6 +1303,7 @@ export default function PeopleClient({
     try {
       const res = await api<{
         tempPassword: string;
+        isDefault: boolean;
         user: { name: string; email: string; username?: string };
       }>(`/users/${user.id}/reset-password`, { method: 'POST' });
       // Surface the username if the account has one, else fall back to email
@@ -1297,6 +1312,7 @@ export default function PeopleClient({
         name: res.user.name,
         email: res.user.username || res.user.email,
         tempPassword: res.tempPassword,
+        isDefault: res.isDefault,
       });
     } catch (e: any) {
       setRoleErr(e.message || 'Failed to reset password.');
@@ -1691,7 +1707,7 @@ export default function PeopleClient({
                     className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
                     onClick={() => resetPassword(u)}
                     disabled={saving === u.id}
-                    title="Generate a temporary password for this lead"
+                    title="Reset this lead's password to the default"
                   >
                     Reset password
                   </button>
@@ -1871,7 +1887,7 @@ export default function PeopleClient({
                   className="text-xs text-slate-500 hover:text-blue-700 font-semibold px-2.5 py-1.5 rounded-lg hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
                   onClick={() => resetPassword(u)}
                   disabled={saving === u.id}
-                  title="Generate a temporary password"
+                  title="Reset password to the default"
                 >
                   Reset password
                 </button>

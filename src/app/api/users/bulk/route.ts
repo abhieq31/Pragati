@@ -6,6 +6,7 @@ import { User } from '@/models/User';
 import { requireRole } from '@/lib/auth';
 import { handleError, readBody } from '@/lib/http';
 import { UsernameSchema } from '@/lib/validations';
+import { defaultPassword } from '@/lib/defaultPassword';
 
 export const runtime = 'nodejs';
 // Each row costs one bcrypt hash (~80 ms). Capping at 100 keeps the request
@@ -26,14 +27,6 @@ const Row = z.object({
 const Body = z.object({
   rows: z.array(Row).min(1).max(100),
 });
-
-/** Same convention as the single-create flow: first name as written, "@",
- *  employee ID. e.g. "Abhi Patel" + 29218 → "Abhi@29218". Forced to change
- *  on first login. */
-function defaultPassword(name: string, employeeId: string): string {
-  const first = name.trim().split(/\s+/)[0] || 'User';
-  return `${first}@${employeeId.trim()}`;
-}
 
 function deriveName(username: string): string {
   return (
