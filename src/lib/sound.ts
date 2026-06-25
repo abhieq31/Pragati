@@ -57,11 +57,6 @@ export function soundEnabled(): boolean {
   return localStorage.getItem('pragati-sound') !== 'off';
 }
 
-export function setSoundEnabled(on: boolean) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('pragati-sound', on ? 'on' : 'off');
-}
-
 /** Plays the chime only when the user hasn't muted sounds. */
 export function chimeIfEnabled() {
   if (soundEnabled()) playSuccessChime();

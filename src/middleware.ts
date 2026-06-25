@@ -49,13 +49,11 @@ export const config = {
     '/', // dashboard
     '/admin/:path*',
     '/audit/:path*',
-    '/copilot/:path*',
     '/my-day/:path*',
     '/people/:path*',
     '/projects/:path*',
     '/settings/:path*',
     '/tasks/:path*',
     '/teams/:path*',
-    '/yearly/:path*',
   ],
 };

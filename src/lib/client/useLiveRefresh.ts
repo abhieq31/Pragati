@@ -83,12 +83,3 @@ export function useLiveRefresh(
   }, [enabled, intervalMs, eventsKey]);
 }
 
-/**
- * Broadcast that data changed so every mounted live view refreshes at once
- * (this tab). Call after any create/edit/delete. Cheap and idempotent.
- */
-export function notifyDataChanged() {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('pragati:data-changed'));
-  }
-}

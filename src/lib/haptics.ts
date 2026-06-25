@@ -49,13 +49,3 @@ export function hapticCelebrate() {
     /* ignore */
   }
 }
-
-export function hapticsEnabled(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem('pragati-haptics') !== 'off';
-}
-
-export function setHapticsEnabled(on: boolean) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('pragati-haptics', on ? 'on' : 'off');
-}

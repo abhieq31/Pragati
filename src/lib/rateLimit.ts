@@ -42,11 +42,6 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
   return true;
 }
 
-/** Reset a key, e.g. after a successful login clears the failure window. */
-export function rateLimitReset(key: string): void {
-  STATE.delete(key);
-}
-
 // Sweep expired buckets every minute so the map can't grow unbounded.
 if (!(global as any).__pragatiRateLimitSweeper) {
   (global as any).__pragatiRateLimitSweeper = setInterval(() => {

@@ -95,18 +95,6 @@ export const LIFECYCLE_COLORS: Record<string, string> = {
   generic: 'text-slate-600 bg-slate-100',
 };
 
-export const SEVERITY_COLORS: Record<string, string> = {
-  minor: 'bg-slate-100 text-slate-700',
-  major: 'bg-amber-50 text-amber-800',
-  critical: 'bg-red-50 text-red-700',
-};
-
-export const RISK_COLORS: Record<string, string> = {
-  low: 'bg-green-50 text-green-700',
-  medium: 'bg-amber-50 text-amber-800',
-  high: 'bg-red-50 text-red-700',
-};
-
 // ── Tag primitives ────────────────────────────────────────────────────────────
 export function Tag({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
@@ -227,20 +215,6 @@ export function Card({
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-export function EmptyState({ title, hint, principle }: { title: string; hint?: string; principle?: string }) {
-  return (
-    <div className="text-center py-10 text-slate-400">
-      <div className="text-xl mb-2 opacity-30">◈</div>
-      <div className="text-sm font-medium text-slate-500">{title}</div>
-      {hint && <div className="text-xs mt-1.5 text-slate-400 max-w-xs mx-auto leading-relaxed">{hint}</div>}
-      {principle && (
-        <div className="mt-3 text-[10px] uppercase tracking-widest text-slate-300 font-bold">{principle}</div>
-      )}
-    </div>
-  );
-}
-
 // ── Utilities ─────────────────────────────────────────────────────────────────
 export function formatDate(s?: string | Date | null) {
   if (!s) return '—';
@@ -313,59 +287,6 @@ const AVATAR_GRADIENTS: Array<[string, string]> = [
   ['#7B1FA2', '#4A148C'], // purple
   ['#6D4C41', '#4E342E'], // warm brown
   ['#546E7A', '#37474F'], // blue grey
-];
-
-// User-pickable monogram backgrounds. A richer palette so the picker feels
-// expressive without leaving the brand's calm tone: 6 groups (pastels, vivids,
-// jewels, earth, mono, brand-accent) × 4 hues each. The editor groups them
-// visually so the choice feels curated, not a sea of swatches.
-export const AVATAR_MONOGRAM_BG: string[] = [
-  // Pastels — soft, friendly defaults
-  '#F8BBD9',
-  '#FDBA74',
-  '#FDE047',
-  '#86EFAC',
-  '#7DD3FC',
-  '#C4B5FD',
-  '#FCA5A5',
-  '#A7F3D0',
-  '#FBCFE8',
-  '#FED7AA',
-  '#FEF08A',
-  '#BAE6FD',
-  // Vivid — punchier saturation
-  '#EC4899',
-  '#F97316',
-  '#EAB308',
-  '#22C55E',
-  '#06B6D4',
-  '#8B5CF6',
-  '#EF4444',
-  '#10B981',
-  // Jewel — deep, rich tones
-  '#9333EA',
-  '#0EA5E9',
-  '#059669',
-  '#B91C1C',
-  '#7C2D12',
-  '#0F766E',
-  '#1D4ED8',
-  '#A21CAF',
-  // Earth — warm neutrals
-  '#A16207',
-  '#854D0E',
-  '#365314',
-  '#1E3A8A',
-  // Mono — professional grayscale
-  '#0F172A',
-  '#334155',
-  '#64748B',
-  '#CBD5E1',
-  // Brand accents — Pragati gradient stops
-  '#1565C0',
-  '#1976D2',
-  '#2E7D32',
-  '#0D47A1',
 ];
 
 /**
@@ -775,23 +696,6 @@ export function TaskLink({
       className={className ?? 'font-medium text-slate-800 hover:text-blue-700 transition-colors'}
     >
       {children || task.title}
-    </Link>
-  );
-}
-
-export function ProjectLink({
-  project,
-  children,
-}: {
-  project: { id: string; name?: string };
-  children?: ReactNode;
-}) {
-  return (
-    <Link
-      href={`/projects/${project.id}`}
-      className="font-medium text-slate-700 hover:text-brand-700 transition-colors"
-    >
-      {children || project.name}
     </Link>
   );
 }

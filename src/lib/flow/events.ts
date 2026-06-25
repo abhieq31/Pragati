@@ -131,21 +131,6 @@ export async function recordTaskFlowEvent(args: RecordEventArgs): Promise<void> 
 }
 
 /**
- * Standalone helper for the rare case where work moved (e.g. a subtask
- * status flipped) but we don't yet want to write a TaskFlowEvent in that
- * path. Use sparingly — prefer recordTaskFlowEvent so the event stream
- * stays the single source of truth.
- */
-export async function touchMeaningfulActivity(taskId: Oid, at?: Date): Promise<void> {
-  if (!taskId) return;
-  try {
-    await Task.updateOne({ _id: taskId }, { $max: { lastMeaningfulActivityAt: at || new Date() } });
-  } catch (e) {
-    console.error('[flow] touchMeaningfulActivity failed', e);
-  }
-}
-
-/**
  * The set of Task PATCH field names that count as cosmetic — explicitly
  * documented here so that route handlers can compare incoming bodies
  * against it and skip the activity bump. NOT a behavioural enforcement;

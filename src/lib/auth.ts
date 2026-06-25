@@ -100,16 +100,6 @@ export function configuredAdminEmail(): string | null {
   return env || null;
 }
 
-// True for any email that should be treated as admin. Today there's only
-// one (the workspace owner), but the helper exists so the login + register
-// routes don't repeat the comparison logic and so the hard-coded fallback
-// stays in a single auditable place.
-export function isConfiguredAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  const target = configuredAdminEmail();
-  return !!target && email.trim().toLowerCase() === target;
-}
-
 // JWT_SECRET is REQUIRED in production. The dev fallback below is only used
 // when NODE_ENV !== 'production' AND the env var is unset — anything else
 // (preview deploys included) refuses to sign or verify a token. We check at
@@ -384,10 +374,4 @@ export async function requireRole(req: NextRequest, ...roles: Role[]) {
     };
   }
   return { user, error: null };
-}
-
-export async function ensureDBAndUser(req: NextRequest) {
-  await connectDB();
-  const fresh = await User.findOne({ _id: (await requireUser(req)).user?.sub });
-  return fresh;
 }
