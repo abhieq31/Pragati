@@ -2350,7 +2350,7 @@ export default function ProjectDetailClient(props: ProjectDetailClientProps) {
                             ) : null;
                           })()}
                         {t.gxpCritical && (
-                          <span className="tag bg-red-50 text-red-700 border border-red-200">GxP</span>
+                          <span className="tag bg-red-50 text-red-700 border border-red-200">Critical</span>
                         )}
                         {t.requiresQaSignoff &&
                           (t.qaSignoffAt ? (

@@ -486,7 +486,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
               </label>
               <input
                 className="input text-sm font-mono disabled:bg-slate-50 disabled:text-slate-500"
-                placeholder="SOP / Protocol / Doc ref"
+                placeholder="Document / reference"
                 value={task.documentNo || ''}
                 disabled={!canEditAll}
                 onChange={(e) => setTask({ ...task, documentNo: e.target.value })}

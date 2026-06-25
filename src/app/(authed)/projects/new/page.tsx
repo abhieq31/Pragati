@@ -703,7 +703,7 @@ export default function NewProjectPage() {
                   {isLead
                     ? 'Personal to-do list — no team attached.'
                     : personal
-                      ? 'No team attached. Toggle off to browse the QA / GxP workflow templates.'
+                      ? 'No team attached. Toggle off to browse the shared workflow templates.'
                       : "Preview mode — contributors can only create personal projects, so we'll switch back on submit."}
                 </div>
               </div>
@@ -747,7 +747,7 @@ export default function NewProjectPage() {
                 ? 'Pick a ready-made template to jump-start your personal project — or start blank.'
                 : isLead
                   ? 'Pick a template to get predefined stages and tasks — you can edit everything in the next step.'
-                  : 'Browse every template available — the QA / GxP workflows are listed too so you can see how shared projects are structured. Shared projects can only be created by a lead.'}
+                  : 'Browse every template available — the shared workflows are listed too so you can see how shared projects are structured. Shared projects can only be created by a lead.'}
             </p>
             <div className="space-y-4">
               {/* When the Personal toggle is on, only show the Personal group

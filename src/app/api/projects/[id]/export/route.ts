@@ -443,7 +443,7 @@ function buildTasksSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], users
       11,
     );
     r++;
-    colHdr(ws, r, ['#', 'Task Title', 'Assignee', 'Status', 'Priority', 'Due Date', 'Days Late', 'GxP']);
+    colHdr(ws, r, ['#', 'Task Title', 'Assignee', 'Status', 'Priority', 'Due Date', 'Days Late', 'Critical']);
     r++;
 
     pTasks.forEach((task, idx) => {
@@ -676,7 +676,7 @@ function buildBottleneckSheet(wb: ExcelJS.Workbook, project: any, tasks: any[], 
     setVal(ws, r, 1, '  ✅  No critical/high priority open items!', { color: C.done, bold: true });
     r++;
   } else {
-    colHdr(ws, r, ['#', 'Task Title', 'Phase', 'Assignee', 'Status', 'Priority', 'Due Date', 'GxP']);
+    colHdr(ws, r, ['#', 'Task Title', 'Phase', 'Assignee', 'Status', 'Priority', 'Due Date', 'Critical']);
     r++;
     criticalOpen.forEach((task, i) => {
       const isCrit = task.priority === 'critical';

@@ -580,7 +580,7 @@ export function ActivityGraph({ userId, name }: { userId?: string; name?: string
                               </span>
                             )}
                             {it.gxpCritical && (
-                              <span className="text-[9px] font-bold text-amber-600 shrink-0">GxP</span>
+                              <span className="text-[9px] font-bold text-amber-600 shrink-0">Critical</span>
                             )}
                             <span className="ml-auto text-[10px] font-semibold text-emerald-600 shrink-0">
                               +{it.points}
