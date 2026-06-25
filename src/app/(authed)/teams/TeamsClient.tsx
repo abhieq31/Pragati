@@ -257,7 +257,7 @@ function TeamCard({
       )}
 
       <div className="mt-3 text-[11px] text-slate-400 dark:text-white/35">
-        <span className="font-semibold uppercase tracking-wider">Team leader · </span>
+        <span className="font-semibold uppercase tracking-wider">Team Owner · </span>
         <span className="text-slate-600 dark:text-white/60 font-medium">{lead?.name || 'Unassigned'}</span>
       </div>
 
