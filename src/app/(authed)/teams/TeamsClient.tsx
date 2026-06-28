@@ -22,6 +22,7 @@ import {
 interface TeamModules {
   qms: { enabled: boolean };
   tickets: { enabled: boolean };
+  recurring: { enabled: boolean };
 }
 
 interface TeamItem {
@@ -367,6 +368,9 @@ function TeamFormModal({
   const [func, setFunc] = useState<string>(team?.function || 'general');
   const [qmsEnabled, setQmsEnabled] = useState<boolean>(!!team?.modules?.qms?.enabled);
   const [ticketsEnabled, setTicketsEnabled] = useState<boolean>(!!team?.modules?.tickets?.enabled);
+  const [recurringEnabled, setRecurringEnabled] = useState<boolean>(
+    !!team?.modules?.recurring?.enabled,
+  );
   const [leadId, setLeadId] = useState(team?.leadId || '');
   const [memberIds, setMemberIds] = useState<string[]>(team?.memberIds || []);
   const [memberQuery, setMemberQuery] = useState('');
@@ -445,7 +449,11 @@ function TeamFormModal({
             leadId: leadId || undefined,
             memberIds: memberIds.length ? memberIds : undefined,
             function: func,
-            modules: { qms: { enabled: qmsEnabled }, tickets: { enabled: ticketsEnabled } },
+            modules: {
+              qms: { enabled: qmsEnabled },
+              tickets: { enabled: ticketsEnabled },
+              recurring: { enabled: recurringEnabled },
+            },
           },
         });
       } else if (team) {
@@ -457,7 +465,11 @@ function TeamFormModal({
             leadId: leadId || null,
             memberIds,
             function: func,
-            modules: { qms: { enabled: qmsEnabled }, tickets: { enabled: ticketsEnabled } },
+            modules: {
+              qms: { enabled: qmsEnabled },
+              tickets: { enabled: ticketsEnabled },
+              recurring: { enabled: recurringEnabled },
+            },
           },
         });
       }
@@ -595,6 +607,12 @@ function TeamFormModal({
                     hint="A lightweight request queue for this team."
                     checked={ticketsEnabled}
                     onChange={setTicketsEnabled}
+                  />
+                  <ModuleToggle
+                    label="Recurring activities"
+                    hint="Scheduled chores that repeat (e.g. monthly downtime) with a checklist that resets each cycle."
+                    checked={recurringEnabled}
+                    onChange={setRecurringEnabled}
                   />
                 </div>
               </div>

@@ -39,6 +39,10 @@ const TicketsPanel = dynamic(() => import('./TicketsPanel').then((m) => m.Ticket
   ssr: false,
   loading: () => <div className="h-40 skeleton rounded-xl" />,
 });
+const RecurringPanel = dynamic(() => import('./RecurringPanel').then((m) => m.RecurringPanel), {
+  ssr: false,
+  loading: () => <div className="h-40 skeleton rounded-xl" />,
+});
 import {
   Card,
   ProgressBar,
@@ -178,7 +182,9 @@ export default function TeamDetailPage() {
   // "Foresight" (lead/admin only) sits between the two — the predictive capacity
   // read, on demand rather than taking up permanent vertical space. Everyone
   // opens on Work.
-  const [view, setView] = useState<'work' | 'foresight' | 'projects' | 'qms' | 'tickets'>('work');
+  const [view, setView] = useState<
+    'work' | 'foresight' | 'projects' | 'qms' | 'tickets' | 'recurring'
+  >('work');
 
   async function load() {
     setLoadError('');
@@ -652,6 +658,7 @@ export default function TeamDetailPage() {
                 ['projects', 'Projects'],
                 ...(team.modules?.qms?.enabled ? [['qms', 'QMS']] : []),
                 ...(team.modules?.tickets?.enabled ? [['tickets', 'Tickets']] : []),
+                ...(team.modules?.recurring?.enabled ? [['recurring', 'Recurring']] : []),
               ] as [string, string][]
             ).map(([k, l]) => (
               <button
@@ -747,6 +754,11 @@ export default function TeamDetailPage() {
           {/* ── Tickets — support request queue, opt-in per team ───────────── */}
           {view === 'tickets' && team.modules?.tickets?.enabled && (
             <TicketsPanel teamId={id} isLead={isLead} members={team.members || []} />
+          )}
+
+          {/* ── Recurring — scheduled team activities, opt-in per team ──────── */}
+          {view === 'recurring' && team.modules?.recurring?.enabled && (
+            <RecurringPanel teamId={id} isLead={isLead} members={team.members || []} />
           )}
 
           {view === 'projects' && (

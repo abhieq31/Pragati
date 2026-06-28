@@ -12,6 +12,9 @@ const ModulesSchema = new Schema(
     tickets: {
       enabled: { type: Boolean, default: false }, // Support ticket queue
     },
+    recurring: {
+      enabled: { type: Boolean, default: false }, // Recurring/scheduled team activities
+    },
   },
   { _id: false },
 );

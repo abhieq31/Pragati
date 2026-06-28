@@ -223,6 +223,7 @@ export const TeamFunctionEnum = z.enum([
 export const TeamModulesSchema = z.object({
   qms: z.object({ enabled: z.boolean() }).partial().optional(),
   tickets: z.object({ enabled: z.boolean() }).partial().optional(),
+  recurring: z.object({ enabled: z.boolean() }).partial().optional(),
 });
 
 // PM-only update. Each field independently optional so callers can patch
@@ -245,6 +246,43 @@ export const DeleteTeamSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 export type DeleteTeamInput = z.infer<typeof DeleteTeamSchema>;
+
+/* ── Recurring activities (team-level scheduled chores) ──────────────────── */
+
+export const RecurrenceUnitEnum = z.enum(['day', 'week', 'month', 'year']);
+
+const ChecklistInput = z
+  .array(z.object({ title: z.string().min(1).max(300) }))
+  .max(50)
+  .default([]);
+
+export const RecurringActivityCreateSchema = z.object({
+  title: z.string().min(1).max(300),
+  description: z.string().max(5000).optional(),
+  checklist: ChecklistInput,
+  assigneeId: optionalObjectId,
+  priority: PriorityEnum.optional(),
+  intervalUnit: RecurrenceUnitEnum.default('month'),
+  intervalCount: z.number().int().min(1).max(365).default(1),
+  startDate: dateString,
+  leadTimeDays: z.number().int().min(0).max(365).optional(),
+});
+export type RecurringActivityCreateInput = z.infer<typeof RecurringActivityCreateSchema>;
+
+export const RecurringActivityUpdateSchema = z.object({
+  title: z.string().min(1).max(300).optional(),
+  description: z.string().max(5000).optional(),
+  checklist: z.array(z.object({ title: z.string().min(1).max(300) })).max(50).optional(),
+  assigneeId: nullableObjectId,
+  priority: PriorityEnum.optional(),
+  intervalUnit: RecurrenceUnitEnum.optional(),
+  intervalCount: z.number().int().min(1).max(365).optional(),
+  // Repointing the anchor also resets the next-due cursor (handled in route).
+  startDate: dateString.optional(),
+  leadTimeDays: z.number().int().min(0).max(365).optional(),
+  active: z.boolean().optional(),
+});
+export type RecurringActivityUpdateInput = z.infer<typeof RecurringActivityUpdateSchema>;
 
 /* ── Task schemas ────────────────────────────────────────────────────────── */
 

@@ -41,6 +41,9 @@ const ProjectSchema = new Schema(
     // admin rollup — only their owner can see them. Identified by this flag
     // (and, for legacy rows created before the flag, the "PRSN-" code prefix).
     isPersonal: { type: Boolean, default: false },
+    // System-managed project (e.g. the per-team holder for recurring-activity
+    // task occurrences). Created and maintained by the app, not the user.
+    isSystem: { type: Boolean, default: false },
     startDate: { type: Date },
     dueDate: { type: Date },
     completedAt: { type: Date },

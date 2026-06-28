@@ -36,6 +36,9 @@ const TaskSchema = new Schema(
   {
     projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
     phaseId: { type: Schema.Types.ObjectId },
+    // Set on occurrences of a team recurring activity. When such a task is
+    // completed, the next occurrence is spawned (see lib/recurring.ts).
+    recurringActivityId: { type: Schema.Types.ObjectId, ref: 'RecurringActivity', default: null },
     // Manual ordering within a phase (lower = higher up). Lets a lead
     // reshuffle tasks in the by-phase view. Defaults to 0; ties fall back
     // to createdAt so existing tasks keep a stable order.
@@ -150,6 +153,7 @@ const TaskSchema = new Schema(
   { timestamps: true },
 );
 
+TaskSchema.index({ recurringActivityId: 1, status: 1 });
 TaskSchema.index({ assigneeId: 1 });
 // "My tasks" also surfaces subtasks assigned to the user. Without this the
 // { 'subtasks.assigneeId': userId } lookup is a full collection scan; this

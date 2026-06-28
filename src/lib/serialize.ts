@@ -97,6 +97,7 @@ export function team(t: any, extras: Any = {}) {
     modules: {
       qms: { enabled: !!t.modules?.qms?.enabled },
       tickets: { enabled: !!t.modules?.tickets?.enabled },
+      recurring: { enabled: !!t.modules?.recurring?.enabled },
     },
     ...extras,
   };

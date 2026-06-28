@@ -154,6 +154,22 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
+    // Recurring activity — completing an occurrence spawns the next one so the
+    // chore keeps appearing on its cadence. Best-effort: a failure here must
+    // never block the completion the user just made.
+    if (body.status === 'done' && current.status !== 'done' && (fresh as any).recurringActivityId) {
+      try {
+        const { RecurringActivity } = await import('@/models/RecurringActivity');
+        const { generateOccurrence, hasOpenOccurrence } = await import('@/lib/recurring');
+        const activity = await RecurringActivity.findById((fresh as any).recurringActivityId);
+        if (activity && activity.active && !(await hasOpenOccurrence(String(activity._id)))) {
+          await generateOccurrence(activity);
+        }
+      } catch (e) {
+        console.error('[recurring] spawn-next failed', e);
+      }
+    }
+
     const statusChanged = !!body.status && body.status !== current.status;
     // Flow Signal — record actual work movement on the meaningful event
     // stream. Status, completion, reassignment count; cosmetic edits (title,
