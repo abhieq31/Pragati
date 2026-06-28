@@ -654,11 +654,13 @@ export default function TeamDetailPage() {
             {(
               [
                 ['work', isLead ? 'Work' : 'My tasks'],
-                ...(isLead ? [['foresight', 'Foresight']] : []),
                 ['projects', 'Projects'],
                 ...(team.modules?.qms?.enabled ? [['qms', 'QMS']] : []),
                 ...(team.modules?.tickets?.enabled ? [['tickets', 'Tickets']] : []),
                 ...(team.modules?.recurring?.enabled ? [['recurring', 'Recurring']] : []),
+                // Foresight is forward-looking — kept last so the team reads
+                // current work first, then the outlook.
+                ...(isLead ? [['foresight', 'Foresight']] : []),
               ] as [string, string][]
             ).map(([k, l]) => (
               <button

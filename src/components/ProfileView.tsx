@@ -196,11 +196,6 @@ export default function ProfileView({
       {/* ── Impact row — what this person delivers, at a glance ─────────── */}
       {stats && <ProfileStatTiles stats={stats} />}
 
-      {/* ── Delivery Foresight — forward-looking read over the heavy engine.
-          Backward (the impact tiles above) meets forward (where they're
-          heading). Self sees the full forecast; a colleague sees rhythm. ── */}
-      <DeliveryForesight userId={profile.id} isSelf={isSelf} />
-
       {/* ── Activity section ────────────────────────────────────────────── */}
       <div id="activity" className="scroll-mt-6">
         <div className="card rounded-xl border overflow-hidden">
@@ -224,6 +219,11 @@ export default function ProfileView({
           </div>
         </div>
       </div>
+
+      {/* ── Delivery Foresight — forward-looking read, kept last so the page
+          reads backward-then-forward: identity, impact, activity, then where
+          they're heading. Self sees the full forecast; a colleague sees rhythm. */}
+      <DeliveryForesight userId={profile.id} isSelf={isSelf} />
     </div>
   );
 }

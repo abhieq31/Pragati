@@ -19,22 +19,20 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, unattributed wisdom — Elon Musk, the books and authors that shaped
-   him (Asimov's Foundation, Douglas Adams, Heinlein, Tolkien, Thiel's Zero to
-   One) and the inventors and leaders he names as heroes (Tesla, Franklin,
-   Newton, Ford, Feynman, Einstein, Jobs, Churchill), curated to what Pragati is
-   for: doing the work — building, shipping, focus, finishing, deleting the
-   unessential, and persisting against the odds. No name is ever shown, only the
-   line. Never repeats on a device until the whole library has been shown (see
-   unseenQuoteIndices / pickUnseen below). See src/lib/quotes.ts for the
-   sourcing rules. */
+/* Rotating, unattributed wisdom — Jensen Huang, drawn from his keynotes,
+   interviews, and university addresses, curated to what Pragati is for: doing
+   the work — mission, resilience, ownership, focus, finishing, and reasoning
+   from first principles. No name is ever shown, only the line. Never repeats on
+   a device until the whole library has been shown (see unseenQuoteIndices /
+   pickUnseen below). See src/lib/quotes.ts for the sourcing rules. */
 
 // Bumped when the library is re-curated (the ledger is positional, so a fresh
 // key avoids old indices pre-marking different lines): v2 = Elon→Naval pool,
 // v3 = Bezos + his reading list, v4 = Elon Musk + the books he recommends,
 // v5 = Naval Ravikant + the thinkers and books he champions,
-// v6 = Elon Musk + the books, authors, and leaders he admires.
-const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v6';
+// v6 = Elon Musk + the books, authors, and leaders he admires,
+// v7 = Jensen Huang.
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v7';
 
 /** Indices not yet shown on this device; resets only once the whole set is
  *  exhausted. Takes the library size so a re-curation of the list stays in

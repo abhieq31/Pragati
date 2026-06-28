@@ -16,6 +16,8 @@ import {
   Trash2,
   AlertTriangle,
   ArrowRight,
+  ChevronDown,
+  ChevronRight,
   Search,
 } from 'lucide-react';
 
@@ -371,6 +373,11 @@ function TeamFormModal({
   const [recurringEnabled, setRecurringEnabled] = useState<boolean>(
     !!team?.modules?.recurring?.enabled,
   );
+  // Modules are an advanced, opt-in section — collapsed by default so the team
+  // form stays focused. Auto-expanded when the team already has one enabled.
+  const [modulesOpen, setModulesOpen] = useState<boolean>(
+    !!(team?.modules?.qms?.enabled || team?.modules?.tickets?.enabled || team?.modules?.recurring?.enabled),
+  );
   const [leadId, setLeadId] = useState(team?.leadId || '');
   const [memberIds, setMemberIds] = useState<string[]>(team?.memberIds || []);
   const [memberQuery, setMemberQuery] = useState('');
@@ -589,32 +596,48 @@ function TeamFormModal({
                 </div>
               </div>
 
-              {/* Opt-in capabilities — off by default so nothing new appears on a
-                  team until its owner turns it on. */}
+              {/* Opt-in capabilities — collapsed by default and off until the
+                  owner expands and turns one on, so the form stays focused. */}
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                <button
+                  type="button"
+                  onClick={() => setModulesOpen((o) => !o)}
+                  className="w-full flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 mb-1.5"
+                >
+                  {modulesOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                   Modules
-                </label>
-                <div className="space-y-2">
-                  <ModuleToggle
-                    label="Quality (QMS) tracking"
-                    hint="A configurable tracker — define your own columns to follow records through any process."
-                    checked={qmsEnabled}
-                    onChange={setQmsEnabled}
-                  />
-                  <ModuleToggle
-                    label="Support tickets"
-                    hint="A lightweight request queue for this team."
-                    checked={ticketsEnabled}
-                    onChange={setTicketsEnabled}
-                  />
-                  <ModuleToggle
-                    label="Recurring activities"
-                    hint="Scheduled chores that repeat (e.g. monthly downtime) with a checklist that resets each cycle."
-                    checked={recurringEnabled}
-                    onChange={setRecurringEnabled}
-                  />
-                </div>
+                  {!modulesOpen &&
+                    (() => {
+                      const n = [qmsEnabled, ticketsEnabled, recurringEnabled].filter(Boolean).length;
+                      return (
+                        <span className="normal-case font-normal text-slate-300">
+                          {n > 0 ? `${n} on` : 'optional add-ons'}
+                        </span>
+                      );
+                    })()}
+                </button>
+                {modulesOpen && (
+                  <div className="space-y-2">
+                    <ModuleToggle
+                      label="Quality (QMS) tracking"
+                      hint="A configurable tracker — define your own columns to follow records through any process."
+                      checked={qmsEnabled}
+                      onChange={setQmsEnabled}
+                    />
+                    <ModuleToggle
+                      label="Support tickets"
+                      hint="A lightweight request queue for this team."
+                      checked={ticketsEnabled}
+                      onChange={setTicketsEnabled}
+                    />
+                    <ModuleToggle
+                      label="Recurring activities"
+                      hint="Scheduled chores that repeat (e.g. monthly downtime) with a checklist that resets each cycle."
+                      checked={recurringEnabled}
+                      onChange={setRecurringEnabled}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
