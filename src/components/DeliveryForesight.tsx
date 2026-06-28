@@ -73,7 +73,7 @@ const STATUS_STYLE: Record<SelfForesight['status'], { label: string; fg: string;
   {
     building: { label: 'Calibrating', fg: '#64748b', bg: '#f1f5f9', ring: '#cbd5e1' },
     on_track: { label: 'On track', fg: '#047857', bg: '#ecfdf5', ring: '#34d399' },
-    clear: { label: 'Plate clear', fg: '#0369a1', bg: '#eff6ff', ring: '#38bdf8' },
+    clear: { label: 'Plate clear', fg: '#0369a1', bg: '#f4f9e9', ring: '#38bdf8' },
     at_risk: { label: 'At risk', fg: '#b45309', bg: '#fffbeb', ring: '#fbbf24' },
     overloaded: { label: 'Overloaded', fg: '#be123c', bg: '#fff1f2', ring: '#fb7185' },
     cooling: { label: 'Cooling', fg: '#475569', bg: '#f8fafc', ring: '#94a3b8' },
@@ -82,7 +82,7 @@ const STATUS_STYLE: Record<SelfForesight['status'], { label: string; fg: string;
 function ringColor(score: number): string {
   if (score >= 80) return '#16a34a';
   if (score >= 65) return '#0d9488';
-  if (score >= 50) return '#2563eb';
+  if (score >= 50) return '#4e7a00';
   if (score >= 35) return '#d97706';
   return '#94a3b8';
 }
@@ -151,12 +151,12 @@ function Sparkline({ data }: { data: number[] }) {
       <polyline
         points={pts.join(' ')}
         fill="none"
-        stroke="#3b82f6"
+        stroke="#76b900"
         strokeWidth={1.75}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={lastX} cy={lastY} r={2.5} fill="#3b82f6" />
+      <circle cx={lastX} cy={lastY} r={2.5} fill="#76b900" />
     </svg>
   );
 }

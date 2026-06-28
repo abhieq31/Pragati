@@ -3,8 +3,8 @@
     <!-- Matches PragatiMark's tile gradient (135°, same three stops) so the
          tab-bar favicon and the in-app logo read as the same mark. -->
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%"   stop-color="#1565C0"/>
-      <stop offset="45%"  stop-color="#1769C8"/>
+      <stop offset="0%"   stop-color="#4e7a00"/>
+      <stop offset="45%"  stop-color="#5e9400"/>
       <stop offset="100%" stop-color="#2B8C29"/>
     </linearGradient>
     <!-- Glossy top-left highlight, same as the in-app mark's inner ring. -->

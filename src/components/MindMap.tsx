@@ -38,7 +38,7 @@ interface MMEdge {
   to: string;
 }
 
-const COLORS = ['#1565C0', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
+const COLORS = ['#4e7a00', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#0EA5E9'];
 const NODE_R = 56; // node radius (px); chosen so 2 lines of text fit
 
 function uid() {
@@ -280,7 +280,7 @@ export function MindMap() {
 
     // Nodes
     nodes.forEach((n) => {
-      const color = n.color || '#1565C0';
+      const color = n.color || '#4e7a00';
       // Fill
       ctx.beginPath();
       ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
@@ -452,7 +452,7 @@ export function MindMap() {
               return (
                 <path
                   d={`M ${a.x} ${a.y} L ${linkCursor.x} ${linkCursor.y}`}
-                  stroke="#3b82f6"
+                  stroke="#76b900"
                   strokeWidth={1.5}
                   strokeDasharray="4 4"
                   fill="none"
@@ -485,9 +485,9 @@ export function MindMap() {
                   cx={n.x}
                   cy={n.y}
                   r={NODE_R}
-                  fill={n.color || '#1565C0'}
+                  fill={n.color || '#4e7a00'}
                   fillOpacity={0.12}
-                  stroke={n.color || '#1565C0'}
+                  stroke={n.color || '#4e7a00'}
                   strokeWidth={isLinking ? 2.5 : 1.5}
                 />
                 <foreignObject
@@ -509,7 +509,7 @@ export function MindMap() {
                       textAlign: 'center',
                       fontSize: 11,
                       fontWeight: 700,
-                      color: n.color || '#1565C0',
+                      color: n.color || '#4e7a00',
                       lineHeight: 1.2,
                       padding: '0 4px',
                       overflow: 'hidden',
@@ -524,7 +524,7 @@ export function MindMap() {
                   cy={n.y}
                   r={9}
                   fill="#fff"
-                  stroke={n.color || '#1565C0'}
+                  stroke={n.color || '#4e7a00'}
                   strokeWidth={1.25}
                   onMouseDown={(e) => {
                     e.stopPropagation();
@@ -534,7 +534,7 @@ export function MindMap() {
                   }}
                   style={{ cursor: 'crosshair' }}
                 />
-                <Link2Icon cx={n.x + NODE_R} cy={n.y} color={n.color || '#1565C0'} />
+                <Link2Icon cx={n.x + NODE_R} cy={n.y} color={n.color || '#4e7a00'} />
               </g>
             );
           })}
@@ -565,7 +565,7 @@ export function MindMap() {
                     }
                   }}
                   className="w-full text-[12px] text-center font-bold rounded-lg border-2 px-1.5 py-1 outline-none bg-white shadow-md"
-                  style={{ borderColor: n.color || '#1565C0', color: n.color || '#1565C0' }}
+                  style={{ borderColor: n.color || '#4e7a00', color: n.color || '#4e7a00' }}
                 />
               </div>
             );

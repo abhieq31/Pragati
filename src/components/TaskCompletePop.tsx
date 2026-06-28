@@ -96,7 +96,7 @@ export function TaskCompletePop({
       <div
         className="rounded-xl px-3.5 py-2.5 flex items-center gap-2.5 text-white shadow-xl"
         style={{
-          background: 'linear-gradient(120deg, #15803d 0%, #16a34a 50%, #1565C0 100%)',
+          background: 'linear-gradient(120deg, #15803d 0%, #16a34a 50%, #4e7a00 100%)',
           boxShadow: '0 12px 30px rgba(15,23,42,0.22)',
         }}
       >

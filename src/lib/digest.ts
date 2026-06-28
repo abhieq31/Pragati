@@ -280,14 +280,14 @@ function escapeHtml(s: string): string {
 const PRIORITY_COLOR: Record<string, string> = {
   critical: '#dc2626',
   high: '#ea580c',
-  medium: '#2563eb',
+  medium: '#4e7a00',
   low: '#64748b',
 };
 
 function renderTaskRow(t: DigestTask, projectName: string | null, appUrl: string): string {
   const titleHtml = escapeHtml(t.title);
   const title = appUrl
-    ? `<a href="${appUrl}/tasks/${t.id}" style="color:#1d4ed8;text-decoration:none;">${titleHtml}</a>`
+    ? `<a href="${appUrl}/tasks/${t.id}" style="color:#3e6100;text-decoration:none;">${titleHtml}</a>`
     : titleHtml;
   const proj = projectName ? `<span style="color:#64748b;"> · ${escapeHtml(projectName)}</span>` : '';
   const color = PRIORITY_COLOR[t.priority || 'medium'] || '#64748b';
@@ -485,7 +485,7 @@ export function renderWelcomeEmail(input: {
 
   const insightHtml = input.insight
     ? `<div style="margin:22px 0 4px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;">
-        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1565C0;margin:0 0 6px;">${escapeHtml(
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#4e7a00;margin:0 0 6px;">${escapeHtml(
           input.insight.tag,
         )} · worth a minute</div>
         <div style="font-size:14px;font-weight:700;color:#0f172a;line-height:1.4;">${escapeHtml(input.insight.title)}</div>
@@ -494,16 +494,16 @@ export function renderWelcomeEmail(input: {
     : '';
 
   const cta = input.appUrl
-    ? `<a href="${input.appUrl}" style="display:inline-block;background:#1565C0;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;padding:11px 20px;">Open Pragati</a>`
+    ? `<a href="${input.appUrl}" style="display:inline-block;background:#4e7a00;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;padding:11px 20px;">Open Pragati</a>`
     : '';
 
   const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>
 <body style="margin:0;background:#f1f5f9;padding:24px 12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
-  <tr><td style="height:4px;background:#1565C0;background:linear-gradient(90deg,#1565C0,#43A047);font-size:0;line-height:0;">&nbsp;</td></tr>
+  <tr><td style="height:4px;background:#4e7a00;background:linear-gradient(90deg,#4e7a00,#43A047);font-size:0;line-height:0;">&nbsp;</td></tr>
   <tr><td style="padding:30px 28px 8px;">
-    <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#1565C0;margin:0 0 14px;">Pragati</div>
+    <div style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#4e7a00;margin:0 0 14px;">Pragati</div>
     <h1 style="margin:0 0 10px;font-size:22px;line-height:1.3;color:#0f172a;">Welcome aboard, ${escapeHtml(first)}.</h1>
     <p style="margin:0 0 14px;font-size:14px;color:#334155;line-height:1.6;">Starting tomorrow at <strong>${escapeHtml(
       input.hourLabel,
@@ -600,7 +600,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
       rest.today.map(row).join(''),
       '#0f172a',
     ),
-    renderSection('Coming up', rest.soon.map(row).join(''), '#2563eb'),
+    renderSection('Coming up', rest.soon.map(row).join(''), '#4e7a00'),
     sections.projectUpdates.length
       ? renderSection(
           'Moved yesterday',
@@ -616,8 +616,8 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
   ].join('');
 
   const leadershipHtml = leadershipBrief?.team
-    ? `<div style="margin:0 0 22px;padding:16px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;">
-        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1d4ed8;margin-bottom:5px;">Team pulse</div>
+    ? `<div style="margin:0 0 22px;padding:16px;border:1px solid #e4f2c9;border-radius:14px;background:#f8fbff;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3e6100;margin-bottom:5px;">Team pulse</div>
         <div style="font-size:15px;font-weight:750;color:#0f172a;line-height:1.45;margin-bottom:12px;">${escapeHtml(leadershipBrief.headline)}</div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#dc2626;">${leadershipBrief.team.blocked.length}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Blocked</div></td>
@@ -645,15 +645,15 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         }
       </div>`
     : leadershipBrief?.workspace
-      ? `<div style="margin:0 0 22px;padding:16px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;">
-          <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#1d4ed8;margin-bottom:5px;">Workspace pulse</div>
+      ? `<div style="margin:0 0 22px;padding:16px;border:1px solid #e4f2c9;border-radius:14px;background:#f8fbff;">
+          <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#3e6100;margin-bottom:5px;">Workspace pulse</div>
           <div style="font-size:15px;font-weight:750;color:#0f172a;line-height:1.45;margin-bottom:12px;">${escapeHtml(leadershipBrief.headline)}</div>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
             <td style="padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#16a34a;">${leadershipBrief.workspace.doneYesterday}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Closed yesterday</div></td>
             <td width="8"></td>
             <td style="padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#dc2626;">${leadershipBrief.workspace.overdueTotal}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Overdue</div></td>
             <td width="8"></td>
-            <td style="padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#2563eb;">${leadershipBrief.workspace.activeProjects}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Active projects</div></td>
+            <td style="padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;text-align:center;"><div style="font-size:20px;font-weight:800;color:#4e7a00;">${leadershipBrief.workspace.activeProjects}</div><div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Active projects</div></td>
           </tr></table>
           ${
             leadershipBrief.workspace.risky.length
@@ -667,8 +667,8 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
 
   // ── The one thing ─────────────────────────────────────────────────────
   const focusHtml = focus
-    ? `<div style="margin:0 0 22px;border:1px solid ${focus.bucket === 'overdue' ? '#fecaca' : '#bfdbfe'};border-left:4px solid ${focus.bucket === 'overdue' ? '#dc2626' : '#1565C0'};border-radius:12px;padding:14px 16px;background:${focus.bucket === 'overdue' ? '#fff7f7' : '#f8fbff'};">
-        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${focus.bucket === 'overdue' ? '#b91c1c' : '#1565C0'};margin-bottom:4px;">Start here</div>
+    ? `<div style="margin:0 0 22px;border:1px solid ${focus.bucket === 'overdue' ? '#fecaca' : '#cde79b'};border-left:4px solid ${focus.bucket === 'overdue' ? '#dc2626' : '#4e7a00'};border-radius:12px;padding:14px 16px;background:${focus.bucket === 'overdue' ? '#fff7f7' : '#f8fbff'};">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${focus.bucket === 'overdue' ? '#b91c1c' : '#4e7a00'};margin-bottom:4px;">Start here</div>
         <div style="font-size:16px;font-weight:700;color:#0f172a;line-height:1.35;">${
           appUrl
             ? `<a href="${appUrl}/tasks/${focus.id}" style="color:#0f172a;text-decoration:none;">${escapeHtml(focus.title)}</a>`
@@ -681,7 +681,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     : '';
 
   const openBtn = appUrl
-    ? `<a href="${appUrl}/my-day" style="display:inline-block;background:#1565C0;color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:10px;">Open My Day</a>`
+    ? `<a href="${appUrl}/my-day" style="display:inline-block;background:#4e7a00;color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:10px;">Open My Day</a>`
     : '';
 
   const manage = appUrl
@@ -736,7 +736,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         ${openBtn ? `<div style="margin-top:4px;">${openBtn}</div>` : ''}
         ${
           insight
-            ? `<div style="margin-top:22px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:12.5px;color:#64748b;line-height:1.55;"><strong style="color:#1565C0;">${escapeHtml(
+            ? `<div style="margin-top:22px;padding-top:14px;border-top:1px solid #f1f5f9;font-size:12.5px;color:#64748b;line-height:1.55;"><strong style="color:#4e7a00;">${escapeHtml(
                 insight.tag,
               )} —</strong> <strong style="color:#0f172a;">${escapeHtml(insight.title)}.</strong> ${escapeHtml(insight.body)}</div>`
             : ''

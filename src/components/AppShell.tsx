@@ -371,7 +371,7 @@ export default function AppShell({
   // My Day is NOT in the main nav list — it renders pinned just above the user
   // footer so it's always reachable without scrolling.
   const leadNav: NavItem[] = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#4e7a00', iconBg: '#f4f9e9' },
     { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
@@ -418,7 +418,7 @@ export default function AppShell({
     : [];
 
   const contributorNav: NavItem[] = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#1565C0', iconBg: '#E3F2FD' },
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard, iconColor: '#4e7a00', iconBg: '#f4f9e9' },
     { href: '/projects', label: 'Projects', icon: FolderKanban, iconColor: '#7B1FA2', iconBg: '#F3E5F5' },
     { href: '/teams', label: 'Teams', icon: Users, iconColor: '#2E7D32', iconBg: '#E8F5E9' },
   ];
@@ -427,8 +427,8 @@ export default function AppShell({
     href: '/my-day',
     label: 'My Day',
     icon: NotebookPen,
-    iconColor: '#1565C0',
-    iconBg: '#EFF6FF',
+    iconColor: '#4e7a00',
+    iconBg: '#f4f9e9',
   };
 
   const nav = isAdmin
@@ -924,7 +924,7 @@ export default function AppShell({
                 >
                   <div
                     className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag:opacity-100"
-                    style={{ background: '#3b82f6', margin: '8px 0' }}
+                    style={{ background: '#76b900', margin: '8px 0' }}
                   />
                 </div>
                 <div
@@ -935,7 +935,7 @@ export default function AppShell({
                 >
                   <div
                     className="absolute right-0 top-0 bottom-0 w-[3px] transition-all duration-150 rounded-full opacity-0 group-hover/drag2:opacity-100"
-                    style={{ background: '#3b82f6', margin: '8px 0' }}
+                    style={{ background: '#76b900', margin: '8px 0' }}
                   />
                 </div>
               </>

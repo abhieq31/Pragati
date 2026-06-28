@@ -31,7 +31,7 @@ export function BirdsEyeLoader({
           className="absolute inset-0 rounded-full"
           style={{
             border: '2.5px solid #e8edf4',
-            borderTopColor: '#1565C0',
+            borderTopColor: '#4e7a00',
             borderRightColor: '#2E7D32',
             animation: 'pragati-spin 0.9s linear infinite',
           }}

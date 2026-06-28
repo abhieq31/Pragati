@@ -5,7 +5,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 // ── Status dots ───────────────────────────────────────────────────────────────
 const STATUS_DOT: Record<string, string> = {
   todo: '#94a3b8',
-  in_progress: '#3b82f6',
+  in_progress: '#76b900',
   review: '#f59e0b',
   blocked: '#ef4444',
   done: '#22c55e',
@@ -277,7 +277,7 @@ export function isOverdue(due?: string | Date | null, status?: string | null): b
 // ── Avatar ────────────────────────────────────────────────────────────────────
 // Each palette entry is a [lighter, darker] gradient pair for a soft 3-D feel.
 const AVATAR_GRADIENTS: Array<[string, string]> = [
-  ['#1E88E5', '#1565C0'], // brand blue
+  ['#76b900', '#4e7a00'], // brand blue
   ['#5E35B1', '#311B92'], // deep purple
   ['#00897B', '#00695C'], // teal
   ['#EF6C00', '#E65100'], // orange
@@ -298,7 +298,7 @@ const AVATAR_GRADIENTS: Array<[string, string]> = [
  */
 export const AVATAR_PRESETS: Array<{ bg: string; font: number }> = [
   // Sans on rich solids — the safe, professional defaults
-  { bg: '#1565C0', font: 0 }, // brand blue + system sans
+  { bg: '#4e7a00', font: 0 }, // brand blue + system sans
   { bg: '#2E7D32', font: 0 }, // brand green + system sans
   { bg: '#7B1FA2', font: 1 }, // royal purple + Helvetica heavy
   { bg: '#C62828', font: 1 }, // crimson + Helvetica heavy
@@ -306,8 +306,8 @@ export const AVATAR_PRESETS: Array<{ bg: string; font: number }> = [
   { bg: '#EF6C00', font: 3 }, // amber + Avenir
   // Display weights for confident strokes
   { bg: '#0F172A', font: 5 }, // ink + Futura
-  { bg: '#1976D2', font: 5 }, // brand blue + Futura
-  { bg: '#0D47A1', font: 4 }, // navy + Impact
+  { bg: '#5e9400', font: 5 }, // brand blue + Futura
+  { bg: '#324e00', font: 4 }, // navy + Impact
   { bg: '#365314', font: 4 }, // olive + Impact
   // Serifs on lighter pastels — soft and editorial
   { bg: '#FED7AA', font: 6 }, // peach + Georgia

@@ -539,7 +539,7 @@ export default function LoginPage() {
               <div className="fade-up-2 flex justify-center mt-5">
                 <div
                   className="relative h-0.5 w-20 rounded-full overflow-hidden shimmer-line"
-                  style={{ background: 'linear-gradient(90deg, #1769C8, #43A047)' }}
+                  style={{ background: 'linear-gradient(90deg, #5e9400, #43A047)' }}
                 />
               </div>
 
@@ -569,7 +569,7 @@ export default function LoginPage() {
           <div className="absolute inset-0 lg:hidden profile-hero-shimmer opacity-90" />
           <div
             className="absolute top-0 left-0 right-0 h-[3px]"
-            style={{ background: 'linear-gradient(90deg, #1565C0 0%, #1769C8 50%, #2B8C29 100%)' }}
+            style={{ background: 'linear-gradient(90deg, #4e7a00 0%, #5e9400 50%, #2B8C29 100%)' }}
           />
 
           <div className="w-full max-w-[340px] fade-up relative">
@@ -620,7 +620,7 @@ export default function LoginPage() {
                       <div
                         className="relative rounded-full p-[3px]"
                         style={{
-                          background: 'conic-gradient(from 210deg, #1565C0, #2E7D32, #1976D2, #1565C0)',
+                          background: 'conic-gradient(from 210deg, #4e7a00, #2E7D32, #5e9400, #4e7a00)',
                           boxShadow: '0 14px 34px -8px rgba(21,101,192,0.45)',
                         }}
                       >
@@ -637,7 +637,7 @@ export default function LoginPage() {
                               className="w-20 h-20 rounded-full flex items-center justify-center text-2xl select-none"
                               style={{
                                 background:
-                                  deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                                  deviceAvatar.bg || 'linear-gradient(135deg, #4e7a00 0%, #1a237e 100%)',
                                 color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
                                 fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
                                 fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
@@ -679,16 +679,16 @@ export default function LoginPage() {
                             : shake
                               ? '#ef4444'
                               : pin.length === i
-                                ? '#1565C0'
+                                ? '#4e7a00'
                                 : pin.length > i
-                                  ? '#93c5fd'
+                                  ? '#b1d96a'
                                   : '#e2e8f0',
                           background: unlocked
                             ? '#f0fdf4'
                             : shake
                               ? '#fef2f2'
                               : pin.length > i
-                                ? '#eff6ff'
+                                ? '#f4f9e9'
                                 : pin.length === i
                                   ? '#f0f9ff'
                                   : 'white',
@@ -973,7 +973,7 @@ export default function LoginPage() {
             <div
               className="relative rounded-full p-[3px]"
               style={{
-                background: 'conic-gradient(from 210deg, #1769C8, #43A047, #1976D2, #1769C8)',
+                background: 'conic-gradient(from 210deg, #5e9400, #43A047, #5e9400, #5e9400)',
                 boxShadow: '0 16px 40px -8px rgba(21,101,192,0.55)',
               }}
             >
@@ -989,7 +989,7 @@ export default function LoginPage() {
                   <div
                     className="w-[74px] h-[74px] rounded-full flex items-center justify-center text-xl select-none"
                     style={{
-                      background: deviceAvatar.bg || 'linear-gradient(135deg, #1565C0 0%, #1a237e 100%)',
+                      background: deviceAvatar.bg || 'linear-gradient(135deg, #4e7a00 0%, #1a237e 100%)',
                       color: deviceAvatar.bg ? avatarFg(deviceAvatar.bg) : '#ffffff',
                       fontFamily: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).family,
                       fontWeight: (AVATAR_FONTS[deviceAvatar.font] || AVATAR_FONTS[0]).weight,
@@ -1010,7 +1010,7 @@ export default function LoginPage() {
           <div className="mt-7 w-44 h-1 rounded-full overflow-hidden bg-white/10 fade-up-3">
             <div
               className="h-full w-1/2 rounded-full veil-bar"
-              style={{ background: 'linear-gradient(90deg, #1769C8, #43A047)' }}
+              style={{ background: 'linear-gradient(90deg, #5e9400, #43A047)' }}
             />
           </div>
         </div>

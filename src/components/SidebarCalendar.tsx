@@ -216,7 +216,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
   function hoverAccentColor(list: CalTask[]): string {
     const sig = signals(list);
     if (sig.overdue) return '#ef4444';
-    if (sig.mine) return '#1976D2';
+    if (sig.mine) return '#5e9400';
     return '#22a565';
   }
 
@@ -354,7 +354,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
                         ? {
                             width: 26,
                             height: 26,
-                            background: 'linear-gradient(135deg,#0d47a1 0%,#1565C0 45%,#1e88e5 100%)',
+                            background: 'linear-gradient(135deg,#324e00 0%,#4e7a00 45%,#76b900 100%)',
                             boxShadow: '0 2px 8px rgba(21,101,192,0.45)',
                           }
                         : { width: 24, height: 24 }
@@ -368,7 +368,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
                       <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#ef4444' }} />
                     )}
                     {!sig?.overdue && sig?.mine && (
-                      <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#1976D2' }} />
+                      <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#5e9400' }} />
                     )}
                     {!sig?.overdue && sig?.team && (
                       <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#22a565' }} />
@@ -430,7 +430,7 @@ export function SidebarCalendar({ dark }: { dark: boolean }) {
                     >
                       <span
                         className="w-[5px] h-[5px] rounded-full mt-[5px] shrink-0"
-                        style={{ background: overdue ? '#ef4444' : t.mine ? '#1976D2' : '#22a565' }}
+                        style={{ background: overdue ? '#ef4444' : t.mine ? '#5e9400' : '#22a565' }}
                       />
                       <div className="min-w-0 flex-1">
                         <div

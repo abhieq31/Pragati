@@ -30,7 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const STATUS_COLOR: Record<string, string> = {
   todo: '#94a3b8',
-  in_progress: '#3b82f6',
+  in_progress: '#76b900',
   review: '#8b5cf6',
   blocked: '#ef4444',
   done: '#22c55e',
@@ -38,7 +38,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 function bar(pct: number): string {
   const c = Math.max(0, Math.min(100, pct));
-  const color = c >= 90 ? '#22c55e' : c >= 60 ? '#3b82f6' : c >= 30 ? '#f59e0b' : '#94a3b8';
+  const color = c >= 90 ? '#22c55e' : c >= 60 ? '#76b900' : c >= 30 ? '#f59e0b' : '#94a3b8';
   return `<div class="bar"><div class="bar-fill" style="width:${c}%;background:${color}"></div></div>`;
 }
 
@@ -167,17 +167,17 @@ export function buildProjectReportHtml(project: any, phases: any[], exportedBy =
   * { box-sizing:border-box; }
   body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#0f172a; margin:0; background:#f8fafc; }
   .page { max-width:900px; margin:0 auto; padding:40px; background:#fff; }
-  .brand { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #1565C0; padding-bottom:14px; margin-bottom:8px; }
+  .brand { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #4e7a00; padding-bottom:14px; margin-bottom:8px; }
   .brand .mark { display:flex; align-items:center; gap:10px; }
-  .brand .logo { font-size:13px; font-weight:900; letter-spacing:.18em; color:#1565C0; text-transform:uppercase; line-height:1.2; }
+  .brand .logo { font-size:13px; font-weight:900; letter-spacing:.18em; color:#4e7a00; text-transform:uppercase; line-height:1.2; }
   .brand .logo small { display:block; font-size:9px; font-weight:700; letter-spacing:.12em; color:#94a3b8; }
   .brand .gen { font-size:11px; color:#94a3b8; text-align:right; }
-  .refchip { display:inline-block; font-family:ui-monospace,monospace; font-size:12px; font-weight:700; color:#1565C0; background:#E3F2FD; border-radius:6px; padding:2px 8px; margin-top:6px; }
+  .refchip { display:inline-block; font-family:ui-monospace,monospace; font-size:12px; font-weight:700; color:#4e7a00; background:#f4f9e9; border-radius:6px; padding:2px 8px; margin-top:6px; }
   h1 { font-size:26px; margin:14px 0 2px; }
-  h2 { font-size:14px; margin:30px 0 10px; text-transform:uppercase; letter-spacing:.08em; color:#1565C0; border-bottom:1px solid #e2e8f0; padding-bottom:5px; }
+  h2 { font-size:14px; margin:30px 0 10px; text-transform:uppercase; letter-spacing:.08em; color:#4e7a00; border-bottom:1px solid #e2e8f0; padding-bottom:5px; }
   .muted { color:#94a3b8; font-weight:400; }
   .sub { color:#64748b; margin:0; font-size:13px; }
-  .summary { background:#f1f5f9; border-left:4px solid #1565C0; border-radius:8px; padding:14px 16px; margin:18px 0; font-size:14px; line-height:1.6; }
+  .summary { background:#f1f5f9; border-left:4px solid #4e7a00; border-radius:8px; padding:14px 16px; margin:18px 0; font-size:14px; line-height:1.6; }
   .kpis { display:flex; gap:10px; flex-wrap:wrap; margin:16px 0; }
   .kpi { border:1px solid #e2e8f0; border-radius:12px; padding:12px 16px; min-width:110px; flex:1; }
   .kpi .n { font-size:24px; font-weight:800; }
@@ -202,7 +202,7 @@ export function buildProjectReportHtml(project: any, phases: any[], exportedBy =
     <div class="brand">
       <span class="mark">
         <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <defs><linearGradient id="pg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#1565C0"/><stop offset="0.45" stop-color="#1769C8"/><stop offset="1" stop-color="#2B8C29"/></linearGradient></defs>
+          <defs><linearGradient id="pg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#4e7a00"/><stop offset="0.45" stop-color="#5e9400"/><stop offset="1" stop-color="#2B8C29"/></linearGradient></defs>
           <rect width="64" height="64" rx="17" fill="url(#pg)"/>
           <g fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 40 L32 22 L50 40" stroke="#ffffff" stroke-width="7"/>
@@ -421,7 +421,7 @@ export function printProjectReport(project: any, phases: any[], exportedBy = '')
   const withPrintBar = html.replace(
     '</body>',
     `<div id="pragati-print-bar" style="position:fixed;right:16px;bottom:16px;z-index:99999;display:flex;gap:8px;font-family:-apple-system,Segoe UI,Roboto,sans-serif">
-       <button onclick="window.print()" style="background:linear-gradient(135deg,#1565C0,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,0.18)">Save as PDF / Print</button>
+       <button onclick="window.print()" style="background:linear-gradient(135deg,#4e7a00,#2E7D32);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,0.18)">Save as PDF / Print</button>
        <button onclick="window.close()" style="background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer">Close</button>
      </div>
      <style>@media print { #pragati-print-bar { display:none !important; } }</style>

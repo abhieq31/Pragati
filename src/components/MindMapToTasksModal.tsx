@@ -120,7 +120,7 @@ export function MindMapToTasksModal({
               <div className="flex items-center gap-2.5 min-w-0">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #1565C0, #22C55E)' }}
+                  style={{ background: 'linear-gradient(135deg, #4e7a00, #22C55E)' }}
                 >
                   <ListChecks size={17} className="text-white" />
                 </div>

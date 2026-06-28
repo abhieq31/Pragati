@@ -49,7 +49,7 @@ type Summary = {
 const STATUS_STYLE: Record<Status, { label: string; fg: string; bg: string; dot: string }> = {
   building: { label: 'Calibrating', fg: '#64748b', bg: '#f1f5f9', dot: '#cbd5e1' },
   on_track: { label: 'On track', fg: '#047857', bg: '#ecfdf5', dot: '#34d399' },
-  clear: { label: 'Clear', fg: '#0369a1', bg: '#eff6ff', dot: '#38bdf8' },
+  clear: { label: 'Clear', fg: '#0369a1', bg: '#f4f9e9', dot: '#38bdf8' },
   at_risk: { label: 'At risk', fg: '#b45309', bg: '#fffbeb', dot: '#fbbf24' },
   overloaded: { label: 'Overloaded', fg: '#be123c', bg: '#fff1f2', dot: '#fb7185' },
   cooling: { label: 'Cooling', fg: '#475569', bg: '#f8fafc', dot: '#94a3b8' },

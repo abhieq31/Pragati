@@ -41,7 +41,7 @@ interface Sheet {
 
 const STATUS_STYLE: Record<StageStatus, { bg: string; fg: string }> = {
   done: { bg: '#dcfce7', fg: '#15803d' },
-  in_progress: { bg: '#dbeafe', fg: '#1d4ed8' },
+  in_progress: { bg: '#e4f2c9', fg: '#3e6100' },
   pending: { bg: '#fef3c7', fg: '#b45309' },
   na: { bg: '#f1f5f9', fg: '#64748b' },
 };
@@ -424,7 +424,7 @@ export default function CsvSheetClient({
           font-size: 12px;
         }
         .cell-input:hover:not(:disabled) { border-color: #e2e8f0; }
-        .cell-input:focus { border-color: #3b82f6; background: #fff; }
+        .cell-input:focus { border-color: #76b900; background: #fff; }
         .cell-input:disabled { cursor: default; }
       `}</style>
     </div>

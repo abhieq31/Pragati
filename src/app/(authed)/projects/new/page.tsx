@@ -815,7 +815,7 @@ export default function NewProjectPage() {
               onClick={() => step > s && setStep(s as 1 | 2)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
               style={{
-                background: step === s ? '#1565C0' : step > s ? '#dcfce7' : '#f1f5f9',
+                background: step === s ? '#4e7a00' : step > s ? '#dcfce7' : '#f1f5f9',
                 color: step === s ? '#fff' : step > s ? '#15803d' : '#94a3b8',
                 cursor: step > s ? 'pointer' : 'default',
               }}

@@ -109,7 +109,7 @@ export function ExportMenu({
             hint: 'Vector map — scales to any size, crisp in print',
             icon: Network,
             onClick: onBirdEyeSvg,
-            tint: '#2563eb',
+            tint: '#4e7a00',
           },
         ]
       : []),

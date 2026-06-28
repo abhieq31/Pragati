@@ -113,12 +113,12 @@ const FUNCTION_LABEL: Record<string, string> = {
 // the per-member tint that read as noisy on the profile. Falls back to the
 // brand blue→green sweep.
 const FUNCTION_COVER: Record<string, string> = {
-  rtb: 'linear-gradient(115deg, #0d47a1 0%, #1976D2 55%, #1565C0 100%)',
-  ctb: 'linear-gradient(115deg, #1b5e20 0%, #2E7D32 55%, #1565C0 100%)',
-  data_integrity: 'linear-gradient(115deg, #4a148c 0%, #6a1b9a 55%, #1565C0 100%)',
+  rtb: 'linear-gradient(115deg, #324e00 0%, #5e9400 55%, #4e7a00 100%)',
+  ctb: 'linear-gradient(115deg, #1b5e20 0%, #2E7D32 55%, #4e7a00 100%)',
+  data_integrity: 'linear-gradient(115deg, #4a148c 0%, #6a1b9a 55%, #4e7a00 100%)',
   audit: 'linear-gradient(115deg, #4e342e 0%, #6d4c41 55%, #455a64 100%)',
 };
-const DEFAULT_COVER = 'linear-gradient(115deg, #1565C0 0%, #1976D2 40%, #2E7D32 100%)';
+const DEFAULT_COVER = 'linear-gradient(115deg, #4e7a00 0%, #5e9400 40%, #2E7D32 100%)';
 
 /* One figure in the team header's stat strip — a quiet tile with an icon so
    the five numbers scan at a glance rather than reading as a wall of text. */

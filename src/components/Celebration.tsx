@@ -11,7 +11,7 @@ import { playFanfare } from '@/lib/sound';
  * caller decides what counts as a milestone.
  */
 
-const CONFETTI_COLORS = ['#1769C8', '#2B8C47', '#fbbf24', '#f472b6', '#38bdf8', '#a78bfa'];
+const CONFETTI_COLORS = ['#5e9400', '#2B8C47', '#fbbf24', '#f472b6', '#38bdf8', '#a78bfa'];
 
 function ConfettiPiece({ i }: { i: number }) {
   // Deterministic-ish spread so pieces fan across the width with varied timing.

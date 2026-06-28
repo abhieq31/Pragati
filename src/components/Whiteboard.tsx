@@ -59,7 +59,7 @@ type Doc = { strokes: Stroke[] };
 
 const COLORS: { value: string; label: string }[] = [
   { value: '#0f172a', label: 'Ink' },
-  { value: '#1565C0', label: 'Blue' },
+  { value: '#4e7a00', label: 'Blue' },
   { value: '#22C55E', label: 'Green' },
   { value: '#F59E0B', label: 'Amber' },
   { value: '#EF4444', label: 'Red' },

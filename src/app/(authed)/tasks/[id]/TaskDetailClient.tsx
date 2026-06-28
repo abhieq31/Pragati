@@ -39,7 +39,7 @@ const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
 const STATUS_META: Record<string, { label: string; dot: string; ring: string }> = {
   todo: { label: 'To do', dot: '#94a3b8', ring: '#e2e8f0' },
-  in_progress: { label: 'In progress', dot: '#3b82f6', ring: '#bfdbfe' },
+  in_progress: { label: 'In progress', dot: '#76b900', ring: '#cde79b' },
   review: { label: 'Review', dot: '#f59e0b', ring: '#fde68a' },
   blocked: { label: 'Blocked', dot: '#ef4444', ring: '#fecaca' },
   done: { label: 'Done', dot: '#22c55e', ring: '#bbf7d0' },
@@ -728,7 +728,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                                     : s === 'blocked'
                                       ? '#dc2626'
                                       : s === 'in_progress'
-                                        ? '#1565C0'
+                                        ? '#4e7a00'
                                         : s === 'review'
                                           ? '#92400e'
                                           : '#475569',
@@ -933,7 +933,7 @@ export default function TaskDetailClient(props: TaskDetailClientProps) {
                           className="h-full rounded-full transition-all"
                           style={{
                             width: `${pct}%`,
-                            background: overBudget ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#3b82f6',
+                            background: overBudget ? '#ef4444' : pct >= 80 ? '#f59e0b' : '#76b900',
                           }}
                         />
                       </div>

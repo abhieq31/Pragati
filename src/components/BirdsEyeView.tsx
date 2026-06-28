@@ -168,14 +168,14 @@ export interface BirdsEyeData {
    as a calm executive overview rather than a developer graph. */
 const STATUS_FILL: Record<string, string> = {
   todo: '#f8fafc',
-  in_progress: '#eff6ff',
+  in_progress: '#f4f9e9',
   review: '#fffbeb',
   blocked: '#fef2f2',
   done: '#f0fdf4',
 };
 const STATUS_STROKE: Record<string, string> = {
   todo: '#94a3b8',
-  in_progress: '#3b82f6',
+  in_progress: '#76b900',
   review: '#f59e0b',
   blocked: '#ef4444',
   done: '#22c55e',
@@ -1095,7 +1095,7 @@ export function BirdsEyeView({
       return [];
     }
   });
-  const [brushColor, setBrushColor] = useState('#1565C0');
+  const [brushColor, setBrushColor] = useState('#4e7a00');
   const liveStroke = useRef<BrushStroke | null>(null);
   const [, forceLive] = useState(0); // re-render trigger for live stroke painting
   const svgRef = useRef<SVGSVGElement>(null);
@@ -1852,7 +1852,7 @@ export function BirdsEyeView({
             {brushOn && (
               <>
                 <div className="flex items-center gap-0.5 mx-0.5">
-                  {['#1565C0', '#22c55e', '#f59e0b', '#ef4444', '#0f172a'].map((c) => (
+                  {['#4e7a00', '#22c55e', '#f59e0b', '#ef4444', '#0f172a'].map((c) => (
                     <button
                       key={c}
                       type="button"
@@ -1951,8 +1951,8 @@ export function BirdsEyeView({
                     {/* Match the app's 3-stop brand gradient so the workspace
                         root reads as the same identity as the sidebar wordmark. */}
                     <linearGradient id="beRootGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#1565C0" />
-                      <stop offset="50%" stopColor="#1976D2" />
+                      <stop offset="0%" stopColor="#4e7a00" />
+                      <stop offset="50%" stopColor="#5e9400" />
                       <stop offset="100%" stopColor="#2E7D32" />
                     </linearGradient>
                     {/* Soft drop shadow lifts every card off the dotted canvas
@@ -2103,7 +2103,7 @@ export function BirdsEyeView({
                                 y1={collapseCy}
                                 x2={collapseCx + 4}
                                 y2={collapseCy}
-                                stroke="#1565C0"
+                                stroke="#4e7a00"
                                 strokeWidth={1.6}
                                 strokeLinecap="round"
                               />
@@ -2112,7 +2112,7 @@ export function BirdsEyeView({
                                 y1={collapseCy - 4}
                                 x2={collapseCx}
                                 y2={collapseCy + 4}
-                                stroke="#1565C0"
+                                stroke="#4e7a00"
                                 strokeWidth={1.6}
                                 strokeLinecap="round"
                               />
@@ -2148,7 +2148,7 @@ export function BirdsEyeView({
                           style={{ cursor: 'pointer' }}
                         >
                           <title>Add a task under this {n.kind}</title>
-                          <circle cx={n.x + n.width - 11} cy={n.y + n.height - 11} r={8.5} fill="#1565C0" />
+                          <circle cx={n.x + n.width - 11} cy={n.y + n.height - 11} r={8.5} fill="#4e7a00" />
                           <line
                             x1={n.x + n.width - 15}
                             y1={n.y + n.height - 11}
@@ -2264,7 +2264,7 @@ export function BirdsEyeView({
           const mmW = Math.max(60, Math.round(width * scale));
           const mmH = Math.max(44, Math.round(height * scale));
           const MM_KIND_FILL: Record<string, string> = {
-            root: '#1565C0',
+            root: '#4e7a00',
             team: '#a5b4fc',
             phase: '#cbd5e1',
             count: '#e2e8f0',
@@ -2328,7 +2328,7 @@ export function BirdsEyeView({
                   width={viewportBox.cw / zoom}
                   height={viewportBox.ch / zoom}
                   fill="rgba(21,101,192,0.08)"
-                  stroke="#1565C0"
+                  stroke="#4e7a00"
                   strokeWidth={Math.max(2, 2 / scale / 2)}
                   rx={8}
                 />
