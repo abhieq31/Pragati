@@ -149,7 +149,20 @@ export const ProjectCreateSchema = z.object({
     .array(
       z.object({
         name: z.string().min(1).max(120),
-        tasks: z.array(z.string().max(300)),
+        // A task may be a bare title (legacy/template callers) or a richer
+        // object carrying an optional assignee and start/due dates chosen at
+        // creation time, so the lead doesn't have to open each task afterwards.
+        tasks: z.array(
+          z.union([
+            z.string().max(300),
+            z.object({
+              title: z.string().min(1).max(300),
+              assigneeId: optionalObjectId,
+              startDate: dateString.optional(),
+              dueDate: dateString.optional(),
+            }),
+          ]),
+        ),
       }),
     )
     .optional(),

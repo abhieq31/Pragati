@@ -16,6 +16,7 @@ import {
   Plus,
   Search,
   Copy,
+  ArrowUpRight,
 } from 'lucide-react';
 import { api } from '@/lib/client/api';
 import { DatePicker } from '@/components/DatePicker';
@@ -1102,6 +1103,9 @@ export function BirdsEyeView({
   // Tracks whether the user has taken manual control of the zoom; until they
   // do, we keep auto-fitting on resize so the first paint always frames the tree.
   const userZoomed = useRef(false);
+  // Live mirror of the zoom level for the native wheel listener, which is bound
+  // once (non-passive) and would otherwise close over a stale zoom value.
+  const zoomRef = useRef(1);
   // Find-on-canvas: a query dims everything that doesn't match so the matches
   // pop without re-laying-out the tree (positions stay stable — that's what
   // keeps the view trustworthy as a spatial reference).
@@ -1367,6 +1371,12 @@ export function BirdsEyeView({
     if (mounted) sampleViewport();
   }, [mounted, zoom, width, height, sampleViewport]);
 
+  // Mirror zoom into a ref so the once-bound native wheel handler always reads
+  // the current level.
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
   const zoomBy = (delta: number) => {
     userZoomed.current = true;
     setZoom((z) => Math.min(2, Math.max(0.3, Math.round((z + delta) * 100) / 100)));
@@ -1375,6 +1385,53 @@ export function BirdsEyeView({
     userZoomed.current = false;
     fitToViewport();
   };
+
+  // Cursor-anchored wheel / trackpad-pinch zoom. The natural way to zoom a
+  // canvas — hold ⌘/Ctrl (trackpad pinch sends ctrlKey automatically) and
+  // scroll; the point under the pointer stays put. Bound natively with
+  // { passive: false } because React routes wheel through a passive listener,
+  // so preventDefault (which stops the browser's own page-zoom) wouldn't fire.
+  // A plain wheel without the modifier still scrolls/pans as before.
+  useEffect(() => {
+    if (!mounted) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (brushOn) return;
+      e.preventDefault();
+      const svg = svgRef.current;
+      if (!svg) return;
+      const z0 = zoomRef.current;
+      const svgRect = svg.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      // Content point (unscaled) under the cursor + cursor position in the canvas.
+      const cx = (e.clientX - svgRect.left) / z0;
+      const cy = (e.clientY - svgRect.top) / z0;
+      const px = e.clientX - elRect.left;
+      const py = e.clientY - elRect.top;
+      // Exponential step → smooth, consistent zoom regardless of device deltas.
+      const z2 = Math.min(2, Math.max(0.3, Math.round(z0 * Math.exp(-e.deltaY * 0.0015) * 100) / 100));
+      if (z2 === z0) return;
+      userZoomed.current = true;
+      setZoom(z2);
+      // After the re-render settles, nudge scroll so the content point lands
+      // back under the cursor. Measuring the real svg rect keeps this correct
+      // even with the canvas centred when it's narrower than the viewport.
+      requestAnimationFrame(() => {
+        const el2 = scrollRef.current;
+        const svg2 = svgRef.current;
+        if (!el2 || !svg2) return;
+        const nr = svg2.getBoundingClientRect();
+        const er = el2.getBoundingClientRect();
+        el2.scrollLeft -= er.left + px - (nr.left + cx * z2);
+        el2.scrollTop -= er.top + py - (nr.top + cy * z2);
+        sampleViewport();
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [mounted, brushOn, sampleViewport]);
 
   // Pointer handling — two modes share one set of handlers:
   //   • Node drag  : press on a [data-be-node] element moves only that node.
@@ -1746,17 +1803,21 @@ export function BirdsEyeView({
             <button
               onClick={() => zoomBy(-0.1)}
               className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
-              title="Zoom out"
+              title="Zoom out (− or ⌘/Ctrl+scroll)"
             >
               <ZoomOut size={15} />
             </button>
-            <span className="text-[11px] font-bold text-slate-600 tabular-nums w-10 text-center">
+            <button
+              onClick={resetView}
+              className="text-[11px] font-bold text-slate-600 tabular-nums w-10 text-center hover:text-blue-600"
+              title="Reset zoom · fit to screen"
+            >
               {Math.round(zoom * 100)}%
-            </span>
+            </button>
             <button
               onClick={() => zoomBy(0.1)}
               className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
-              title="Zoom in"
+              title="Zoom in (+ or ⌘/Ctrl+scroll)"
             >
               <ZoomIn size={15} />
             </button>
@@ -2379,7 +2440,7 @@ export function BirdsEyeView({
               </button>
             ))}
             <span className="ml-auto text-slate-400 hidden lg:inline">
-              Drag nodes · / search · F fit · B brush · T tasks · urgency chips above
+              Drag nodes · ⌘/Ctrl+scroll or pinch to zoom · / search · F fit · B brush · T tasks
             </span>
           </div>
         </div>
@@ -2449,6 +2510,9 @@ function BirdsEyeTaskEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [title, setTitle] = useState(task.title);
+  const [status, setStatus] = useState('todo');
+  const [priority, setPriority] = useState('medium');
   const [assigneeId, setAssigneeId] = useState('');
   const [due, setDue] = useState('');
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
@@ -2458,12 +2522,14 @@ function BirdsEyeTaskEditor({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Pull the live task so we have the canonical assignee/TCD + project to
-      // pick the members list from. The bird's-eye payload only carries
-      // labels, not ids.
+      // Pull the live task so we have the canonical fields + project to pick the
+      // members list from. The bird's-eye payload only carries labels, not ids.
       try {
         const t = await api<any>(`/tasks/${task.id}`);
         if (cancelled) return;
+        setTitle(t.title || task.title);
+        setStatus(t.status || 'todo');
+        setPriority(t.priority || 'medium');
         setAssigneeId(t.assigneeId || '');
         setDue(t.ccTcd || t.dueDate || '');
         const projectId = t.projectId;
@@ -2483,12 +2549,21 @@ function BirdsEyeTaskEditor({
   }, [task.id]);
 
   async function save() {
+    const t = title.trim();
+    if (!t) {
+      setErr('Title is required');
+      return;
+    }
     setSaving(true);
     setErr('');
     try {
-      const body: any = {};
-      body.assigneeId = assigneeId || null;
-      body.ccTcd = due || null;
+      const body: any = {
+        title: t,
+        status,
+        priority,
+        assigneeId: assigneeId || null,
+        ccTcd: due || null,
+      };
       await api(`/tasks/${task.id}`, { method: 'PATCH', body });
       notifyCalendarChange();
       onSaved();
@@ -2501,7 +2576,7 @@ function BirdsEyeTaskEditor({
 
   // Anchor against the viewport but keep the popover fully on-screen.
   const POP_W = 280;
-  const POP_H = 260;
+  const POP_H = 440;
   const left = Math.min(
     Math.max(8, anchorX - POP_W / 2),
     (typeof window !== 'undefined' ? window.innerWidth : 1024) - POP_W - 8,
@@ -2516,23 +2591,73 @@ function BirdsEyeTaskEditor({
       {/* Click-away catcher (sits between modal and popover) */}
       <div className="fixed inset-0 z-[70]" onClick={onClose} />
       <div
-        className="fixed z-[71] rounded-xl border border-slate-200 bg-white shadow-2xl p-3 modal-in"
+        className="fixed z-[71] rounded-xl border border-slate-200 bg-white shadow-2xl p-3 modal-in max-h-[90vh] overflow-y-auto"
         style={{ left, top, width: POP_W }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0">
             <div className="text-[9px] font-bold uppercase tracking-widest text-blue-600">Quick edit</div>
-            <div className="text-[12px] font-bold text-slate-800 truncate" title={task.title}>
-              {task.title}
-            </div>
+            <a
+              href={`/tasks/${task.id}`}
+              className="text-[10px] font-semibold text-slate-400 hover:text-blue-600 inline-flex items-center gap-0.5"
+              title="Open the full task page"
+            >
+              Open full task <ArrowUpRight size={11} />
+            </a>
           </div>
           <button onClick={onClose} className="p-0.5 text-slate-400 hover:text-slate-700">
             <X size={14} />
           </button>
         </div>
 
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-2 mb-1">
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1 mb-1">
+          Title
+        </label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          placeholder="Task title"
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">
+              Status
+            </label>
+            <Select
+              value={status}
+              onChange={setStatus}
+              ariaLabel="Status"
+              options={[
+                { value: 'todo', label: 'To do' },
+                { value: 'in_progress', label: 'In progress' },
+                { value: 'review', label: 'Review' },
+                { value: 'blocked', label: 'Blocked' },
+                { value: 'done', label: 'Done' },
+              ]}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">
+              Priority
+            </label>
+            <Select
+              value={priority}
+              onChange={setPriority}
+              ariaLabel="Priority"
+              options={[
+                { value: 'low', label: 'Low' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'high', label: 'High' },
+                { value: 'critical', label: 'Critical' },
+              ]}
+            />
+          </div>
+        </div>
+
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-3 mb-1">
           Assignee
         </label>
         <Select
@@ -2667,7 +2792,7 @@ function BirdsEyeNewTaskEditor({
     <>
       <div className="fixed inset-0 z-[70]" onClick={onClose} />
       <div
-        className="fixed z-[71] rounded-xl border border-slate-200 bg-white shadow-2xl p-3 modal-in"
+        className="fixed z-[71] rounded-xl border border-slate-200 bg-white shadow-2xl p-3 modal-in max-h-[90vh] overflow-y-auto"
         style={{ left, top, width: POP_W }}
         onClick={(e) => e.stopPropagation()}
       >

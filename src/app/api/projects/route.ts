@@ -188,11 +188,22 @@ export async function POST(req: NextRequest) {
     // Use customPhases if provided, otherwise fall back to lifecycle template.
     // Personal projects start empty — they are an unstructured private list,
     // not a validated lifecycle, so no regulatory phases/tasks are seeded.
-    const sourcePhases = isPersonal
+    // Normalise every task into a uniform shape. customPhases tasks may arrive
+    // as bare strings (templates) or as objects carrying an assignee and dates
+    // chosen during creation; built-in lifecycle tasks are always bare titles.
+    type SeedTask = { title: string; assigneeId?: string; startDate?: string; dueDate?: string };
+    const normalizeTask = (t: any): SeedTask =>
+      typeof t === 'string'
+        ? { title: t }
+        : { title: t.title, assigneeId: t.assigneeId, startDate: t.startDate, dueDate: t.dueDate };
+    const sourcePhases: { name: string; tasks: SeedTask[] }[] = isPersonal
       ? []
       : body.customPhases && body.customPhases.length > 0
-        ? body.customPhases.map((ph, i) => ({ name: ph.name || `Stage ${i + 1}`, tasks: ph.tasks }))
-        : lc.phases.map((ph) => ({ name: ph.name, tasks: ph.tasks.map((t) => t.title) }));
+        ? body.customPhases.map((ph, i) => ({
+            name: ph.name || `Stage ${i + 1}`,
+            tasks: ph.tasks.map(normalizeTask),
+          }))
+        : lc.phases.map((ph) => ({ name: ph.name, tasks: ph.tasks.map((t) => ({ title: t.title })) }));
 
     const phaseDocs = sourcePhases.map((ph, i) => ({
       _id: new mongoose.Types.ObjectId(),
@@ -227,14 +238,20 @@ export async function POST(req: NextRequest) {
     // Seed tasks from custom or template phases
     const taskDocs: any[] = [];
     sourcePhases.forEach((ph, i) => {
-      for (const title of ph.tasks) {
-        if (title.trim()) {
+      for (const t of ph.tasks) {
+        const title = (t.title || '').trim();
+        if (title) {
           taskDocs.push({
             projectId: project._id,
             phaseId: phaseDocs[i]._id,
-            title: title.trim(),
+            title,
             taskType: 'task',
             priority: body.priority || 'medium',
+            // Per-task assignee and dates picked during creation. Left undefined
+            // when not chosen so the task stays unassigned / undated as before.
+            assigneeId: t.assigneeId || undefined,
+            startDate: t.startDate ? new Date(t.startDate) : undefined,
+            dueDate: t.dueDate ? new Date(t.dueDate) : undefined,
           });
         }
       }

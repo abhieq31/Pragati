@@ -1,9 +1,22 @@
 import mongoose, { Schema, Model, InferSchemaType } from 'mongoose';
 
+// NOTE: `type` is a reserved key in Mongoose. Declaring the task shape inline as
+// `[{ title: String, type: String }]` makes Mongoose read the `type: String` as a
+// SchemaType declaration and collapse the whole element into a plain `[String]`,
+// which then throws a CastError when an array of `{ title }` objects is saved.
+// Defining an explicit sub-schema keeps `title`/`type` as real object fields.
+const WfTaskSchema = new Schema(
+  {
+    title: { type: String, required: true },
+    type: { type: String, default: '' },
+  },
+  { _id: false },
+);
+
 const WfPhaseSchema = new Schema(
   {
     name: { type: String, required: true },
-    tasks: [{ title: String, type: String }],
+    tasks: { type: [WfTaskSchema], default: [] },
   },
   { _id: false },
 );

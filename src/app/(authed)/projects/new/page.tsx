@@ -15,16 +15,29 @@ import {
   BookmarkPlus,
   Lock,
   Pencil,
+  CalendarClock,
 } from 'lucide-react';
 import { DatePicker } from '@/components/DatePicker';
 import { Select } from '@/components/Select';
 import { clearSidebarCalendarCache } from '@/components/SidebarCalendar';
 
 /* ── Types ────────────────────────────────────────────────────────────────── */
+interface PhaseTask {
+  id: string;
+  title: string;
+  assigneeId?: string;
+  startDate?: string;
+  dueDate?: string;
+}
 interface Phase {
   id: string;
   name: string;
-  tasks: string[];
+  tasks: PhaseTask[];
+}
+
+interface Member {
+  id: string;
+  name: string;
 }
 
 interface CustomTemplate {
@@ -120,7 +133,7 @@ function phasesFromTemplate(template: any): Phase[] {
   return template.phases.map((ph: any) => ({
     id: uid(),
     name: ph.name,
-    tasks: ph.tasks.map((t: any) => (typeof t === 'string' ? t : t.title)),
+    tasks: ph.tasks.map((t: any) => ({ id: uid(), title: typeof t === 'string' ? t : t.title })),
   }));
 }
 
@@ -128,8 +141,41 @@ function phasesFromCustomTemplate(template: CustomTemplate): Phase[] {
   return template.phases.map((ph) => ({
     id: uid(),
     name: ph.name,
-    tasks: ph.tasks.map((t) => t.title),
+    // Tolerate legacy templates that stored tasks as bare strings.
+    tasks: ph.tasks.map((t: any) => ({ id: uid(), title: typeof t === 'string' ? t : t.title })),
   }));
+}
+
+// Build the phase editor from a *running* project's structure (its phases plus
+// the task titles grouped under each, in board order). We copy the workflow
+// shape only — not assignees, dates or status — so the new project starts as a
+// clean instance of the same process. The source detail is the GET /projects/:id
+// payload (phases: [{id,name,position}], tasks: [{phaseId,title,position}]).
+function phasesFromProjectDetail(detail: any): Phase[] {
+  const phases: any[] = [...(detail?.phases || [])].sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0),
+  );
+  const tasks: any[] = [...(detail?.tasks || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const byPhase = new Map<string, any[]>();
+  const orphans: any[] = [];
+  for (const t of tasks) {
+    if (t.phaseId && phases.some((p) => p.id === t.phaseId)) {
+      (byPhase.get(t.phaseId) || byPhase.set(t.phaseId, []).get(t.phaseId)!).push(t);
+    } else {
+      orphans.push(t);
+    }
+  }
+  const out: Phase[] = phases.map((ph) => ({
+    id: uid(),
+    name: ph.name,
+    tasks: (byPhase.get(ph.id) || []).map((t) => ({ id: uid(), title: t.title })),
+  }));
+  // Tasks with no phase still belong to the workflow — keep them in a catch-all
+  // stage so nothing is silently dropped on import.
+  if (orphans.length) {
+    out.push({ id: uid(), name: 'Other', tasks: orphans.map((t) => ({ id: uid(), title: t.title })) });
+  }
+  return out;
 }
 
 /* ── Save-as-template / edit-template dialog ─────────────────────────────────
@@ -166,7 +212,7 @@ function SaveTemplateDialog({
         description: description.trim() || undefined,
         phases: phases.map((ph) => ({
           name: ph.name,
-          tasks: ph.tasks.map((t) => ({ title: t })),
+          tasks: ph.tasks.map((t) => ({ title: t.title })),
         })),
       };
       const saved = editingTemplate
@@ -236,11 +282,119 @@ function SaveTemplateDialog({
   );
 }
 
+/* ── Single task editor row ───────────────────────────────────────────────── */
+function TaskRow({
+  task,
+  members,
+  onChange,
+  onRemove,
+}: {
+  task: PhaseTask;
+  members: Member[];
+  onChange: (t: PhaseTask) => void;
+  onRemove: () => void;
+}) {
+  // Per-task scheduling/assignment is opt-in: the row stays a single compact
+  // line until the lead expands it, so a long stage list isn't a wall of date
+  // pickers. We auto-open if the task already carries any of those details.
+  const hasDetails = !!(task.assigneeId || task.startDate || task.dueDate);
+  const [open, setOpen] = useState(hasDetails);
+
+  const assigneeName = members.find((m) => m.id === task.assigneeId)?.name;
+  // A small summary chip so collapsed rows still show what's been set.
+  const summaryBits = [
+    assigneeName,
+    task.dueDate ? `due ${task.dueDate}` : task.startDate ? `from ${task.startDate}` : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="rounded-lg border border-transparent hover:border-slate-100 transition-colors">
+      <div className="flex items-center gap-2 group">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
+        <input
+          value={task.title}
+          onChange={(e) => onChange({ ...task, title: e.target.value })}
+          className="flex-1 text-sm text-slate-600 bg-transparent outline-none border-b border-transparent focus:border-blue-300 transition-colors"
+        />
+        {!open && summaryBits.length > 0 && (
+          <span className="text-[10px] text-slate-400 truncate max-w-[180px]">
+            {summaryBits.join(' · ')}
+          </span>
+        )}
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className={`p-0.5 rounded transition-all ${
+            open || hasDetails
+              ? 'text-blue-500'
+              : 'text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100'
+          }`}
+          title="Assignee & dates"
+        >
+          <CalendarClock size={13} />
+        </button>
+        <button
+          onClick={onRemove}
+          className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-300 hover:text-red-500 transition-all"
+        >
+          <X size={11} />
+        </button>
+      </div>
+      {open && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pl-3.5 pr-1 py-2">
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Assignee
+            </label>
+            {members.length > 0 ? (
+              <Select
+                value={task.assigneeId || ''}
+                onChange={(v) => onChange({ ...task, assigneeId: v || undefined })}
+                ariaLabel="Assignee"
+                placeholder="Unassigned"
+                options={[
+                  { value: '', label: 'Unassigned' },
+                  ...members.map((m) => ({ value: m.id, label: m.name })),
+                ]}
+              />
+            ) : (
+              <div className="text-[11px] text-slate-300 mt-1">Pick a team first</div>
+            )}
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Start
+            </label>
+            <DatePicker
+              block
+              placeholder="Start date"
+              value={task.startDate || null}
+              onChange={(v) => onChange({ ...task, startDate: v || undefined })}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Due
+            </label>
+            <DatePicker
+              block
+              placeholder="Due date"
+              value={task.dueDate || null}
+              onChange={(v) => onChange({ ...task, dueDate: v || undefined })}
+              minDate={task.startDate ? new Date(task.startDate) : undefined}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Phase editor row ─────────────────────────────────────────────────────── */
 function PhaseRow({
   phase,
   index,
   total,
+  members,
   onChange,
   onDelete,
   onMoveUp,
@@ -249,6 +403,7 @@ function PhaseRow({
   phase: Phase;
   index: number;
   total: number;
+  members: Member[];
   onChange: (p: Phase) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -260,7 +415,7 @@ function PhaseRow({
 
   function addTask() {
     if (!newTask.trim()) return;
-    onChange({ ...phase, tasks: [...phase.tasks, newTask.trim()] });
+    onChange({ ...phase, tasks: [...phase.tasks, { id: uid(), title: newTask.trim() }] });
     setNewTask('');
     taskRef.current?.focus();
   }
@@ -314,18 +469,17 @@ function PhaseRow({
 
       {/* Tasks list */}
       {open && (
-        <div className="px-4 py-3 space-y-1.5">
+        <div className="px-4 py-3 space-y-1">
           {phase.tasks.map((task, ti) => (
-            <div key={ti} className="flex items-center gap-2 group">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
-              <span className="flex-1 text-sm text-slate-600">{task}</span>
-              <button
-                onClick={() => onChange({ ...phase, tasks: phase.tasks.filter((_, i) => i !== ti) })}
-                className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-300 hover:text-red-500 transition-all"
-              >
-                <X size={11} />
-              </button>
-            </div>
+            <TaskRow
+              key={task.id}
+              task={task}
+              members={members}
+              onChange={(t) =>
+                onChange({ ...phase, tasks: phase.tasks.map((x, i) => (i === ti ? t : x)) })
+              }
+              onRemove={() => onChange({ ...phase, tasks: phase.tasks.filter((_, i) => i !== ti) })}
+            />
           ))}
           <div className="flex items-center gap-2 mt-2">
             <Plus size={12} className="text-slate-300 shrink-0" />
@@ -386,6 +540,10 @@ export default function NewProjectPage() {
   });
   const [phases, setPhases] = useState<Phase[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  // Assignable members for the per-task assignee picker — populated from the
+  // selected team. Personal projects have no team, so this stays empty and the
+  // task rows fall back to "Pick a team first".
+  const [members, setMembers] = useState<Member[]>([]);
   const [templateInfo, setTemplateInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
@@ -401,6 +559,12 @@ export default function NewProjectPage() {
   // Current user id (populated from /auth/me once)
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
+  // "Start from an existing project" — clone a running project's workflow shape.
+  const [projectList, setProjectList] = useState<any[]>([]);
+  const [sourceProjectId, setSourceProjectId] = useState<string | null>(null);
+  const [sourceProjectName, setSourceProjectName] = useState<string>('');
+  const [importing, setImporting] = useState(false);
+
   useEffect(() => {
     api<any[]>('/teams')
       .then(setTeams)
@@ -413,6 +577,9 @@ export default function NewProjectPage() {
     api<CustomTemplate[]>('/workflow-templates')
       .then(setCustomTemplates)
       .catch(() => {});
+    api<any[]>('/projects')
+      .then((ps) => setProjectList((ps || []).filter((p) => !p.archived)))
+      .catch(() => {});
   }, []);
 
   // Only fetch built-in lifecycle data when no custom template is active.
@@ -420,14 +587,34 @@ export default function NewProjectPage() {
   // form.lifecycle to 'generic', so checking customTemplateId here prevents
   // the effect from overwriting the custom phases on the same render batch.
   useEffect(() => {
-    if (!form.lifecycle || customTemplateId) return;
+    if (!form.lifecycle || customTemplateId || sourceProjectId) return;
     api<any>(`/lifecycles?key=${form.lifecycle}`)
       .then((t) => {
         setTemplateInfo(t);
         setPhases(phasesFromTemplate(t));
       })
       .catch(() => {});
-  }, [form.lifecycle, customTemplateId]);
+  }, [form.lifecycle, customTemplateId, sourceProjectId]);
+
+  // Load the selected team's members so tasks can be assigned during creation.
+  // Cleared whenever there's no team (personal projects or "— Unassigned —").
+  useEffect(() => {
+    if (personal || !form.teamId) {
+      setMembers([]);
+      return;
+    }
+    let cancelled = false;
+    api<any>(`/teams/${form.teamId}`)
+      .then((t) => {
+        if (!cancelled) setMembers(t.members || []);
+      })
+      .catch(() => {
+        if (!cancelled) setMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.teamId, personal]);
 
   function up<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -437,18 +624,46 @@ export default function NewProjectPage() {
   // the effect above is free to fetch the template data.
   function selectBuiltInLifecycle(value: string) {
     setCustomTemplateId(null);
+    setSourceProjectId(null);
     setTemplateInfo(null);
     up('lifecycle', value);
   }
 
   function selectCustomTemplate(t: CustomTemplate) {
     setCustomTemplateId(t.id);
+    setSourceProjectId(null);
     setTemplateInfo(null);
     // Keep lifecycle as 'generic' so the submission payload stays valid.
     // Because customTemplateId is set first (in the same batch), the
     // useEffect above skips the fetch and leaves the custom phases intact.
     setForm((f) => ({ ...f, lifecycle: 'generic' }));
     setPhases(phasesFromCustomTemplate(t));
+  }
+
+  // Clone a running project's workflow into the editor. Like selectCustomTemplate
+  // it pins lifecycle to 'generic' and clears the other sources first so the
+  // built-in fetch effect leaves the imported phases alone.
+  async function selectSourceProject(projId: string) {
+    if (!projId) {
+      setSourceProjectId(null);
+      return;
+    }
+    setCustomTemplateId(null);
+    setTemplateInfo(null);
+    setSourceProjectId(projId);
+    setForm((f) => ({ ...f, lifecycle: 'generic' }));
+    setSourceProjectName(projectList.find((p) => p.id === projId)?.name || 'project');
+    setImporting(true);
+    try {
+      const detail = await api<any>(`/projects/${projId}`);
+      setSourceProjectName(detail?.name || projectList.find((p) => p.id === projId)?.name || 'project');
+      setPhases(phasesFromProjectDetail(detail));
+    } catch (e: any) {
+      setErr(e?.message || 'Could not load that project’s workflow.');
+      setSourceProjectId(null);
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function deleteCustomTemplate(id: string) {
@@ -523,7 +738,19 @@ export default function NewProjectPage() {
           customPhases: phases
             .map((ph) => ({
               name: ph.name.trim(),
-              tasks: (ph.tasks || []).map((t) => t.trim()).filter(Boolean),
+              tasks: (ph.tasks || [])
+                .map((t) => ({
+                  title: t.title.trim(),
+                  // Only attach an assignee that's actually on the chosen team,
+                  // so a stale pick from a previously-selected team is dropped.
+                  assigneeId:
+                    t.assigneeId && members.some((m) => m.id === t.assigneeId)
+                      ? t.assigneeId
+                      : undefined,
+                  startDate: t.startDate || undefined,
+                  dueDate: t.dueDate || undefined,
+                }))
+                .filter((t) => t.title),
             }))
             .filter((ph) => ph.name),
         },
@@ -541,13 +768,15 @@ export default function NewProjectPage() {
   const selectedCustomTemplate = customTemplateId
     ? customTemplates.find((t) => t.id === customTemplateId)
     : null;
-  const lifecycleLabel = selectedCustomTemplate
-    ? selectedCustomTemplate.name
-    : (LIFECYCLE_GROUPS.flatMap((g) => g.options).find((o) => o.value === form.lifecycle)?.label ??
-      form.lifecycle);
+  const lifecycleLabel = sourceProjectId
+    ? `${sourceProjectName} (existing project)`
+    : selectedCustomTemplate
+      ? selectedCustomTemplate.name
+      : (LIFECYCLE_GROUPS.flatMap((g) => g.options).find((o) => o.value === form.lifecycle)?.label ??
+        form.lifecycle);
 
   // Whether the current lifecycle selection is a non-generic built-in
-  const hasBuiltInLifecycle = form.lifecycle !== 'generic' && !customTemplateId;
+  const hasBuiltInLifecycle = form.lifecycle !== 'generic' && !customTemplateId && !sourceProjectId;
 
   return (
     <div className="max-w-3xl pb-20">
@@ -731,7 +960,7 @@ export default function NewProjectPage() {
             <div className="flex items-center justify-between mb-1">
               <label className="label mb-0">Workflow template</label>
               {/* Save-as-template button — shown when a non-generic lifecycle is selected */}
-              {(hasBuiltInLifecycle || customTemplateId) && phases.length > 0 && (
+              {(hasBuiltInLifecycle || customTemplateId || sourceProjectId) && phases.length > 0 && (
                 <button
                   type="button"
                   onClick={() => setShowSaveDialog(true)}
@@ -957,6 +1186,35 @@ export default function NewProjectPage() {
                   </div>
                 </div>
               )}
+
+              {/* Start from an existing project — clone a running project's
+                  phases + tasks as the starting workflow. */}
+              {projectList.length > 0 && (
+                <div>
+                  <div className="flex items-baseline gap-2 mb-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      From an existing project
+                    </div>
+                    <div className="text-[10px] text-slate-300">Reuse a running project’s workflow</div>
+                  </div>
+                  <Select
+                    value={sourceProjectId || ''}
+                    onChange={(v) => selectSourceProject(v)}
+                    ariaLabel="Start from an existing project"
+                    placeholder="Pick a project to copy its stages & tasks…"
+                    options={[
+                      { value: '', label: '— None —' },
+                      ...projectList.map((p) => ({
+                        value: p.id,
+                        label: `${p.name}${p.taskCount ? ` · ${p.taskCount} task${p.taskCount === 1 ? '' : 's'}` : ''}${p.isPersonal ? ' · personal' : ''}`,
+                      })),
+                    ]}
+                  />
+                  {importing && (
+                    <div className="mt-1.5 text-[11px] text-slate-400">Loading workflow…</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Preview of what the picked built-in template ships with */}
@@ -1065,7 +1323,9 @@ export default function NewProjectPage() {
                 </button>
                 <button
                   onClick={() => {
-                    if (selectedCustomTemplate) {
+                    if (sourceProjectId) {
+                      selectSourceProject(sourceProjectId);
+                    } else if (selectedCustomTemplate) {
                       setPhases(phasesFromCustomTemplate(selectedCustomTemplate));
                     } else {
                       setPhases(phasesFromTemplate(templateInfo));
@@ -1096,6 +1356,7 @@ export default function NewProjectPage() {
                   phase={ph}
                   index={i}
                   total={phases.length}
+                  members={members}
                   onChange={(p) => updatePhase(ph.id, p)}
                   onDelete={() => deletePhase(ph.id)}
                   onMoveUp={() => movePhase(i, -1)}

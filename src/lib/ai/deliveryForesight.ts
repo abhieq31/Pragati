@@ -715,9 +715,19 @@ export function computeForesight(input: ForesightInputs): Foresight {
       .filter((t) => t.daysToDue !== null && t.daysToDue >= 0 && t.slipProb > 0)
       .sort((a, b) => b.slipProb - a.slipProb)[0] || null;
 
+  // Signal is gated on *how many tasks the person has finished*, not on how many
+  // produced a usable cycle time. cycleSamples deliberately drops same-session /
+  // bulk / seeded completions (created→done gap < ~2.4h), so a team that closes
+  // work quickly would otherwise sit at "Calibrating" forever even with a long
+  // delivery record. Throughput, cadence and gap models only need the
+  // completion timestamps, which these completions do carry — so the forecast is
+  // well-founded the moment there are enough finishes. Cycle samples still drive
+  // the turnaround figure and confidence below.
+  const completionCount = completedAts.reduce((n, v) => (toDate(v) ? n + 1 : n), 0);
   const samples = cyc.length;
-  const hasSignal = samples >= MIN_SIGNAL_SAMPLES;
-  const confidence: Foresight['confidence'] = samples >= 20 ? 'high' : samples >= 8 ? 'medium' : 'low';
+  const hasSignal = completionCount >= MIN_SIGNAL_SAMPLES;
+  const confidence: Foresight['confidence'] =
+    completionCount >= 20 ? 'high' : completionCount >= 8 ? 'medium' : 'low';
 
   // ── Status precedence: the most actionable truth wins ──────────────────
   let status: ForesightStatus;

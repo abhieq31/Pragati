@@ -240,6 +240,29 @@ describe('computeForesight', () => {
     assert.equal(f.digestLine, null);
   });
 
+  it('builds a signal from quick same-session completions (no cycle time)', () => {
+    // Tasks created and finished within minutes produce no usable cycle sample
+    // (cycleSamples drops gaps < ~2.4h), yet a person who has closed 6 of them
+    // clearly has a delivery rhythm — the signal must come up, not sit at
+    // "building" forever. This is the regression for Team Foresight never
+    // leaving "Calibrating" on teams that close work fast.
+    const rows = [];
+    for (let i = 0; i < 6; i++) {
+      const finished = new Date(+now - (i * 4 + 1) * 86_400_000);
+      const created = new Date(+finished - 10 * 60_000); // 10 minutes earlier
+      rows.push({
+        createdAt: created.toISOString(),
+        completedAt: finished.toISOString(),
+        dueDate: null,
+        ccTcd: null,
+      });
+    }
+    assert.equal(cycleSamples(rows).length, 0, 'no cycle samples from sub-hour completions');
+    const f = computeForesight({ completed: rows, open: [], prior: PRIOR, gapPrior: GAP_PRIOR, now });
+    assert.equal(f.hasSignal, true);
+    assert.notEqual(f.status, 'building');
+  });
+
   it('reports an empty plate as clear', () => {
     const f = computeForesight({
       completed: goodHistory(),

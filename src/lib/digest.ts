@@ -350,11 +350,9 @@ export interface RenderInput {
 /** One line of role framing under the greeting. Deliberately copy, not data —
  *  the data below is identical for everyone; the lens is what changes. */
 export function roleFraming(role?: string): string {
-  if (role === 'admin' || role === 'master_admin')
-    return 'Your own plate first — the workspace view is one click away on your console.';
-  if (role === 'lead' || role === 'pm')
-    return 'Your plate first. Clear it, then look at the board — your team reads your pace.';
-  return 'Just your plate — nothing about anyone else, nothing you can’t act on.';
+  if (role === 'admin' || role === 'master_admin') return 'Your plate. Workspace view on the console.';
+  if (role === 'lead' || role === 'pm') return 'Your plate first, then the board.';
+  return 'Your plate.';
 }
 
 /* A short canon of closing lines (drawn from the same books as the login
@@ -678,7 +676,7 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
         }</div>
         <div style="font-size:12px;color:#64748b;margin-top:3px;">${escapeHtml(focus.label)}${
           projLabel(focus.projectId) ? ` · ${escapeHtml(projLabel(focus.projectId)!)}` : ''
-        } — clear this and the day tilts your way.</div>
+        }</div>
       </div>`
     : '';
 
@@ -690,27 +688,27 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     ? `<a href="${appUrl}/settings#daily-email" style="color:#64748b;text-decoration:underline;">your daily-email settings</a>`
     : 'your daily-email settings';
 
-  const aphorism = closingLine();
-
   // ── Opening line — ONE plain sentence under the greeting, not a stack of
   // boxes saying overlapping things. Folds in the role framing, the day's
   // shape, a directive, and yesterday's momentum. The "all clear" phrasing
   // is load-bearing for the empty-state test below — keep the literal words.
+  // Minimal opening: the day's shape stated as fact, plus a one-word directive
+  // pointing at where to start. No momentum recap, no pep — the work is the
+  // message. (winsYesterday is intentionally unused in the body now.)
   const dayShape = counts.join(' · ');
   const directive = sections.overdue.length
-    ? 'Clear the overdue first — momentum follows.'
+    ? 'Overdue first.'
     : sections.today.length
-      ? 'One focused pass and today is done.'
+      ? 'Start at the top.'
       : sections.soon.length
-        ? 'Nothing due today — get ahead of what’s coming.'
-        : 'You’re all clear today — spend the room on your single highest-leverage move.';
-  const momentumClause =
-    winsYesterday > 0 ? ` You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday.` : '';
-  const openingHtml = `<p style="margin:0 0 20px;font-size:13.5px;color:#475569;line-height:1.65;">${escapeHtml(roleFraming(role))} ${
+        ? 'Nothing due today. Get ahead.'
+        : 'All clear.';
+  const openingHtml = `<p style="margin:0 0 20px;font-size:13.5px;color:#475569;line-height:1.65;">${
     dayShape
       ? `<strong style="color:#0f172a;">${escapeHtml(dayShape.charAt(0).toUpperCase() + dayShape.slice(1))}.</strong> ${escapeHtml(directive)}`
       : escapeHtml(directive)
-  }${momentumClause ? escapeHtml(momentumClause) : ''}</p>`;
+  }</p>`;
+  void winsYesterday;
 
   // ── Foresight ─────────────────────────────────────────────────────────
   // The forward-looking counterpart to the task list: a single quiet line
@@ -743,7 +741,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
               )} —</strong> <strong style="color:#0f172a;">${escapeHtml(insight.title)}.</strong> ${escapeHtml(insight.body)}</div>`
             : ''
         }
-        <div style="margin-top:22px;${insight ? '' : 'padding-top:14px;border-top:1px solid #f1f5f9;'}font-size:13px;font-style:italic;color:#64748b;">“${escapeHtml(aphorism)}”</div>
       </td></tr>
       <tr><td style="padding:16px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
         <div style="font-size:12px;color:#94a3b8;line-height:1.5;">
@@ -762,9 +759,6 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     `Good morning, ${first}.`,
     '',
   ];
-  if (winsYesterday > 0) {
-    lines.push(`You closed ${winsYesterday} task${winsYesterday === 1 ? '' : 's'} yesterday.`, '');
-  }
   if (leadershipBrief?.team) {
     lines.push(
       'TEAM PULSE',
@@ -804,9 +798,8 @@ export function renderDigestEmail(input: RenderInput): { subject: string; html: 
     for (const p of sections.projectUpdates) lines.push(`  • ${p.name} — ${p.count} done`);
     lines.push('');
   }
-  if (!digestHasContent(sections)) lines.push("You're all clear — nothing due today.");
+  if (!digestHasContent(sections)) lines.push('All clear — nothing due today.');
   if (appUrl) lines.push('', `Open My Day: ${appUrl}/my-day`);
-  lines.push('', `“${aphorism}”`);
 
   return { subject, html, text: lines.join('\n') };
 }
