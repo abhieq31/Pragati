@@ -102,6 +102,24 @@ export function TicketsPanel({
     return { active: a, done: d };
   }, [tickets]);
 
+  // Queue health — the signal a request queue actually needs: how much is open,
+  // how fast we close, and how stale the oldest open item is.
+  const metrics = useMemo(() => {
+    const ageDaysOf = (iso: string | null) =>
+      iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : 0;
+    const open = active.length;
+    const inProgress = active.filter((t) => t.status === 'in_progress').length;
+    const oldestOpen = active.reduce((m, t) => Math.max(m, ageDaysOf(t.createdAt)), 0);
+    const resolveDays = (tickets || [])
+      .filter((t) => t.resolvedAt && t.createdAt)
+      .map((t) => (new Date(t.resolvedAt!).getTime() - new Date(t.createdAt!).getTime()) / 86_400_000)
+      .sort((x, y) => x - y);
+    const medianResolve = resolveDays.length
+      ? resolveDays[Math.floor(resolveDays.length / 2)]
+      : null;
+    return { open, inProgress, oldestOpen, medianResolve };
+  }, [active, tickets]);
+
   async function createTicket(e: React.FormEvent) {
     e.preventDefault();
     if (!draft.title.trim()) return;
@@ -172,6 +190,23 @@ export function TicketsPanel({
               {t.requesterName ? ` · from ${t.requesterName}` : ''}
             </span>
           </span>
+          {/* Aging — open tickets get a colour-coded age so a queue can't quietly
+              rot. Green < 3d, amber 3–7d, red ≥ 7d. */}
+          {t.status !== 'resolved' &&
+            t.status !== 'closed' &&
+            (() => {
+              const age = Math.floor((Date.now() - new Date(t.createdAt || Date.now()).getTime()) / 86_400_000);
+              const c = age >= 7 ? '#dc2626' : age >= 3 ? '#b45309' : '#16a34a';
+              return (
+                <span
+                  className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full shrink-0"
+                  style={{ background: `${c}1a`, color: c }}
+                  title={`Open for ${age} day${age === 1 ? '' : 's'}`}
+                >
+                  {age}d
+                </span>
+              );
+            })()}
           <span
             className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0"
             style={{ background: PRIORITY_STYLE[t.priority].bg, color: PRIORITY_STYLE[t.priority].fg }}
@@ -293,6 +328,35 @@ export function TicketsPanel({
       <p className="-mt-1 mb-3 text-[11px] text-slate-500 leading-snug">
         A shared request queue for this team. Anyone can file; the team works it down.
       </p>
+
+      {/* Queue health — open load, throughput, and the oldest thing rotting. */}
+      {tickets && tickets.length > 0 && (
+        <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { label: 'Open', value: String(metrics.open), accent: '#0369a1' },
+            { label: 'In progress', value: String(metrics.inProgress), accent: '#4e7a00' },
+            {
+              label: 'Median resolve',
+              value: metrics.medianResolve == null ? '—' : `${metrics.medianResolve.toFixed(1)}d`,
+              accent: '#16a34a',
+            },
+            {
+              label: 'Oldest open',
+              value: metrics.open ? `${metrics.oldestOpen}d` : '—',
+              accent: metrics.oldestOpen >= 7 ? '#dc2626' : metrics.oldestOpen >= 3 ? '#b45309' : '#64748b',
+            },
+          ].map((m) => (
+            <div key={m.label} className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2">
+              <div className="text-[18px] font-black tabular-nums leading-none" style={{ color: m.accent }}>
+                {m.value}
+              </div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
+                {m.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {creating && (
         <form onSubmit={createTicket} className="mb-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">

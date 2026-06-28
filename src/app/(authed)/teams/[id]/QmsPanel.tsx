@@ -85,6 +85,42 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
         Track status across your own steps, one sheet per record.
       </p>
 
+      {/* Rollup — the at-a-glance the bare list was missing: how many records,
+          how much work they carry, average completion, and how many are done. */}
+      {sheets && sheets.length > 0 && (
+        <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {(() => {
+            const records = sheets.length;
+            const items = sheets.reduce((n, s) => n + (s.rowCount || 0), 0);
+            const avg = Math.round(sheets.reduce((n, s) => n + overall(s), 0) / records);
+            const complete = sheets.filter((s) => overall(s) >= 100).length;
+            const tiles = [
+              { label: 'Records', value: String(records), accent: '#4e7a00' },
+              { label: 'Items', value: String(items), accent: '#0369a1' },
+              {
+                label: 'Avg complete',
+                value: `${avg}%`,
+                accent: avg >= 75 ? '#16a34a' : avg >= 40 ? '#b45309' : '#dc2626',
+              },
+              { label: 'Done', value: `${complete}/${records}`, accent: '#16a34a' },
+            ];
+            return tiles.map((t) => (
+              <div key={t.label} className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2">
+                <div
+                  className="text-[18px] font-black tabular-nums leading-none"
+                  style={{ color: t.accent }}
+                >
+                  {t.value}
+                </div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
+                  {t.label}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
       {creating && (
         <form
           onSubmit={create}
