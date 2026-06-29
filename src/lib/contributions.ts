@@ -3,6 +3,7 @@ import { Task } from '@/models/Task';
 import { Project } from '@/models/Project';
 import { User } from '@/models/User';
 import { NOT_PERSONAL } from '@/lib/leadScope';
+import { projectRef } from '@/lib/projectRef';
 
 /**
  * Contribution scoring — the data behind the GitHub-style activity graph.
@@ -218,7 +219,7 @@ export async function buildContributions(
   );
   const rawProjects = rawProjectIds.length
     ? await Project.find({ _id: { $in: rawProjectIds } })
-        .select(`code name${viewingSelf ? '' : ' isPersonal personal'}`)
+        .select(`code ccNo name${viewingSelf ? '' : ' isPersonal personal'}`)
         .lean()
     : [];
   // Strip personal-project entries entirely from someone else's view — the
@@ -240,7 +241,9 @@ export async function buildContributions(
   const projMap = new Map(
     rawProjects
       .filter((p: any) => visibleProjectIds.has(String(p._id)))
-      .map((p: any) => [String(p._id), { code: p.code || '', name: p.name || '' }]),
+      // The displayed reference must follow the owner's edits — use the picked
+      // ccNo when set, else the system code (same rule as the rest of the app).
+      .map((p: any) => [String(p._id), { code: projectRef(p), name: p.name || '' }]),
   );
 
   const days: Record<string, number> = {};

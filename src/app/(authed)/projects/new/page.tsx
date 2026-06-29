@@ -286,11 +286,15 @@ function SaveTemplateDialog({
 function TaskRow({
   task,
   members,
+  canSchedule,
   onChange,
   onRemove,
 }: {
   task: PhaseTask;
   members: Member[];
+  // Only team leads assign work and set dates at creation time. Contributors
+  // (who can only create personal projects) just type task titles.
+  canSchedule: boolean;
   onChange: (t: PhaseTask) => void;
   onRemove: () => void;
 }) {
@@ -316,22 +320,25 @@ function TaskRow({
           onChange={(e) => onChange({ ...task, title: e.target.value })}
           className="flex-1 text-sm text-slate-600 bg-transparent outline-none border-b border-transparent focus:border-blue-300 transition-colors"
         />
-        {!open && summaryBits.length > 0 && (
+        {canSchedule && !open && summaryBits.length > 0 && (
           <span className="text-[10px] text-slate-400 truncate max-w-[180px]">
             {summaryBits.join(' · ')}
           </span>
         )}
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className={`p-0.5 rounded transition-all ${
-            open || hasDetails
-              ? 'text-blue-500'
-              : 'text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100'
-          }`}
-          title="Assignee & dates"
-        >
-          <CalendarClock size={13} />
-        </button>
+        {canSchedule && (
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+              open || hasDetails
+                ? 'text-blue-600 bg-blue-50'
+                : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+            }`}
+            title="Assign owner & set dates"
+          >
+            <CalendarClock size={12} />
+            {open || hasDetails ? 'Assigned' : 'Assign'}
+          </button>
+        )}
         <button
           onClick={onRemove}
           className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-300 hover:text-red-500 transition-all"
@@ -339,7 +346,7 @@ function TaskRow({
           <X size={11} />
         </button>
       </div>
-      {open && (
+      {canSchedule && open && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pl-3.5 pr-1 py-2">
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
@@ -395,6 +402,7 @@ function PhaseRow({
   index,
   total,
   members,
+  canSchedule,
   onChange,
   onDelete,
   onMoveUp,
@@ -404,6 +412,7 @@ function PhaseRow({
   index: number;
   total: number;
   members: Member[];
+  canSchedule: boolean;
   onChange: (p: Phase) => void;
   onDelete: () => void;
   onMoveUp: () => void;
@@ -475,6 +484,7 @@ function PhaseRow({
               key={task.id}
               task={task}
               members={members}
+              canSchedule={canSchedule}
               onChange={(t) =>
                 onChange({ ...phase, tasks: phase.tasks.map((x, i) => (i === ti ? t : x)) })
               }
@@ -1357,6 +1367,7 @@ export default function NewProjectPage() {
                   index={i}
                   total={phases.length}
                   members={members}
+                  canSchedule={isLead}
                   onChange={(p) => updatePhase(ph.id, p)}
                   onDelete={() => deletePhase(ph.id)}
                   onMoveUp={() => movePhase(i, -1)}
