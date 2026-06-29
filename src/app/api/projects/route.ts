@@ -28,6 +28,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = req.nextUrl;
     const q: any = { ...visibilityFilter };
+    // System-managed projects (the per-team recurring-activity holder) never
+    // appear in the project list — their task occurrences surface as tasks.
+    q.isSystem = { $ne: true };
 
     // Archived projects are hidden by default — pass ?includeArchived=1
     // to retrieve them, or ?archived=1 to fetch *only* the archive bin.

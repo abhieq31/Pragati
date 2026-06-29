@@ -240,7 +240,13 @@ async function computeLeadDashboardData(jwtUser: {
   const ownerName = new Map(owners.map((u) => [String(u._id), u.name]));
   const projStats = new Map(projectTaskAgg.map((s: any) => [String(s._id), s]));
 
-  const projectList = projects.map((p) => {
+  const projectList = projects
+    // Recurring-activity holder projects are system-managed — their task
+    // occurrences still flow into the due/assigned task views (we keep them in
+    // `projects` above so their tasks load), but they must never appear as a
+    // project card on the dashboard.
+    .filter((p) => !(p as any).isSystem)
+    .map((p) => {
     const s: any = projStats.get(String(p._id)) ?? { total: 0, done: 0, overdue: 0, lastCompletedAt: null };
     const open = s.total - s.done;
     const pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0;

@@ -72,21 +72,23 @@ export function digestSendMinuteOfDay(): number {
   return defaultDigestHour() * 60 + DIGEST_SEND_MINUTE;
 }
 
-/** Is this scheduled tick the 08:30 delivery tick?
+/** Is this scheduled tick eligible to send today's 08:30 brief?
  *
- * Schedulers can start a few seconds late, so 08:30–08:34 is treated as the
- * same 08:30 run. Earlier ticks wait and later ticks do not send a delayed
- * brief. Manual/admin runs (scheduledHour undefined) remain available on
- * demand. The per-day idempotency stamp prevents duplicate delivery if both
- * Vercel Cron and the five-minute GitHub Action hit this window. Pure. */
+ * Opens a few minutes before 08:30 and stays open for the rest of the local
+ * day. At-most-once delivery is guaranteed SEPARATELY by the per-day
+ * `lastDigestSentOn` idempotency stamp — so a late or jittery scheduler tick
+ * (Vercel Cron is best-effort and routinely drifts past a fixed minute) still
+ * delivers exactly one brief instead of silently missing the whole day. The old
+ * behaviour gated on a tight 5-minute slot, which meant a single daily cron
+ * landing at 08:35 sent nothing to anyone — the "no one got the email" bug.
+ * Manual/admin runs (scheduledHour undefined) remain available on demand. Pure. */
 export function digestWindowOpen(
   scheduledHour: number | undefined,
   scheduledMinute: number | undefined,
 ): boolean {
   if (scheduledHour === undefined) return true;
   const tick = scheduledHour * 60 + (scheduledMinute ?? 0);
-  const sendAt = digestSendMinuteOfDay();
-  return tick >= sendAt && tick < sendAt + DIGEST_SEND_WINDOW_MINUTES;
+  return tick >= digestSendMinuteOfDay() - DIGEST_SEND_WINDOW_MINUTES;
 }
 
 /** Local calendar day key (YYYY-MM-DD) in `tz` — the idempotency key that
@@ -912,10 +914,11 @@ export async function buildAndSendDailyDigests(opts: RunOptions = {}): Promise<R
     return { ...summary, disabled: true };
   }
 
-  // One fixed send window for the whole workspace (08:30–08:34). Every active,
-  // opted-in user with a deliverable notification address is selected in the
-  // same batch; the idempotency stamp prevents duplicates from parallel
-  // schedulers. Ticks outside the window do not send delayed mail.
+  // The brief targets 08:30 workspace-time but the window stays open for the
+  // rest of the day, because the per-day idempotency stamp (lastDigestSentOn)
+  // is what guarantees at-most-once — not a tight time slot. So the daily cron
+  // delivers exactly once even when it drifts past 08:30. Every active,
+  // opted-in user with a deliverable address is selected in the same batch.
   if (!isOneShot && !digestWindowOpen(opts.scheduledHour, opts.scheduledMinute)) {
     return summary;
   }

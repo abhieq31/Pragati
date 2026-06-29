@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle2, CalendarRange, FolderKanban, Flame } from 'lucide-react';
+import { CheckCircle2, CalendarRange, FolderKanban } from 'lucide-react';
 import { api } from '@/lib/client/api';
 
 /**
@@ -108,17 +108,9 @@ export function ProfileStatTiles({ stats }: { stats: ProfileStats }) {
       color: '#7B1FA2',
       bg: '#f3e5f5',
     },
-    {
-      label: 'Streak',
-      value: stats.streak,
-      sub: stats.streak === 1 ? 'active day' : 'active days',
-      icon: Flame,
-      color: '#d97706',
-      bg: '#fffbeb',
-    },
   ];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 gap-3">
       {tiles.map((s, i) => (
         <StatTile key={s.label} s={s} index={i} />
       ))}

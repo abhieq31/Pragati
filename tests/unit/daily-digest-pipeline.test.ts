@@ -229,8 +229,9 @@ beforeEach(() => {
 });
 
 describe('buildAndSendDailyDigests → Brevo (end to end over HTTP)', () => {
-  it('sends the opted-in batch at 08:30 only', async () => {
-    const before = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 29 });
+  it('sends once at ~08:30 and survives a jittery/late daily tick', async () => {
+    // Before the window opens (08:25) nothing is even considered.
+    const before = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 24 });
     assert.equal(before.sent, 0);
     assert.equal(before.considered, 0);
 
@@ -240,10 +241,13 @@ describe('buildAndSendDailyDigests → Brevo (end to end over HTTP)', () => {
     assert.equal(onTime.skippedNoEmail, 1);
     assert.equal(inbox[0].to, 'asha@example.com');
 
-    inbox.length = 0;
-    const late = await digest.buildAndSendDailyDigests({ now, scheduledHour: 8, scheduledMinute: 35 });
-    assert.equal(late.sent, 0, 'a late scheduler tick must not send a delayed brief');
-    assert.equal(inbox.length, 0);
+    // A late/drifted tick later the same day must NOT silently miss the day.
+    // The window now stays open, so the batch is still evaluated (considered),
+    // and at-most-once is enforced by the per-day stamp — not by dropping the
+    // run. (Old behaviour: a 5-min window early-returned with considered 0 —
+    // the "no one got the email" bug whenever the daily cron drifted past 08:34.)
+    const late = await digest.buildAndSendDailyDigests({ now, scheduledHour: 9, scheduledMinute: 0 });
+    assert.equal(late.considered, 2, 'a late tick still evaluates the batch — not dropped by the window');
   });
 
   it('does not send twice when the user is already stamped for the local day', async () => {

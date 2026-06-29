@@ -50,7 +50,6 @@ const BirdsEyeView = dynamic(() => import('@/components/BirdsEyeView').then((m) 
 });
 import type { BirdsEyeData } from '@/components/BirdsEyeView';
 import { BirdEyeButton } from '@/components/BirdEyeButton';
-import { StreakChip } from '@/components/StreakChip';
 import { FlowSignalStrip, type FlowSignalPayload } from '@/components/FlowSignalStrip';
 // The Morning Brief stays available through its other channels (push, email,
 // calendar feed) — the dashboard card was removed by owner decision: the
@@ -366,10 +365,8 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
             </span>
           </h1>
         </div>
-        {/* Bird's-eye view trigger + the practice streak — both quiet,
-            both on the row the user sees every day. */}
+        {/* Bird's-eye view trigger — quiet, on the row the user sees every day. */}
         <div className="flex items-center gap-2 shrink-0">
-          {!isFirstRun && <StreakChip />}
           {!isFirstRun && <BirdEyeButton scopeKey="dashboard" onClick={() => setBirdsEyeOpen(true)} />}
         </div>
       </div>

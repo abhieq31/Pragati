@@ -270,12 +270,13 @@ describe('per-user digest scheduling', () => {
     }
   });
 
-  it('opens only for the exact 08:30 scheduler window', () => {
-    assert.equal(digestWindowOpen(8, 29), false);
+  it('opens at ~08:25 and stays open all day (idempotency dedups, jitter survives)', () => {
+    assert.equal(digestWindowOpen(8, 24), false, 'too early — before the window');
+    assert.equal(digestWindowOpen(8, 25), true, 'early-jitter tolerance');
     assert.equal(digestWindowOpen(8, 30), true);
-    assert.equal(digestWindowOpen(8, 34), true, 'allow scheduler startup jitter');
-    assert.equal(digestWindowOpen(8, 35), false, 'do not send a late daily brief');
-    assert.equal(digestWindowOpen(9, 0), false);
+    assert.equal(digestWindowOpen(8, 35), true, 'a late/drifted daily tick still delivers');
+    assert.equal(digestWindowOpen(9, 0), true, 'catch-up later in the day, once');
+    assert.equal(digestWindowOpen(18, 0), true, 'still eligible — stamp guarantees at-most-once');
     assert.equal(digestWindowOpen(undefined, undefined), true, 'manual runs remain available');
   });
 
