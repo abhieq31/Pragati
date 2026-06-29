@@ -60,7 +60,7 @@ const STATUSES = ['todo', 'in_progress', 'review', 'blocked', 'done'] as const;
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
   todo: { label: 'To Do', color: '#64748b', bg: '#f8fafc', border: '#e2e8f0' },
-  in_progress: { label: 'In Progress', color: '#4e7a00', bg: '#f4f9e9', border: '#cde79b' },
+  in_progress: { label: 'In Progress', color: '#1565C0', bg: '#eff6ff', border: '#bfdbfe' },
   review: { label: 'Review', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
   blocked: { label: 'Blocked', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
   done: { label: 'Done', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },

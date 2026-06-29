@@ -154,8 +154,8 @@ export default async function AdminConsolePage() {
       sub: `${overdueTasks} overdue`,
       href: '/projects',
       icon: ListChecks,
-      iconColor: '#4e7a00',
-      iconBg: '#f4f9e9',
+      iconColor: '#1565C0',
+      iconBg: '#E3F2FD',
     },
   ];
 

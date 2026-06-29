@@ -1238,7 +1238,7 @@ function RecoveryKeyModal({ keyValue, onClose }: { keyValue: string; onClose: ()
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all"
-            style={{ background: '#4e7a00' }}
+            style={{ background: '#1565C0' }}
           >
             I&rsquo;ve saved it — close
           </button>
@@ -1706,7 +1706,7 @@ export default function SettingsClient({ initialUser }: { initialUser: any }) {
                       disabled={recoveryKeyBusy || hasRecoveryKey === null}
                       className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
                       style={{
-                        background: hasRecoveryKey ? '#f8fafc' : '#4e7a00',
+                        background: hasRecoveryKey ? '#f8fafc' : '#1565C0',
                         color: hasRecoveryKey ? '#475569' : '#ffffff',
                         border: hasRecoveryKey ? '1px solid #e2e8f0' : 'none',
                         opacity: recoveryKeyBusy || hasRecoveryKey === null ? 0.6 : 1,

@@ -25,7 +25,7 @@ function PrefRow({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className="relative shrink-0 rounded-full transition-colors"
-        style={{ width: 34, height: 19, background: checked ? '#4e7a00' : '#e2e8f0' }}
+        style={{ width: 34, height: 19, background: checked ? '#1565C0' : '#e2e8f0' }}
       >
         <span
           className="absolute top-0.5 h-[15px] w-[15px] rounded-full bg-white shadow-sm transition-all"

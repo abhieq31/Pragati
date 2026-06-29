@@ -69,11 +69,11 @@
    plain .brand-wordmark with an explicit colour instead. */
 .brand-wordmark-gradient {
   /* Blue-dominant with a deep-azure core and a forest finish on the final
-     glyphs — mirrors the logo mark's tile gradient. The extra #324e00 stop
+     glyphs — mirrors the logo mark's tile gradient. The extra #0D47A1 stop
      gives the start a richer, inkier depth than a flat two-stop ramp, and the
      green is pushed to the tail (88–100%) so it reads as an accent, not half
      the word. */
-  background: linear-gradient(118deg, #324e00 0%, #4e7a00 30%, #76b900 60%, #43a047 100%);
+  background: linear-gradient(118deg, #0d47a1 0%, #1565c0 30%, #1976d2 60%, #2e7d32 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -84,18 +84,18 @@
 
 :root {
   color-scheme: light;
-  --brand: #4e7a00;
-  --brand-dark: #324e00;
-  --brand-light: #f4f9e9;
+  --brand: #1565c0;
+  --brand-dark: #0d47a1;
+  --brand-light: #e3f2fd;
   --forest: #2e7d32;
   --forest-light: #e8f5e9;
   --teal: #00897b;
   --mint: #b7e4c2;
   /* Two-stop brand gradient — used on primary CTAs, active sidebar item,
-     header chips, and the focus ring. NVIDIA-green identity. */
-  --brand-gradient: linear-gradient(135deg, #4e7a00 0%, #76b900 55%, #8fd400 100%);
-  --brand-gradient-soft: linear-gradient(135deg, rgba(118, 185, 0, 0.12) 0%, rgba(78, 122, 0, 0.1) 100%);
-  --brand-gradient-hover: linear-gradient(135deg, #3e6100 0%, #5e9400 55%, #76b900 100%);
+     header chips, and the focus ring. Same hues as the logo mark. */
+  --brand-gradient: linear-gradient(135deg, #1565c0 0%, #1976d2 45%, #2e7d32 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(21, 101, 192, 0.1) 0%, rgba(46, 125, 50, 0.1) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #1256b0 0%, #1565c0 45%, #257026 100%);
   --radius: 10px;
   /* Flat page canvas. The brand colour shows up on the dashboard hero card
      (.brand-mesh) instead of on the body itself — painting two radial
@@ -152,8 +152,8 @@ body {
 
 /* ── Selection ────────────────────────────────────────────────────────────── */
 ::selection {
-  background: #e4f2c9;
-  color: #324e00;
+  background: #bbdefb;
+  color: #0d47a1;
 }
 
 @layer components {
@@ -235,7 +235,7 @@ body {
     background:
       radial-gradient(900px 420px at -5% 0%, rgba(21, 101, 192, 0.32), transparent 55%),
       radial-gradient(700px 360px at 105% 100%, rgba(46, 125, 50, 0.28), transparent 60%),
-      linear-gradient(135deg, #324e00 0%, #4e7a00 45%, #2e7d32 100%);
+      linear-gradient(135deg, #0d47a1 0%, #1565c0 45%, #2e7d32 100%);
     color: #ffffff;
   }
   /* Soft animated sheen — useful on hero text-strips */
@@ -251,7 +251,7 @@ body {
     }
   }
   .brand-shimmer-text {
-    background: linear-gradient(90deg, #4e7a00, #5e9400, #2e7d32, #5e9400, #4e7a00);
+    background: linear-gradient(90deg, #1565c0, #1976d2, #2e7d32, #1976d2, #1565c0);
     background-size: 300% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -260,7 +260,7 @@ body {
   }
   /* Animated blue→green shimmer for hero card backgrounds */
   .profile-hero-shimmer {
-    background: linear-gradient(135deg, #0f4fb8 0%, #5e9400 25%, #2b8c47 50%, #5e9400 75%, #0f4fb8 100%);
+    background: linear-gradient(135deg, #0f4fb8 0%, #1769c8 25%, #2b8c47 50%, #1769c8 75%, #0f4fb8 100%);
     background-size: 300% 300%;
     animation: brand-shimmer 10s ease-in-out infinite;
   }
@@ -281,7 +281,7 @@ body {
   /* Active sidebar pill */
   .nav-active {
     background: var(--brand-gradient-soft);
-    color: #324e00;
+    color: #0d47a1;
     border: 1px solid rgba(21, 101, 192, 0.18);
     box-shadow: inset 0 0 0 1px rgba(46, 125, 50, 0.1);
   }
@@ -302,7 +302,7 @@ body {
   .input:focus,
   .select:focus,
   .textarea:focus {
-    border-color: #5e9400;
+    border-color: #1769c8;
     box-shadow:
       0 0 0 3px rgba(21, 101, 192, 0.14),
       0 0 0 4px rgba(46, 125, 50, 0.08),
@@ -366,7 +366,7 @@ body {
   }
   .card-accent {
     @apply card border-l-4;
-    border-left-color: #4e7a00;
+    border-left-color: #1565c0;
   }
   .card-success {
     @apply card border-l-4;
@@ -379,7 +379,7 @@ body {
 
   .card-header {
     @apply text-white rounded-t-xl px-4 py-3;
-    background: linear-gradient(135deg, #3e6100 0%, #5e9400 100%);
+    background: linear-gradient(135deg, #1256b0 0%, #1769c8 100%);
   }
 
   /* ════════════════════════════════════════════════════════════════════
@@ -421,7 +421,7 @@ body {
 /* ── Progress bar ─────────────────────────────────────────────────────────── */
 .progress-bar-fill {
   position: relative;
-  background: linear-gradient(90deg, #5e9400 0%, #2b8c29 100%);
+  background: linear-gradient(90deg, #1769c8 0%, #2b8c29 100%);
   overflow: hidden;
 }
 /* Travelling highlight that sweeps across the filled portion — a subtle,
@@ -755,7 +755,7 @@ body {
   }
 }
 .hero-greeting {
-  background: linear-gradient(110deg, #0f172a 0%, #0f172a 35%, #4e7a00 50%, #0f172a 65%, #0f172a 100%);
+  background: linear-gradient(110deg, #0f172a 0%, #0f172a 35%, #1565c0 50%, #0f172a 65%, #0f172a 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;

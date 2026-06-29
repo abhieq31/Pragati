@@ -71,7 +71,7 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
 
   const STATUS_COLORS: Record<string, { dot: string; label: string }> = {
     planning: { dot: '#94a3b8', label: 'Planning' },
-    in_progress: { dot: '#76b900', label: 'In progress' },
+    in_progress: { dot: '#3b82f6', label: 'In progress' },
     on_hold: { dot: '#f59e0b', label: 'On hold' },
     completed: { dot: '#22c55e', label: 'Completed' },
     cancelled: { dot: '#ef4444', label: 'Cancelled' },
@@ -239,13 +239,13 @@ export default function ProjectsClient({ initialData }: { initialData: InitialDa
             // App-theme progress: blue at the start, transitioning to green as it
             // nears completion — never the dull grey it used to fall back to at
             // low percentages. The % text reads green only once nearly done.
-            const progressColor = pct >= 90 ? '#22c55e' : '#5e9400';
+            const progressColor = pct >= 90 ? '#22c55e' : '#1769C8';
             const dueIn = p.dueDate
               ? Math.round((new Date(p.dueDate).getTime() - Date.now()) / 86400000)
               : null;
             const dueTone = dueIn === null ? 'slate' : dueIn < 0 ? 'red' : dueIn <= 7 ? 'amber' : 'slate';
             // Blue → green themed fill so the bar always carries the app accent.
-            const progressGradient = 'linear-gradient(90deg, #5e9400 0%, #22c55e 100%)';
+            const progressGradient = 'linear-gradient(90deg, #1769C8 0%, #22c55e 100%)';
             return (
               <Link
                 href={`/projects/${p.id}`}

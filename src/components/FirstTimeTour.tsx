@@ -53,8 +53,8 @@ function buildSteps(role: string): Step[] {
         isAdmin ? 'the workspace admin' : isLead ? 'a team lead' : 'a contributor'
       }. Skip whenever you like.`,
       icon: Sparkles,
-      iconBg: '#e4f2c9',
-      iconColor: '#4e7a00',
+      iconBg: '#DBEAFE',
+      iconColor: '#1565C0',
     },
     {
       target: '[data-tour="nav-dashboard"]',
@@ -64,8 +64,8 @@ function buildSteps(role: string): Step[] {
         ? "Your whole scope at a glance — project health, who's loaded, what's overdue or about to slip, and the Bird's-eye button for the full tree."
         : "Your work at a glance — what's due today, what's coming up next, and the projects you're part of.",
       icon: LayoutDashboard,
-      iconBg: '#f4f9e9',
-      iconColor: '#4e7a00',
+      iconBg: '#E3F2FD',
+      iconColor: '#1565C0',
       side: 'right',
     },
     {
@@ -249,7 +249,7 @@ function useTargetRect(selector: string | undefined): DOMRect | null {
 }
 
 // Scribble underline SVG for the title
-function ScribbleUnderline({ color = '#4e7a00' }: { color?: string }) {
+function ScribbleUnderline({ color = '#1565C0' }: { color?: string }) {
   return (
     <svg viewBox="0 0 120 8" className="w-full h-2 mt-0.5" preserveAspectRatio="none" aria-hidden>
       <path
@@ -590,7 +590,7 @@ export function FirstTimeTour({
           {/* Coloured header strip */}
           <div
             className="px-5 pt-5 pb-4 relative"
-            style={{ background: 'linear-gradient(135deg, #F8FAFF 0%, #f4f9e9 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #F8FAFF 0%, #EFF6FF 100%)' }}
           >
             <button
               onClick={close}

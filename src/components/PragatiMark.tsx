@@ -40,7 +40,7 @@ export function PragatiMark({
         width: size,
         height: size,
         borderRadius: r,
-        background: 'linear-gradient(135deg, #4e7a00 0%, #5e9400 45%, #2B8C29 100%)',
+        background: 'linear-gradient(135deg, #1565C0 0%, #1769C8 45%, #2B8C29 100%)',
         boxShadow: shadow,
       }}
     >

@@ -48,7 +48,7 @@ const PRIORITY_OPTS = [
 ];
 const STATUS_STYLE: Record<string, { bg: string; fg: string }> = {
   open: { bg: '#fef3c7', fg: '#b45309' },
-  in_progress: { bg: '#e4f2c9', fg: '#3e6100' },
+  in_progress: { bg: '#dbeafe', fg: '#1d4ed8' },
   waiting: { bg: '#f3e8ff', fg: '#7c3aed' },
   resolved: { bg: '#dcfce7', fg: '#15803d' },
   closed: { bg: '#f1f5f9', fg: '#64748b' },

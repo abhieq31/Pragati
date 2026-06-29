@@ -1049,7 +1049,7 @@ const BULK_META: Record<BulkAction, { verb: string; tone: string; bg: string; no
   promote_lead: {
     verb: 'Promote to lead',
     tone: 'text-blue-700',
-    bg: 'linear-gradient(135deg,#3e6100,#76b900)',
+    bg: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
     note: 'Contributors in the selection gain lead access — create teams, allocate projects, assign tasks.',
   },
 };

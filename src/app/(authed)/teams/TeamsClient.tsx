@@ -498,7 +498,7 @@ function TeamFormModal({
           >
             <div
               className="relative px-5 py-5 text-white overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #0f4fb8 0%, #5e9400 45%, #2b8c47 100%)' }}
+              style={{ background: 'linear-gradient(135deg, #0f4fb8 0%, #1769c8 45%, #2b8c47 100%)' }}
             >
               <div
                 aria-hidden

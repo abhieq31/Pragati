@@ -613,7 +613,7 @@ function PanelHeader({
 }
 
 const PANEL_TINTS = {
-  blue: { bg: 'rgba(21,101,192,0.10)', fg: '#4e7a00' },
+  blue: { bg: 'rgba(21,101,192,0.10)', fg: '#1565C0' },
   emerald: { bg: 'rgba(16,185,129,0.12)', fg: '#059669' },
   violet: { bg: 'rgba(124,58,237,0.12)', fg: '#7c3aed' },
 } as const;
@@ -826,7 +826,7 @@ function ContributorWelcome({ name }: { name: string }) {
         <Link
           href="/my-day"
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold text-white transition-all"
-          style={{ background: 'linear-gradient(135deg, #3e6100 0%, #5e9400 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #1256B0 0%, #1769C8 100%)' }}
         >
           Open My Day <ArrowRight size={13} />
         </Link>
@@ -1053,7 +1053,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
             if (isBlocked) return ['#ef4444', 'Blocked'];
             if (overdue) return ['#ef4444', 'Overdue'];
             if (dueIn !== null && dueIn <= 3) return ['#d97706', 'Due soon'];
-            if (t.status === 'in_progress') return ['#4e7a00', 'In progress'];
+            if (t.status === 'in_progress') return ['#1565C0', 'In progress'];
             if (t.status === 'review') return ['#7c3aed', 'In review'];
             return ['#94a3b8', 'To do'];
           })();
@@ -1061,7 +1061,7 @@ function DashboardTaskFlow({ tasks, projectId }: { tasks: TeamTask[]; projectId:
           const stateMeta = ((): { label: string; fg: string; bg: string } | null => {
             if (isDone) return { label: 'Done', fg: '#059669', bg: 'rgba(16,185,129,0.12)' };
             if (t.status === 'in_progress')
-              return { label: 'In progress', fg: '#4e7a00', bg: 'rgba(21,101,192,0.12)' };
+              return { label: 'In progress', fg: '#1565C0', bg: 'rgba(21,101,192,0.12)' };
             if (t.status === 'review')
               return { label: 'In review', fg: '#7c3aed', bg: 'rgba(124,58,237,0.12)' };
             if (t.status === 'todo' || !t.status)
@@ -1470,7 +1470,7 @@ function MyTasksPanel({ tasks, myId }: { tasks: TeamTask[]; myId: string }) {
             const overdue = isOverdue(due, t.status);
             const dotColor =
               t.status === 'in_progress'
-                ? '#76b900'
+                ? '#3B82F6'
                 : t.status === 'review'
                   ? '#8B5CF6'
                   : t.status === 'blocked'
@@ -2183,7 +2183,7 @@ function ContributorRow({
                         style={{
                           background:
                             t.status === 'in_progress'
-                              ? '#76b900'
+                              ? '#3B82F6'
                               : t.status === 'review'
                                 ? '#8B5CF6'
                                 : t.status === 'blocked'
