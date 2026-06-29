@@ -102,23 +102,13 @@ export function TicketsPanel({
     return { active: a, done: d };
   }, [tickets]);
 
-  // Queue health — the signal a request queue actually needs: how much is open,
-  // how fast we close, and how stale the oldest open item is.
+  // Two numbers a team meeting actually needs: how many are still pending, and
+  // how many have been closed. Nothing else.
   const metrics = useMemo(() => {
-    const ageDaysOf = (iso: string | null) =>
-      iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000) : 0;
-    const open = active.length;
-    const inProgress = active.filter((t) => t.status === 'in_progress').length;
-    const oldestOpen = active.reduce((m, t) => Math.max(m, ageDaysOf(t.createdAt)), 0);
-    const resolveDays = (tickets || [])
-      .filter((t) => t.resolvedAt && t.createdAt)
-      .map((t) => (new Date(t.resolvedAt!).getTime() - new Date(t.createdAt!).getTime()) / 86_400_000)
-      .sort((x, y) => x - y);
-    const medianResolve = resolveDays.length
-      ? resolveDays[Math.floor(resolveDays.length / 2)]
-      : null;
-    return { open, inProgress, oldestOpen, medianResolve };
-  }, [active, tickets]);
+    const pending = active.length;
+    const closed = done.length;
+    return { pending, closed };
+  }, [active, done]);
 
   async function createTicket(e: React.FormEvent) {
     e.preventDefault();
@@ -329,32 +319,26 @@ export function TicketsPanel({
         A shared request queue for this team. Anyone can file; the team works it down.
       </p>
 
-      {/* Queue health — open load, throughput, and the oldest thing rotting. */}
-      {tickets && tickets.length > 0 && (
-        <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { label: 'Open', value: String(metrics.open), accent: '#0369a1' },
-            { label: 'In progress', value: String(metrics.inProgress), accent: '#4e7a00' },
-            {
-              label: 'Median resolve',
-              value: metrics.medianResolve == null ? '—' : `${metrics.medianResolve.toFixed(1)}d`,
-              accent: '#16a34a',
-            },
-            {
-              label: 'Oldest open',
-              value: metrics.open ? `${metrics.oldestOpen}d` : '—',
-              accent: metrics.oldestOpen >= 7 ? '#dc2626' : metrics.oldestOpen >= 3 ? '#b45309' : '#64748b',
-            },
-          ].map((m) => (
-            <div key={m.label} className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2">
-              <div className="text-[18px] font-black tabular-nums leading-none" style={{ color: m.accent }}>
-                {m.value}
-              </div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
-                {m.label}
-              </div>
+      {/* Two meeting-ready numbers: pending vs closed. Read them straight off
+          the screen in a stand-up. */}
+      {tickets && (
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
+            <div className="text-[28px] font-black tabular-nums leading-none text-amber-600">
+              {metrics.pending}
             </div>
-          ))}
+            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-700/70 mt-1.5">
+              Pending
+            </div>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+            <div className="text-[28px] font-black tabular-nums leading-none text-emerald-600">
+              {metrics.closed}
+            </div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-700/70 mt-1.5">
+              Closed
+            </div>
+          </div>
         </div>
       )}
 

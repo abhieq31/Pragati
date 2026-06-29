@@ -82,41 +82,36 @@ export function QmsPanel({ teamId, isLead }: { teamId: string; isLead: boolean }
     >
       {ToastEl}
       <p className="-mt-1 mb-3 text-[11px] text-slate-500 leading-snug">
-        Track status across your own steps, one sheet per record.
+        Quality records for IT/CSV — periodic reviews, change controls, deviations, access reviews —
+        one record per sheet. Two numbers to read straight into a review.
       </p>
 
-      {/* Rollup — the at-a-glance the bare list was missing: how many records,
-          how much work they carry, average completion, and how many are done. */}
+      {/* Meeting-ready counters: how many records are still open vs closed. */}
       {sheets && sheets.length > 0 && (
-        <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="mb-3 grid grid-cols-2 gap-3">
           {(() => {
-            const records = sheets.length;
-            const items = sheets.reduce((n, s) => n + (s.rowCount || 0), 0);
-            const avg = Math.round(sheets.reduce((n, s) => n + overall(s), 0) / records);
             const complete = sheets.filter((s) => overall(s) >= 100).length;
-            const tiles = [
-              { label: 'Records', value: String(records), accent: '#4e7a00' },
-              { label: 'Items', value: String(items), accent: '#0369a1' },
-              {
-                label: 'Avg complete',
-                value: `${avg}%`,
-                accent: avg >= 75 ? '#16a34a' : avg >= 40 ? '#b45309' : '#dc2626',
-              },
-              { label: 'Done', value: `${complete}/${records}`, accent: '#16a34a' },
-            ];
-            return tiles.map((t) => (
-              <div key={t.label} className="rounded-lg border border-slate-200 bg-slate-50/60 px-2.5 py-2">
-                <div
-                  className="text-[18px] font-black tabular-nums leading-none"
-                  style={{ color: t.accent }}
-                >
-                  {t.value}
+            const open = sheets.length - complete;
+            return (
+              <>
+                <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3">
+                  <div className="text-[28px] font-black tabular-nums leading-none text-amber-600">
+                    {open}
+                  </div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-amber-700/70 mt-1.5">
+                    Open
+                  </div>
                 </div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">
-                  {t.label}
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+                  <div className="text-[28px] font-black tabular-nums leading-none text-emerald-600">
+                    {complete}
+                  </div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-700/70 mt-1.5">
+                    Closed
+                  </div>
                 </div>
-              </div>
-            ));
+              </>
+            );
           })()}
         </div>
       )}
