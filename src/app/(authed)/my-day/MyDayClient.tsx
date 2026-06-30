@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ModalPortal } from '@/components/ModalPortal';
 import Link from 'next/link';
+import { SCRATCHPAD_ENABLED } from '@/lib/features';
 import { api } from '@/lib/client/api';
 import { useIsLead, useCurrentUser } from '@/components/CurrentUserContext';
 import {
@@ -915,8 +916,15 @@ export default function MyDayClient({ initialData }: { initialData: { open: Note
         </div>
       </div>
 
-      <NotesFAB />
-      <WhiteboardFAB />
+      {/* Secondary "workbench" tools — sticky notes + whiteboard. Off for a
+          focused launch (see lib/features); the core My Day capture + brief
+          stay. Re-enable per-deployment with NEXT_PUBLIC_SCRATCHPAD_ENABLED=1. */}
+      {SCRATCHPAD_ENABLED && (
+        <>
+          <NotesFAB />
+          <WhiteboardFAB />
+        </>
+      )}
 
       {/* Promote modal */}
       {promote && (

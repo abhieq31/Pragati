@@ -575,6 +575,77 @@ export default function NewProjectPage() {
   const [sourceProjectName, setSourceProjectName] = useState<string>('');
   const [importing, setImporting] = useState(false);
 
+  // ── Draft auto-save ───────────────────────────────────────────────────────
+  // A half-built project is real work — never lose it on an accidental nav or
+  // refresh. The in-progress form + stages are auto-saved to local storage and
+  // offered back on return; a beforeunload guard catches tab close / refresh.
+  const DRAFT_KEY = 'pragati_new_project_draft';
+  const suppressLifecycleFetch = useRef(false);
+  const [restorable, setRestorable] = useState<any | null>(null);
+  // Dirty = there's something worth keeping (a name or any stages).
+  const dirty = !!(form.name.trim() || form.description.trim() || phases.length > 0);
+
+  // Offer to restore a saved draft once on mount (never auto-apply — the user
+  // chooses, so a fresh start is never silently overwritten).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d && (d.form?.name?.trim() || (d.phases || []).length > 0)) setRestorable(d);
+      }
+    } catch {
+      /* corrupt/blocked storage — just skip the offer */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save whenever there's work worth keeping.
+  useEffect(() => {
+    if (!dirty) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ form, phases, personal, savedAt: Date.now() }));
+    } catch {
+      /* storage full / disabled — best-effort */
+    }
+  }, [form, phases, personal, dirty]);
+
+  // Catch tab close / refresh / external nav while there's unsaved work.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirty && !loading) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty, loading]);
+
+  function restoreDraft() {
+    if (!restorable) return;
+    suppressLifecycleFetch.current = true; // keep restored phases; don't refetch
+    if (restorable.form) setForm(restorable.form);
+    if (Array.isArray(restorable.phases)) setPhases(restorable.phases);
+    if (typeof restorable.personal === 'boolean') setPersonal(restorable.personal);
+    setRestorable(null);
+  }
+  function discardDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+    setRestorable(null);
+  }
+  function clearDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
   useEffect(() => {
     api<any[]>('/teams')
       .then(setTeams)
@@ -598,6 +669,13 @@ export default function NewProjectPage() {
   // the effect from overwriting the custom phases on the same render batch.
   useEffect(() => {
     if (!form.lifecycle || customTemplateId || sourceProjectId) return;
+    // Restoring a draft sets form.lifecycle, which would otherwise re-trigger
+    // this fetch and clobber the restored (user-edited) phases. Skip exactly
+    // one run after a restore.
+    if (suppressLifecycleFetch.current) {
+      suppressLifecycleFetch.current = false;
+      return;
+    }
     api<any>(`/lifecycles?key=${form.lifecycle}`)
       .then((t) => {
         setTemplateInfo(t);
@@ -767,6 +845,7 @@ export default function NewProjectPage() {
       });
       // Bust the sidebar calendar cache so newly-added tasks appear immediately.
       clearSidebarCalendarCache();
+      clearDraft(); // saved for real now — drop the local draft
       router.push(`/projects/${p.id}`);
     } catch (e: any) {
       setErr(e.message || 'Something went wrong.');
@@ -790,6 +869,32 @@ export default function NewProjectPage() {
 
   return (
     <div className="max-w-3xl pb-20">
+      {/* Unsaved-draft offer — a half-built project from a previous visit. */}
+      {restorable && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-slate-800">You have an unsaved project draft</div>
+            <div className="text-xs text-slate-500 truncate">
+              {restorable.form?.name?.trim() || 'Untitled'} ·{' '}
+              {(restorable.phases || []).length} stage
+              {(restorable.phases || []).length === 1 ? '' : 's'}
+            </div>
+          </div>
+          <button
+            onClick={restoreDraft}
+            className="shrink-0 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg"
+          >
+            Restore
+          </button>
+          <button
+            onClick={discardDraft}
+            className="shrink-0 text-xs font-semibold text-slate-500 hover:text-red-600 px-2 py-1.5"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       {/* Save-as-template / edit-template dialog */}
       {showSaveDialog && (
         <SaveTemplateDialog
