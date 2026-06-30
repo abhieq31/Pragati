@@ -19,20 +19,22 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-/* Rotating, unattributed wisdom — Jensen Huang, drawn from his keynotes,
-   interviews, and university addresses, curated to what Pragati is for: doing
-   the work — mission, resilience, ownership, focus, finishing, and reasoning
-   from first principles. No name is ever shown, only the line. Never repeats on
-   a device until the whole library has been shown (see unseenQuoteIndices /
-   pickUnseen below). See src/lib/quotes.ts for the sourcing rules. */
+/* Rotating, unattributed wisdom — Sundar Pichai, drawn from his interviews and
+   talks plus the books he has recommended (The Ride of a Lifetime, The Hard
+   Thing About Hard Things, Shoe Dog, Sapiens, Man's Search for Meaning),
+   curated to what Pragati is for: doing the work — focus on the user,
+   simplicity, helpfulness, doing hard things that matter, optimism, resilience.
+   No name is ever shown, only the line. Never repeats on a device until the
+   whole library has been shown (see unseenQuoteIndices / pickUnseen below). See
+   src/lib/quotes.ts for the sourcing rules. */
 
 // Bumped when the library is re-curated (the ledger is positional, so a fresh
 // key avoids old indices pre-marking different lines): v2 = Elon→Naval pool,
 // v3 = Bezos + his reading list, v4 = Elon Musk + the books he recommends,
 // v5 = Naval Ravikant + the thinkers and books he champions,
 // v6 = Elon Musk + the books, authors, and leaders he admires,
-// v7 = Jensen Huang.
-const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v7';
+// v7 = Jensen Huang, v8 = Sundar Pichai + the books he recommends.
+const QUOTES_SEEN_KEY = 'pragati_quotes_seen_v8';
 
 /** Indices not yet shown on this device; resets only once the whole set is
  *  exhausted. Takes the library size so a re-curation of the list stays in
