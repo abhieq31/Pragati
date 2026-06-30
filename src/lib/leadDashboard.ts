@@ -9,7 +9,12 @@ import { getLeadScope, projectsVisibleFilter } from '@/lib/leadScope';
 import { computeFlowStrip, type FlowSignalPayload } from '@/lib/flow/computeStrip';
 import { getFlowConfig, isUiEnabled, isPilotTeamVisible } from '@/lib/flow/config';
 import { cached, cacheBust } from '@/lib/cache';
-import { buildWorkMixerFromDashboardData, type WorkMixerResult } from '@/lib/workMixer';
+import {
+  buildWorkMixerFromDashboardData,
+  scoreWorkCandidate,
+  taskToCandidate,
+  type WorkMixerResult,
+} from '@/lib/workMixer';
 import { normalizeRole } from '@/lib/auth';
 import { buildDeliveryProfiles, buildOpenLoad, scoreSlipRisk } from '@/lib/ai/slipRisk';
 
@@ -354,6 +359,12 @@ async function computeLeadDashboardData(jwtUser: {
 
   const teamTasks = teamTasksRaw.map((t) => {
     const p = projMap.get(String(t.projectId));
+    // Leverage score + the reasons behind it, from the (pure, tested) Work
+    // Mixer engine — the same signals that decide priority: overdue,
+    // blocked/waiting, due-soon, critical/business-critical, staleness. The
+    // dashboard uses this to lead with the one thing that matters and to show
+    // WHY, instead of a naive status sort.
+    const lev = scoreWorkCandidate(taskToCandidate(t), now);
     return {
       id: String(t._id),
       title: t.title,
@@ -372,6 +383,8 @@ async function computeLeadDashboardData(jwtUser: {
       subtasksDone: ((t as any).subtasks || []).filter((s: any) => s.status === 'done').length,
       subtaskTitles: ((t as any).subtasks || []).slice(0, 3).map((s: any) => s.title),
       gxpCritical: !!(t as any).gxpCritical,
+      leverage: lev.score,
+      reasons: lev.reasons.slice(0, 2),
       // Slip-risk early warning — learned from each assignee's delivery
       // history in the SAME rows we already loaded (no extra queries; see
       // lib/ai/slipRisk). Null for most tasks; a {reason} object when the

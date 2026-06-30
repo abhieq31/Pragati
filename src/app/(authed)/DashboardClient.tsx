@@ -78,6 +78,10 @@ interface TeamTask {
    *  task is judged likely to miss its date; `reason` is the plain-language
    *  factor behind the call (shown as the chip's tooltip). */
   slipRisk?: { reason: string } | null;
+  /** Leverage score + the reasons that built it, from the Work Mixer engine.
+   *  Drives the "Start here" focus card — the single highest-leverage thing. */
+  leverage?: number;
+  reasons?: string[];
 }
 
 interface DashProject {
@@ -330,6 +334,18 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
     [openTasks],
   );
 
+  // ── The one thing ───────────────────────────────────────────────────────
+  // My single highest-leverage open task, ranked by the Work Mixer engine
+  // (overdue, blocked, due-soon, critical, stale). This is the morning
+  // decision — what to do first — surfaced with the reason so it's never a
+  // black box. Personal to the viewer: even a lead's day starts with their
+  // own plate. Null when nothing carries real pressure.
+  const focusTask = useMemo(() => {
+    const mine = openTasks.filter((t) => t.assigneeId === myId && (t.leverage ?? 0) > 0);
+    if (mine.length === 0) return null;
+    return mine.reduce((best, t) => ((t.leverage ?? 0) > (best.leverage ?? 0) ? t : best));
+  }, [openTasks, myId]);
+
   // Expanded project view: everyone sees the whole project's tasks, so an IC
   // can see the path of work around their own assignments — not just their
   // own row in isolation.
@@ -390,6 +406,50 @@ export default function DashboardClient({ initialData }: { initialData: DashResp
               Renders nothing when there's nothing to surface — silence is
               the correct product state. */}
           <FlowSignalStrip data={dash.flowSignal} />
+
+          {/* ── Start here ─────────────────────────────────────────────────
+              The morning decision: the single highest-leverage thing on the
+              viewer's own plate, ranked by the Work Mixer engine, with the
+              reason shown so it's never a black box. */}
+          {focusTask && (
+            <Link
+              href={`/tasks/${focusTask.id}`}
+              className="group block mb-5 rounded-2xl border border-blue-200 dark:border-blue-500/25 bg-gradient-to-br from-blue-50 to-white dark:from-blue-500/[0.08] dark:to-transparent p-4 transition hover:border-blue-300 hover:shadow-sm"
+            >
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 w-8 h-8 rounded-lg grid place-items-center shrink-0 bg-blue-600 text-white shadow-sm">
+                  <Sparkles size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-300">
+                    Start here
+                  </div>
+                  <div className="text-[15px] font-bold text-slate-900 dark:text-white leading-snug truncate mt-0.5">
+                    {focusTask.title}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                    {focusTask.projectCode && (
+                      <span className="text-[11px] font-semibold text-slate-400">
+                        {focusTask.projectCode}
+                      </span>
+                    )}
+                    {(focusTask.reasons || []).map((r) => (
+                      <span
+                        key={r}
+                        className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-blue-100/70 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300"
+                      >
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <ArrowRight
+                  size={16}
+                  className="text-blue-400 shrink-0 mt-1 group-hover:translate-x-0.5 transition-transform"
+                />
+              </div>
+            </Link>
+          )}
 
           {/* ── Summary strip ──────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2 mb-5">
