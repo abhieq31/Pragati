@@ -40,7 +40,7 @@ import { Task } from '../src/models/Task';
 import { AuditLog } from '../src/models/AuditLog';
 import { Notification } from '../src/models/Notification';
 import { LIFECYCLES, type LifecycleKey } from '../src/lib/lifecycles';
-import { DEMO_EMAIL_RX } from '../src/lib/demo';
+import { DEMO_EMAIL_RX, DEMO_PASSWORD } from '../src/lib/demo'; // the published password, shared with the login route
 
 // ── CLI flags ───────────────────────────────────────────────────────────
 const args = new Set(process.argv.slice(2));
@@ -58,7 +58,6 @@ if (!process.env.MONGODB_URI) {
 // with the auth path (src/lib/demo.ts) so seeding and lockout-immunity can
 // never disagree on what counts as a demo account.
 const DEMO_PROJECT_CODE = /^DEMO-/;
-const DEMO_PASSWORD = 'Demo@1234';
 
 const pick = <T>(arr: T[], n: number): T[] => {
   const out = [...arr];

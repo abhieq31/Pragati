@@ -30,6 +30,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: '2026-10-26',
+    title: 'The public demo always lets you in',
+    tags: ['fix', 'security'],
+    body: [
+      'A visitor signed in to a demo account could change its password, so everyone after them got "Invalid email or password". Demo accounts now refuse password changes with a clear message.',
+      'Typing the published demo password restores an account a past visitor changed, deactivated or flagged for a password change. The demo heals itself on the next sign-in.',
+      'Real accounts are unaffected: their password rules and lockout are unchanged.',
+    ],
+  },
+  {
     date: '2026-08-13',
     title: 'A stranger can ask to be let in',
     tags: ['feature'],

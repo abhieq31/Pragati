@@ -7,6 +7,7 @@ import { requireUser } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { rateLimit } from '@/lib/rateLimit';
 import { isPasswordReused, pushPasswordHistory, PASSWORD_REUSE_MESSAGE } from '@/lib/passwordHistory';
+import { isDemoAccount, DEMO_READ_ONLY_MESSAGE } from '@/lib/demo';
 
 export const runtime = 'nodejs';
 
@@ -32,6 +33,9 @@ export async function PATCH(req: NextRequest) {
     const body = await readBody(req, Body);
     const user = await User.findById(me.sub);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // The shared demo keeps its published password, or the next visitor is locked out.
+    if (isDemoAccount(user.email))
+      return NextResponse.json({ error: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
     const ok = bcrypt.compareSync(body.currentPassword, user.passwordHash);
     if (!ok) return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
 

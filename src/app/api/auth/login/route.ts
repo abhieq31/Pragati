@@ -8,7 +8,7 @@ import { readBody, handleError } from '@/lib/http';
 import { u } from '@/lib/serialize';
 import { rateLimit } from '@/lib/rateLimit';
 import { logOperation } from '@/lib/audit';
-import { isDemoAccount } from '@/lib/demo';
+import { isDemoAccount, shouldRestoreDemo, DEMO_PASSWORD } from '@/lib/demo';
 
 export const runtime = 'nodejs';
 
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     // even when no user matched, so the response time doesn't reveal
     // whether the email exists in the database.
     const DUMMY_HASH = '$2a$10$CwTycUXWue0Thq9StjUM0uJ8ZQAYPwLqL.qZdW7HtLZqL2lF6f7Pi';
-    const passwordOk = bcrypt.compareSync(body.password, user?.passwordHash || DUMMY_HASH);
+    let passwordOk = bcrypt.compareSync(body.password, user?.passwordHash || DUMMY_HASH);
 
     if (!user) {
       return NextResponse.json(GENERIC_INVALID.body, { status: GENERIC_INVALID.status });
@@ -106,6 +106,20 @@ export async function POST(req: NextRequest) {
     // clears any lock an earlier visitor left behind (self-healing). See
     // src/lib/demo.ts.
     const demo = isDemoAccount(user.email);
+
+    // Self-healing demo: the published password always opens a demo account. If a visitor
+    // changed it before password changes were blocked for demo accounts (or deactivated or
+    // flagged it), typing the published password restores the account to its published state
+    // instead of answering "Invalid email or password" to everyone after them.
+    if (shouldRestoreDemo(user.email, body.password, passwordOk)) {
+      user.passwordHash = bcrypt.hashSync(DEMO_PASSWORD, 10);
+      passwordOk = true;
+    }
+    if (demo && passwordOk) {
+      (user as any).mustChangePassword = false;
+      (user as any).active = true;
+      if (user.isModified()) await user.save();
+    }
 
     if (user.lockedAt && !securityKeyOk && !demo) {
       // The account is real (we matched it above) and is locked. Telling

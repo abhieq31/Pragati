@@ -6,6 +6,7 @@ import { User } from '@/models/User';
 import { normalizeRole, requireUser, signToken, setAuthCookie } from '@/lib/auth';
 import { readBody, handleError } from '@/lib/http';
 import { isPasswordReused, pushPasswordHistory, PASSWORD_REUSE_MESSAGE } from '@/lib/passwordHistory';
+import { isDemoAccount, DEMO_READ_ONLY_MESSAGE } from '@/lib/demo';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
     const body = await readBody(req, Body);
     const user = await User.findById(me.sub);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (isDemoAccount(user.email))
+      return NextResponse.json({ error: DEMO_READ_ONLY_MESSAGE }, { status: 403 });
     if (!user.mustChangePassword) {
       return NextResponse.json({ error: 'Password already set' }, { status: 400 });
     }

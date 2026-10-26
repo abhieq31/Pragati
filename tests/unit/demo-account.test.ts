@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isDemoAccount, DEMO_EMAIL_RX } from '../../src/lib/demo';
+import { isDemoAccount, DEMO_EMAIL_RX, DEMO_PASSWORD, shouldRestoreDemo } from '../../src/lib/demo';
 
 describe('isDemoAccount — matches the seeded public demo accounts', () => {
   it('matches the two headline demo accounts from the README', () => {
@@ -52,5 +52,29 @@ describe('DEMO_EMAIL_RX — shared with the seed cleanup query', () => {
   it('is anchored at both ends so it can be used directly as a Mongo filter', () => {
     assert.equal(DEMO_EMAIL_RX.source.startsWith('^'), true);
     assert.equal(DEMO_EMAIL_RX.source.endsWith('$'), true);
+  });
+});
+
+describe('shouldRestoreDemo — the published password always opens a demo account', () => {
+  it('restores a demo account whose password a visitor changed', () => {
+    assert.equal(shouldRestoreDemo('demo.lead@pragati.local', DEMO_PASSWORD, false), true);
+  });
+
+  it('does nothing when the stored password already matches', () => {
+    assert.equal(shouldRestoreDemo('demo.lead@pragati.local', DEMO_PASSWORD, true), false);
+  });
+
+  it('never accepts any other password for a demo account', () => {
+    assert.equal(shouldRestoreDemo('demo.lead@pragati.local', 'demo@1234', false), false);
+    assert.equal(shouldRestoreDemo('demo.lead@pragati.local', 'anything', false), false);
+  });
+
+  it('never applies to a real account, even with the demo password', () => {
+    assert.equal(shouldRestoreDemo('priya.shah@company.com', DEMO_PASSWORD, false), false);
+    assert.equal(shouldRestoreDemo('demo.lead@evil.com', DEMO_PASSWORD, false), false);
+  });
+
+  it('matches the password the README and the login page publish', () => {
+    assert.equal(DEMO_PASSWORD, 'Demo@1234');
   });
 });

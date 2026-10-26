@@ -20,3 +20,26 @@ export const DEMO_EMAIL_RX = /^demo\.[^@]*@pragati\.local$/i;
 export function isDemoAccount(email: string | null | undefined): boolean {
   return !!email && DEMO_EMAIL_RX.test(email.trim());
 }
+
+/** The published password of every demo account (README, login page, seed). */
+export const DEMO_PASSWORD = 'Demo@1234';
+
+/**
+ * Shown when someone signed in to the shared demo tries to change its password. If one visitor
+ * could change it, every visitor after them would get "Invalid email or password".
+ */
+export const DEMO_READ_ONLY_MESSAGE =
+  "The public demo account's password can't be changed — it's shared by everyone trying Pragati. Request a workspace to get your own account.";
+
+/**
+ * Should this sign-in restore a demo account to its published state? Yes when the account is a
+ * demo account and the published password was typed but no longer matches the stored hash —
+ * i.e. a visitor changed it before changes were blocked (or the hash was lost).
+ */
+export function shouldRestoreDemo(
+  email: string | null | undefined,
+  typedPassword: string,
+  storedHashMatches: boolean,
+): boolean {
+  return isDemoAccount(email) && !storedHashMatches && typedPassword === DEMO_PASSWORD;
+}
