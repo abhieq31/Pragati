@@ -5,7 +5,7 @@
  *
  * What this confirms:
  *   ✓ /api/health is 200 and Mongo ping latency is healthy
- *   ✓ /bootstrap returns 404 (the production-safe state)
+ *   ✓ /bootstrap serves no page (404, or the sign-in redirect)
  *   ✓ /api/admin/bootstrap returns 404 (token not set)
  *   ✓ /api/auth/register returns 403 (public registration disabled)
  *   ✓ /login renders
@@ -60,11 +60,20 @@ async function main() {
     }
   }
 
-  // 2. /bootstrap must be 404 in steady state
+  // 2. /bootstrap must not serve a page. The bootstrap page was removed, so the path now falls
+  // through to the (authed)/[username] profile route, which sends a signed-out visitor to /login.
+  // Either a 404 or that redirect is the safe state; a 200 means a bootstrap page is live again.
   {
-    const r = await probe('/bootstrap', 404);
-    if (r.ok) pass('/bootstrap → 404', 'token not configured (correct)');
-    else fail('/bootstrap → 404', `status ${r.status} — ADMIN_BOOTSTRAP_TOKEN appears to be set in prod env`);
+    const r = await probe('/bootstrap', [404, 307, 308]);
+    const location = (r.res as Response).headers?.get?.('location') || '';
+    if (r.status === 404) pass('/bootstrap → 404', 'no bootstrap page (correct)');
+    else if (r.ok && new URL(location, base).pathname === '/login')
+      pass('/bootstrap', 'behind the sign-in wall');
+    else
+      fail(
+        '/bootstrap',
+        `status ${r.status}${location ? ` → ${location}` : ''} — a bootstrap page may be live`,
+      );
   }
 
   // 3. /api/admin/bootstrap must be 404 in steady state
